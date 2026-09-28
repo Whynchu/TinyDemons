@@ -123,6 +123,12 @@ func _apply_fusion_geometry() -> void:
 		_set_native_position(stat_before_texts[index], Vector2(STAT_BEFORE_RIGHT - _texture_width(stat_before_texts[index]), y))
 		_set_native_position(stat_arrow_texts[index], Vector2(STAT_ARROW_X, y))
 		_set_native_position(stat_after_texts[index], Vector2(STAT_AFTER_RIGHT - _texture_width(stat_after_texts[index]), y))
+	# Fusion's stat rows begin at y=41, so keep the same eight-pixel header-to-row
+	# gap as Shop while accounting for Fusion's higher body panel.
+	var before_header := get_node_or_null("StatBeforeHeader") as Sprite2D
+	var after_header := get_node_or_null("StatAfterHeader") as Sprite2D
+	_set_native_position(before_header, Vector2(STAT_BEFORE_RIGHT - 25.0, 33.0))
+	_set_native_position(after_header, Vector2(STAT_AFTER_RIGHT - 20.0, 33.0))
 
 func refresh_layout_preserving_state() -> void:
 	_apply_layout()

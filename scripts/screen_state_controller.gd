@@ -19,7 +19,7 @@ const MENU_CIRCLE_TEXTURE: Texture2D = preload("res://assets/artwork/circle55.pn
 const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
 const MENU_TRIANGLE_TEXTURE: Texture2D = preload("res://assets/artwork/triangle55.png")
 const MENU_SQUARE_TEXTURE: Texture2D = preload("res://assets/artwork/square55.png")
-const GAME_VERSION := "0.3.15"
+const GAME_VERSION := "0.3.16"
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const HUB_STAT_ADD_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEaddition.png")
 const HUB_STAT_SUBTRACT_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEsubtract.png")
@@ -2273,34 +2273,6 @@ func _shop_stat_comparison(_root: GameplayState, profile: PlayerProfile, catalog
 	return result
 
 
-func _fusion_stat_comparison(catalog: ItemCatalog, item: ItemInstance, count: int) -> Array[Dictionary]:
-	var projected := ItemInstance.from_dictionary(item.to_dictionary())
-	var projected_rarity := item.rarity
-	var projected_enhancement := item.enhancement_level
-	for step in count:
-		if projected_enhancement >= PlayerProfile.MAX_ITEM_ENHANCEMENT:
-			projected_rarity = ItemCatalog.next_rarity(projected_rarity)
-			projected_enhancement = 0
-		else:
-			projected_enhancement += 1
-	projected.rarity = projected_rarity
-	projected.enhancement_level = projected_enhancement
-	var before_bonuses := catalog.bonuses(item, 0)
-	var after_bonuses := catalog.bonuses(projected, 0)
-	var fields := [
-		{"key": "vitality", "label": "VIT"}, {"key": "strength", "label": "STR"},
-		{"key": "defense", "label": "DEF"}, {"key": "agi", "label": "AGI"},
-		{"key": "intelligence", "label": "INT"}, {"key": "mnd", "label": "MND"},
-	]
-	var result: Array[Dictionary] = []
-	for field: Dictionary in fields:
-		var before := float(before_bonuses.get(field["key"], 0.0))
-		var after := float(after_bonuses.get(field["key"], 0.0))
-		var delta := after - before
-		result.append({"label": field["label"], "before": before, "after": after, "after_color": Color8(56, 183, 100) if delta > 0.0 else Color8(177, 62, 83) if delta < 0.0 else Color8(244, 244, 244)})
-	return result
-
-
 func _render_fusion_menu(root: GameplayState, pixel_texture: Callable, profile: PlayerProfile) -> void:
 	if hub_fusion_menu == null or profile == null:
 		return
@@ -2323,13 +2295,14 @@ func _render_fusion_menu(root: GameplayState, pixel_texture: Callable, profile: 
 	if not candidates.is_empty():
 		var selected_index := clampi(hub_item_index, 0, candidates.size() - 1)
 		var selected := candidates[selected_index] as ItemInstance
-		model.owned_count = profile.fusion_owned_count(selected.instance_id, catalog)
-		model.fusion_count_max = maxi(profile.fusion_material_count(selected.instance_id, catalog), 1)
+		var selected_details := root.hub_flow_controller.call("fusion_candidate_details", root, selected) as Dictionary
+		model.owned_count = int(selected_details.get("owned_count", 0))
+		model.fusion_count_max = maxi(int(selected_details.get("material_count", 0)), 1)
 		model.fusion_count = clampi(hub_fusion_count, 1, model.fusion_count_max)
 		model.soul_cost = profile.fusion_batch_cost(selected, model.fusion_count) if model.owned_count > 0 else profile.fusion_batch_cost(selected, 1)
 		model.can_fuse = model.owned_count > 0 and profile.souls >= model.soul_cost
-		model.can_salvage = profile.can_salvage_overflow(selected.instance_id, catalog)
-		model.stat_comparison = _fusion_stat_comparison(catalog, selected, model.fusion_count)
+		model.can_salvage = bool(selected_details.get("can_salvage", false))
+		model.stat_comparison = _shop_stat_comparison(root, profile, catalog, selected)
 	model.message = hub_fusion_message
 	view.call("set_pixel_texture", pixel_texture)
 	view.call("render_fusion", model)

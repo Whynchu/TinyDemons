@@ -2,14 +2,26 @@
 extends VBoxContainer
 
 const AuthoringPlacementCatalogScript := preload("res://scripts/authoring_placement_catalog.gd")
+const ContentDefinitionManifestServiceScript := preload("res://scripts/content_definition_manifest_service.gd")
+const ItemCatalogDataScript := preload("res://scripts/item_catalog_data.gd")
 const HUB_PREVIEW_SCENE := "res://scenes/hub_world_preview.tscn"
+
+signal design_preview_requested(enemy_id: StringName)
+signal interactive_preview_requested(enemy_id: StringName, seed_value: int)
+signal stop_preview_requested
 
 var _plugin: EditorPlugin = null
 var _scene_root: Node = null
 var _filter: LineEdit = null
 var _tree: Tree = null
 var _status: Label = null
+var _preview_status: Label = null
+var _enemy_validation_status: Label = null
+var _manifest_status: Label = null
 var _prefab_picker: OptionButton = null
+var _enemy_picker: OptionButton = null
+var _preview_seed: SpinBox = null
+var _stop_preview_button: Button = null
 var _selected_path: NodePath = NodePath("")
 
 
@@ -42,9 +54,69 @@ func _build_ui() -> void:
 	actions.add_child(open_hub)
 	var refresh_button := Button.new()
 	refresh_button.text = "Refresh"
-	refresh_button.pressed.connect(_refresh)
+	refresh_button.pressed.connect(_refresh_authoring_content)
 	actions.add_child(refresh_button)
 	add_child(actions)
+
+	var enemy_preview_title := Label.new()
+	enemy_preview_title.text = "Enemy Preview"
+	enemy_preview_title.add_theme_font_size_override("font_size", 14)
+	enemy_preview_title.tooltip_text = "Preview registered enemies using the same factory and runtime encounter path."
+	add_child(enemy_preview_title)
+	var enemy_row := HBoxContainer.new()
+	_enemy_picker = OptionButton.new()
+	_enemy_picker.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_populate_enemy_picker()
+	enemy_row.add_child(_enemy_picker)
+	var design_button := Button.new()
+	design_button.text = "Design"
+	design_button.tooltip_text = "Open the pixel-art enemy design preview for the selected definition."
+	design_button.pressed.connect(_request_design_preview)
+	enemy_row.add_child(design_button)
+	var play_button := Button.new()
+	play_button.text = "Play"
+	play_button.tooltip_text = "Launch a separate game process with an isolated temporary profile."
+	play_button.pressed.connect(_request_interactive_preview)
+	enemy_row.add_child(play_button)
+	_stop_preview_button = Button.new()
+	_stop_preview_button.text = "Stop"
+	_stop_preview_button.tooltip_text = "Stop only the isolated interactive preview process."
+	_stop_preview_button.disabled = true
+	_stop_preview_button.pressed.connect(func() -> void: stop_preview_requested.emit())
+	enemy_row.add_child(_stop_preview_button)
+	add_child(enemy_row)
+	var enemy_validation_row := HBoxContainer.new()
+	var validate_enemies_button := Button.new()
+	validate_enemies_button.text = "Validate Enemies"
+	validate_enemies_button.tooltip_text = "Run the shared EnemyDefinition and registry checks used by the definition preflight."
+	validate_enemies_button.pressed.connect(_validate_enemy_catalog)
+	enemy_validation_row.add_child(validate_enemies_button)
+	add_child(enemy_validation_row)
+	_enemy_validation_status = Label.new()
+	_enemy_validation_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_enemy_validation_status.text = "Enemy registry has not been validated."
+	add_child(_enemy_validation_status)
+	_manifest_status = Label.new()
+	_manifest_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_update_manifest_status()
+	add_child(_manifest_status)
+	var seed_row := HBoxContainer.new()
+	var seed_label := Label.new()
+	seed_label.text = "Seed (-1 = new):"
+	seed_row.add_child(seed_label)
+	_preview_seed = SpinBox.new()
+	_preview_seed.min_value = -1
+	_preview_seed.max_value = 2147483647
+	_preview_seed.step = 1
+	_preview_seed.value = -1
+	_preview_seed.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_preview_seed.tooltip_text = "Use a fixed seed to reproduce this interactive enemy session, or -1 to generate a new seed."
+	seed_row.add_child(_preview_seed)
+	add_child(seed_row)
+	_preview_status = Label.new()
+	_preview_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_preview_status.text = "Select an enemy to open its design view or isolated playtest."
+	add_child(_preview_status)
 
 	var prefab_row := HBoxContainer.new()
 	var prefab_label := Label.new()
@@ -71,7 +143,7 @@ func _build_ui() -> void:
 	duplicate_button.pressed.connect(_duplicate_placement)
 	edit_actions.add_child(duplicate_button)
 	var validate_button := Button.new()
-	validate_button.text = "Validate"
+	validate_button.text = "Validate Scene"
 	validate_button.tooltip_text = "Check placement IDs and authoring categories in the open scene."
 	validate_button.pressed.connect(_validate_current_scene)
 	edit_actions.add_child(validate_button)
@@ -102,9 +174,104 @@ func _build_ui() -> void:
 	add_child(_status)
 
 
+func _populate_enemy_picker() -> void:
+	if _enemy_picker == null:
+		return
+	var previous_id := _selected_enemy_id()
+	_enemy_picker.clear()
+	var enemy_ids: Array[StringName] = SlimeVariantCatalog.variants().duplicate()
+	enemy_ids.sort_custom(func(left: StringName, right: StringName) -> bool:
+		var left_definition := EnemyFactory.definition(left)
+		var right_definition := EnemyFactory.definition(right)
+		var left_name := left_definition.display_name if left_definition != null else String(left)
+		var right_name := right_definition.display_name if right_definition != null else String(right)
+		if left_name.to_lower() == right_name.to_lower():
+			return String(left) < String(right)
+		return left_name.to_lower() < right_name.to_lower()
+	)
+	var selected_index := -1
+	for enemy_id in enemy_ids:
+		var definition := EnemyFactory.definition(enemy_id)
+		var display_name := definition.display_name if definition != null else String(enemy_id)
+		var index := _enemy_picker.item_count
+		_enemy_picker.add_item("%s  [%s]" % [display_name, enemy_id])
+		_enemy_picker.set_item_metadata(index, enemy_id)
+		if enemy_id == previous_id:
+			selected_index = index
+	if _enemy_picker.item_count > 0:
+		_enemy_picker.select(selected_index if selected_index >= 0 else 0)
+
+
+func _refresh_authoring_content() -> void:
+	var manifest_was_current := ContentDefinitionManifestServiceScript.check_freshness().is_empty()
+	var manifest_error: Error = ContentDefinitionManifestServiceScript.refresh_manifest()
+	if _manifest_status != null:
+		if manifest_error == OK:
+			_manifest_status.text = "Definition manifest is current." if manifest_was_current else "Definition manifest refreshed."
+		else:
+			_manifest_status.text = "Definition manifest refresh failed (error %d)." % manifest_error
+	SlimeVariantCatalog.invalidate_cache()
+	ItemCatalogDataScript.invalidate_default_cache()
+	if _scene_root != null and _scene_root.has_method("refresh_preview"):
+		_scene_root.call("refresh_preview")
+	_refresh()
+
+
+func _update_manifest_status() -> void:
+	if _manifest_status == null:
+		return
+	var problems: Array[String] = ContentDefinitionManifestServiceScript.check_freshness()
+	if problems.is_empty():
+		_manifest_status.text = "Definition manifest is current (%d resources)." % ContentDefinitionManifestServiceScript.discover_resource_paths().size()
+	else:
+		_manifest_status.text = "Definition manifest needs refresh. Use Refresh after authoring changes."
+
+
+func selected_enemy_id() -> StringName:
+	return _selected_enemy_id()
+
+
+func _selected_enemy_id() -> StringName:
+	if _enemy_picker == null or _enemy_picker.item_count == 0 or _enemy_picker.selected < 0:
+		return &""
+	var value: Variant = _enemy_picker.get_item_metadata(_enemy_picker.selected)
+	return value as StringName if value is StringName else StringName(str(value))
+
+
+func _request_design_preview() -> void:
+	var enemy_id := _selected_enemy_id()
+	if not enemy_id.is_empty():
+		design_preview_requested.emit(enemy_id)
+
+
+func _request_interactive_preview() -> void:
+	var enemy_id := _selected_enemy_id()
+	if not enemy_id.is_empty():
+		interactive_preview_requested.emit(enemy_id, int(_preview_seed.value) if _preview_seed != null else -1)
+
+
+func _validate_enemy_catalog() -> void:
+	var errors := SlimeVariantCatalog.validate()
+	if errors.is_empty():
+		_enemy_validation_status.text = "VALID: %d enemy definitions." % SlimeVariantCatalog.variants().size()
+		return
+	var visible_errors := errors.slice(0, mini(errors.size(), 3))
+	var remaining_count := errors.size() - visible_errors.size()
+	var suffix := " (+%d more)" % remaining_count if remaining_count > 0 else ""
+	_enemy_validation_status.text = "INVALID: %s%s" % ["; ".join(visible_errors), suffix]
+
+
+func set_preview_status(value: String, preview_running: bool) -> void:
+	if _preview_status != null:
+		_preview_status.text = value
+	if _stop_preview_button != null:
+		_stop_preview_button.disabled = not preview_running
+
+
 func _refresh() -> void:
 	if _tree == null:
 		return
+	_populate_enemy_picker()
 	_tree.clear()
 	if _scene_root == null:
 		_selected_path = NodePath("")

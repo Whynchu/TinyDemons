@@ -6,7 +6,7 @@ Updated: 2026-09-28
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.3.15`; the authoring and verification sequence is
+Current release: version `0.3.16`; the authoring and verification sequence is
 now owned by [`authoring-system-plan.md`](authoring-system-plan.md).
 
 The 0.3.0 checkpoint closes the known start-position, controller Debug access,
@@ -305,9 +305,14 @@ standalone definitions, definition-owned encounter metadata, a preview
 workbench, a factory-created runtime pool, and a passing focused room-entry
 acceptance. The current authoring slice adds the editor-neutral placement
 catalog, an authoring dock, and live animated Hub preview bindings. The
-isolated interactive workbench remains the next M1 work. The curated release
-gate remains open on unrelated existing paths. Slices 2–3 extend the same
-contract to items, elements, rooms, and dungeon/map definitions.
+authoring dock now selects registered enemies, opens the design preview, and
+launches a deterministic isolated enemy process. Enemy and item runtime catalogs
+now consume typed entries from kind-specific generated manifests, keeping only
+the selected content kind in each catalog's export dependencies. The dock/session
+contracts, actual exported loading, and editor-side save isolation, cleanup, and
+preview acceptance remain unverified. The curated release gate remains open on
+existing paths. Slices 2–3 extend the same contract to items, elements, rooms,
+and dungeon/map definitions.
 
 ## Out of scope for this cycle
 

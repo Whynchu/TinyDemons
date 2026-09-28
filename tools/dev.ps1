@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
 	[Parameter(Position = 0)]
-	[ValidateSet("verify", "test", "preview", "new", "report", "doctor", "help")]
+	[ValidateSet("verify", "test", "preview", "new", "report", "manifest", "doctor", "help")]
 	[string]$Command = "help",
 	[Parameter(Position = 1)]
 	[string]$Kind = "",
@@ -214,6 +214,8 @@ Tiny Demons authoring commands
   new enemy <id>                  Create a new enemy family (requires a family definition and actor route; not available yet).
   new item <id>                  Create one standalone ItemDefinition resource.
   report                         Print the authored catalog report.
+  manifest refresh               Generate the checked-in content definition references.
+  manifest check                 Fail when the checked-in content manifest is stale.
   doctor                         Check the project and configured Godot executable.
 
 Use -ProjectRoot and -GodotBin when working from another checkout. GODOT_BIN is
@@ -264,6 +266,12 @@ switch ($Command) {
 	"report" {
 		Assert-GodotAvailable
 		Invoke-RepoPowerShell (Join-Path $resolvedRoot "tools/report_catalogs.ps1") @("-ProjectRoot", $resolvedRoot, "-GodotBin", $resolvedGodot)
+	}
+	"manifest" {
+		if ($Kind -notin @("refresh", "check")) { throw "Usage: dev.ps1 manifest refresh|check" }
+		Assert-GodotAvailable
+		$manifestScript = if ($Kind -eq "refresh") { "res://tools/refresh_definition_manifest.gd" } else { "res://tools/check_definition_manifest.gd" }
+		Invoke-HeadlessScript $manifestScript
 	}
 	"doctor" {
 		Assert-GodotAvailable

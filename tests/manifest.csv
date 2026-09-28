@@ -146,3 +146,5 @@
 "floating_popup_lifecycle_smoke","owner","unverified","combat presentation","floating gameplay text holds for four scheduled updates after its scale pop before drifting","pure",""
 "slime_support_component_smoke","owner","verified","slime support","Healer slime definition, family identity, factory composition, and encounter unlock","pure","standalone Godot 4.7.1 pass 2026-09-27; family routing verified"
 "enemy_preview_lifecycle_smoke","owner","unverified","content authoring","editor-safe enemy design preview death effect and transient lifecycle","pure","Headless contract only; editor-visible acceptance remains manual"
+"authoring_dock_preview_smoke","owner","unverified","content authoring","registered enemy selector and design/play/stop request contract","pure","Added for M1; focused Godot execution and live EditorPlugin launch remain pending"
+"preview_session_contract_smoke","owner","unverified","content authoring","versioned isolated preview session payload and stable-ID validation","pure","Added for M1; focused Godot execution and child-process isolation checks are pending"

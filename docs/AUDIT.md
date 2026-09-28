@@ -10,7 +10,7 @@ the first commit on top of it)
 
 Baseline game version: `0.2.24`
 
-Current release: `0.3.15` (composition refactor structurally and editor-wise
+Current release: `0.3.16` (composition refactor structurally and editor-wise
 complete: the strict scorecard and regression floor both pass at 100%, with 2,198
 root accesses and `GameplayState` at 1,717 lines / 286 fields. The debug-menu
 dispatch added in 0.2.96 was extracted into `DebugSessionController` to restore
@@ -539,8 +539,13 @@ balance change is required to preserve behavior after extraction.
    using the runtime palette mapping and default effects tuning. Accept it after
    checking the catalog picker, starter creation, visible frame output,
    save/refresh lifecycle, geometry interaction, death-effect playback, and
-   undo/redo; then add the isolated interactive workbench and close the
-   remaining cache, manifest, and cleanup checks. Use the acceptance bars in
+   undo/redo. The dock now selects enemies, opens that design view, refreshes on
+   saves/reimports, and starts a seeded factory-backed play process with isolated
+   user data. Focused dock/session contracts are registered but unverified; use
+   the connected editor to prove process cleanup and unchanged profile/settings.
+   Enemy and item runtime discovery now uses kind-specific generated manifests,
+   with a static dependency for each content kind; exported loading and
+   add/move/delete lifecycle evidence remain open. Use the acceptance bars in
    `authoring-system-plan.md` rather than the editor composition percentage as
    proof.
 4. **Continue Slice 2 after the M1 workflow is dependable.** Finish the full
@@ -564,19 +569,21 @@ composition root into `DebugSessionController`. The two stale player-combat and
 recovery contract smoke scripts that no longer compiled were repaired and now
 pass standalone (`spin_damage_smoke`, `active_run_recovery_contract_smoke`). The
 test
-manifest validates at 145 rows, 143 runnable paths, two reports, and a 44-path
+manifest validates at 149 rows, 147 runnable paths, two reports, and a 44-path
 default gate. These are focused validation results, not a fresh run of the full
 curated gate.
 
 Content authoring is the active refactor work. The placement dock and Hub design
 preview are landed. The enemy design-preview adapter now edits and saves its
-typed definitions inline, while editor acceptance, the isolated interactive
-workbench, and the remaining authoring lifecycle checks are still open. The
-next sequence is to complete that shared M1 foundation, then continue the item
-and element migration in Slice 2. The curated gate and device-backed
-performance evidence remain separate open verification work. Keep future
-structural work vertical and owner-led; do not reopen a broad composition
-rewrite.
+typed definitions inline. The dock also selects registered enemies, opens
+their design preview, and launches a seeded factory-backed session in a child
+process with separate user data. Dock/session contract checks are registered
+but unverified; editor refresh, process cleanup, profile isolation, and visual
+acceptance remain open. The next sequence is to close those M1 checks, then
+continue the item and element migration in Slice 2. The curated gate and
+device-backed performance evidence remain separate open verification work.
+Keep future structural work vertical and owner-led; do not reopen a broad
+composition rewrite.
 
 ## 17. Architecture cleanup (added 2026-09-27)
 

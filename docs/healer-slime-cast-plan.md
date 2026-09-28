@@ -103,7 +103,7 @@ Related: `docs/combat-and-dungeon-design-principles.md`,
 | Player-block cancel precedent | zeroes `combat.active/timer` | `scripts/slime_actor.gd:315-318` |
 | Charge aura VFX | procedural `Sprite2D` aura | `scripts/effects_spawner.gd:304-346,349-386,389-426` |
 | Rising + noise particles | fire sparks + `FastNoiseLite` | `scripts/effects_spawner.gd:510-535,994-1043` |
-| A "+" texture | `gearplus3x5.png` preloaded | `scripts/effects_spawner.gd:5` |
+| A "+" texture | Dedicated 9x9 high-contrast green pixel glyph generated and cached for healing bursts; the 3x5 `gearplus3x5.png` remains for pixel text | `scripts/effects_spawner.gd:5,446-462` |
 | World-space meter | `region_rect` fill + hide/fade | `scripts/player_guard_component.gd:43-66,200-228` |
 | Bar attached to an enemy | overhead bar parented to enemy | `scripts/hud_controller.gd:1324-1376,508-588` |
 | Pop-then-vanish | damage-number pop/hold/fade | `scripts/effects_spawner.gd:923-962,1046-1104` |
@@ -195,7 +195,8 @@ enemy-side `cancel_cast(reason)` (today only the player-block path cancels).
 - `effects_spawner.spawn_heal_burst_from_root(pos, ...)` — green "+" sprites rising
   with per-particle `scale` and noise-varied speed (a noise member like
   `scripts/effects_spawner.gd:37,519-520`; cf. `scripts/screen_state_controller.gd:958-960`).
-  Reuse `gearplus3x5.png` or the new asset.
+  Healing uses its dedicated 9x9 high-contrast glyph; keep the 3x5 text glyph
+  unchanged.
 
 **Phase 5 — movement AI (behind allies, gap from player)**
 - In `context_steering_direction` (`scripts/slime_brain.gd:183-252`), add a
@@ -226,8 +227,8 @@ enemy-side `cancel_cast(reason)` (today only the player-block path cancels).
 - Heal animation: `Artwork/SlimeGreen_Spell_Cast.png` → one-shot
   `support_spell_frames` after healing resolves.
 - Cast bar: reuse `HpOverhead.png` + a bar fill texture, or a new meter texture.
-- Heal "+": reuse `gearplus3x5.png` or the new asset; per-particle scale gives
-  size variation.
+- Heal "+": use the dedicated 9x9 high-contrast glyph with per-particle scale
+  variation; preserve `gearplus3x5.png` for pixel-text rendering.
 - Cast/heal/bias values live in `SlimeTuning` (`.tres`), **not** code constants —
   avoid the `dungeon_generation_policy.tres` trap where authored values are
   validated but ignored.

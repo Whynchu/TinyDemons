@@ -64,7 +64,17 @@ func _add_runtime_node(root: GameplayState, script: Script, node_name: StringNam
 	return node
 
 
-func initialize(root: GameplayState) -> void:
+func initialize(root: GameplayState, preview_session: RefCounted = null) -> void:
+	if preview_session != null:
+		var preview_errors := _preview_session_errors(preview_session)
+		if not preview_errors.is_empty():
+			for error in preview_errors:
+				push_error("PREVIEW_SESSION_REJECTED: %s" % error)
+			root.get_tree().quit(1)
+			return
+		root.debug_enemy_test_id = preview_session.get("content_id") as StringName
+		root.debug_start_in_boss_room = true
+		root.rng.seed = int(preview_session.get("seed"))
 	SkeletonActor.warm_authored_frames()
 	var has_active_profile := ProfileSaveService.has_profile_save()
 	var has_profile := ProfileSaveService.has_any_profile_save()
@@ -204,12 +214,15 @@ func initialize(root: GameplayState) -> void:
 		root.set("boot_active", false)
 		return
 	var rng := root.rng
-	rng.randomize()
+	if preview_session == null:
+		rng.randomize()
+	else:
+		rng.seed = int(preview_session.get("seed"))
 	var run_state := RunState.new()
 	root.run_state = run_state
 	var dungeon_graph := root.dungeon_graph
 	dungeon_graph.configure_progression(profile.completed_runs)
-	var dungeon_seed := rng.randi()
+	var dungeon_seed := int(preview_session.get("seed")) if preview_session != null else rng.randi()
 	root.current_dungeon_seed = dungeon_seed
 	var initial_room_id: StringName = root.dungeon_map_controller.begin_run(dungeon_graph, dungeon_seed, profile.completed_runs, profile.starter_flame, profile.persistent_flame() if profile.has_bound_element else &"", profile.puzzle_attempt_rotation_quarter_turns)
 	root.dungeon_minimap_controller.call("configure", root.dungeon_map_controller)
@@ -392,6 +405,23 @@ func initialize(root: GameplayState) -> void:
 	root.gameplay_frame_controller.invalidate_contexts()
 	_phase(&"finalize")
 	root.set("boot_active", false)
+
+
+func _preview_session_errors(session: RefCounted) -> Array[String]:
+	var errors: Array[String] = session.call("validation_errors")
+	if session.get("content_kind") != &"enemy":
+		errors.append("This preview runner currently supports enemy content only.")
+	if session.get("requested_mode") != &"enemy_boss_encounter":
+		errors.append("Enemy preview mode must be enemy_boss_encounter.")
+	if session.get("arrival_socket_id") != &"auto":
+		errors.append("Enemy preview mode currently requires automatic boss-room entry.")
+	var loadout: Dictionary = session.get("loadout") as Dictionary
+	if String(loadout.get("preset", "")) != "starter":
+		errors.append("Enemy preview mode requires the starter loadout preset.")
+	var content_id := session.get("content_id") as StringName
+	if not EnemyFactory.is_variant(content_id):
+		errors.append("Unknown enemy content ID '%s'." % content_id)
+	return errors
 
 
 func _place_debug_player_at_boss_entry(root: GameplayState, player: Sprite2D) -> void:

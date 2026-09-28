@@ -5,24 +5,34 @@ extends SceneTree
 ## definition is malformed, so CI preflight catches broken content before
 ## runtime. Run via tools/validate_definitions.ps1.
 
-const DEFINITION_ROOT := "res://resources/definitions"
 const ENEMY_FACTORY_SCRIPT = preload("res://scripts/enemy_factory.gd")
+const CONTENT_MANIFEST_SERVICE := preload("res://scripts/content_definition_manifest_service.gd")
 
-var _definition_paths: Array[String] = []
+var _definition_resources: Array[Resource] = []
+var _manifest_problems: Array[String] = []
 
 
 func _initialize() -> void:
-	_definition_paths = _discover_definition_paths(DEFINITION_ROOT)
+	_manifest_problems = CONTENT_MANIFEST_SERVICE.check_freshness()
+	var discovered_paths: PackedStringArray = CONTENT_MANIFEST_SERVICE.discover_resource_paths()
+	_definition_resources = CONTENT_MANIFEST_SERVICE.load_entries()
+	if _definition_resources.size() != discovered_paths.size():
+		_manifest_problems.append("generated manifest references %d of %d discovered resources" % [
+			_definition_resources.size(), discovered_paths.size(),
+		])
 	call_deferred("_run")
 
 
 func _run() -> void:
-	var failures: Array[String] = []
+	var failures: Array[String] = _manifest_problems.duplicate()
 	var loaded := 0
-	for path in _definition_paths:
-		var resource := load(path)
+	for resource in _definition_resources:
 		if resource == null:
-			failures.append("DEFINITION_LOAD_FAILED: %s" % path)
+			failures.append("DEFINITION_LOAD_FAILED: generated manifest contains a null resource")
+			continue
+		var path := resource.resource_path
+		if path.is_empty():
+			failures.append("DEFINITION_PATH_MISSING: manifest entry has no source path")
 			continue
 		loaded += 1
 		if resource.has_method("validate"):
@@ -33,7 +43,7 @@ func _run() -> void:
 			failures.append_array(_structural_checks(path, resource, _kind_for_path(path)))
 	if ENEMY_FACTORY_SCRIPT.weighted_variants_for_type(&"skeleton").is_empty():
 		failures.append("enemy catalog has no registered skeleton variants with encounter weight")
-	print("DEFINITION_VALIDATOR loaded=%d/%d" % [loaded, _definition_paths.size()])
+	print("DEFINITION_VALIDATOR loaded=%d/%d" % [loaded, CONTENT_MANIFEST_SERVICE.discover_resource_paths().size()])
 	if failures.is_empty():
 		print("DEFINITION_VALIDATOR_OK")
 		quit(0)
@@ -41,26 +51,6 @@ func _run() -> void:
 	for failure in failures:
 		push_error("FAILED: %s" % failure)
 	quit(1)
-
-
-func _discover_definition_paths(directory_path: String) -> Array[String]:
-	var paths: Array[String] = []
-	var directory := DirAccess.open(directory_path)
-	if directory == null:
-		return paths
-	directory.list_dir_begin()
-	var entry := directory.get_next()
-	while not entry.is_empty():
-		if entry != "." and entry != "..":
-			var entry_path := directory_path.path_join(entry)
-			if directory.current_is_dir():
-				paths.append_array(_discover_definition_paths(entry_path))
-			elif entry.get_extension().to_lower() == "tres":
-				paths.append(entry_path)
-		entry = directory.get_next()
-	directory.list_dir_end()
-	paths.sort()
-	return paths
 
 
 func _kind_for_path(path: String) -> String:

@@ -106,3 +106,159 @@ script checks and `git diff --check` pass; no test suite or Godot process ran.
 Prepare a 0.3.11 release containing the healer adjustment, update the in-game
 and README version, and push to `main` to trigger GitHub Pages deployment for
 mobile browser playtesting. Keep `.mcp.json` and the timed-floor plan out.
+
+## 2026-09-28T16:32Z — codex — done
+Released version 0.3.11 in commit `72c47db` and pushed `main` to origin;
+GitHub Actions is configured to build and deploy Pages for the mobile browser
+playtest. The staged commit excluded `.mcp.json` and the timed-floor plan.
+
+## 2026-09-28T16:32Z — codex — claim
+Continue M1 offline: inspect and finish the enemy preview authoring lifecycle
+and isolated interactive PreviewSession boundary. Do not launch Godot after
+the recorded standalone crash.
+
+## 2026-09-28T16:49Z — codex — claim
+Add registered enemy design/play/stop dock actions, deterministic isolated
+sessions, refresh hooks, and focused contract coverage; reconcile live inventory
+counts in the authoring and verification docs. Godot execution remains deferred.
+
+## 2026-09-28T16:55Z — codex — blocker
+The M1 source slice and offline diagnostics are in place, but dock/session smokes
+and live profile isolation remain unverified because the repo records a Godot
+startup crash and forbids another process launch in this session.
+
+## 2026-09-28T17:05Z — codex — claim
+Source audit for healer arc anchors/boss jump, cast-bar position, Fusion inventory
+scans, and Shop BUY/SELL gear comparisons. Document findings in KNOWN_ISSUES
+before implementation; preserve unfinished M1 and user-owned working changes.
+
+## 2026-09-28T17:11Z — codex — done
+Recorded the healer, Fusion, and Shop findings before implementation. Top-center
+sprite-following cast anchors, the extra bar pixel, one-pass Fusion eligibility
+aggregation, and equipped-versus-highlighted Shop stat columns are implemented.
+Offline diagnostics and diff hygiene pass; in-game and performance evidence remain open.
+
+## 2026-09-28T17:52Z — codex — claim
+Resume M1 with a source audit of the enemy registry validation path. Keep the
+0.3.12 release and unrelated user changes untouched; do not launch Godot after
+the recorded crash.
+
+## 2026-09-28T17:54Z — codex — done
+Fixed the registry validator's duplicate-ID blind spot: validation now sees each
+distinct embedded or standalone source and reports the conflicting stable ID
+with both paths, while runtime lookup keeps its existing order. Updated the
+authoring issue register and workflow docs. Offline script diagnostics and
+diff hygiene pass; runtime validator acceptance remains open.
+
+## 2026-09-28T17:57Z — codex — claim
+Expose the shared enemy registry validator in the authoring dock and make the
+existing placement-only validation action explicit in its label.
+
+## 2026-09-28T17:58Z — codex — done
+Added `Validate Enemies` to the dock, backed by the same catalog validator used
+by definition preflight, and renamed the placement action `Validate Scene`.
+Offline script diagnostics pass; editor interaction remains unverified.
+
+## 2026-09-28T18:02Z — codex — claim
+Make healing floating-number text consistently green and prepare the 0.3.13
+mobile web playtest release; keep the uncommitted M1 work isolated.
+
+## 2026-09-28T18:04Z — codex — done
+All healing floating numbers now use the established pale-green feedback color.
+The 0.3.13 release metadata is prepared; the combat script's offline diagnostic
+and `git diff --check` pass. Runtime behavior was not launched in this session.
+
+## 2026-09-28T18:07Z — codex — claim
+Adjust the healer cast arc so both endpoints attach to the visible silhouette
+outline rather than the sprite rectangle; release as 0.3.14 for mobile web.
+
+## 2026-09-28T18:10Z — codex — done
+Healer arc endpoints now select actual outline pixels nearest to the sprite's
+top-center on both caster and target. Released 0.3.14 in `de41e15`; offline
+script diagnostics and diff hygiene pass. No runtime was launched.
+
+## 2026-09-28T18:11Z — codex — claim
+Continue M1 with deterministic manifest generation for current and future
+content roots, shared by editor refresh and CLI, and stale-manifest validation.
+## 2026-09-28T00:00Z — codex — claim
+Interrupting M1 for the requested 0.3.15 healer cast-anchor refinement and push. M1 manifest edits remain local and unstaged.
+
+## 2026-09-28T18:25Z — codex — done
+Healer arc endpoints now use the top-center pixel of each generated silhouette
+contour; the target contact shares the exact outline pixels used by its ring.
+Released version 0.3.15 in `dd19520` and pushed `main` to origin. Offline
+GDScript diagnostics and `git diff --check` pass. No Godot runtime or tests ran.
+
+## 2026-09-28T18:42Z — codex — claim
+Temporarily interrupt local M1 to align Fusion's `EQUIP`/`ITEM` comparison and
+header positions, enhance healer plus-particle visibility, and document the
+loot-progression request pending the player's progression preference. No Godot
+runtime or suite execution is allowed in this session.
+
+## 2026-09-28T18:47Z — codex — done
+Fusion now uses the Shop equipped-piece/item stat comparison with headers above
+its rows; healing bursts use a dedicated 9x9 high-contrast pixel plus. The loot
+progression request is source-audited and documented but awaits the player's
+choice of completed-run progression, current-run depth, or both. Offline script
+diagnostics and `git diff --check` pass; no tests or Godot runtime ran.
+
+## 2026-09-28T18:56Z — codex — claim
+The player selected strict completed-run progression for gear rewards, excluding
+current-run depth. Updating reward-definition curves and all run chest/clear
+rarity call paths, plus the tuning and issue records. No Godot process or tests.
+
+## 2026-09-28T19:09Z — codex — done
+Implemented completed-run-only gear progression across standard/risk chest
+chance, chest item count, clear reward chance, and rarity. The clear reward
+includes the just-completed run and leaves room for all 20 progression steps
+even at maximum score; vaults remain guaranteed one item. Updated the tuning
+index and issue record. Offline diagnostics pass for all three changed scripts,
+the reward resource explicitly assigns all 37 exported fields, and diff hygiene
+passes. No tests or Godot runtime ran; M1 work resumes.
+
+## 2026-09-28T19:11Z — codex — claim
+Replace enemy and item catalog directory scans with typed resources from the
+generated content manifest so exported builds retain authored definitions.
+Keep manifest freshness and exported-load acceptance open until the connected
+editor/export can verify them. No Godot process or tests.
+
+## 2026-09-28T19:16Z — codex — done
+Enemy and item catalog data now source authored resources from the generated
+manifest; typed filtering covers both supported roots, preserves explicit item
+references, and keeps duplicate validation across roots. A static preload pins
+the manifest dependency into exported builds, while editor loads replace the
+cached copy after refresh. Offline diagnostics pass for the two catalog data
+scripts and manifest service; diff hygiene passes. Export and lifecycle evidence
+remain open; no tests or Godot runtime ran.
+
+## 2026-09-28T19:22Z — codex — claim
+Split runtime export references into enemy- and item-specific manifests so a
+catalog does not load every authored resource when resolving its own kind.
+Wire dock refresh to invalidate both catalog data caches. No Godot process or
+tests.
+
+## 2026-09-28T19:23Z — codex — done
+Generated and checked in kind-specific dependency manifests alongside the
+all-resource preflight index. Enemy and item catalogs preload only their typed
+manifest; editor refresh replaces that manifest and invalidates the enemy and
+item resource caches. Static source comparison confirms 28 total resources, 10
+standalone enemies, and 2 items are represented. Runtime/export and lifecycle
+acceptance remain open; no tests or Godot runtime ran.
+
+## 2026-09-28T19:24Z — codex — claim
+Refresh M1 registries and previews after editor filesystem add/move/delete
+events as well as resource save/reimport, coalescing repeated editor signals.
+Keep rendered and exported acceptance open; no Godot process or tests.
+
+## 2026-09-28T19:26Z — codex — done
+The authoring plugin now coalesces resource-save, reimport, and
+`EditorFileSystem.filesystem_changed` events into one deferred manifest/cache
+refresh. Offline diagnostics pass for the plugin, dock, both catalog data
+scripts, and manifest service; `git diff --check` passes. Filesystem lifecycle
+behavior remains unverified in Godot; no tests or runtime ran.
+
+## 2026-09-28T19:34Z — codex — handoff
+The 0.3.16 release packages the current M1 source progress with the Fusion
+comparison, healing visibility, and completed-run gear progression updates.
+Editor/export acceptance remains open. Preserve `.mcp.json` and
+`docs/timed-floor-hazard-plan.md`; they are outside this release.

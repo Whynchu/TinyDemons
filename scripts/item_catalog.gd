@@ -891,7 +891,7 @@ func sell_soul_value(item: ItemInstance) -> int:
 	return floori(float(invested) * 0.5)
 
 
-func roll_run_rarity(roll: float, rank: int, performance_bonus: float = 0.0, rarity_multipliers: Array = []) -> StringName:
+func roll_run_rarity(roll: float, rank: int, performance_bonus: float = 0.0, rarity_adjustments: Array = []) -> StringName:
 	var band_index := mini(maxi(floori(float(maxi(rank, 1) - 1) / 10.0), 0), 5)
 	var band_progress := 0.0 if band_index == 0 else float((maxi(rank, 1) - 1) % 10) / 10.0
 	var rates: Array = [[0.12, 0.0075, 0.001, 0.00005], [0.12, 0.0125, 0.0015, 0.0001], [0.12, 0.0175, 0.003, 0.0002], [0.12, 0.025, 0.005, 0.0005], [0.12, 0.0325, 0.008, 0.001], [0.12, 0.04, 0.012, 0.002]]
@@ -901,12 +901,19 @@ func roll_run_rarity(roll: float, rank: int, performance_bonus: float = 0.0, rar
 	var epic_chance := lerpf(float(current[1]), float(next[1]), band_progress)
 	var legendary_chance := lerpf(float(current[2]), float(next[2]), band_progress)
 	var mythic_chance := lerpf(float(current[3]), float(next[3]), band_progress)
-	if rarity_multipliers.size() >= 4:
-		rare_chance *= clampf(float(rarity_multipliers[0]), 0.0, 1.0)
-		epic_chance *= clampf(float(rarity_multipliers[1]), 0.0, 1.0)
-		legendary_chance *= clampf(float(rarity_multipliers[2]), 0.0, 1.0)
-		mythic_chance *= clampf(float(rarity_multipliers[3]), 0.0, 1.0)
-	# Quality is intentionally bounded to the current rank band.
+	# Slots 0-3 are the existing per-rarity multipliers. Slots 4-7 carry
+	# completed-run additions so source penalties also scale that progression.
+	if rarity_adjustments.size() >= 8:
+		rare_chance += maxf(float(rarity_adjustments[4]), 0.0)
+		epic_chance += maxf(float(rarity_adjustments[5]), 0.0)
+		legendary_chance += maxf(float(rarity_adjustments[6]), 0.0)
+		mythic_chance += maxf(float(rarity_adjustments[7]), 0.0)
+	if rarity_adjustments.size() >= 4:
+		rare_chance *= clampf(float(rarity_adjustments[0]), 0.0, 1.0)
+		epic_chance *= clampf(float(rarity_adjustments[1]), 0.0, 1.0)
+		legendary_chance *= clampf(float(rarity_adjustments[2]), 0.0, 1.0)
+		mythic_chance *= clampf(float(rarity_adjustments[3]), 0.0, 1.0)
+	# The run-quality adjustment stays bounded independently of completed-run rarity progress.
 	var quality_shift := clampf(performance_bonus * 0.001, -0.002, 0.002)
 	epic_chance = maxf(0.0, epic_chance + quality_shift)
 	legendary_chance = maxf(0.0, legendary_chance + quality_shift * 0.35)

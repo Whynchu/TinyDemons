@@ -4,7 +4,8 @@ class_name ItemCatalogData
 
 ## Editor-inspectable item definition data. ItemCatalog loads this resource so
 ## the authored gear definitions live in .tres data instead of code dictionaries,
-## while the instance API stays unchanged.
+## while the instance API stays unchanged. The generated manifest supplies the
+## standalone resources in both editor and exported runtime builds.
 
 @export var live_base_ids: Array[StringName] = []
 @export var live_base_definitions: Dictionary = {}
@@ -12,11 +13,14 @@ class_name ItemCatalogData
 @export var definitions: Dictionary = {}
 @export var definition_metadata: Dictionary = {}
 @export var transmutations: Dictionary = {}
-## Explicit resource references keep special-acquisition definitions reachable
-## in exported builds; directory discovery remains useful for editor authoring.
+## Explicit references keep special-acquisition definitions reachable even when
+## they are not part of the generated authored-definition set.
 @export var authored_definitions: Array[Resource] = []
 
 const AUTHORED_ITEM_ROOT := "res://resources/definitions/items"
+const DEFAULT_DATA_PATH := "res://resources/definitions/item_catalog.tres"
+const CONTENT_MANIFEST_SERVICE_SCRIPT := preload("res://scripts/content_definition_manifest_service.gd")
+const ITEM_MANIFEST_EXPORT_DEPENDENCY := preload("res://resources/generated/item_definition_manifest.tres")
 var _authored_definition_resources_cache: Array[Resource] = []
 var _authored_definition_resources_loaded := false
 
@@ -25,17 +29,27 @@ func authored_definition_resources() -> Array[Resource]:
 	if _authored_definition_resources_loaded:
 		return _authored_definition_resources_cache
 	var resources: Array[Resource] = authored_definitions.duplicate()
-	var referenced_paths: Dictionary = {}
+	var seen_resource_ids: Dictionary = {}
+	var seen_resource_paths: Dictionary = {}
 	for resource: Resource in resources:
-		if resource != null and not resource.resource_path.is_empty():
-			referenced_paths[resource.resource_path] = true
-	var paths := _discover_authored_paths(AUTHORED_ITEM_ROOT)
-	for path: String in paths:
-		if referenced_paths.has(path):
-			continue
-		var resource := load(path) as Resource
 		if resource != null:
-			resources.append(resource)
+			seen_resource_ids[resource.get_instance_id()] = true
+			if not resource.resource_path.is_empty():
+				seen_resource_paths[resource.resource_path] = true
+	for resource: Resource in CONTENT_MANIFEST_SERVICE_SCRIPT.load_kind_entries(&"item", ITEM_MANIFEST_EXPORT_DEPENDENCY):
+		if resource == null:
+			continue
+		var is_legacy_item_root_resource := resource.resource_path.begins_with(AUTHORED_ITEM_ROOT + "/")
+		if resource as ItemDefinition == null and not is_legacy_item_root_resource:
+			continue
+		var instance_id := resource.get_instance_id()
+		var source_path := resource.resource_path
+		if seen_resource_ids.has(instance_id) or (not source_path.is_empty() and seen_resource_paths.has(source_path)):
+			continue
+		seen_resource_ids[instance_id] = true
+		if not source_path.is_empty():
+			seen_resource_paths[source_path] = true
+		resources.append(resource)
 	_authored_definition_resources_cache = resources
 	_authored_definition_resources_loaded = true
 	return _authored_definition_resources_cache
@@ -44,6 +58,12 @@ func authored_definition_resources() -> Array[Resource]:
 func invalidate_authored_definition_cache() -> void:
 	_authored_definition_resources_cache.clear()
 	_authored_definition_resources_loaded = false
+
+
+static func invalidate_default_cache() -> void:
+	var default_data := load(DEFAULT_DATA_PATH) as ItemCatalogData
+	if default_data != null:
+		default_data.invalidate_authored_definition_cache()
 
 
 func authored_definition_resource(definition_id: StringName) -> ItemDefinition:
@@ -124,23 +144,3 @@ func validate() -> Array[String]:
 		for problem: Variant in resource_problems:
 			problems.append("%s: %s" % [resource.resource_path, str(problem)])
 	return problems
-
-
-func _discover_authored_paths(directory_path: String) -> Array[String]:
-	var paths: Array[String] = []
-	var directory := DirAccess.open(directory_path)
-	if directory == null:
-		return paths
-	directory.list_dir_begin()
-	var entry := directory.get_next()
-	while not entry.is_empty():
-		if entry != "." and entry != "..":
-			var entry_path := directory_path.path_join(entry)
-			if directory.current_is_dir():
-				paths.append_array(_discover_authored_paths(entry_path))
-			elif entry.get_extension().to_lower() == "tres":
-				paths.append(entry_path)
-		entry = directory.get_next()
-	directory.list_dir_end()
-	paths.sort()
-	return paths

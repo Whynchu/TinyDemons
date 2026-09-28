@@ -1,12 +1,17 @@
 # Tiny Demons Content Authoring Guide
 
-Status: working guide; enemy definitions and encounter eligibility now use the
+Status: working guide; enemy definitions and encounter eligibility use the
 typed catalog/factory path, including standalone one-file definitions and the
-enemy preview workbench. Runtime discovery uses `ResourceLoader.list_directory`
-so standalone definitions remain discoverable in exported PCKs. The authored
-Hub world now has a standalone animated design preview; other content surfaces
-are still only partially wired. Read the trap table below before editing any
-`.tres`.
+enemy preview workbench. Enemy and item runtime catalogs now discover standalone
+definitions through kind-specific generated resource manifests. The authored
+Hub world has a standalone animated design preview. The same service generates
+the checked-in manifests from the dock and CLI, and definition preflight rejects
+stale manifests.
+Each kind manifest is a static export dependency, and editor catalog loads
+replace the cached kind manifest after refresh. The all-resource manifest feeds
+preflight and freshness checks. Actual exported-PCK loading and add/move/delete
+lifecycle acceptance remain open M1 evidence. Read the trap table below before
+editing any `.tres`.
 
 Updated: 2026-09-28
 
@@ -39,6 +44,13 @@ traps:
 
 The definition validator is part of the release gate and web CI. The catalog
 report exits nonzero when a required surface cannot load.
+
+`tools/dev.ps1 manifest refresh` writes the all-resource index and the typed
+resource-reference files after content is created, moved, or deleted. The
+authoring dock's `Refresh`, resource-save/reimport, and editor filesystem-change
+hooks call the same generator and invalidate the current enemy/item caches.
+`tools/dev.ps1 manifest check` and the definition preflight compare the checked-in
+output with the supported source roots without repairing it.
 
 ## Shared rules
 
@@ -270,7 +282,9 @@ Workflow (current, typed enemy-definition path):
 4. Do not add a `VARIANTS` entry, a `RoomController` constant, a scene-authored
    roster slot, or a count-table expectation. The registry discovers the typed
    entry with `ResourceLoader.list_directory`, `EnemyFactory` materializes it,
-   and the runtime pool configures the selected slot from the definition.
+   and the runtime pool configures the selected slot from the definition. The
+   shared catalog validator checks distinct embedded and standalone sources for
+   duplicate stable IDs and reports both paths before export.
 5. If the variant introduces a genuinely new palette or behavior, extend that
    narrow owner and add a focused golden assertion. Reusing an existing
    `visual_source` is data-only; invalid palette IDs fail enemy-definition
@@ -419,8 +433,22 @@ presentation-only; the preview uses the enemy factory and shared slime frame
 builders but does not run AI or combat. The sprite is positioned inside the
 project's 240-by-160 preview canvas. Boss jump/slam sheets require `Boss actor`
 preview size. Death currently has no authored slime frame sequence and remains
-an effect-preview gap. Automatic asset reimport refresh and the isolated
-interactive workbench remain open M1 work.
+an effect-preview gap. Resource-save/reimport cache refresh is wired to the
+authoring dock but still needs editor acceptance. The isolated interactive
+workbench also remains open M1 acceptance work.
+
+The Tiny Demons Authoring dock now lists registered enemy definitions. `Design`
+opens the pixel-art enemy workbench on that stable ID. `Play` launches a
+separate desktop game process with a versioned session payload and a unique
+temporary `--user-data-dir`; it uses the real enemy factory encounter path and
+leaves the editor's save/settings directory isolated. `Stop` terminates only
+that child process. `Validate Enemies` runs the same typed catalog validator as
+the definition preflight and reports source paths for duplicate IDs;
+`Validate Scene` checks placement IDs and layers in the open scene. The session
+contract test is registered but still needs a focused Godot run and editor-side
+proof that process cleanup leaves the normal profile and settings unchanged.
+The payload has content-kind and arrival-socket fields so the planned room
+workbench can share this lifecycle when that adapter lands.
 
 Do not implement a new enemy only as a recolor if its combat identity differs.
 Do not alter global tuning to solve a room-specific placement problem.

@@ -235,9 +235,11 @@ These affect dungeon generation and room behavior and are `const` in
 | NPC interact distance | 24.0 | `gameplay_state.gd:NPC_INTERACT_DISTANCE` |
 | Chest gold base | 100 | `gameplay_state.gd:CHEST_REWARD_GOLD` |
 | Chest gold roll | `0.75x-1.30x` base before rank/grade multiplier | `run_flow_controller.gd:chest_gold_reward` |
-| Chest item drop chance | Standard rooms retain the base policy; dangerous shortcut rooms receive a modest bonus; elemental vault chests guarantee one item | `run_flow_controller.gd:chest_item_drop_chance`, `run_flow_controller.gd:claim_chest_item_reward` |
+| Chest item drop chance | Standard chance uses 0.34 base plus difficulty-rank, grade, exploration, and +0.015 per completed run (up to +0.30 at 20); final cap 0.88. Risk adds 0.12 (cap 0.95); vaults guarantee one item | `reward_definition.gd:item_drop_chance`, `run_flow_controller.gd:chest_item_drop_chance` |
+| Run-clear gear reward | `clamp(0.30 + score*0.0065 + 0.0025*min(completed_runs_after_clear,20), 0.30, 1.0)`; at most one item. The just-completed run counts, adding 0.25 percentage points per clear up to +5 points after 20 runs—even at maximum score | `reward_definition.gd:clear_item_drop_chance`, `run_flow_controller.gd:complete_run` |
+| Completed-run rarity bonus | +0.005 total rare-or-better probability per completed run, capped at +0.10 after 20; split across Rare/Epic/Legendary/Mythic at 60/30/8/2 | `reward_definition.gd:completed_run_rarity_bonus`, `item_catalog.gd:roll_run_rarity` |
 | Regular enemy-room treasure | R1+ run ranks; 0.50 deterministic chance per combat room; 0.50x Treasure Room gold; rarity multipliers Rare/Epic/Legendary/Mythic = 0.50/0.40/0.25/0.20 relative to dedicated Treasure Rooms | `room_controller.gd:REGULAR_ROOM_TREASURE_CHANCE`, `run_flow_controller.gd:chest_gold_reward`, `run_flow_controller.gd:claim_chest_item_reward` |
-| Chest second gear drop | 1 additional item, base 0.35 chance | `run_flow_controller.gd:chest_item_drop_count` |
+| Additional chest gear drops | Per completed run, add +0.015 second-item, +0.005 third-item, and +0.002 fourth-item chance thresholds, capped after 20 runs and by each existing threshold cap. Rank/grade terms remain; vaults stay at one item | `reward_definition.gd:drop_count_for`, `run_flow_controller.gd:chest_item_drop_count` |
 | R6+ route risk | Risk shortcuts use a stronger local encounter tier and improved reward tier; vault branches use elite encounters and enhanced guaranteed gear | `room_controller.gd`, `run_flow_controller.gd`, `gameplay.gd` |
 | Collision sizes | 9x4 actor, 3.6 radius | `gameplay_state.gd` |
 | Vertical movement scale | 0.5 | `gameplay_state.gd:VERTICAL_MOVEMENT_SCALE` |
@@ -260,16 +262,14 @@ These affect dungeon generation and room behavior and are `const` in
 
 ## Magic numbers still hardcoded (known gaps)
 
-These are real balance/economy knobs embedded in `gameplay.gd` and not yet
-exposed or indexed. Candidates to export into the tuning resources:
+These are live balance/economy knobs that remain literal in gameplay owners.
+The RewardDefinition-backed loot knobs are listed in the policy table above.
 
 | Knob | Value | Location |
 | --- | ---: | --- |
-| Loot grade bonuses (S/A/B/C/F) | 3 / 2 / 1 / 0.5 / -0.5 | `gameplay.gd:_loot_grade_bonus` |
-| Chest drop sub-terms | 0.025 / 0.20 / 0.035 / 0.025 | `gameplay.gd:177-178` |
-| Chest gold roll range | 0.55 - 1.15, mult 0.06/0.04, clamp [0.80, 1.90] | `gameplay.gd:183-185` |
-| Run-reward rarity odds | 0.0005 / 0.003 / 0.015 / 0.120 + caps | `gameplay.gd:600-603` |
-| Run-clear reward | `45 + score*3 + variety*8`; drop `0.30 + score*0.0065` clamp [0.30,0.95] | `gameplay.gd:618-622` |
+| Run-rank rarity bands | Six rank bands; exact base probabilities live in the rarity roller | `item_catalog.gd:894-919` |
+| Chest gold roll and scaling | 0.75–1.30x roll; rank/grade multipliers 0.06/0.04, clamped [0.80, 1.90] | `run_flow_controller.gd:chest_gold_reward` |
+| Run-clear gold reward | `45 + score*3` | `run_flow_controller.gd:complete_run` |
  | XP formula | `2 + 2*lvl^0.85`, x1.15/x0.72, clamp [0.30, 2], global x2 | `combat_runtime_controller.gd:xp_reward_for_slime` |
 | Gear sale | 25% of `ItemCatalog.price()` plus 75% of recorded fusion steps as Souls; buy/sell rarity value uses the same rarity ladder | `item_catalog.gd`, `player_profile.gd` |
 

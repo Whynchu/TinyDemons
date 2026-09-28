@@ -38,14 +38,15 @@ func chest_item_drop_chance_for_values(profile: PlayerProfile, run: RunState, ti
 	var exploration_bonus: float = minf(float(run.chests_opened) * _reward_definition().exploration_bonus_per_chest, _reward_definition().exploration_bonus_cap) if run != null else 0.0
 	var run_rank := run_rank_for_profile(profile)
 	var grade := profile.last_run_grade if profile != null else "D"
+	var completed_runs := profile.completed_runs if profile != null else 0
 	var definition := _reward_definition()
 	if tier == DungeonGraph.REWARD_VAULT:
 		return 1.0
 	if tier == DungeonGraph.REWARD_RISK:
 		# The dangerous route's material reward is a modest improvement over an
 		# ordinary combat chest; the elite vault remains the guaranteed premium.
-		return definition.risk_item_drop_chance(exploration_bonus, run_rank, grade)
-	return definition.item_drop_chance(exploration_bonus, run_rank, grade)
+		return definition.risk_item_drop_chance(exploration_bonus, run_rank, grade, completed_runs)
+	return definition.item_drop_chance(exploration_bonus, run_rank, grade, completed_runs)
 
 
 func chest_item_drop_count(root: Object, roll: float) -> int:
@@ -58,12 +59,25 @@ func chest_item_drop_count_for_values(profile: PlayerProfile, tier: StringName, 
 		return 1
 	var run_rank := run_rank_for_profile(profile)
 	var grade := profile.last_run_grade if profile != null else "D"
-	return _reward_definition().drop_count_for(roll, run_rank, grade)
+	var completed_runs := profile.completed_runs if profile != null else 0
+	return _reward_definition().drop_count_for(roll, run_rank, grade, completed_runs)
 
 
-func roll_run_loot_rarity_for_values(profile: PlayerProfile, roll: float, score_quality: float = -1.0, rarity_multipliers: Array = []) -> StringName:
+func _rarity_adjustments_for_completed_runs(base_multipliers: Array, completed_runs: int) -> Array:
+	var adjustments: Array = [1.0, 1.0, 1.0, 1.0]
+	for index in mini(base_multipliers.size(), 4):
+		adjustments[index] = base_multipliers[index]
+	adjustments.append_array(_reward_definition().completed_run_rarity_bonus(completed_runs))
+	return adjustments
+
+
+func roll_run_loot_rarity_for_values(profile: PlayerProfile, roll: float, score_quality: float = -1.0, rarity_multipliers: Array = [], completed_runs_override: int = -1) -> StringName:
 	var performance_bonus: float = score_quality * 3.0 if score_quality >= 0.0 else loot_grade_bonus_for_profile(profile)
-	return ItemCatalog.new().roll_run_rarity(roll, run_rank_for_profile(profile), performance_bonus, rarity_multipliers)
+	var completed_runs := profile.completed_runs if profile != null else 0
+	if completed_runs_override >= 0:
+		completed_runs = completed_runs_override
+	var rarity_adjustments := _rarity_adjustments_for_completed_runs(rarity_multipliers, completed_runs)
+	return ItemCatalog.new().roll_run_rarity(roll, run_rank_for_profile(profile), performance_bonus, rarity_adjustments)
 
 
 func chest_gold_reward(root: Object, base_gold: int) -> int:
@@ -505,12 +519,19 @@ func record_run_action_input(root: Object, action: StringName, accepted: bool) -
 
 
 func clear_reward_rarity(root: Object, score: int, roll: float) -> StringName:
-	return roll_run_loot_rarity(root, roll, clampf(float(score) / 100.0, 0.0, 1.0))
+	var profile := root.get("player_profile") as PlayerProfile
+	var completed_runs_after_clear: int = profile.completed_runs + 1 if profile != null else 0
+	return roll_run_loot_rarity(root, roll, clampf(float(score) / 100.0, 0.0, 1.0), [], completed_runs_after_clear)
 
 
-func roll_run_loot_rarity(root: Object, roll: float, score_quality: float = -1.0, rarity_multipliers: Array = []) -> StringName:
+func roll_run_loot_rarity(root: Object, roll: float, score_quality: float = -1.0, rarity_multipliers: Array = [], completed_runs_override: int = -1) -> StringName:
 	var performance_bonus: float = score_quality * 3.0 if score_quality >= 0.0 else float(root.call("_loot_grade_bonus"))
-	return ItemCatalog.new().roll_run_rarity(roll, run_rank(root), performance_bonus, rarity_multipliers)
+	var profile := root.get("player_profile") as PlayerProfile
+	var completed_runs := profile.completed_runs if profile != null else 0
+	if completed_runs_override >= 0:
+		completed_runs = completed_runs_override
+	var rarity_adjustments := _rarity_adjustments_for_completed_runs(rarity_multipliers, completed_runs)
+	return ItemCatalog.new().roll_run_rarity(roll, run_rank(root), performance_bonus, rarity_adjustments)
 
 
 func complete_run(root: Object) -> void:
@@ -525,7 +546,8 @@ func complete_run(root: Object) -> void:
 	var reward_rng := RandomNumberGenerator.new()
 	reward_rng.seed = root.current_dungeon_seed ^ root.run_state.run_id.hash() ^ score * 7919
 	var dropped_item: ItemInstance = null
-	if reward_rng.randf() < clampf(0.30 + float(score) * 0.0065, 0.30, 0.95):
+	var completed_runs_after_clear: int = root.player_profile.completed_runs + 1 if root.player_profile != null else 0
+	if reward_rng.randf() < _reward_definition().clear_item_drop_chance(score, completed_runs_after_clear):
 		var catalog := ItemCatalog.new()
 		var slot: StringName = catalog.select_slot_for_source(root.player_profile, reward_rng.randi(), root.player_profile.level, &"clear_reward", run_rank(root), root.player_profile.clear_reward_slot_history)
 		var slot_was_empty := catalog.slot_needs_introduction(root.player_profile, slot)

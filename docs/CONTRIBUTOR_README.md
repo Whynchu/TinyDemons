@@ -148,7 +148,7 @@ runtime or per-content test edit.
 
 ## Web build
 
-Current game version: `0.3.15`. Every push to `main` increments the patch version
+Current game version: `0.3.16`. Every push to `main` increments the patch version
 by at least `0.0.01`; update the in-game title-menu version and both READMEs in
 the same commit.
 

@@ -2,18 +2,62 @@ extends "res://scripts/gameplay_state.gd"
 const RunGradeEvaluator = preload("res://scripts/run_grade.gd")
 const ProgressionControllerScript = preload("res://scripts/progression_controller.gd")
 const WebRunDiagnosticsScript = preload("res://scripts/web_run_diagnostics.gd")
+const PreviewSessionScript = preload("res://scripts/preview_session.gd")
+const PreviewSessionRuntimeScript = preload("res://scripts/preview_session_runtime.gd")
 func _add_runtime_node(script: Script, node_name: StringName, parent: Node = self) -> Node:
 	var node := script.new() as Node; node.name = node_name; parent.add_child(node); return node
 func _ready() -> void:
+	var preview_result := PreviewSessionScript.from_user_args(OS.get_cmdline_user_args()) as Dictionary
+	var preview_session := preview_result.get("session") as RefCounted
+	if bool(preview_result.get("present", false)):
+		var preview_errors: Array[String] = []
+		for error_value in preview_result.get("errors", []):
+			preview_errors.append(String(error_value))
+		if preview_session == null:
+			_reject_preview_session(preview_errors)
+			return
+		preview_errors.append_array(_preview_session_errors(preview_session))
+		if not preview_errors.is_empty():
+			_reject_preview_session(preview_errors)
+			return
+		debug_enemy_test_id = preview_session.get("content_id") as StringName
+		debug_start_in_boss_room = true
+		rng.seed = int(preview_session.get("seed"))
+		var preview_runtime := PreviewSessionRuntimeScript.new() as Node
+		preview_runtime.name = "PreviewSessionRuntime"
+		preview_runtime.call("configure", String(preview_result.get("payload_path", "")), preview_session.get("session_id"))
+		add_child(preview_runtime)
 	if OS.is_debug_build():
 		GameplayBootstrap.boot_diagnostics_enabled = true
 		GameplayBootstrap.begin_boot_diagnostics()
-	var bootstrap := _add_runtime_node(GameplayBootstrap, "GameplayBootstrap") as GameplayBootstrap; bootstrap.initialize(self)
+	var bootstrap := _add_runtime_node(GameplayBootstrap, "GameplayBootstrap") as GameplayBootstrap; bootstrap.initialize(self, preview_session)
 	if OS.has_feature("web"):
 		var diagnostics := _add_runtime_node(WebRunDiagnosticsScript, "WebRunDiagnostics") as WebRunDiagnosticsScript
 		diagnostics.configure(self)
 		var flush_callback := JavaScriptBridge.create_callback(_flush_save_from_js)
 		JavaScriptBridge.eval("window.__tdFlushSave = %s" % flush_callback)
+
+func _preview_session_errors(session: RefCounted) -> Array[String]:
+	var errors: Array[String] = session.call("validation_errors")
+	if session.get("content_kind") != &"enemy":
+		errors.append("This preview runner currently supports enemy content only.")
+	if session.get("requested_mode") != &"enemy_boss_encounter":
+		errors.append("Enemy preview mode must be enemy_boss_encounter.")
+	if session.get("arrival_socket_id") != &"auto":
+		errors.append("Enemy preview mode currently requires automatic boss-room entry.")
+	var loadout: Dictionary = session.get("loadout") as Dictionary
+	if String(loadout.get("preset", "")) != "starter":
+		errors.append("Enemy preview mode requires the starter loadout preset.")
+	var content_id := session.get("content_id") as StringName
+	if not EnemyFactory.is_variant(content_id):
+		errors.append("Unknown enemy content ID '%s'." % content_id)
+	return errors
+
+func _reject_preview_session(errors: Array[String]) -> void:
+	for error in errors:
+		push_error("PREVIEW_SESSION_REJECTED: %s" % error)
+	get_tree().quit(1)
+
 func _flush_save_from_js(_args: Array) -> void:
 	if player_profile != null:
 		ProfileSaveService.save_profile(player_profile)

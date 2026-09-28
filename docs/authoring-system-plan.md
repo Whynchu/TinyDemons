@@ -109,7 +109,7 @@ of that trap and proves the replacement with a second piece of content.
 | `room_controller.gd` | 2,243 lines |
 | `dungeon_layout_generator.gd` | 2,487 lines, ~100 static functions |
 | Definitions | 16 authored `.tres` under `resources/definitions/`; validator covers 16/16; composition audit reports 19 editor-able definition surfaces |
-| Tests | 145 manifest rows / 143 runnable / 44-path default gate, process-per-test |
+| Tests | 149 manifest rows / 147 runnable / 44-path default gate, process-per-test |
 | Docs | 105 Markdown files under `docs/` and frozen counts in the authority docs |
 
 Reference commands (current behavior):
@@ -495,10 +495,11 @@ baseline, not the final live-editor experience.
 - [ ] Support undo/redo for authoring-tool edits, visible unsaved changes, and
   explicit shared-resource versus local-copy choices. Duplicate assigns a new
   stable ID; moving a file preserves identity.
-- [ ] Refresh affected previews after resource saves or asset reimports without
-  restarting Godot. Invalidate dependent registry/material/frame caches;
-  previews display their revision and stale/error state. Unsaved previews are
-  labelled; build validation consumes saved content.
+- [x] Wire the current enemy/item registries and previews to a coalesced editor
+  refresh after resource saves, reimports, or filesystem changes, and invalidate
+  their definition caches without restarting Godot.
+- [ ] Show preview revision and stale/error state; label unsaved previews and
+  prove that build validation consumes saved content.
 - [x] Add the standalone `scenes/hub_world_preview.tscn` design preview. It
   reuses the authored world from `main.tscn`, exposes the Hub map, actors, and
   stone accents, hides dungeon/HUD clutter by default, and steps existing fire,
@@ -521,15 +522,32 @@ baseline, not the final live-editor experience.
   preview, and refreshes on scene changes. The dock now creates an empty
   placement or the PlayerPlacement prefab, duplicates a selected placement
   subtree with undoable fresh stable IDs, and validates placement IDs/layers.
-  Generic typed enemy, gear, level, and artwork operations plus the isolated
-  interactive preview remain open for the next slices.
-- [ ] Generate a deterministically ordered manifest through the shared editor
-  save/refresh and CLI generation operation. Verification checks freshness
-  without silently rewriting files. CI rejects stale or invalid manifests;
-  exported runtime discovery consumes the generated references.
-- [ ] Declare supported discovery roots during migration from
-  `resources/definitions/` to `resources/content/`; detect duplicates across
-  both. Move resources only with reference/UID and stable-ID checks.
+  The dock now also selects registered enemies and opens their pixel-art design
+  preview or launches/stops an isolated interactive enemy session. Generic typed
+  gear, level, and artwork operations remain open for later slices.
+- [x] Validate every distinct embedded and standalone enemy definition source
+  before runtime lookup deduplicates stable IDs. Conflicts report the duplicate
+  ID and both paths through `SlimeVariantCatalogData.validate()`, which is also
+  consumed by the definition preflight. The dock exposes the same contract as
+  `Validate Enemies`; placement validation is labelled `Validate Scene`. Runtime
+  validation and editor acceptance remain open under the current Godot launch
+  restriction.
+- [x] Generate deterministic all-resource and kind-specific resource-reference
+  manifests from `resources/definitions/**` and the future `resources/content/**` root. The
+  authoring dock's save/reimport and Refresh paths and `tools/dev.ps1 manifest
+  refresh` share one generator. The definition validator consumes the resource
+  references; its freshness check does not rewrite the manifest, so the existing
+  definition preflight rejects stale output in CI. Dock refresh invalidates the
+  enemy and item definition caches after regenerating the typed manifests.
+- [x] Migrate enemy and item runtime catalogs to consume typed resources from
+  kind-specific generated manifests. Each catalog preloads only its own
+  resource references into exported builds; editor loads replace the cached
+  kind manifest after refresh. Both catalogs discover typed entries across
+  `resources/definitions/` and `resources/content/` and validate duplicate IDs
+  across those roots. The all-resource manifest remains the preflight/freshness
+  index.
+- [ ] Prove exported web/mobile discovery after adding, moving, or deleting a
+  definition; move resources only with reference/UID and stable-ID checks.
 - [ ] Show references before deletion or stable-ID changes. Require an explicit
   migration/deprecation mapping for shipped IDs and test old-save fixtures.
   Missing required content blocks validation/export; optional fallbacks must
@@ -809,13 +827,18 @@ Work items:
   includes a deterministic `Preview Death Effect` action that reuses the
   runtime death palette mapping and default effects tuning; editor acceptance
   is still open.
-- [ ] Add the isolated interactive enemy workbench and the first authoring dock
-  actions. On desktop it launches a separate game process with a unique
-  temporary `--user-data-dir` and a versioned session payload containing the
-  selected definition, deterministic seed, loadout, and start route. It uses
-  normal factory assembly; closing the session stops only that child process
-  and removes its temporary storage. Prove that the real profile and settings
-  are unchanged before and after the preview.
+- [ ] Accept the isolated interactive enemy workbench and authoring dock
+  actions. The source now launches a separate desktop game process with a
+  unique temporary `--user-data-dir` and a schema-versioned `PreviewSession`
+  containing the selected enemy ID, deterministic seed, starter loadout, and
+  automatic boss-room route. The game rejects unsupported payloads and uses its
+  existing factory-backed encounter path. The dock can stop the child process,
+  and its session directory is removed after the child exits. The new payload
+  contract smoke is registered but unverified; confirm child exit, cleanup, and
+  unchanged active profile/settings from the connected editor before closing
+  acceptance. `PreviewSession` reserves content kind and arrival socket fields
+  so the future room/map workbench can extend the contract instead of inventing
+  a separate session format.
 - [x] Complete acceptance of the standalone `ember_guard.tres` definition through the
   registry-driven preview, round-trip, encounter, boss, and room-entry checks
   without a per-variant test edit.
@@ -1083,6 +1106,7 @@ slices. It will grow as later content kinds land:
 | `new variant <id>` | scaffolds one standalone Slime variant in `resources/definitions/<id>.tres` |
 | `new enemy <id>` | reserved for a distinct family; Skeleton is the first manually authored family proof, while generic family scaffolding remains future work |
 | `new item <id>` | scaffolds one standalone `resources/definitions/items/<id>.tres` |
+| `manifest refresh\|check` | regenerate the checked-in resource references or fail on stale output |
 | `report` | prints the authored catalog report |
 | `doctor` | checks the project root and configured Godot executable |
 

@@ -197,9 +197,12 @@ visual reference and its authored layout is the contract:
   already identified by its row, icon, and cursor.
 - Item names retain their rarity color. Fusion selection is communicated by the
   cursor, not by greying the entire list or muting unselected items.
-- The right panel uses Shop's exact comparison structure: stat label, current
-  value, `>`, and projected value, with the same row pitch, colors, and fixed
-  right anchors. Fusion must not substitute a free-form list of stat strings.
+- The right panel uses Shop's exact comparison structure: stat label, currently
+  equipped piece value (`EQUIP`), `>`, and selected item value (`ITEM`), with
+  the same row pitch, colors, and fixed right anchors. The comparison includes
+  mastery and item bonuses, and uses the same green/red/neutral meaning as Shop.
+  Fusion must not substitute a free-form list of stat strings or label the
+  pre-fusion item and projected result as `EQUIP`/`ITEM`.
 - The lower band follows Shop's sell interaction geometry. While browsing it
   shows `OWNED: x` at the left. When an action is selected it shows `FUSE?`
   beside the existing minus / quantity / plus controls. The existing shared

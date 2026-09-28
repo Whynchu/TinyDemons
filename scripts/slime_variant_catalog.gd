@@ -33,6 +33,10 @@ static func variants() -> Array[StringName]:
 	return _variant_cache
 
 
+static func validate() -> Array[String]:
+	return DATA.validate()
+
+
 static func variant_ids() -> Array[StringName]:
 	return variants()
 

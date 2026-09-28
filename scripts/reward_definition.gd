@@ -1,11 +1,10 @@
 extends Resource
 class_name RewardDefinition
 
-## Reward composition contract (Slice E, T2). Captures the chest reward drop
-## policy (item-drop chance, drop-count thresholds, loot-grade bonuses) as
-## editor-inspectable data, replacing the hardcoded curves in run_flow_controller.
-## Immutable and reusable across rooms and runs; runtime reward resolution stays
-## in RunFlowController.
+## Reward composition contract (Slice E, T2). Captures gear drop chance,
+## drop-count thresholds, run-clear rewards, rarity progression, and loot-grade
+## bonuses as editor-inspectable data. Runtime resolution stays in
+## RunFlowController.
 
 const DEFAULT_DATA_PATH := "res://resources/definitions/reward_definition.tres"
 
@@ -29,6 +28,21 @@ static func default_data() -> RewardDefinition:
 @export var drop_chance_risk_cap := 0.95
 @export var exploration_bonus_per_chest := 0.025
 @export var exploration_bonus_cap := 0.20
+
+## Persistent gear progression. Only saved completed runs count; the progress
+## stops increasing after the configured cap. Current-run depth is not used.
+@export var completed_run_loot_cap := 20
+@export var drop_chance_per_completed_run := 0.015
+@export var double_drop_per_completed_run := 0.015
+@export var triple_drop_per_completed_run := 0.005
+@export var quad_drop_per_completed_run := 0.002
+@export var clear_drop_chance_base := 0.30
+@export var clear_drop_chance_per_score := 0.0065
+@export var clear_drop_chance_per_completed_run := 0.0025
+@export var clear_drop_chance_cap := 1.0
+## Each completed run adds this much total rare-or-better probability, split
+## across Rare/Epic/Legendary/Mythic at 60/30/8/2 percent.
+@export var rarity_bonus_budget_per_completed_run := 0.005
 
 ## Chest item drop count thresholds.
 @export var double_drop_base := 0.35
@@ -54,7 +68,32 @@ func validate() -> Array[String]:
 	if triple_drop_cap < triple_drop_base: problems.append("triple_drop_cap must be >= triple_drop_base")
 	if quad_drop_cap < quad_drop_base: problems.append("quad_drop_cap must be >= quad_drop_base")
 	if exploration_bonus_cap < 0 or exploration_bonus_per_chest < 0: problems.append("exploration bonus values must be non-negative")
+	if completed_run_loot_cap < 0: problems.append("completed_run_loot_cap must be non-negative")
+	for value in [drop_chance_per_completed_run, double_drop_per_completed_run, triple_drop_per_completed_run, quad_drop_per_completed_run, clear_drop_chance_per_score, clear_drop_chance_per_completed_run, rarity_bonus_budget_per_completed_run]:
+		if float(value) < 0.0: problems.append("completed-run reward bonuses must be non-negative")
+	if clear_drop_chance_base < 0.0 or clear_drop_chance_cap > 1.0 or clear_drop_chance_cap < clear_drop_chance_base:
+		problems.append("clear reward chance must stay within [0, 1] and cap at or above its base")
 	return problems
+
+
+func _completed_run_progress(completed_runs: int) -> int:
+	return clampi(completed_runs, 0, completed_run_loot_cap)
+
+
+func completed_run_rarity_bonus(completed_runs: int) -> Array[float]:
+	var bonus_budget := float(_completed_run_progress(completed_runs)) * rarity_bonus_budget_per_completed_run
+	var result: Array[float] = []
+	result.append(bonus_budget * 0.60)
+	result.append(bonus_budget * 0.30)
+	result.append(bonus_budget * 0.08)
+	result.append(bonus_budget * 0.02)
+	return result
+
+
+func clear_item_drop_chance(score: int, completed_runs: int) -> float:
+	var score_bonus := float(clampi(score, 0, 100)) * clear_drop_chance_per_score
+	var run_bonus := float(_completed_run_progress(completed_runs)) * clear_drop_chance_per_completed_run
+	return clampf(clear_drop_chance_base + score_bonus + run_bonus, clear_drop_chance_base, clear_drop_chance_cap)
 
 
 func loot_grade_bonus(grade: String) -> float:
@@ -67,19 +106,21 @@ func loot_grade_bonus(grade: String) -> float:
 	return 0.0
 
 
-func item_drop_chance(exploration_bonus: float, run_rank: int, grade: String) -> float:
-	var base := clampf(drop_chance_base + exploration_bonus + float(run_rank - 1) * drop_chance_per_rank + loot_grade_bonus(grade) * drop_chance_per_grade, drop_chance_floor, drop_chance_cap)
+func item_drop_chance(exploration_bonus: float, run_rank: int, grade: String, completed_runs: int = 0) -> float:
+	var run_bonus := float(_completed_run_progress(completed_runs)) * drop_chance_per_completed_run
+	var base := clampf(drop_chance_base + exploration_bonus + float(run_rank - 1) * drop_chance_per_rank + loot_grade_bonus(grade) * drop_chance_per_grade + run_bonus, drop_chance_floor, drop_chance_cap)
 	return base
 
 
-func risk_item_drop_chance(exploration_bonus: float, run_rank: int, grade: String) -> float:
-	return clampf(item_drop_chance(exploration_bonus, run_rank, grade) + drop_chance_risk_bonus, drop_chance_floor, drop_chance_risk_cap)
+func risk_item_drop_chance(exploration_bonus: float, run_rank: int, grade: String, completed_runs: int = 0) -> float:
+	return clampf(item_drop_chance(exploration_bonus, run_rank, grade, completed_runs) + drop_chance_risk_bonus, drop_chance_floor, drop_chance_risk_cap)
 
 
-func drop_count_for(roll: float, run_rank: int, grade: String) -> int:
-	var double_chance := clampf(double_drop_base + float(run_rank - 1) * double_drop_per_rank + loot_grade_bonus(grade) * double_drop_per_grade, double_drop_floor, double_drop_cap)
-	var triple_chance := clampf(triple_drop_base + float(run_rank - 1) * triple_drop_per_rank + loot_grade_bonus(grade) * triple_drop_per_grade, triple_drop_base, triple_drop_cap)
-	var quad_chance := clampf(quad_drop_base + float(run_rank - 1) * quad_drop_per_rank + loot_grade_bonus(grade) * quad_drop_per_grade, quad_drop_base, quad_drop_cap)
+func drop_count_for(roll: float, run_rank: int, grade: String, completed_runs: int = 0) -> int:
+	var completed_run_progress := float(_completed_run_progress(completed_runs))
+	var double_chance := clampf(double_drop_base + float(run_rank - 1) * double_drop_per_rank + loot_grade_bonus(grade) * double_drop_per_grade + completed_run_progress * double_drop_per_completed_run, double_drop_floor, double_drop_cap)
+	var triple_chance := clampf(triple_drop_base + float(run_rank - 1) * triple_drop_per_rank + loot_grade_bonus(grade) * triple_drop_per_grade + completed_run_progress * triple_drop_per_completed_run, triple_drop_base, triple_drop_cap)
+	var quad_chance := clampf(quad_drop_base + float(run_rank - 1) * quad_drop_per_rank + loot_grade_bonus(grade) * quad_drop_per_grade + completed_run_progress * quad_drop_per_completed_run, quad_drop_base, quad_drop_cap)
 	if roll < quad_chance: return 4
 	if roll < triple_chance: return 3
 	return 2 if roll < double_chance else 1

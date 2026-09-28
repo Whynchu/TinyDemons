@@ -4,6 +4,23 @@ class_name EffectsSpawner
 const ActorPaletteMaterialScript = preload("res://scripts/actor_palette_material.gd")
 const GEAR_PLUS_TEXTURE: Texture2D = preload("res://assets/artwork/gearplus3x5.png")
 # The supplied 3x5 plus artwork is reused for every pixel-text plus glyph.
+const HEAL_PLUS_PIXELS := [
+	"___dGd___",
+	"___dGd___",
+	"___dGd___",
+	"ddddGdddd",
+	"dggGYGggd",
+	"ddddGdddd",
+	"___dGd___",
+	"___dGd___",
+	"___dGd___",
+]
+const HEAL_PLUS_PALETTE := {
+	"d": Color8(24, 75, 43),
+	"g": Color8(57, 168, 70),
+	"G": Color8(133, 244, 95),
+	"Y": Color8(226, 255, 181),
+}
 
 signal effect_requested(kind: StringName, position: Vector2)
 const CHARGE_AURA_TAG := &"charge_aura"
@@ -15,6 +32,7 @@ var critical_outline_texture_cache: Dictionary = {}
 var name_texture_cache: Dictionary = {}
 var keyboard_prompt_texture_cache: Dictionary = {}
 var pixel_particle_texture_cache: Dictionary = {}
+var heal_plus_texture_cache: Texture2D = null
 var damage_numbers: Array[Dictionary] = []
 var pixel_particles: Array[Dictionary] = []
 
@@ -428,6 +446,21 @@ func spawn_heal_charge(context: SlimeSupportContext, actor: Sprite2D, progress: 
 		})
 
 
+func _get_heal_plus_particle_texture() -> Texture2D:
+	if heal_plus_texture_cache != null:
+		return heal_plus_texture_cache
+	var image := Image.create(9, 9, false, Image.FORMAT_RGBA8)
+	image.fill(Color.TRANSPARENT)
+	for y in range(HEAL_PLUS_PIXELS.size()):
+		var row: String = HEAL_PLUS_PIXELS[y]
+		for x in range(row.length()):
+			var tone := row.substr(x, 1)
+			if tone != "_":
+				image.set_pixel(x, y, HEAL_PLUS_PALETTE[tone] as Color)
+	heal_plus_texture_cache = ImageTexture.create_from_image(image)
+	return heal_plus_texture_cache
+
+
 func spawn_heal_burst(context: SlimeSupportContext, world_position: Vector2, particle_count: int) -> void:
 	if context == null or not context.is_valid():
 		return
@@ -438,25 +471,24 @@ func spawn_heal_burst(context: SlimeSupportContext, world_position: Vector2, par
 	support_heal_noise.frequency = 0.32
 	support_heal_noise.seed = random_source.randi()
 	var origin: Vector2 = context.snap_half_pixel.call(world_position) as Vector2
-	var color := PaletteLibrary.accent("green")
 	var z_index := int(round(world_position.y * context.depth_z_scale)) + 5
 	for index in clampi(particle_count, 1, 12):
 		var particle := Sprite2D.new()
 		particle.name = "HealPlusParticle"
-		particle.texture = GEAR_PLUS_TEXTURE
+		particle.texture = _get_heal_plus_particle_texture()
 		particle.centered = true
 		particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		particle.z_as_relative = false
 		particle.z_index = z_index
-		var particle_size := random_source.randf_range(0.8, 1.5)
+		var particle_size := random_source.randf_range(1.05, 1.35)
 		particle.scale = Vector2.ONE * particle_size
-		particle.modulate = color.lerp(Color.WHITE, random_source.randf_range(0.1, 0.35))
+		particle.modulate = Color.WHITE
 		context.world_root.add_child(particle)
 		var position := origin + Vector2(random_source.randf_range(-6.0, 6.0), random_source.randf_range(-2.0, 2.0))
 		particle.global_position = position
 		support_heal_noise_cursor += 0.37
 		var noise_speed := support_heal_noise.get_noise_1d(support_heal_noise_cursor)
-		var lifetime := random_source.randf_range(0.42, 0.68)
+		var lifetime := random_source.randf_range(0.50, 0.75)
 		pixel_particles.append({
 			"sprite": particle,
 			"velocity": Vector2(noise_speed * 8.0, -15.0 - (noise_speed + 1.0) * 8.0),
@@ -466,7 +498,7 @@ func spawn_heal_burst(context: SlimeSupportContext, world_position: Vector2, par
 			"effect_tag": SUPPORT_HEAL_BURST_TAG,
 			"logical_position": position,
 			"particle_scale": Vector2.ONE * particle_size,
-			"alpha_scale": 0.95,
+			"alpha_scale": 1.0,
 		})
 
 
