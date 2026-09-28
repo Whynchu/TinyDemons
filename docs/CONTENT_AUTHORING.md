@@ -360,14 +360,16 @@ and family routing. It selects a living, damaged enemy ally across mob families,
 channels for two seconds, and heals one primary ally per cast. It keeps seeking
 injured allies throughout the room, repeats the bounded cast as they come into
 range, and uses the normal Slime attack when no eligible healing target remains.
-The healing radius is 52 pixels. At or below 45% health, it prioritizes a
+The healing radius is 104 pixels. At or below 45% health, it prioritizes a
 self-heal at 25% potency while another living enemy ally remains. Successful
 heals on another ally also heal the caster for 25% potency; when no ally needs
 healing, it may self-heal at that potency if another ally is alive.
-The healer can begin when it is aggroed or a nearby ally is aggroed or showing
-its notice/shock reaction. This reads ally state without changing it. A slightly
+The healer inherits persistent aggro when a nearby living ally is aggroed or
+showing its notice/shock reaction, then follows the normal aggro and attack
+flow. The shared check reads ally state without changing the ally. A slightly
 transparent green arc starts and ends at the shared body-geometry edges, traces
-the target outline, and moves single-pixel glimmers along the trail while
+the target with the same cached pixel silhouette highlight used by player
+target-lock, and moves single-pixel glimmers along the trail while
 preserving the target sparkle. Runtime copies of the Casting and Spell Cast
 sheets live in `assets/artwork/` so Godot imports and packages them for web.
 Damage or knockback cancels the cast. Heal potency is 10 HP plus 2 HP per
@@ -378,9 +380,10 @@ Encounter eligibility uses `encounter_min_rank`; the healer is eligible from
 rank 1 and is rolled as a companion after the regular room lineup, so a healer
 room always keeps at least one non-support enemy. The consumed room policy in
 `resources/definitions/room_definition.tres` gives each group of up to three
-regular Slimes an independent 50% healer roll; a partial final group also gets
-a roll, so four Slimes get two chances. Support `encounter_weight` values select
-which eligible support variant appears when a roll succeeds.
+non-support Slimes or Skeletons an independent 50% healer roll; a partial final
+group also gets a roll, so four regular enemies get two chances. Support
+`encounter_weight` values select which eligible support variant appears when a
+roll succeeds.
 Definition validation rejects polygons with infinite or NaN coordinates,
 zero area, or self-intersections, and rectangles with zero or negative sizes.
 

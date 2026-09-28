@@ -21,8 +21,8 @@ static func default_data() -> RoomDefinition:
 
 @export var normal_enemy_cap := 7
 
-## Each group of up to this many non-support Slimes gets an independent roll.
-@export var support_companion_slimes_per_group := 3
+## Each group of up to this many non-support Slimes or Skeletons gets an independent roll.
+@export var support_companion_enemies_per_group := 3
 @export var support_companion_chance_per_group := 0.50
 
 ## Base extra-enemy chance at rank 1, and per-rank growth/clamp.
@@ -42,8 +42,8 @@ static func default_data() -> RoomDefinition:
 func validate() -> Array[String]:
 	var problems: Array[String] = []
 	if normal_enemy_cap < 1: problems.append("normal_enemy_cap must be >= 1")
-	if support_companion_slimes_per_group < 1:
-		problems.append("support_companion_slimes_per_group must be >= 1")
+	if support_companion_enemies_per_group < 1:
+		problems.append("support_companion_enemies_per_group must be >= 1")
 	if support_companion_chance_per_group < 0.0 or support_companion_chance_per_group > 1.0:
 		problems.append("support_companion_chance_per_group must be in [0,1]")
 	if regular_room_treasure_chance < 0.0 or regular_room_treasure_chance > 1.0:
@@ -58,9 +58,9 @@ func validate() -> Array[String]:
 	return problems
 
 
-func support_companion_roll_count(slime_count: int) -> int:
-	var group_size := maxi(support_companion_slimes_per_group, 1)
-	return ceili(float(maxi(slime_count, 0)) / float(group_size))
+func support_companion_roll_count(enemy_count: int) -> int:
+	var group_size := maxi(support_companion_enemies_per_group, 1)
+	return ceili(float(maxi(enemy_count, 0)) / float(group_size))
 
 
 func popcorn_chance_for_rank(run_rank: int) -> float:

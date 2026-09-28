@@ -58,31 +58,33 @@ Related: `docs/combat-and-dungeon-design-principles.md`,
   to the desktop-only, Godot-ignored `Artwork/` source folder.
 - During cast: a **green charge aura** plays on the caster (sword-beam-charge-like).
 - During cast: a slightly transparent, green curved target arc starts at the
-  caster's shared body-geometry edge and ends at the target's edge. It outlines
-  the target in the same single-pixel style, and its glimmers travel over pixels
-  in the trail. Keep the existing sparkle around the target.
+  caster's shared body-geometry edge and ends at the target's edge. Outline the
+  target with the same cached pixel silhouette highlight used by player
+  target-lock, and move glimmers over pixels in the trail. Keep the existing
+  sparkle around the target.
 - On resolve: **green "+" particles** drift upward, per-particle speed driven by
   noise, with varying sizes.
 - A **cast bar below the caster** fills, changes color at full, pops slightly,
   then vanishes when the spell resolves.
 - Healing potency is **10 HP plus 2 HP per healer INT**, so enemy stat growth
   makes later-run healers restore more health.
-- The heal can reach an ally within 52 pixels. If another living enemy ally is
+- The heal can reach an ally within 104 pixels. If another living enemy ally is
   present, the healer can target itself. At or below 45% health, it prioritizes
   a self-heal at 25% potency; successful heals on another ally also heal the
   caster for 25% of that cast's potency. If no ally needs healing, it may
   self-heal at that potency while another ally lives.
-- Healing may begin when the caster is aggroed or a nearby living ally is
-  aggroed or in its notice/shock reaction. This is a read-only local check: the
-  healer does not change its neighbors' aggro or notice state.
+- When a nearby living ally is aggroed or in its notice/shock reaction, the
+  healer inherits persistent aggro and follows its normal attack flow. This is
+  a read-only check on neighbors; it only changes the healer's own aggro state.
 - AI: the caster keeps a **gap from the player** and prefers positions with an
   **ally between it and the player**.
 - The primary heal is bounded and never targets the player. Self-healing is
   available only while another living enemy ally remains.
 - A second `support` definition requires **zero code edits** (data-only proof).
-- Each group of up to three regular Slimes independently gets a **50% chance**
-  to add one healer; a partial final group also gets a roll, so four Slimes get
-  two chances. Healers add slots and never replace a non-support enemy.
+- Each group of up to three non-support Slimes or Skeletons independently gets
+  a **50% chance** to add one healer; a partial final group also gets a roll, so
+  four regular enemies get two chances. Healers add slots and never replace a
+  non-support enemy.
 
 ## 2. Extension points (observed; cite before changing)
 

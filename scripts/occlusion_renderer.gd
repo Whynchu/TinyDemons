@@ -184,6 +184,12 @@ func highlighted_texture(source: Texture2D) -> Texture2D:
 	return texture
 
 
+func highlighted_texture_for_actor(actor: Sprite2D) -> Texture2D:
+	if not _ensure_sprite_registered(actor):
+		return null
+	return highlighted_actor_textures.get(actor) as Texture2D
+
+
 func orb_highlighted_texture(source: Texture2D) -> Texture2D:
 	if source == null:
 		return null
@@ -204,7 +210,7 @@ func apply_unoccluded_actor_texture(actor: Sprite2D, is_target: bool, use_grey_h
 		apply_actor_scale.call(actor, true)
 		return
 	if is_target:
-		actor.texture = grey_highlighted_actor_textures[actor] if use_grey_highlight else highlighted_actor_textures[actor]
+		actor.texture = grey_highlighted_actor_textures[actor] if use_grey_highlight else highlighted_texture_for_actor(actor)
 		apply_actor_scale.call(actor, true)
 	else:
 		actor.texture = original_actor_textures[actor]

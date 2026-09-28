@@ -2,7 +2,6 @@ extends Node2D
 class_name EnemyTargetArc
 
 const ARC_CORE := Color8(112, 255, 151, 176)
-const ARC_OUTLINE := Color8(112, 255, 151, 166)
 const ARC_HIGHLIGHT := Color8(210, 255, 216, 232)
 
 const MIN_ARC_HEIGHT := 3.0
@@ -13,6 +12,8 @@ const ACTOR_FOOT_OFFSET := Vector2(8.0, 13.0)
 
 var source_anchor: Node2D
 var target_anchor: Node2D
+var occlusion_renderer: OcclusionRenderer
+var target_highlight: Sprite2D
 var source_offset := Vector2.ZERO
 var target_offset := Vector2.ZERO
 var start_point := Vector2.ZERO
@@ -24,11 +25,13 @@ var fade_remaining := 0.0
 var fade_duration := 0.0
 
 
-func configure(source: Node2D, target: Node2D, source_world_point: Vector2, target_world_point: Vector2) -> void:
+func configure(source: Node2D, target: Node2D, source_world_point: Vector2, target_world_point: Vector2, renderer: OcclusionRenderer) -> void:
 	source_anchor = source
 	target_anchor = target
+	occlusion_renderer = renderer
 	source_offset = source_world_point - source.global_position
 	target_offset = target_world_point - target.global_position
+	_attach_target_highlight()
 	_update_anchor_points()
 	queue_redraw()
 
@@ -42,9 +45,12 @@ func finish(cancelled: bool = false) -> void:
 func _process(delta: float) -> void:
 	elapsed += maxf(delta, 0.0)
 	_update_anchor_points()
+	_sync_target_highlight()
 	if finishing:
 		fade_remaining = maxf(fade_remaining - maxf(delta, 0.0), 0.0)
 		modulate.a = fade_remaining / maxf(fade_duration, 0.001)
+		if target_highlight != null and is_instance_valid(target_highlight):
+			target_highlight.modulate.a = modulate.a
 		if fade_remaining <= 0.0:
 			queue_free()
 	queue_redraw()
@@ -54,7 +60,6 @@ func _draw() -> void:
 	var points := _build_arc_points()
 	for point in points:
 		draw_rect(Rect2(to_local(point), Vector2.ONE), ARC_CORE)
-	_draw_target_outline()
 	_draw_traveling_sparks(points)
 	_draw_target_glimmers()
 	_draw_target_marker()
@@ -85,6 +90,44 @@ func _update_anchor_points() -> void:
 		start_point = _polygon_edge_point(source_polygon, source_center, direction).round()
 		end_point = _polygon_edge_point(target_polygon, target_center, -direction).round()
 	z_index = mini(maxi(source_anchor.z_index, target_anchor.z_index) + 1, CAST_WORLD_Z_LIMIT)
+
+
+func _attach_target_highlight() -> void:
+	var target := target_anchor as Sprite2D
+	if target == null or not is_instance_valid(target) or occlusion_renderer == null:
+		return
+	target_highlight = Sprite2D.new()
+	target_highlight.name = "SupportTargetHighlight"
+	target_highlight.centered = target.centered
+	target_highlight.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	target_highlight.show_behind_parent = true
+	target_highlight.z_as_relative = true
+	target_highlight.z_index = -1
+	target_highlight.material = target.material
+	target.add_child(target_highlight)
+	_sync_target_highlight()
+
+
+func _sync_target_highlight() -> void:
+	var target := target_anchor as Sprite2D
+	if target_highlight == null or not is_instance_valid(target_highlight) or target == null or not is_instance_valid(target):
+		return
+	target_highlight.texture = occlusion_renderer.highlighted_texture_for_actor(target) if occlusion_renderer != null else null
+	target_highlight.centered = target.centered
+	target_highlight.offset = target.offset
+	target_highlight.flip_h = target.flip_h
+	target_highlight.flip_v = target.flip_v
+	target_highlight.texture_filter = target.texture_filter
+	target_highlight.material = target.material
+	target_highlight.self_modulate = target.self_modulate
+	target_highlight.visible = target.visible and target_highlight.texture != null
+	if not finishing:
+		target_highlight.modulate.a = 1.0
+
+
+func _exit_tree() -> void:
+	if target_highlight != null and is_instance_valid(target_highlight):
+		target_highlight.queue_free()
 
 
 func _actor_body_polygon(actor: Node2D) -> PackedVector2Array:
@@ -157,11 +200,6 @@ func _build_arc_points() -> PackedVector2Array:
 		if points.is_empty() or points[points.size() - 1] != pixel_point:
 			points.append(pixel_point)
 	return points
-
-
-func _draw_target_outline() -> void:
-	for point in target_outline_pixels:
-		draw_rect(Rect2(to_local(point), Vector2.ONE), ARC_OUTLINE)
 
 
 func _draw_traveling_sparks(points: PackedVector2Array) -> void:

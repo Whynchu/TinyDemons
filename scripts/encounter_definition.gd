@@ -176,13 +176,13 @@ static func append_support_companions(
 	encounter_tier: StringName,
 	enemy_level_cap: int
 ) -> int:
-	var slime_companion_count := 0
+	var enemy_companion_count := 0
 	for variant in variants:
 		var companion_definition := EnemyFactory.definition(StringName(variant))
-		if companion_definition != null and companion_definition.type_id == &"slime" and companion_definition.encounter_role != &"support":
-			slime_companion_count += 1
+		if companion_definition != null and companion_definition.type_id in [&"slime", &"skeleton"] and companion_definition.encounter_role != &"support":
+			enemy_companion_count += 1
 	var support_variant_pool := EnemyFactory.weighted_variants_for_role(&"slime", &"support", run_rank)
-	var support_roll_count := room_policy.support_companion_roll_count(slime_companion_count)
+	var support_roll_count := room_policy.support_companion_roll_count(enemy_companion_count)
 	if force_debug_enemy or support_variant_pool.is_empty():
 		return 0
 	var appended_count := 0

@@ -10,6 +10,7 @@ var slime_tuning: SlimeTuning
 var rng: RandomNumberGenerator
 var effects_spawner: Node
 var player_guard_component: PlayerGuardComponent
+var occlusion_renderer: OcclusionRenderer
 var overworld_ui_z := 0
 var depth_z_scale := 1.0
 

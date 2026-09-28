@@ -298,7 +298,14 @@ func prepare_slime_frame_cache(root: Object) -> void:
 			continue
 		slot_cache[slime] = index
 		var brain := root.call("_slime_brain", slime) as SlimeBrain
-		var is_aggroed := not player_dead and (brain.persistent_aggro or (root.call("_actor_foot", slime) as Vector2).distance_squared_to(player_foot) <= tuning.aggro_range * tuning.aggro_range)
+		var inherits_support_aggro := false
+		if not player_dead:
+			var support := slime.get_node_or_null("Support") as SlimeSupportComponent
+			if support != null:
+				inherits_support_aggro = support.has_nearby_alerted_ally(_slime_support_context(root), slime, tuning)
+		var is_aggroed := not player_dead and (brain.persistent_aggro or (root.call("_actor_foot", slime) as Vector2).distance_squared_to(player_foot) <= tuning.aggro_range * tuning.aggro_range or inherits_support_aggro)
+		if inherits_support_aggro:
+			brain.persistent_aggro = true
 		if is_aggroed and not brain.aggroed and not brain.notice_started and not is_slime_hidden(root, slime):
 			if slime is SkeletonActor:
 				if not brain.notice_stagger_pending:
@@ -452,6 +459,7 @@ func _slime_support_context(root: Object) -> SlimeSupportContext:
 	cached.rng = gameplay.rng
 	cached.effects_spawner = gameplay.effects_spawner
 	cached.player_guard_component = gameplay.player_guard_component
+	cached.occlusion_renderer = gameplay.occlusion_renderer
 	cached.overworld_ui_z = gameplay.OVERWORLD_UI_Z
 	cached.depth_z_scale = gameplay.DEPTH_Z_SCALE
 	return cached

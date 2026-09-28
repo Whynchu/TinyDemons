@@ -211,7 +211,7 @@ func _can_seek_heal_target(context: SlimeSupportContext, actor: Sprite2D) -> boo
 		return false
 	if context.is_aggroed.is_valid() and bool(context.is_aggroed.call(actor)):
 		return true
-	return _has_nearby_alerted_ally(context, actor, tuning)
+	return has_nearby_alerted_ally(context, actor, tuning)
 
 
 func _select_heal_target(context: SlimeSupportContext, actor: Sprite2D, tuning: SlimeTuning) -> Sprite2D:
@@ -300,7 +300,7 @@ func _has_living_ally(context: SlimeSupportContext, actor: Sprite2D) -> bool:
 	return false
 
 
-func _has_nearby_alerted_ally(context: SlimeSupportContext, actor: Sprite2D, tuning: SlimeTuning) -> bool:
+func has_nearby_alerted_ally(context: SlimeSupportContext, actor: Sprite2D, tuning: SlimeTuning) -> bool:
 	var radius := maxf(tuning.support_heal_radius, tuning.aggro_range)
 	var radius_squared := radius * radius
 	var actor_foot: Vector2 = context.actor_foot.call(actor)
@@ -359,7 +359,7 @@ func _begin_cast(context: SlimeSupportContext, actor: Sprite2D, target: Sprite2D
 	var source_point: Vector2 = context.magic_target_point.call(actor)
 	var target_point: Vector2 = context.magic_target_point.call(target)
 	cast_arc.global_position = Vector2.ZERO
-	cast_arc.call("configure", actor, target, source_point, target_point)
+	cast_arc.call("configure", actor, target, source_point, target_point, context.occlusion_renderer)
 
 
 func _finish_cast(context: SlimeSupportContext, actor: Sprite2D) -> void:

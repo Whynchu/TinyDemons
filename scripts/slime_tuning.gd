@@ -59,7 +59,7 @@ class_name SlimeTuning
 @export var support_heal_per_intelligence := 2.0
 @export_range(0.0, 1.0, 0.01) var support_self_heal_threshold := 0.45
 @export_range(0.0, 1.0, 0.01) var support_self_heal_multiplier := 0.25
-@export var support_heal_radius := 52.0
+@export var support_heal_radius := 104.0
 @export var support_heal_cooldown := 0.25
 @export var support_cast_release_time := 0.18
 @export var support_cancel_recovery := 0.5
