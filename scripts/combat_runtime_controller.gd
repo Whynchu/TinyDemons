@@ -2,6 +2,7 @@ extends Node
 class_name CombatRuntimeController
 
 const SKELETON_KNOCKBACK_MULTIPLIER := 1.2
+const HEALING_NUMBER_COLOR := Color8(167, 240, 112)
 
 const ProgressionControllerScript = preload("res://scripts/progression_controller.gd")
 const SlimeVariantCatalogScript = preload("res://scripts/slime_variant_catalog.gd")
@@ -757,7 +758,8 @@ func spawn_floating_number(root: Object, world_position: Vector2, value: int, ve
 		priority_offset = Vector2(0.0, 6.0)
 	world_position += priority_offset
 	var tuning := root.get("effects_tuning") as EffectsTuning
-	(root.get("effects_spawner") as EffectsSpawner).spawn_health_number(root, world_position, value, velocity, was_critical, is_healing, healing_color, Callable(root, "_pixel_text_texture"), Callable(root, "_snap_half_pixel"), tuning.damage_number_lifetime, tuning.damage_number_pop_time, display_text)
+	var number_color := HEALING_NUMBER_COLOR if is_healing else healing_color
+	(root.get("effects_spawner") as EffectsSpawner).spawn_health_number(root, world_position, value, velocity, was_critical, is_healing, number_color, Callable(root, "_pixel_text_texture"), Callable(root, "_snap_half_pixel"), tuning.damage_number_lifetime, tuning.damage_number_pop_time, display_text)
 
 
 func health_feedback_color(_root: Object, palette_name: String) -> Color:
