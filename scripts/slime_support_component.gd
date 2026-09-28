@@ -99,15 +99,16 @@ func tick(context: SlimeSupportContext, actor: Sprite2D, delta: float) -> bool:
 		var spell_frame_count := _support_animation_frame_count(actor, SPELL_PHASE)
 		var frame_time := maxf(tuning.support_animation_frame_time, 0.01)
 		var spell_duration := float(spell_frame_count) * frame_time
+		var heal_delay := float(maxi(tuning.support_heal_frame, 0)) * frame_time
 		if spell_frame_count > 0:
 			var frame_index := mini(floori(release_elapsed / frame_time), spell_frame_count - 1)
 			context.set_animation_frame.call(actor, SPELL_PHASE, frame_index)
-			var heal_frame := clampi(tuning.support_heal_frame, 0, spell_frame_count - 1)
-			if not heal_resolved and frame_index >= heal_frame:
-				_resolve_heal(context, actor, tuning)
-		elif not heal_resolved and release_elapsed >= float(maxi(tuning.support_heal_frame, 0)) * frame_time:
+		if not heal_resolved and release_elapsed >= heal_delay:
 			_resolve_heal(context, actor, tuning)
-		if release_elapsed >= maxf(tuning.support_cast_release_time, spell_duration):
+		var release_duration := maxf(tuning.support_cast_release_time, spell_duration)
+		if not heal_resolved:
+			release_duration = maxf(release_duration, heal_delay)
+		if release_elapsed >= release_duration:
 			_finish_cast(context, actor)
 			return false
 		return true

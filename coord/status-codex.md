@@ -2,7 +2,7 @@
 
 _Only codex writes this file._
 
-**Focus:** Continue M1 reference-aware lifecycle and preview acceptance; 0.3.16 release includes the current source work
+**Focus:** Fix healer regression reported after 0.3.16 while continuing M1 reference-aware lifecycle work
 **Updated:** 2026-09-28
 
 ## In flight
@@ -11,6 +11,15 @@ Version 0.3.16 updates the web README and in-game title. This release includes
 the current M1 source work plus the Fusion comparison, healing visibility, and
 completed-run gear progression changes. M1 editor/export acceptance remains
 open and no Godot process or test suite was run for this release.
+
+Post-release report: heals stopped resolving and the healer animation looked
+wrong. The connected editor log showed zero frames from both authored healer
+sheets; those two PNGs were the only artwork files missing `.import` metadata.
+They now have import metadata and static dependencies. Empty animation sets
+fall back to actor frames, release timing waits through heal impact, and the
+healer arc endpoint crosshair is removed. MCP script diagnostics pass for the
+three changed scripts; no gameplay or test suite was run. Web playtest evidence
+remains open.
 
 This M1 step closes the enemy registry validator's duplicate-ID blind spot:
 the catalog now validates every distinct embedded and standalone source before

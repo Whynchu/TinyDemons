@@ -262,3 +262,11 @@ The 0.3.16 release packages the current M1 source progress with the Fusion
 comparison, healing visibility, and completed-run gear progression updates.
 Editor/export acceptance remains open. Preserve `.mcp.json` and
 `docs/timed-floor-hazard-plan.md`; they are outside this release.
+
+## 2026-09-28T20:18Z — codex — done
+The healer regression traced to both authored animation PNGs missing import
+sidecars. Added import metadata and static texture dependencies; the animation
+assignment now falls back when a sheet is empty, the release waits until heal
+impact before finishing, and the target-line endpoint crosshair is removed.
+MCP script diagnostics pass. No gameplay or test suite was run; web playtest
+acceptance remains open.

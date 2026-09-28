@@ -3,8 +3,8 @@ extends Node
 class_name SlimeVisualComponent
 
 const ACTOR_PALETTE_MATERIAL_SCRIPT := preload("res://scripts/actor_palette_material.gd")
-const SUPPORT_CASTING_SHEET_PATH := "res://assets/artwork/SlimeGreen_Casting.png"
-const SUPPORT_SPELL_SHEET_PATH := "res://assets/artwork/SlimeGreen_Spell_Cast.png"
+const SUPPORT_CASTING_SHEET: Texture2D = preload("res://assets/artwork/SlimeGreen_Casting.png")
+const SUPPORT_SPELL_SHEET: Texture2D = preload("res://assets/artwork/SlimeGreen_Spell_Cast.png")
 const SUPPORT_CASTING_FRAME_COUNT := 4
 const SUPPORT_SPELL_FRAME_COUNT := 9
 
@@ -208,13 +208,14 @@ static func assign_support_animation_frames(slimes: Array[Sprite2D], frames: Dic
 		var visual := slime.get_node_or_null("Visual") as SlimeVisualComponent
 		if visual == null:
 			continue
-		if frames.is_empty():
-			var fallback_frames := _build_support_cast_frames(visual.right_texture)
-			visual.support_casting_frames = fallback_frames
-			visual.support_spell_frames = fallback_frames
-			continue
-		visual.support_casting_frames = frames.get("casting", []) as Array[Texture2D]
-		visual.support_spell_frames = frames.get("spell", []) as Array[Texture2D]
+		var casting_frames := frames.get("casting", []) as Array[Texture2D]
+		var spell_frames := frames.get("spell", []) as Array[Texture2D]
+		if casting_frames.is_empty():
+			casting_frames = _build_support_cast_frames(visual.right_texture)
+		if spell_frames.is_empty():
+			spell_frames = _build_support_cast_frames(visual.right_texture)
+		visual.support_casting_frames = casting_frames
+		visual.support_spell_frames = spell_frames
 
 
 static func build_support_cast_frames(source: Texture2D) -> Array[Texture2D]:
@@ -222,8 +223,8 @@ static func build_support_cast_frames(source: Texture2D) -> Array[Texture2D]:
 
 
 static func build_authored_support_animation_frames(frame_library: SpriteFrameLibrary, frame_size: Vector2i, warm_texture: Callable) -> Dictionary:
-	var casting_frames := frame_library.slice_frames(SUPPORT_CASTING_SHEET_PATH, frame_size)
-	var spell_frames := frame_library.slice_frames(SUPPORT_SPELL_SHEET_PATH, frame_size)
+	var casting_frames := frame_library.slice_texture_frames(SUPPORT_CASTING_SHEET, frame_size)
+	var spell_frames := frame_library.slice_texture_frames(SUPPORT_SPELL_SHEET, frame_size)
 	if casting_frames.size() != SUPPORT_CASTING_FRAME_COUNT:
 		push_error("Healer casting sheet produced %d frames; expected %d." % [casting_frames.size(), SUPPORT_CASTING_FRAME_COUNT])
 	if spell_frames.size() != SUPPORT_SPELL_FRAME_COUNT:

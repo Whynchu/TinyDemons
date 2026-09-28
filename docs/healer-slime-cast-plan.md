@@ -2,7 +2,7 @@
 
 Status: implemented; focused verification fixture added
 
-Updated: 2026-09-27
+Updated: 2026-09-28
 
 Scope: one support-role enemy that channels an interruptible, bounded
 single-primary-ally heal with a visible cast bar and heal VFX, plus the minimal
@@ -30,6 +30,10 @@ and spell preview states; rerun it with an in-game readability playtest before
 calling this refinement verified. The audio mix fixture passed with both new
 cues registered. The arc/self-heal/ally-notice refinement is implemented; an
 MCP playtest is still needed to confirm its visual readability and combat feel.
+The 2026-09-28 editor log showed both runtime animation sheets loading as zero
+frames. They now use static preload dependencies, empty-sheet fallback frames,
+and a release timer that cannot finish before heal impact; runtime acceptance
+remains open until the animation and heal are confirmed in play.
 Planned checks include
 `tools/dev.ps1 verify`, `tools/dev.ps1 test -Suite content`,
 `tools/validate_definitions.ps1`, and an MCP playtest/screenshot at 240×160.
@@ -64,7 +68,7 @@ Related: `docs/combat-and-dungeon-design-principles.md`,
   animation frames and the boss jump are followed. Outline the target with the
   same cached pixel silhouette highlight used by player target-lock, and move
   glimmers over pixels in the trail. Keep the existing sparkle around the
-  target.
+  target without adding a crosshair or reticle at the line endpoint.
 - On resolve: **green "+" particles** drift upward, per-particle speed driven by
   noise, with varying sizes.
 - A **cast bar below the caster** fills, changes color at full, pops slightly,

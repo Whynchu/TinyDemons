@@ -6,7 +6,7 @@ Updated: 2026-09-28
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.3.16`. The current smoke inventory is 149 manifest
+Current release: version `0.3.17`. The current smoke inventory is 149 manifest
 rows / 147 runnable paths / 44-path default gate; the counts quoted in older
 sections below are historical snapshots. The authoring and verification
 sequence is in [`authoring-system-plan.md`](authoring-system-plan.md).
@@ -314,6 +314,25 @@ visual. Move the healer bar exactly one additional world pixel upward from its
 current placement. Healing, range, and combat collision geometry must keep their
 existing behavior.
 
+### Healer cast animation loading and endpoint reticle
+
+**Player report:** Healing stopped restoring health and the cast animations
+looked wrong. A small target reticle also appeared where the arc touched the
+target and should be removed.
+
+**Source audit:** The connected editor log reported zero frames from both
+`SlimeGreen_Casting.png` and `SlimeGreen_Spell_Cast.png`. The sheets were loaded
+by path at runtime. If no spell frames loaded, the fallback release duration
+could be shorter than the configured impact delay (`4 × 0.08s`), ending the
+cast before `_resolve_heal()` ran. `EnemyTargetArc._draw_target_marker()` drew
+the endpoint crosshair over the target outline.
+
+**Acceptance criteria:** Statically include and slice both authored animation
+sheets for web exports, use a visible animation fallback when either sheet is
+empty, and keep the cast alive until the configured heal impact resolves even
+when no spell frames are available. Remove only the endpoint reticle; preserve
+the outline, connecting arc, and moving glimmers.
+
 ### Fusion menu inventory-size slowdown
 
 **Player report:** Opening Fusion in the Demon Hub slows substantially when the
@@ -437,7 +456,10 @@ high-contrast plus texture; the 3x5 text glyph is unchanged. Gear rewards now
 increase from completed-run count alone: chest chance and multi-drop thresholds,
 clear-award chance, and rarity probability all progress monotonically to their
 20-run cap. The clear award counts the run just completed; in-run chests use
-previously completed runs. Vault quantity remains exactly one.
+previously completed runs. Vault quantity remains exactly one. Healer animation
+sheets are now statically preloaded for web builds; empty-sheet fallback keeps
+the cast visible and waits through the configured heal impact time. The arc's
+endpoint crosshair is removed while the target outline and glimmers remain.
 
 **Runtime acceptance remains open:** no Godot editor/playtest or large-inventory
 timing sample was run because the current session is still under the recorded

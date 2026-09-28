@@ -65,7 +65,6 @@ func _draw() -> void:
 		draw_rect(Rect2(to_local(point), Vector2.ONE), ARC_CORE)
 	_draw_traveling_sparks(points)
 	_draw_target_glimmers()
-	_draw_target_marker()
 
 
 func _update_anchor_points() -> void:
@@ -252,14 +251,3 @@ func _draw_target_glimmers() -> void:
 		var t := fposmod(phase + float(glimmer_index) * 0.5, 1.0)
 		var point_index := clampi(floori(t * float(target_outline_pixels.size())), 0, target_outline_pixels.size() - 1)
 		draw_rect(Rect2(to_local(target_outline_pixels[point_index]), Vector2.ONE), ARC_HIGHLIGHT)
-
-
-func _draw_target_marker() -> void:
-	if source_anchor == target_anchor:
-		return
-	var center := end_point
-	var marker := ARC_HIGHLIGHT
-	var offsets := [Vector2(0.0, -2.0), Vector2(2.0, 0.0), Vector2(0.0, 2.0), Vector2(-2.0, 0.0)]
-	for offset in offsets:
-		draw_rect(Rect2(to_local((center + offset).round()), Vector2.ONE), marker)
-	draw_rect(Rect2(to_local(center), Vector2.ONE), ARC_CORE)
