@@ -16,6 +16,7 @@ var player_equipment_visual_component: Node = null
 var player_tuning: PlayerTuning = null
 var attack_frame_size := Vector2i(36, 36)
 
+var player_dead_get: Callable = Callable()
 var current_player_palette_name_get: Callable = Callable()
 var player_anim_name_get: Callable = Callable()
 var player_anim_name_set: Callable = Callable()

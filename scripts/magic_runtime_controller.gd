@@ -665,7 +665,7 @@ func magic_hit_slime(context: MagicRuntimeContext, slime: Sprite2D, world_positi
 	var was_critical := damage_result != null and damage_result.critical
 	var immune := damage_result != null and damage_result.immune
 	var resolved_element := damage_result.element if damage_result != null else attack_element
-	context.damage_slime_with_number.call(slime, damage, was_critical, false, resolved_element, immune)
+	context.damage_slime_with_number.call(slime, damage, was_critical, false, resolved_element, immune, damage_result.effectiveness if damage_result != null else 0.0)
 	if not immune and damage > 0.0 and context.record_run_style_action.is_valid():
 		context.record_run_style_action.call(&"magic")
 	if not immune:

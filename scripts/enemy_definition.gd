@@ -3,6 +3,7 @@ extends Resource
 class_name EnemyDefinition
 
 const PALETTE_LIBRARY_SCRIPT = preload("res://scripts/palette_library.gd")
+const STATUS_EFFECT_DEFINITION_SCRIPT = preload("res://scripts/status_effect_definition.gd")
 
 ## Typed, editor-inspectable enemy content contract. Definitions may remain
 ## embedded in SlimeVariantCatalogData for compatibility or live in standalone
@@ -35,6 +36,7 @@ const PALETTE_LIBRARY_SCRIPT = preload("res://scripts/palette_library.gd")
 @export var matchup_weight := 0.0
 @export var preferred_weight := 0.0
 @export var allow_preferred := false
+@export var status_immunities: Array[StringName] = []
 
 ## Actor-local combat geometry. EnemyFactory applies the same data to editor
 ## previews and live pooled actors so tuning here changes both consumers.
@@ -100,6 +102,13 @@ func validate() -> Array[String]:
 		problems.append("support_caster behavior is currently only supported by Slime actors")
 	if behavior_id == &"support_caster" and encounter_role != &"support":
 		problems.append("support_caster variants must use the support encounter role")
+	var seen_status_immunities: Dictionary = {}
+	for status_id in status_immunities:
+		if not STATUS_EFFECT_DEFINITION_SCRIPT.STATUS_IDS.has(status_id):
+			problems.append("unknown status immunity '%s'" % String(status_id))
+		if seen_status_immunities.has(status_id):
+			problems.append("duplicate status immunity '%s'" % String(status_id))
+		seen_status_immunities[status_id] = true
 	_validate_polygon(collision_polygon, "collision_polygon", problems)
 	_validate_polygon(body_hitbox_polygon, "body_hitbox_polygon", problems)
 	_validate_rect(collision_guide_rect, "collision_guide_rect", problems)
@@ -183,6 +192,7 @@ func to_record() -> Dictionary:
 		"matchup_weight": matchup_weight,
 		"preferred_weight": preferred_weight,
 		"allow_preferred": allow_preferred,
+		"status_immunities": status_immunities.duplicate(),
 		"collision_guide_rect": collision_guide_rect,
 		"collision_polygon": collision_polygon.duplicate(),
 		"body_hitbox_polygon": body_hitbox_polygon.duplicate(),

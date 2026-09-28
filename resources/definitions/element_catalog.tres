@@ -1,6 +1,10 @@
-[gd_resource type="Resource" script_class="ElementCatalogData" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="ElementCatalogData" load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/element_catalog_data.gd" id="1"]
+[ext_resource type="Resource" path="res://resources/tuning/status_burn.tres" id="2"]
+[ext_resource type="Resource" path="res://resources/tuning/status_poison.tres" id="3"]
+[ext_resource type="Resource" path="res://resources/tuning/status_slow.tres" id="4"]
+[ext_resource type="Resource" path="res://resources/tuning/status_stun.tres" id="5"]
 
 [resource]
 script = ExtResource("1")
@@ -47,3 +51,4 @@ matchup_table = [
 damage_number_color_boost = 1.1
 default_element = 0
 element_count = 8
+status_effects = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5")])

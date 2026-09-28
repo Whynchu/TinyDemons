@@ -3,7 +3,7 @@
 Status: current external-resource-backed tuning index; hardcoded gap list remains
 planned work
 
-Updated: 2026-09-24
+Updated: 2026-09-28
 
 > Purpose: a single index of gameplay tuning knobs and where to change them.
 > The six core tuning defaults are now external `.tres` resources. Each
@@ -24,6 +24,7 @@ edit `GameplayState` only when changing how a runtime copy is composed.
 | `resources/tuning/progression_default.tres` | `ProgressionTuning` | XP curve, depth scaling, and milestones |
 | `resources/tuning/effects_default.tres` | `EffectsTuning` | Damage numbers, particles, and screen effects |
 | `resources/tuning/chroma_default.tres` | `ChromaTuning` | Chroma pickup and elemental resource values |
+| `resources/tuning/status_*.tres` | `StatusEffectDefinition` | Elemental status chance, duration, stack cap, effect magnitudes/cadence, particle style, and emission interval |
 
 ### `scripts/player_tuning.gd` — player feel (85 exports, all `inspector`)
 
@@ -112,6 +113,27 @@ and boss reward formulas (`combat_runtime_controller.gd:XP_REWARD_MULTIPLIER`).
 10. Resource drops use a damped launch with a gentle wall bounce so Chroma and
 Souls settle inside the room without snapping or flying too far from the enemy.
 
+## Elemental status definitions
+
+The four `StatusEffectDefinition` resources are referenced by
+`ElementCatalogData.status_effects` in `resources/definitions/element_catalog.tres`.
+Edit those resources for status balance; this file is the tuning index, while
+the catalog resource is the runtime registry.
+
+| Status | Element | Proc chance | Duration | Effect | Particle style / interval |
+|---|---|---:|---:|---|---|
+| Burn | Fire | 20% per eligible hit | 2.5 s | 1 damage per stack every 1 s; cap 3 | Imbue-like rising ember trail / 0.08 s |
+| Poison | Shadow | 20% per eligible hit | 2.5 s | 1 damage per stack every 1 s; cap 3 | Rising poison motes / 0.16 s |
+| Slow | Ice | 20% per eligible hit | 2.0 s | 15% movement reduction per stack; cap 3; multiplier floor 0.55 | Drifting frost crystals / 0.16 s |
+| Stun | Electric | 10% per eligible hit | 2.5 s | 0.12 s action lock on a 1 s cadence; each extra stack reduces cadence by 0.05 s to a 0.5 s floor; cap 3 | Short electric sparks / 0.12 s |
+
+Only successful, non-immune elemental hits with positive effectiveness can
+proc. `EnemyDefinition.status_immunities` can reject named status IDs. These
+values are initial playtest defaults; no status balance has been accepted from
+runtime playtest yet. The owner checks are registered but unrun. HUD marker
+lifetime and aura transforms now have source guards; particle and outline
+readability remain open for runtime acceptance.
+
 ## Elemental slime definitions
 
 The planned shared boss behavior for Normal and all seven elemental variants is
@@ -164,7 +186,7 @@ These are code values (not inspector-exposed) that drive gear value:
 
 | Knob | Value | Location |
 | --- | --- | --- |
-| Gear primary-stat contribution | Authored package + 2 flat points per rarity rank + 0.1 tier-stat point per fusion enhancement | `item_catalog.gd:bonuses` |
+| Gear positive attribute lanes | Every positive authored or random attribute lane gets +2 flat points per rarity rank and +0.1 per current-rarity Fusion level; negative tradeoffs stay fixed | `item_catalog.gd:bonuses` |
 | Rarity player-stat buff | Retired from live gear; all live gear uses flat points | `item_catalog.gd:RARITY_PLAYER_STAT_RATES`, `equipment_component.gd` |
 | Starter loadout | Six Plain pieces; every new character starts at VIT/STR/DEF/AGI/INT/MND 2/2/2/2/2/2, with no starter gear stat package | `item_catalog.gd:starter_item`, `screen_state_controller.gd` |
 | Drop tier weights | Plain 5.0, Basic 4.5, Set 0.6; eligible slots roll evenly, while clear rewards avoid recent slots | `item_catalog.gd:select_slot_for_source`, `_gear_drop_weight` |
@@ -175,10 +197,10 @@ These are code values (not inspector-exposed) that drive gear value:
 | Set scope | Swift, Soldier, Guard, Blood, Arcane, Soul, Edge, Oath, Rune; one Weapon/Head/Body/Arm/Shield/Accessory each | `item_catalog.gd:SET_DEFINITIONS` |
 | Weapon scope | Swords and Blades only | `item_catalog.gd:SET_DEFINITIONS`, `LIVE_BASE_DEFINITIONS` |
 | Shield primary trade-offs | SPD penalties are part of the visible flat package; no hidden STR/SPD subtraction | `item_catalog.gd:DEFINITIONS`, `equipment_component.gd` |
-| Shield guard package | Guard values are fixed by the definition and grow only with the +10%/fusion enhancement factor | `item_catalog.gd:shield_bonuses` |
+| Shield guard package | Positive guard durability/reduction lines gain +10% of their authored value per total Fusion step, including rarity promotions | `item_catalog.gd:shield_bonuses` |
 | Gear scaling floor | Not used by the current flat-point model | `combat_stat_snapshot.gd` |
 | Health/damage rate package | Not currently part of the primary gear snapshot | `combat_stat_snapshot.gd` |
-| Enhancement flat point | 0.1 tier-stat point per level; 1 point at +10 | `item_catalog.gd:enhancement_flat_points` |
+| Enhancement flat point | 0.1 point per positive attribute lane per level; +1 per lane at +10 | `item_catalog.gd:enhancement_flat_points`, `item_catalog.gd:bonuses` |
 | Max enhancement | +10 | `player_profile.gd` |
 | Rarity flat points | 0 / 2 / 4 / 6 / 8 for common through mythic | `item_catalog.gd:RARITY_FLAT_POINTS_PER_RANK` |
 | Random primary affixes | Retired; random `+` points are independent, visible, and capped at three total | `item_catalog.gd:bonuses`, `item_instance.gd` |
@@ -192,11 +214,12 @@ These are code values (not inspector-exposed) that drive gear value:
 | SPD scale | 0.012 per point (see player_tuning) | `player_tuning.gd` |
 
 The flat ladder is `definition base + (rarity rank × 2) + (fusion enhancement ×
-0.1)` on the authored tier stat. Each random `+` point is an additional stat
-lane that receives the same rarity and fusion growth. For the Basic Sword,
-that is STR 2.0 at Common F0, STR 2.1 at Common F1, STR 3.0 at Common F10,
-STR 4.0 at Rare F0, STR 5.0 at Rare F10, and STR 6.0 at Epic F0. The `+` marker
-is the random drop package; `F` is the separate fusion level.
+0.1)` on every positive authored or random attribute lane. Negative authored
+tradeoffs stay fixed. A positive shield guard line instead gains 10% of its
+authored value for every Fusion step; its monotonic step count survives rarity
+promotion. For the Basic Sword, STR is 2.0 at Common F0, 2.1 at Common F1,
+3.0 at Common F10, 4.0 at Rare F0, 5.0 at Rare F10, and 6.0 at Epic F0. The
+`+` marker is the random drop package; `F` is the current rarity's Fusion level.
 
 ## Display and settings (not gameplay tuning)
 
@@ -235,11 +258,11 @@ These affect dungeon generation and room behavior and are `const` in
 | NPC interact distance | 24.0 | `gameplay_state.gd:NPC_INTERACT_DISTANCE` |
 | Chest gold base | 100 | `gameplay_state.gd:CHEST_REWARD_GOLD` |
 | Chest gold roll | `0.75x-1.30x` base before rank/grade multiplier | `run_flow_controller.gd:chest_gold_reward` |
-| Chest item drop chance | Standard chance uses 0.34 base plus difficulty-rank, grade, exploration, and +0.015 per completed run (up to +0.30 at 20); final cap 0.88. Risk adds 0.12 (cap 0.95); vaults guarantee one item | `reward_definition.gd:item_drop_chance`, `run_flow_controller.gd:chest_item_drop_chance` |
-| Run-clear gear reward | `clamp(0.30 + score*0.0065 + 0.0025*min(completed_runs_after_clear,20), 0.30, 1.0)`; at most one item. The just-completed run counts, adding 0.25 percentage points per clear up to +5 points after 20 runs—even at maximum score | `reward_definition.gd:clear_item_drop_chance`, `run_flow_controller.gd:complete_run` |
+| Chest item drop chance | Standard base 0.45, floor 0.40, plus difficulty-rank, grade, exploration, and +0.015 per completed run (up to +0.30 at 20); cap 0.92. Risk adds 0.12 (cap 0.95); vaults guarantee two items | `reward_definition.gd:item_drop_chance`, `run_flow_controller.gd:chest_item_drop_chance` |
+| Run-clear gear reward | `clamp(0.40 + score*0.0065 + 0.0025*min(completed_runs_after_clear,20), 0.40, 1.0)`; at most one item. The just-completed run counts, adding 0.25 percentage points per clear up to +5 points after 20 runs | `reward_definition.gd:clear_item_drop_chance`, `run_flow_controller.gd:complete_run` |
 | Completed-run rarity bonus | +0.005 total rare-or-better probability per completed run, capped at +0.10 after 20; split across Rare/Epic/Legendary/Mythic at 60/30/8/2 | `reward_definition.gd:completed_run_rarity_bonus`, `item_catalog.gd:roll_run_rarity` |
-| Regular enemy-room treasure | R1+ run ranks; 0.50 deterministic chance per combat room; 0.50x Treasure Room gold; rarity multipliers Rare/Epic/Legendary/Mythic = 0.50/0.40/0.25/0.20 relative to dedicated Treasure Rooms | `room_controller.gd:REGULAR_ROOM_TREASURE_CHANCE`, `run_flow_controller.gd:chest_gold_reward`, `run_flow_controller.gd:claim_chest_item_reward` |
-| Additional chest gear drops | Per completed run, add +0.015 second-item, +0.005 third-item, and +0.002 fourth-item chance thresholds, capped after 20 runs and by each existing threshold cap. Rank/grade terms remain; vaults stay at one item | `reward_definition.gd:drop_count_for`, `run_flow_controller.gd:chest_item_drop_count` |
+| Regular enemy-room treasure | R1+ run ranks; 0.50 deterministic chance per combat room; 0.50x Treasure Room gold; rarity multipliers Rare/Epic/Legendary/Mythic = 0.50/0.40/0.25/0.20 relative to dedicated Treasure Rooms. Chest frequency is unchanged | `resources/definitions/room_definition.tres`, `room_controller.gd`, `run_flow_controller.gd` |
+| Additional chest gear drops | Second-item threshold base/cap 0.50/0.85; third 0.025/0.22; fourth 0.01/0.12, plus existing rank/grade terms and completed-run increments (+0.015/+0.005/+0.002 per run, capped after 20). Vaults guarantee two items | `reward_definition.gd:drop_count_for`, `run_flow_controller.gd:chest_item_drop_count` |
 | R6+ route risk | Risk shortcuts use a stronger local encounter tier and improved reward tier; vault branches use elite encounters and enhanced guaranteed gear | `room_controller.gd`, `run_flow_controller.gd`, `gameplay.gd` |
 | Collision sizes | 9x4 actor, 3.6 radius | `gameplay_state.gd` |
 | Vertical movement scale | 0.5 | `gameplay_state.gd:VERTICAL_MOVEMENT_SCALE` |

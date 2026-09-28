@@ -33,6 +33,9 @@ var target_overhead_fill_sizes: Dictionary = {}
 var target_overhead_aggro_markers: Dictionary = {}
 var target_overhead_aggro_offsets: Dictionary = {}
 var target_overhead_elite_symbols: Dictionary = {}
+var target_overhead_status_markers: Dictionary = {}
+var player_status_markers: Array[Sprite2D] = []
+var status_badge_texture_cache: Dictionary = {}
 var enemy_overhead_offset := Vector2(3, 0)
 var enemy_overhead_frame_template: Sprite2D = null
 var enemy_overhead_fill_template: Sprite2D = null
@@ -466,6 +469,70 @@ func update_player_health_ui(health: float, display_health: float, damage_hold: 
 	return {"display_health": display_health, "damage_hold": damage_hold}
 
 
+func update_player_status_marks(anchor: Sprite2D, status_component: StatusComponent, pixel_text: Callable) -> void:
+	_prune_player_status_markers()
+	if anchor == null or not is_instance_valid(anchor) or status_component == null or not is_instance_valid(status_component) or not pixel_text.is_valid():
+		for marker in player_status_markers:
+			marker.visible = false
+		return
+	var definitions := status_component.active_definitions()
+	var parent := anchor.get_parent()
+	if parent == null:
+		return
+	while player_status_markers.size() < definitions.size():
+		player_status_markers.append(_new_status_marker(parent, "PlayerStatusMark%d" % player_status_markers.size()))
+	for index in player_status_markers.size():
+		var marker := player_status_markers[index]
+		if index >= definitions.size():
+			marker.visible = false
+			continue
+		var definition := definitions[index]
+		marker.texture = status_badge_texture(definition, pixel_text)
+		marker.position = anchor.position + Vector2(18.0 + float(index) * 8.0, -3.0)
+		marker.z_index = 5
+		marker.visible = true
+
+
+func _new_status_marker(parent: Node, marker_name: String) -> Sprite2D:
+	var marker := Sprite2D.new()
+	marker.name = marker_name
+	marker.centered = false
+	marker.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	marker.z_as_relative = true
+	marker.visible = false
+	parent.add_child(marker)
+	return marker
+
+
+func status_badge_texture(definition: StatusEffectDefinition, pixel_text: Callable) -> Texture2D:
+	if definition == null or not pixel_text.is_valid():
+		return null
+	var element_color := ElementCatalogScript.damage_number_color(definition.element)
+	var cache_key := "%s:%s" % [String(definition.id), element_color.to_html(false)]
+	if status_badge_texture_cache.has(cache_key):
+		return status_badge_texture_cache[cache_key] as Texture2D
+	var image := Image.create(7, 7, false, Image.FORMAT_RGBA8)
+	image.fill(Color.TRANSPARENT)
+	for y in 7:
+		for x in 7:
+			var distance := Vector2(float(x) - 3.0, float(y) - 3.0).length_squared()
+			if distance <= 10.0:
+				image.set_pixel(x, y, Color.BLACK if distance <= 4.0 else element_color)
+	var glyph_texture := pixel_text.call(definition.badge_glyph, Color.WHITE) as Texture2D
+	if glyph_texture != null:
+		var glyph := glyph_texture.get_image()
+		var glyph_origin := Vector2i((7 - glyph.get_width()) / 2, (7 - glyph.get_height()) / 2)
+		for y in glyph.get_height():
+			for x in glyph.get_width():
+				if glyph.get_pixel(x, y).a > 0.0:
+					var target := glyph_origin + Vector2i(x, y)
+					if target.x >= 0 and target.y >= 0 and target.x < 7 and target.y < 7:
+						image.set_pixelv(target, Color.WHITE)
+	var texture := ImageTexture.create_from_image(image)
+	status_badge_texture_cache[cache_key] = texture
+	return texture
+
+
 func set_fill_ratio(fill: Sprite2D, fill_size: Vector2, ratio: float) -> void:
 	if fill == null:
 		return
@@ -514,14 +581,19 @@ func update_overhead_bars(
 	is_aggroed_for: Callable,
 	set_values: Callable,
 	overwold_ui_z: int,
-	is_hidden_for: Callable = Callable()
+	is_hidden_for: Callable = Callable(),
+	pixel_text: Callable = Callable()
 ) -> void:
 	for slime in slimes:
-		var frame := target_overhead_frames.get(slime) as Sprite2D
-		var damage_fill := target_overhead_damage_fills.get(slime) as Sprite2D
-		var fill := target_overhead_fills.get(slime) as Sprite2D
-		var aggro_marker := target_overhead_aggro_markers.get(slime) as Sprite2D
-		var elite_symbol := target_overhead_elite_symbols.get(slime) as Sprite2D
+		if slime == null or not is_instance_valid(slime):
+			continue
+		var frame := _valid_sprite_reference(target_overhead_frames.get(slime))
+		var damage_fill := _valid_sprite_reference(target_overhead_damage_fills.get(slime))
+		var fill := _valid_sprite_reference(target_overhead_fills.get(slime))
+		var aggro_marker := _valid_sprite_reference(target_overhead_aggro_markers.get(slime))
+		var elite_symbol := _valid_sprite_reference(target_overhead_elite_symbols.get(slime))
+		var status_markers: Array = target_overhead_status_markers.get(slime, [])
+		_prune_status_markers(status_markers)
 		if frame == null or damage_fill == null or fill == null or aggro_marker == null or elite_symbol == null:
 			continue
 		var hidden := (is_hidden_for.is_valid() and bool(is_hidden_for.call(slime))) or bool(slime.get_meta("boss_jump_ui_suppressed", false))
@@ -531,6 +603,8 @@ func update_overhead_bars(
 			fill.visible = false
 			aggro_marker.visible = false
 			elite_symbol.visible = false
+			for status_marker in status_markers:
+				status_marker.visible = false
 			continue
 		var max_health := float(max_health_for.call(slime))
 		var health := float(health_for.call(slime))
@@ -570,6 +644,8 @@ func update_overhead_bars(
 		elite_symbol.global_position = symbol_position
 		elite_symbol.global_scale = Vector2.ONE
 		elite_symbol.z_index = overwold_ui_z + 4
+		var status_component := slime.get_node_or_null("Status") as StatusComponent
+		_update_actor_status_markers(slime, status_component, status_markers, overhead_position + Vector2(fill_size.x + 2.0, -1.0), overwold_ui_z + 5, pixel_text)
 		aggro_marker.top_level = true
 		var aggro_offset := target_overhead_aggro_offsets.get(slime, Vector2.ZERO) as Vector2
 		if float(slime.get_meta("encounter_scale", 1.0)) > 1.0:
@@ -583,9 +659,58 @@ func update_overhead_bars(
 			aggro_marker.global_position = slime.global_position + aggro_offset + Vector2(0, -2)
 		aggro_marker.global_scale = Vector2.ONE
 		aggro_marker.z_index = overwold_ui_z + 3
-		if not should_show:
+		if should_show:
+			set_values.call(fill, damage_fill, fill_size, health, float(display_health_for.call(slime)), max_health)
+
+
+func _update_actor_status_markers(actor: Sprite2D, status_component: StatusComponent, markers: Array, origin: Vector2, z_index: int, pixel_text: Callable) -> void:
+	if actor == null or not is_instance_valid(actor):
+		return
+	_prune_status_markers(markers)
+	var definitions := status_component.active_definitions() if status_component != null and is_instance_valid(status_component) else []
+	while markers.size() < definitions.size():
+		var marker := _new_status_marker(actor, "StatusMark%d" % markers.size())
+		marker.top_level = true
+		markers.append(marker)
+	for index in markers.size():
+		var marker := _valid_sprite_reference(markers[index])
+		if marker == null:
 			continue
-		set_values.call(fill, damage_fill, fill_size, health, float(display_health_for.call(slime)), max_health)
+		if index >= definitions.size():
+			marker.visible = false
+			continue
+		marker.texture = status_badge_texture(definitions[index], pixel_text)
+		marker.global_position = origin + Vector2(float(index) * 8.0, 0.0)
+		marker.global_scale = Vector2.ONE
+		marker.z_as_relative = false
+		marker.z_index = z_index
+		marker.visible = true
+
+
+func _prune_status_markers(markers: Array) -> void:
+	for index in range(markers.size() - 1, -1, -1):
+		var marker_value: Variant = markers[index]
+		if not is_instance_valid(marker_value):
+			markers.remove_at(index)
+			continue
+		if not (marker_value is Sprite2D):
+			markers.remove_at(index)
+
+
+func _valid_sprite_reference(value: Variant) -> Sprite2D:
+	if not is_instance_valid(value) or not (value is Sprite2D):
+		return null
+	return value as Sprite2D
+
+
+func _prune_player_status_markers() -> void:
+	for index in range(player_status_markers.size() - 1, -1, -1):
+		var marker_value: Variant = player_status_markers[index]
+		if not is_instance_valid(marker_value):
+			player_status_markers.remove_at(index)
+			continue
+		if not (marker_value is Sprite2D):
+			player_status_markers.remove_at(index)
 
 
 func update_button_hud(buttons: Array[Sprite2D], _devices: Array[int], router: InputRouter = null, input_device_tracker: Node = null, pixel_texture: Callable = Callable()) -> void:
@@ -768,7 +893,7 @@ func update_overworld(root: Object, delta: float, ui_z: int) -> void:
 	update_combo_hud(root)
 	var timer := fmod(gold_animation_timer + delta, 0.48); gold_animation_timer = timer; _tick_gold_counter(root, delta); _tick_soul_counter(root, delta); update_gold_indicator(gold_indicator, gold_animation_frames, timer)
 	update_run_timer(root)
-	update_overhead_bars(root.get("slimes"), Callable(root, "_enemy_max_health"), Callable(root, "_slime_current_health"), Callable(root, "_slime_display_health"), Callable(root, "_is_slime_dead"), Callable(root, "_is_slime_aggroed"), Callable(self, "set_health_bar_values"), ui_z, Callable(root, "_is_slime_hidden"))
+	update_overhead_bars(root.get("slimes"), Callable(root, "_enemy_max_health"), Callable(root, "_slime_current_health"), Callable(root, "_slime_display_health"), Callable(root, "_is_slime_dead"), Callable(root, "_is_slime_aggroed"), Callable(self, "set_health_bar_values"), ui_z, Callable(root, "_is_slime_hidden"), Callable(root, "_pixel_text_texture"))
 
 
 func update_combo_hud(root: Object) -> void:
@@ -1291,7 +1416,7 @@ func build_enemy_health_ui(
 	for slime in slimes:
 		target_health_damage_fill_textures[slime] = bright_texture.call(target_health_texture_for(slime))
 		target_overhead_damage_fill_textures[slime] = bright_texture.call(target_overhead_texture_for(slime))
-	target_overhead_frames.clear(); target_overhead_damage_fills.clear(); target_overhead_fills.clear(); target_overhead_offsets.clear(); target_overhead_fill_sizes.clear(); target_overhead_aggro_markers.clear(); target_overhead_aggro_offsets.clear(); target_overhead_elite_symbols.clear()
+	target_overhead_frames.clear(); target_overhead_damage_fills.clear(); target_overhead_fills.clear(); target_overhead_offsets.clear(); target_overhead_fill_sizes.clear(); target_overhead_aggro_markers.clear(); target_overhead_aggro_offsets.clear(); target_overhead_elite_symbols.clear(); target_overhead_status_markers.clear()
 	target_health_fill.texture = TARGET_HEALTH_BAR_TEXTURE
 	target_health_fill.self_modulate = Color.WHITE
 	var target_damage_fill := duplicate_fill.call(target_health_fill, "EnemyHpDamageFill") as Sprite2D
@@ -1344,12 +1469,16 @@ func register_overhead_bar(slime: Sprite2D, frame: Sprite2D, fill: Sprite2D, off
 	elite_symbol.z_as_relative = false
 	elite_symbol.top_level = true
 	elite_symbol.visible = false
+	var status_markers: Array = target_overhead_status_markers.get(slime, [])
+	if status_markers == null:
+		status_markers = []
+		target_overhead_status_markers[slime] = status_markers
 	# These bars remain children of the slime so hidden/unaggroed bars retain a
 	# valid authored local transform. update_overhead_bars() assigns their world
 	# position and scale whenever they are shown; only the marker needs to stay
 	# top-level because it is placed against the bar's resolved left edge.
 	aggro_marker.top_level = true
-	target_overhead_frames[slime] = frame; target_overhead_damage_fills[slime] = damage_fill; target_overhead_fills[slime] = fill; target_overhead_offsets[slime] = offset; target_overhead_fill_sizes[slime] = fill.texture.get_size() if fill.texture != null else Vector2.ZERO; target_overhead_aggro_markers[slime] = aggro_marker; target_overhead_aggro_offsets[slime] = aggro_offset; target_overhead_elite_symbols[slime] = elite_symbol
+	target_overhead_frames[slime] = frame; target_overhead_damage_fills[slime] = damage_fill; target_overhead_fills[slime] = fill; target_overhead_offsets[slime] = offset; target_overhead_fill_sizes[slime] = fill.texture.get_size() if fill.texture != null else Vector2.ZERO; target_overhead_aggro_markers[slime] = aggro_marker; target_overhead_aggro_offsets[slime] = aggro_offset; target_overhead_elite_symbols[slime] = elite_symbol; target_overhead_status_markers[slime] = status_markers
 	frame.visible = false; damage_fill.visible = false; fill.visible = false; aggro_marker.visible = false
 
 
@@ -1392,6 +1521,7 @@ func rebind_enemy_actor(old_actor: Sprite2D, new_actor: Sprite2D) -> void:
 		target_overhead_aggro_markers,
 		target_overhead_aggro_offsets,
 		target_overhead_elite_symbols,
+		target_overhead_status_markers,
 	]
 	for actor_cache in actor_caches:
 		if actor_cache.has(old_actor):

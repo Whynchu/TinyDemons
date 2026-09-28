@@ -281,3 +281,54 @@ Replaced the repetitive fractional-scaled healing crosses with crisp outlined
 crosses and smaller sparkle accents using pixel-aligned scale and controlled
 upward motion. Updated the issue and healer plan; runtime visual acceptance
 remains open under the recorded Godot process restriction.
+
+## 2026-09-28T21:00Z — codex — handoff
+The user redirected the elemental-status documentation into implementation and
+explicitly rejected the chest proof and grayscale acceptance requirement. The
+design and implementation-plan documents from the prior authoring task are now
+assigned to Codex for correction and execution, alongside the reported magenta
+render artifact. No playtest may be launched in this session.
+
+## 2026-09-28T21:53Z — codex — handoff
+Implemented the four status families and their catalog/runtime/presentation
+documentation. Fixed the reported overhead HUD Array cast and the missing
+`PlayerAnimationContext.player_dead_get` dependency; configured `ElementAura`
+through typed actor/status/overlay-parent references; added the player-death
+visibility guard and opaque death-entry reset. Focused MCP script diagnostics
+and `git diff --check` pass. Owner checks remain unrun, no Godot process was
+launched, and the magenta artifact remains unresolved without a capture.
+## 2026-09-28T22:06Z — codex — claim
+Increase general gear-drop volume at chest, room-treasure, clear, and vault
+reward paths; change Fusion growth so each positive gear stat line advances,
+while preserving fixed tradeoff penalties. Update tuning and gear documentation.
+## 2026-09-28T22:06Z — codex — claim
+Follow up the status playtest report: prune freed HUD status markers before
+casting, fix status-aura transform ownership, and add distinct persistent
+particles for Burn, Poison, Stun, and Slow. No Godot process or tests.
+
+## 2026-09-28T22:29Z — codex — done
+Fixed cached HUD marker lifetime checks; aligned status/imbue overlays and
+particle sources to each sprite's current atlas/region/sheet frame; added
+separate status particles. Focused offline MCP script diagnostics and diff
+hygiene pass; no runtime playtest or test suite was run.
+
+## 2026-09-28T22:29Z — codex — done
+Raised room treasure/chest/clear/drop-count quantity and guaranteed two vault
+items. Fusion now advances every positive authored/random attribute and shield
+guard line while retaining negative tradeoffs. Focused offline MCP script
+diagnostics and diff hygiene pass; no runtime or suite was run.
+
+## 2026-09-28T22:29Z — codex — correction
+Owner clarified the intended change was more gear per chest/reward, not more
+chests. Restored regular combat-room treasure frequency to its original 0.50;
+kept item drop odds, multi-item thresholds, run-clear gear odds, and two vault
+items. Updated tuning and known-issue text.
+
+## 2026-09-28T22:40Z — codex — claim
+Prepare the 0.3.19 main release for current gameplay/status changes; preserve local MCP and timed-hazard edits.
+
+## 2026-09-28T22:40Z — codex — done
+Aligned 0.3.19 across the in-game title and release documentation, preserved
+the web Compatibility renderer override, and prepared the gameplay/status and
+gear changes for release. Local MCP configuration and timed-floor planning
+changes remain outside the release. No Godot runtime or suite was launched.

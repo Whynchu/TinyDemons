@@ -2,6 +2,7 @@ extends Node
 class_name EffectsSpawner
 
 const ActorPaletteMaterialScript = preload("res://scripts/actor_palette_material.gd")
+const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
 const GEAR_PLUS_TEXTURE: Texture2D = preload("res://assets/artwork/gearplus3x5.png")
 const HEAL_PLUS_PIXELS := [
 	"....d....",
@@ -38,6 +39,9 @@ var critical_outline_texture_cache: Dictionary = {}
 var name_texture_cache: Dictionary = {}
 var keyboard_prompt_texture_cache: Dictionary = {}
 var pixel_particle_texture_cache: Dictionary = {}
+var status_particle_texture_cache: Dictionary = {}
+var status_edge_position_cache: Dictionary = {}
+var status_source_image_cache: Dictionary = {}
 var heal_plus_texture_cache: Texture2D = null
 var heal_spark_texture_cache: Texture2D = null
 var damage_numbers: Array[Dictionary] = []
@@ -68,6 +72,7 @@ var charge_ready_opaque_timer := 0.0
 var charge_ready_was_maxed := false
 var charge_aura_active := false
 var charge_ready_highlight: Sprite2D = null
+var status_particle_noise := FastNoiseLite.new()
 
 
 func configure_item_acquisition_delivery(ui: Node2D, hud: HudController, registry: FeedbackAnimationRegistry, screen_state: Node, minimap: Node, sound_player: Callable = Callable()) -> void:
@@ -698,6 +703,11 @@ func begin_player_death(root: Object, depth_scale: float) -> void:
 	root.set("player_is_attacking", false); root.set("player_is_rolling", false); root.set("player_is_backflipping", false); root.call("_clear_roll_dust")
 	var player := root.get("player") as Sprite2D
 	(root.get("player_attack_visual") as Sprite2D).visible = false
+	# The actor can enter death from a transient visual state (palette/occlusion
+	# flash, or an interrupted animation). Start from the authored opaque baseline
+	# before hiding it so no stale alpha leaks into later presentation callbacks.
+	player.modulate = Color.WHITE
+	player.self_modulate = Color.WHITE
 	var renderer := root.get("occlusion_renderer") as OcclusionRenderer
 	var death_texture := player.texture
 	if renderer != null:
@@ -1115,9 +1125,187 @@ func spawn_health_number(parent: Node, world_position: Vector2, value: int, velo
 
 func _discard_damage_number(damage_number: Dictionary) -> void:
 	for key in [&"sprite", &"shadow", &"outline"]:
-		var node := damage_number.get(key) as Node
-		if node != null and is_instance_valid(node):
+		var node_value: Variant = damage_number.get(key)
+		if is_instance_valid(node_value) and node_value is Node:
+			var node := node_value as Node
 			node.queue_free()
+
+
+func spawn_actor_status_particle(actor: Sprite2D, effect_parent: Node2D, definition: StatusEffectDefinition, random_source: RandomNumberGenerator, pixel_texture: Callable) -> void:
+	if actor == null or not is_instance_valid(actor) or actor.texture == null or not actor.visible or not actor.is_visible_in_tree():
+		return
+	if effect_parent == null or not is_instance_valid(effect_parent) or definition == null or not pixel_texture.is_valid():
+		return
+	if pixel_particles.size() >= MAX_PIXEL_PARTICLES:
+		return
+	var edge_positions := _status_edge_positions(actor)
+	if edge_positions.is_empty():
+		return
+	var source := random_source
+	if source == null or not is_instance_valid(source):
+		source = RandomNumberGenerator.new()
+		source.randomize()
+	var source_pixel: Vector2i = edge_positions[source.randi_range(0, edge_positions.size() - 1)]
+	var source_image := _status_source_image(actor)
+	if source_image == null or source_image.is_empty():
+		return
+	var pixel_x := source_image.get_width() - 1 - source_pixel.x if actor.flip_h else source_pixel.x
+	var pixel_y := source_image.get_height() - 1 - source_pixel.y if actor.flip_v else source_pixel.y
+	var sprite_rect := actor.get_rect()
+	var local_pixel := sprite_rect.position + Vector2(float(pixel_x) + 0.5, float(pixel_y) + 0.5)
+	var origin := actor.to_global(local_pixel)
+	var color := ElementCatalogScript.damage_number_color(definition.element)
+	var particle_texture := _status_particle_texture(definition.particle_style, color, pixel_texture)
+	if particle_texture == null:
+		return
+	var particle := Sprite2D.new()
+	particle.name = "StatusParticle_%s" % String(definition.id)
+	particle.texture = particle_texture
+	particle.centered = true
+	particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	particle.z_as_relative = false
+	particle.z_index = actor.z_index + 1
+	effect_parent.add_child(particle)
+	particle.global_position = origin
+	particle.global_scale = actor.global_scale
+	var lifetime := 0.5
+	var velocity := Vector2.ZERO
+	var gravity := 0.0
+	var particle_data: Dictionary = {
+		"sprite": particle,
+		"timer": 0.5,
+		"lifetime": 0.5,
+		"gravity": 0.0,
+		"effect_tag": StringName("status_%s" % String(definition.id)),
+		"logical_position": origin,
+	}
+	match definition.particle_style:
+		&"ember":
+			status_particle_noise.frequency = 0.28
+			var noise_value := status_particle_noise.get_noise_2d(float(source_pixel.x), float(source_pixel.y) + float(Time.get_ticks_msec()) * 0.002)
+			lifetime = source.randf_range(0.45, 0.90)
+			velocity = Vector2(noise_value * 5.0, -(8.0 + (noise_value + 1.0) * 14.0))
+			particle_data["fire_spark"] = true
+			particle_data["fire_palette"] = ElementCatalogScript.palette_key(definition.element)
+		&"poison_mote":
+			lifetime = source.randf_range(0.65, 1.05)
+			velocity = Vector2(source.randf_range(-2.5, 2.5), source.randf_range(-8.0, -4.0))
+			gravity = -1.0
+		&"electric_spark":
+			lifetime = source.randf_range(0.16, 0.28)
+			var angle := source.randf_range(0.0, TAU)
+			velocity = Vector2(cos(angle), sin(angle)) * source.randf_range(12.0, 22.0)
+		&"frost_crystal":
+			lifetime = source.randf_range(0.70, 1.10)
+			velocity = Vector2(source.randf_range(-1.5, 1.5), source.randf_range(2.0, 5.0))
+	particle_data["timer"] = lifetime
+	particle_data["lifetime"] = lifetime
+	particle_data["velocity"] = velocity
+	particle_data["gravity"] = gravity
+	pixel_particles.append(particle_data)
+
+
+func _status_particle_texture(particle_style: StringName, color: Color, pixel_texture: Callable) -> Texture2D:
+	if particle_style == &"ember":
+		return pixel_texture.call(color) as Texture2D
+	var key := "%s:%s" % [String(particle_style), color.to_html(false)]
+	if status_particle_texture_cache.has(key):
+		return status_particle_texture_cache[key] as Texture2D
+	var pattern: Array[String] = []
+	match particle_style:
+		&"poison_mote": pattern = [".p.", "pPp", ".p."]
+		&"electric_spark": pattern = ["..s.", ".SSs", "SS..", ".s.."]
+		&"frost_crystal": pattern = ["..i..", ".iIi.", "iIiIi", ".iIi.", "..i.."]
+		_: pattern = ["p"]
+	var width := pattern[0].length()
+	var image := Image.create(width, pattern.size(), false, Image.FORMAT_RGBA8)
+	image.fill(Color.TRANSPARENT)
+	var highlight := color.lerp(Color.WHITE, 0.55)
+	for y in pattern.size():
+		for x in width:
+			var pixel_code := pattern[y].substr(x, 1)
+			if pixel_code == ".":
+				continue
+			image.set_pixel(x, y, highlight if pixel_code in ["P", "S", "I"] else color)
+	var texture := ImageTexture.create_from_image(image)
+	status_particle_texture_cache[key] = texture
+	return texture
+
+
+func _status_edge_positions(sprite: Sprite2D) -> Array:
+	if sprite == null or not is_instance_valid(sprite) or sprite.texture == null:
+		return []
+	var key := _status_sprite_cache_key(sprite)
+	if status_edge_position_cache.has(key):
+		return status_edge_position_cache[key] as Array
+	var image := _status_source_image(sprite)
+	if image == null or image.is_empty():
+		return []
+	var positions: Array[Vector2i] = []
+	for y in image.get_height():
+		for x in image.get_width():
+			if image.get_pixel(x, y).a <= 0.0:
+				continue
+			for offset in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+				var neighbor: Vector2i = Vector2i(x, y) + offset
+				if neighbor.x < 0 or neighbor.y < 0 or neighbor.x >= image.get_width() or neighbor.y >= image.get_height() or image.get_pixelv(neighbor).a <= 0.0:
+					positions.append(Vector2i(x, y))
+					break
+	status_edge_position_cache[key] = positions
+	return positions
+
+
+func _status_sprite_cache_key(sprite: Sprite2D) -> String:
+	var region_key := ""
+	if sprite.region_enabled:
+		region_key = ":%s:%s" % [sprite.region_rect.position, sprite.region_rect.size]
+	return "%s:%s:%s:%s:%s%s" % [sprite.texture.get_rid(), sprite.hframes, sprite.vframes, sprite.frame, sprite.region_enabled, region_key]
+
+
+func _status_source_image(sprite: Sprite2D) -> Image:
+	if sprite == null or not is_instance_valid(sprite) or sprite.texture == null:
+		return null
+	var key := _status_sprite_cache_key(sprite)
+	if status_source_image_cache.has(key):
+		return status_source_image_cache[key] as Image
+	var image: Image = null
+	var source := sprite.texture
+	if source is AtlasTexture:
+		var atlas_texture := source as AtlasTexture
+		if atlas_texture.atlas == null:
+			return null
+		var atlas_image := atlas_texture.atlas.get_image()
+		if atlas_image == null or atlas_image.is_empty():
+			return null
+		var region := Rect2i(atlas_texture.region.position, atlas_texture.region.size)
+		if region.position.x < 0 or region.position.y < 0 or region.end.x > atlas_image.get_width() or region.end.y > atlas_image.get_height():
+			return null
+		image = atlas_image.get_region(region)
+	else:
+		image = source.get_image()
+	if image == null or image.is_empty():
+		return null
+	if image.is_compressed() and image.decompress() != OK:
+		return null
+	if sprite.region_enabled:
+		var sprite_region := Rect2i(sprite.region_rect.position, sprite.region_rect.size)
+		if sprite_region.size.x <= 0 or sprite_region.size.y <= 0 or sprite_region.position.x < 0 or sprite_region.position.y < 0 or sprite_region.end.x > image.get_width() or sprite_region.end.y > image.get_height():
+			return null
+		image = image.get_region(sprite_region)
+	var horizontal_frames := maxi(sprite.hframes, 1)
+	var vertical_frames := maxi(sprite.vframes, 1)
+	if horizontal_frames > 1 or vertical_frames > 1:
+		var frame_width := floori(float(image.get_width()) / float(horizontal_frames))
+		var frame_height := floori(float(image.get_height()) / float(vertical_frames))
+		var frame_index := clampi(sprite.frame, 0, horizontal_frames * vertical_frames - 1)
+		var frame_x := frame_index % horizontal_frames
+		var frame_y := floori(float(frame_index) / float(horizontal_frames))
+		var frame_region := Rect2i(frame_x * frame_width, frame_y * frame_height, frame_width, frame_height)
+		if frame_region.size.x <= 0 or frame_region.size.y <= 0:
+			return null
+		image = image.get_region(frame_region)
+	status_source_image_cache[key] = image
+	return image
 
 
 func _rgb_key(color: Color) -> String:
@@ -1133,8 +1321,9 @@ func clear_effect_particles(effect_tag: StringName) -> void:
 		var particle_data := pixel_particles[index]
 		if particle_data.get("effect_tag", &"") != effect_tag:
 			continue
-		var particle := particle_data.get("sprite") as Sprite2D
-		if particle != null:
+		var particle_value: Variant = particle_data.get("sprite")
+		if is_instance_valid(particle_value) and particle_value is Sprite2D:
+			var particle := particle_value as Sprite2D
 			particle.queue_free()
 		pixel_particles.remove_at(index)
 	if effect_tag == CHARGE_AURA_TAG:
@@ -1147,12 +1336,17 @@ func update_pixel_particles(delta: float, snap_position: Callable, default_lifet
 	# grow the per-frame particle update (and node) count without bound.
 	while pixel_particles.size() > MAX_PIXEL_PARTICLES:
 		var oldest := pixel_particles.pop_front() as Dictionary
-		var oldest_sprite := oldest.get("sprite") as Node
-		if oldest_sprite != null and is_instance_valid(oldest_sprite):
+		var oldest_sprite_value: Variant = oldest.get("sprite")
+		if is_instance_valid(oldest_sprite_value) and oldest_sprite_value is Node:
+			var oldest_sprite := oldest_sprite_value as Node
 			oldest_sprite.queue_free()
 	for index in range(pixel_particles.size() - 1, -1, -1):
 		var particle_data := pixel_particles[index]
-		var particle := particle_data["sprite"] as Sprite2D
+		var particle_value: Variant = particle_data.get("sprite")
+		if not is_instance_valid(particle_value) or not (particle_value is Sprite2D):
+			pixel_particles.remove_at(index)
+			continue
+		var particle := particle_value as Sprite2D
 		var timer := float(particle_data["timer"]) - delta
 		var delay := float(particle_data.get("delay", 0.0))
 		if delay > 0.0:

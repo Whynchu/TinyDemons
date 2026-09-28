@@ -58,6 +58,11 @@ For an external product/design review, use the curated [`review/00-astra-review-
     approved/rejected directions, and evidence still needed.
 20. [`agent-workflow.md`](agent-workflow.md) — project-scoped Codex advisor roles
     and the workflow for asking Pip, Thorn, and Hexley for input.
+21. [`elemental-ability-and-status-system.md`](elemental-ability-and-status-system.md)
+    — approved direction for one reusable elemental ability/status/presentation
+    pipeline shared by the player and enemies. Decision log:
+    [`elemental-ability-and-status-system-addendum.md`](elemental-ability-and-status-system-addendum.md).
+    Execution: [`elemental-status-implementation-plan.md`](elemental-status-implementation-plan.md).
 
 ## Authority by question
 
@@ -88,6 +93,7 @@ For an external product/design review, use the curated [`review/00-astra-review-
 | What are the current combat and dungeon design principles? | [`combat-and-dungeon-design-principles.md`](combat-and-dungeon-design-principles.md) | feature-specific plans and tuning values |
 | Which product and design questions remain unresolved? | [`design-philosophy-interview-questionnaire.md`](design-philosophy-interview-questionnaire.md) | current design authorities and interview decision records |
 | What is the ratified design contract? | [`design-interview-record-2026-09-18.md`](design-interview-record-2026-09-18.md) | feature-specific plans and tuning values |
+| How should elemental abilities, statuses, and auras be built? | [`elemental-ability-and-status-system.md`](elemental-ability-and-status-system.md) | component contract, design principles, and the authoring plan |
 
 ## Document lifecycle
 

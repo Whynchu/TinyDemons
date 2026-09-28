@@ -616,3 +616,22 @@ overlap between `save_flow_controller.gd` and `screen_state_controller.gd` is
 "synchronous disk I/O in frame paths" finding was broader than the evidence -
 pickup profile saves are already coalesced into a pending flag and flushed from
 the frame schedule, and the sound-profile poll is signature-gated.
+
+## 18. Elemental status implementation follow-up (2026-09-28)
+
+The working tree now contains the first four catalog-backed elemental statuses,
+actor-local status components, player/enemy application and tick integration,
+movement slow, periodic stun, status HUD marks, and the shared aura owner.
+Death visibility also has a source fix: animation refresh/tick callbacks check
+the player-dead state before exposing sprites, and death entry restores opaque
+modulation before hiding the player. The reported transient magenta actor/hitbox
+rectangle remains unexplained because no capture or reproducible source-backed
+cause was available.
+
+The newly registered status component, status combat, and player-death
+visibility checks are still unrun. Focused offline script diagnostics passed
+for the corrected HUD registration, animation context, frame-context builder,
+animation component, and death visibility contract. Native-resolution visual
+acceptance, cloak/death reproduction, catalog validators, and browser playtest
+remain open. The user-reported HUD startup failure from casting a stored Array
+to `Array[Sprite2D]` was corrected and its script diagnostic now passes.

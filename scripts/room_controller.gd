@@ -643,6 +643,9 @@ func _enter_connected_room_impl(runtime: GameplayState, transition: RoomTransiti
 	runtime._reset_combo()
 	runtime._save_current_room_state()
 	runtime.current_room_id = transition.destination_room_id
+	var player_status := runtime.player.get_node_or_null("Status") as StatusComponent if runtime.player != null else null
+	if player_status != null:
+		player_status.clear_all()
 	runtime._sync_current_room_metadata(transition.arrival_socket_id)
 	enter_room(transition.destination_room_id, transition.destination_room_type, transition.arrival_socket_id)
 	_maybe_add_backtrack_popcorn(runtime)

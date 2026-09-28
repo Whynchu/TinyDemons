@@ -360,7 +360,7 @@ func apply_hitbox(root: GameplayState) -> void:
 			var first_swing_share := floorf(base_damage / maxf(divisor, 1.0))
 			divided_damage = maxf(divided_damage, first_swing_share + 1.0)
 		damage_result.amount = 0.0 if damage_result.immune else maxf(divided_damage, 1.0)
-		root._damage_slime(slime, damage_result.amount, damage_result.critical, damage_result.element, damage_result.immune)
+		root._damage_slime(slime, damage_result.amount, damage_result.critical, damage_result.element, damage_result.immune, damage_result.effectiveness)
 		if imbued_contact:
 			root._play_sound_with_perlin_pitch("imbue_impact", 0.0, 1.0, 0.03)
 		if not damage_result.immune and damage_result.amount > 0.0:

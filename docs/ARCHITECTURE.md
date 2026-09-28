@@ -2,7 +2,7 @@
 
 Status: current ownership and extension guide for the `0.2.x` baseline
 
-Updated: 2026-09-26
+Updated: 2026-09-28
 
 Authority: [`AUDIT.md`](AUDIT.md) records measured findings; this document
 defines the intended runtime boundaries and safe extension rules.
@@ -95,6 +95,13 @@ Encrypted-vault deployment and operational verification are documented in
 - **Web/input**: `input_device_tracker` (last deliberate device and prompt
   labels), `touch_controls_layer` (virtual stick and touch buttons), and
   `input_router` (the single merged input snapshot).
+- **Elemental statuses**: `ElementCatalogData` owns the current status
+  definitions; `StatusComponent` owns each actor's active records;
+  `CombatRuntimeController` applies eligible effects and handles typed tick
+  results. `GameplayFrameController` and `SlimeRuntimeController` schedule the
+  player and enemy ticks. `ActorMotor` / `SlimeBrain` consume slow multipliers,
+  `HudController` draws status marks, and `ElementAuraComponent` owns the
+  status outline plus reusable imbue overlays.
 - **Infra**: `gameplay` (coordinator), `gameplay_state` (state),
   `gameplay_bootstrap`, `gameplay_frame_controller`,
   `editor_collision_guide`, `editor_polygon_guide`, `ui_layout_guide`.
@@ -130,9 +137,9 @@ effects and preserves the explicit frame schedule. New room-entry behavior
 should extend this result or add a focused result beside it rather than adding
 another loose destination/arrival argument to the coordinator.
 
-## Tuning classes and default resources
+## Tuning and status-definition resources
 
-The tuning classes expose typed exported fields and have inspector-facing
+The six tuning classes expose typed exported fields and have inspector-facing
 defaults under `resources/tuning/`. `GameplayState` loads and deep-duplicates
 one default resource per runtime, so a test, debug scene, or future designer
 override cannot mutate the cached default used by another runtime.
@@ -145,6 +152,11 @@ override cannot mutate the cached default used by another runtime.
 | `resources/tuning/progression_default.tres` / `progression_tuning.gd` | XP curve, depth scaling, milestones |
 | `resources/tuning/effects_default.tres` / `effects_tuning.gd` | Damage numbers, particles, screen effects |
 | `resources/tuning/chroma_default.tres` / `chroma_tuning.gd` | Chroma pickup and elemental resource values |
+
+`resources/tuning/status_*.tres` are typed content definitions, not per-runtime
+tuning copies. `ElementCatalogData.status_effects` references them as the
+current status registry. Their proc, duration, stack, tick, slow, and stun
+values are indexed in `GAMEPLAY_TUNING.md`.
 
 Balance data lives in these resources, not in `gameplay.gd`. See
 `GAMEPLAY_TUNING.md` for the full export index and the remaining hardcoded

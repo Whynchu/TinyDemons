@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="StatusEffectDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/status_effect_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"burn"
+element = 1
+family = 0
+proc_chance = 0.2
+duration = 2.5
+maximum_stacks = 3
+magnitude_per_stack = 1.0
+tick_interval = 1.0
+badge_glyph = "B"
+particle_style = &"ember"
+particle_interval = 0.08

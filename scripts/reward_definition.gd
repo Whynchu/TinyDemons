@@ -19,15 +19,17 @@ static func default_data() -> RewardDefinition:
 @export var loot_grade_bonus_f := -0.5
 
 ## Chest item drop chance curve.
-@export var drop_chance_base := 0.34
+@export var drop_chance_base := 0.45
 @export var drop_chance_per_rank := 0.035
 @export var drop_chance_per_grade := 0.025
-@export var drop_chance_floor := 0.30
-@export var drop_chance_cap := 0.88
+@export var drop_chance_floor := 0.40
+@export var drop_chance_cap := 0.92
 @export var drop_chance_risk_bonus := 0.12
 @export var drop_chance_risk_cap := 0.95
 @export var exploration_bonus_per_chest := 0.025
 @export var exploration_bonus_cap := 0.20
+## Vaults guarantee this many premium gear items after their guaranteed drop.
+@export_range(1, 4, 1) var vault_item_drop_count := 2
 
 ## Persistent gear progression. Only saved completed runs count; the progress
 ## stops increasing after the configured cap. Current-run depth is not used.
@@ -36,7 +38,7 @@ static func default_data() -> RewardDefinition:
 @export var double_drop_per_completed_run := 0.015
 @export var triple_drop_per_completed_run := 0.005
 @export var quad_drop_per_completed_run := 0.002
-@export var clear_drop_chance_base := 0.30
+@export var clear_drop_chance_base := 0.40
 @export var clear_drop_chance_per_score := 0.0065
 @export var clear_drop_chance_per_completed_run := 0.0025
 @export var clear_drop_chance_cap := 1.0
@@ -45,23 +47,24 @@ static func default_data() -> RewardDefinition:
 @export var rarity_bonus_budget_per_completed_run := 0.005
 
 ## Chest item drop count thresholds.
-@export var double_drop_base := 0.35
+@export var double_drop_base := 0.50
 @export var double_drop_per_rank := 0.06
 @export var double_drop_per_grade := 0.04
 @export var double_drop_floor := 0.25
-@export var double_drop_cap := 0.75
-@export var triple_drop_base := 0.01
+@export var double_drop_cap := 0.85
+@export var triple_drop_base := 0.025
 @export var triple_drop_per_rank := 0.0045
 @export var triple_drop_per_grade := 0.006
-@export var triple_drop_cap := 0.15
-@export var quad_drop_base := 0.005
+@export var triple_drop_cap := 0.22
+@export var quad_drop_base := 0.01
 @export var quad_drop_per_rank := 0.0035
 @export var quad_drop_per_grade := 0.004
-@export var quad_drop_cap := 0.10
+@export var quad_drop_cap := 0.12
 
 
 func validate() -> Array[String]:
 	var problems: Array[String] = []
+	if vault_item_drop_count < 1 or vault_item_drop_count > 4: problems.append("vault_item_drop_count must be between 1 and 4")
 	if drop_chance_cap < drop_chance_floor: problems.append("drop_chance_cap must be >= drop_chance_floor")
 	if drop_chance_risk_cap < drop_chance_cap: problems.append("drop_chance_risk_cap must be >= drop_chance_cap")
 	if double_drop_cap < double_drop_floor: problems.append("double_drop_cap must be >= double_drop_floor")

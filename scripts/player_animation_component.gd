@@ -210,6 +210,8 @@ func _apply_material_palette(sprite: Sprite2D, palette: String) -> void:
 
 
 func apply_frame(new_context: PlayerAnimationContext) -> void:
+	if _hide_player_after_death(new_context):
+		return
 	_sync_material_palette(new_context)
 	var player := new_context.player
 	var animation_key := String(new_context.player_anim_name_get.call())
@@ -413,6 +415,8 @@ func apply_palette_async(new_context: PlayerAnimationContext, palette_name: Stri
 
 
 func tick_coordinator_animation(new_context: PlayerAnimationContext, delta: float) -> void:
+	if _hide_player_after_death(new_context):
+		return
 	var attacking := bool(new_context.player_is_attacking_get.call())
 	var rolling := bool(new_context.player_is_rolling_get.call())
 	var backflipping := bool(new_context.player_is_backflipping_get.call())
@@ -560,6 +564,16 @@ func tick_coordinator_animation(new_context: PlayerAnimationContext, delta: floa
 		if step_frame == 1 or step_frame == 3:
 			new_context.on_player_walk_step.call(step_frame)
 	apply_frame(new_context)
+
+
+func _hide_player_after_death(new_context: PlayerAnimationContext) -> bool:
+	if new_context == null or not new_context.player_dead_get.is_valid() or not bool(new_context.player_dead_get.call()):
+		return false
+	if new_context.player != null:
+		new_context.player.visible = false
+	if new_context.player_attack_visual != null:
+		new_context.player_attack_visual.visible = false
+	return true
 
 
 func update_attack_visual(player: Sprite2D, attack_visual: Sprite2D, active: bool, texture_offset: Vector2, z_index_value: int) -> void:

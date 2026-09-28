@@ -90,6 +90,7 @@ func animation_context(root: GameplayState) -> PlayerAnimationContext:
 	context.player_equipment_visual_component = root.player_equipment_visual_component
 	context.player_tuning = root.player_tuning
 	context.attack_frame_size = root.PLAYER_ATTACK_FRAME_SIZE
+	context.player_dead_get = func() -> Variant: return root.get("player_dead")
 	context.current_player_palette_name_get = func() -> Variant: return root.get("current_player_palette_name")
 	context.player_anim_name_get = func() -> Variant: return root.get("player_anim_name")
 	context.player_anim_name_set = func(value: Variant) -> void: root.set("player_anim_name", value)
@@ -141,6 +142,7 @@ func equipment_visual_context(root: GameplayState) -> PlayerEquipmentVisualConte
 		# The depth sorter reassigns these arrays, so refresh them on each access.
 		context.actor_sprites = root.actor_sprites
 		context.occluder_sprites = root.occluder_sprites
+		context.element_aura_component = root.player.get_node_or_null("ElementAura") as ElementAuraComponent if root.player != null else null
 		return context
 	_record_context_build(&"equipment_visual_context")
 	context = PlayerEquipmentVisualContext.new()
@@ -155,6 +157,7 @@ func equipment_visual_context(root: GameplayState) -> PlayerEquipmentVisualConte
 	context.rng = root.rng
 	context.player_equipment = root.player_equipment
 	context.player_guard_component = root.player_guard_component
+	context.element_aura_component = root.player.get_node_or_null("ElementAura") as ElementAuraComponent if root.player != null else null
 	context.combat_tuning = root.combat_tuning
 	context.player_tuning = root.player_tuning
 	context.actor_sprites = root.actor_sprites
@@ -645,6 +648,8 @@ func tick(root: GameplayState, delta: float) -> void:
 	if dialogue_was_active: npc.update_dialogue_from_root(root, delta); npc.update_dialogue_input(root); root._update_cloaked_demon_animation(delta)
 	var hitstop: float = root.hitstop_timer
 	if hitstop > 0.0: root.hitstop_timer = maxf(hitstop - delta, 0.0); return
+	if root.player != null:
+		root.call("_tick_actor_statuses", root.player, delta, true)
 	if root.player_death_pending and not root.player_dead:
 		if root.player_motor != null: root.player_motor.update_player_hit_reaction(root, delta)
 		root.player_equipment_visual_component.tick_death_pending(root.gameplay_frame_controller.equipment_visual_context(root))

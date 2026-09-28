@@ -59,10 +59,6 @@ var imbue_remaining := 0.0
 var last_imbue_visual_intensity := 1.0
 var imbue_flash_timer := 0.0
 var imbue_particle_timer := 0.0
-var imbue_outline_overlays: Dictionary = {}
-var imbue_flash_overlays: Dictionary = {}
-var imbue_outline_texture_cache: Dictionary = {}
-var imbue_color_texture_cache: Dictionary = {}
 var imbue_bleed_positions_cache: Dictionary = {}
 var imbue_noise := FastNoiseLite.new()
 var frame_paths := {
@@ -126,6 +122,7 @@ func begin_imbue(new_context: PlayerEquipmentVisualContext, element: int, durati
 
 
 func end_imbue(new_context: PlayerEquipmentVisualContext) -> void:
+	context = new_context
 	imbue_remaining = 0.0
 	last_imbue_visual_intensity = 1.0
 	imbue_flash_timer = 0.0
@@ -939,22 +936,18 @@ func _update_guard_flash(new_context: PlayerEquipmentVisualContext) -> void:
 
 
 func _clear_imbue_overlays() -> void:
-	for overlay in imbue_outline_overlays.values():
-		var sprite := overlay as Sprite2D
-		if sprite != null:
-			sprite.queue_free()
-	imbue_outline_overlays.clear()
-	for overlay in imbue_flash_overlays.values():
-		var sprite := overlay as Sprite2D
-		if sprite != null:
-			sprite.queue_free()
-	imbue_flash_overlays.clear()
+	var aura := _element_aura_component(context)
+	if aura != null:
+		aura.clear_imbue()
 
 
 func _update_imbue_overlays(new_context: PlayerEquipmentVisualContext) -> void:
 	if imbue_remaining <= 0.0 or imbue_element == ElementCatalogScript.Element.NEUTRAL:
 		last_imbue_visual_intensity = 1.0
 		_clear_imbue_overlays()
+		return
+	var aura := _element_aura_component(new_context)
+	if aura == null:
 		return
 	last_imbue_visual_intensity = imbue_visual_intensity(new_context)
 	var outline_color := ElementCatalogScript.damage_number_color(imbue_element)
@@ -967,46 +960,14 @@ func _update_imbue_overlays(new_context: PlayerEquipmentVisualContext) -> void:
 		if layer == null or not layer.visible or layer.texture == null:
 			continue
 		visible_layers[layer] = true
-		var outline := imbue_outline_overlays.get(layer) as Sprite2D
-		if outline == null:
-			outline = Sprite2D.new()
-			outline.name = "%sImbueOutline" % layer.name
-			outline.centered = layer.centered
-			outline.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-			outline.z_as_relative = false
-			new_context.player.get_parent().add_child(outline)
-			imbue_outline_overlays[layer] = outline
-		outline.texture = _imbue_outline_texture(layer.texture, outline_color)
-		outline.global_position = layer.global_position
-		outline.offset = layer.offset + Vector2(-1.0, -1.0)
-		outline.flip_h = layer.flip_h
-		# Match the sword layer's depth exactly. The back sword must remain behind
-		# the player instead of letting its outline render through the body.
-		outline.z_index = layer.z_index
-		outline.modulate = Color(1.0, 1.0, 1.0, outline_alpha)
-		outline.visible = outline_alpha > 0.0
-		var flash := imbue_flash_overlays.get(layer) as Sprite2D
-		if flash == null:
-			flash = Sprite2D.new()
-			flash.name = "%sImbueFlash" % layer.name
-			flash.centered = layer.centered
-			flash.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-			flash.z_as_relative = false
-			new_context.player.get_parent().add_child(flash)
-			imbue_flash_overlays[layer] = flash
-		flash.texture = _imbue_color_texture(layer.texture, flash_color)
-		flash.global_position = layer.global_position
-		flash.offset = layer.offset
-		flash.flip_h = layer.flip_h
-		flash.z_index = layer.z_index
-		flash.modulate = Color(1.0, 1.0, 1.0, flash_alpha)
-		flash.visible = flash_alpha > 0.0
-	for layer in imbue_outline_overlays:
-		if not visible_layers.has(layer):
-			(imbue_outline_overlays[layer] as Sprite2D).visible = false
-	for layer in imbue_flash_overlays:
-		if not visible_layers.has(layer):
-			(imbue_flash_overlays[layer] as Sprite2D).visible = false
+		aura.update_imbue_layer(layer, outline_color, outline_alpha, flash_color, flash_alpha)
+	aura.hide_unused_imbue_layers(visible_layers)
+
+
+func _element_aura_component(new_context: PlayerEquipmentVisualContext) -> ElementAuraComponent:
+	if new_context == null:
+		return null
+	return new_context.element_aura_component
 
 
 func imbue_visual_intensity(new_context: PlayerEquipmentVisualContext) -> float:
@@ -1015,45 +976,6 @@ func imbue_visual_intensity(new_context: PlayerEquipmentVisualContext) -> float:
 	if tuning == null or snapshot == null:
 		return 1.0
 	return tuning.imbue_visual_intensity_for_intelligence(snapshot.intelligence)
-
-
-func _imbue_color_texture(source: Texture2D, color: Color) -> Texture2D:
-	if source == null:
-		return null
-	var key := "%s:%s" % [source.get_instance_id(), color.to_html(false)]
-	if imbue_color_texture_cache.has(key):
-		return imbue_color_texture_cache[key] as Texture2D
-	var image := source.get_image().duplicate()
-	for y in image.get_height():
-		for x in image.get_width():
-			var source_color: Color = image.get_pixel(x, y)
-			if source_color.a > 0.0:
-				image.set_pixel(x, y, Color(color.r, color.g, color.b, source_color.a))
-	var texture := ImageTexture.create_from_image(image)
-	imbue_color_texture_cache[key] = texture
-	return texture
-
-
-func _imbue_outline_texture(source: Texture2D, color: Color) -> Texture2D:
-	if source == null:
-		return null
-	var key := "%s:%s" % [source.get_instance_id(), color.to_html(false)]
-	if imbue_outline_texture_cache.has(key):
-		return imbue_outline_texture_cache[key] as Texture2D
-	var image := source.get_image()
-	var output := Image.create(image.get_width() + 2, image.get_height() + 2, false, Image.FORMAT_RGBA8)
-	output.fill(Color.TRANSPARENT)
-	for y in image.get_height():
-		for x in image.get_width():
-			if image.get_pixel(x, y).a <= 0.0:
-				continue
-			for offset in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
-				var neighbor: Vector2i = Vector2i(x, y) + offset
-				if neighbor.x < 0 or neighbor.y < 0 or neighbor.x >= image.get_width() or neighbor.y >= image.get_height() or image.get_pixelv(neighbor).a <= 0.0:
-					output.set_pixel(x + 1 + offset.x, y + 1 + offset.y, color)
-	var texture := ImageTexture.create_from_image(output)
-	imbue_outline_texture_cache[key] = texture
-	return texture
 
 
 func _imbue_bleed_positions(source: Texture2D) -> Array:

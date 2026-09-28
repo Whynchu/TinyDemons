@@ -763,18 +763,6 @@ func bonuses(item: ItemInstance, _mastery_level: int = 0) -> Dictionary:
 	# is the monotonic total across promotions and must not be re-added here, or a
 	# promoted item would receive its prior-track levels twice.
 	var fusion_enhancement_points := enhancement_flat_points(item.enhancement_level)
-	var tier_stat := _normalize_stat_key(str(definition.get("tier_stat", "")))
-	# The primary `tier_stat` scales with rarity/enhancement. `tier_stats`
-	# lists additional stats that scale alongside it (premium dual-lane items).
-	var scaled_stats: Array = []
-	for raw_stat: Variant in definition.get("tier_stats", []):
-		scaled_stats.append(_normalize_stat_key(str(raw_stat)))
-	if tier_stat.is_empty():
-		pass
-	elif scaled_stats.is_empty():
-		scaled_stats.append(tier_stat)
-	elif tier_stat not in scaled_stats:
-		scaled_stats.append(tier_stat)
 	var random_points: Dictionary = item.random_stat_points if item.random_stat_points is Dictionary else {}
 	var stat_keys: Array[String] = []
 	for stat: Variant in base_bonuses.keys():
@@ -789,16 +777,14 @@ func bonuses(item: ItemInstance, _mastery_level: int = 0) -> Dictionary:
 		var authored_value := float(base_bonuses.get(normalized_stat, base_bonuses.get(_legacy_stat_key(normalized_stat), 0.0)))
 		var random_value := maxi(int(random_points.get(normalized_stat, 0)), 0)
 		var flat_value := authored_value + float(random_value)
-		if normalized_stat in scaled_stats:
+		# Every positive authored or random attribute line advances with rarity
+		# and Fusion. Keep explicit negative tradeoffs fixed so upgrades do not
+		# erase the item's build identity.
+		if authored_value > 0.0 or random_value > 0:
 			flat_value += rarity_points
-			if normalized_stat == tier_stat:
-				flat_value += fusion_enhancement_points
+			flat_value += fusion_enhancement_points
 		if random_value > 1:
 			flat_value += float(random_value - 1) * float(_rarity_rank(item.rarity))
-		# A random lane is a real stat lane: it grows at the same additive pace as
-		# the authored primary, even when its roll lands on a secondary stat.
-		if random_value > 0 and normalized_stat not in scaled_stats:
-			flat_value += rarity_points + fusion_enhancement_points
 		result[normalized_stat] = flat_value
 		if normalized_stat == "agi":
 			result["speed"] = flat_value
@@ -845,12 +831,14 @@ func shield_bonuses(item: ItemInstance) -> Dictionary:
 		return {}
 	var definition: Dictionary = definition_data(item.definition_id)
 	var shield_values: Dictionary = definition.get("shield", {})
-	var enhancement_factor := 1.0 + MASTERY_BONUS_PER_LEVEL * float(clampi(item.enhancement_level, 0, PlayerProfile.MAX_ITEM_ENHANCEMENT))
+	# Shield guard lines use their own percentage package. Use the monotonic Fusion
+	# count so those values keep improving when enhancement_level resets at a
+	# rarity promotion.
+	var fusion_steps := maxi(item.fusion_stat_points, maxi(item.fusion_count, item.enhancement_level))
+	var enhancement_factor := 1.0 + MASTERY_BONUS_PER_LEVEL * float(fusion_steps)
 	var result: Dictionary = {}
 	for stat: String in shield_values:
-		# Guard values are the shield's simple fixed package. Fusion may improve
-		# them with the same small additive enhancement factor, but rarity adds no
-		# hidden percentage multiplier.
+		# Guard values retain their authored package and improve on every Fusion.
 		var mastery_multiplier := enhancement_factor if stat in ["guard_durability", "guard_reduction"] else 1.0
 		result[stat] = float(shield_values[stat]) * mastery_multiplier
 	return result

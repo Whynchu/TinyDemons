@@ -57,6 +57,9 @@ static func configure_actor(actor: SlimeActor, definition: EnemyDefinition) -> v
 	actor.set_meta("enemy_type_id", definition.type_id)
 	actor.set_meta("ranged_stationary_attack", definition.type_id == TYPE_SKELETON)
 	actor.set_meta("behavior_id", definition.behavior_id)
+	var status_component := actor.get_node_or_null("Status") as StatusComponent
+	if status_component != null:
+		status_component.status_immunities = definition.status_immunities.duplicate()
 	if definition.type_id == TYPE_SKELETON:
 		actor.set_meta("attack_hit_frame_override", SkeletonActor.BONE_THROW_ATTACK_FRAME_INDEX)
 	actor.set_meta("visual_source", definition.visual_source)

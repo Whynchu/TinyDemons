@@ -528,6 +528,9 @@ func _initialize_player(root: GameplayState, player: Sprite2D) -> void:
 		equipment.configure_from_profile(profile)
 	var tuning := root.player_tuning
 	var health := _ensure_player_component(player, HealthComponent, "Health") as HealthComponent
+	var status_component := _ensure_player_component(player, StatusComponent, "Status") as StatusComponent
+	var element_aura := _ensure_player_component(player, ElementAuraComponent, "ElementAura") as ElementAuraComponent
+	element_aura.configure(player, player.get_parent() as Node2D, status_component)
 	health.set_process(false); health.regen_delay = tuning.regen_delay; health.regen_interval = tuning.regen_interval; health.regen_amount = tuning.regen_amount
 	health.damaged.connect(Callable(root, "_on_player_health_damaged")); health.healed.connect(Callable(root, "_on_player_health_healed")); health.health_changed.connect(Callable(root, "_on_player_health_changed"))
 	root.player_health_component = health

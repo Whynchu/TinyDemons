@@ -4,6 +4,7 @@
 
 [node name="EnemyPreviewWorkbench" type="Node2D" unique_id=2089970631]
 process_mode = 3
+texture_filter = 1
 script = ExtResource("1_preview")
 enemy = "Slime"
 variant = "Healer"

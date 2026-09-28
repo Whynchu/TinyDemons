@@ -418,13 +418,22 @@ the number of previously completed runs. The run-clear award uses the count
 including the run just completed. Failed attempts do not advance the profile
 count.
 
-**Acceptance criteria:** Increase standard/risk chest drop odds, additional
-chest item thresholds, run-clear award chance, and better-rarity odds using only
-`completed_runs`. Keep the progression monotonic through its declared cap,
-preserve deterministic seeded rolls, and preserve one guaranteed item from a
-vault. Keep existing rank/grade terms as separate legacy modifiers; do not use
-room depth or elapsed run progress for the new bonus. Record the cap and rates
-in `GAMEPLAY_TUNING.md`.
+**Acceptance criteria:** Increase gear odds and the number of gear items
+available from chest and run-clear rewards, without increasing chest frequency.
+Keep completed-run progression monotonic through its
+declared cap, preserve deterministic seeded rolls, and guarantee two items from
+a vault. Keep existing rank/grade terms as separate modifiers; do not use room
+depth or elapsed run progress for completed-run progression. Record rates in
+`GAMEPLAY_TUNING.md`.
+
+**Implemented in source (2026-09-28):** Chest frequency remains at its existing
+0.50 chance per regular combat room. Standard chest gear chance uses a 0.45
+base, 0.40 floor, and 0.92 cap; risk
+chests retain their +0.12 bonus and 0.95 cap. The clear-award base rises to
+0.40. Double/triple/quad item thresholds use bases 0.50/0.025/0.01 and caps
+0.85/0.22/0.12. Vaults guarantee two items. Existing completed-run increments
+remain unchanged and still count completed runs only; room depth does not
+contribute.
 
 ### Healing-burst particle art
 
@@ -457,7 +466,7 @@ controlled upward motion; the 3x5 text glyph is unchanged. Gear rewards now
 increase from completed-run count alone: chest chance and multi-drop thresholds,
 clear-award chance, and rarity probability all progress monotonically to their
 20-run cap. The clear award counts the run just completed; in-run chests use
-previously completed runs. Vault quantity remains exactly one. Healer animation
+previously completed runs. Vault quantity is now two items. Healer animation
 sheets are now statically preloaded for web builds; empty-sheet fallback keeps
 the cast visible and waits through the configured heal impact time. The arc's
 endpoint crosshair is removed while the target outline and glimmers remain.
@@ -468,6 +477,50 @@ Godot crash restriction. Offline GDScript diagnostics passed for all five
 changed scripts, and `git diff --check` passed.
 
 ## Player-facing findings still needing runtime evidence
+
+### Elemental statuses and actor-render follow-up — implemented in source, open for runtime acceptance (2026-09-28)
+
+The first four elemental statuses and their shared actor-local state, combat
+application/tick paths, movement and stun effects, HUD marks, sibling outline,
+and four data-selected edge-particle styles are present in the working tree.
+Burn uses an ember trail matching the motion of the player's imbue trail;
+Poison uses rising motes, Stun uses electric sparks, and Slow uses frost
+crystals. `status_component_smoke` and
+`status_combat_smoke` are registered in the manifest but have not been run.
+Catalog/definition validation, native-resolution readability, and web/browser
+playtesting remain open.
+
+The overhead status marker previously cast a stored built-in Array to
+`Array[Sprite2D]`, then could retain child sprites after their actor freed them.
+The cached array is now pruned before both hidden-bar handling and update, and
+player markers receive the same lifetime guard. Particle cleanup also drops
+freed sprites before casting. The reported `Trying to cast a freed object`
+error has a source fix; runtime confirmation remains open.
+
+The user also reported status outlines appearing offset or oversized. The
+outline now lives beside the actor sprite, copies its global transform, and
+crops AtlasTexture regions, Sprite2D regions, and the current animation-sheet
+frame before generating the border. Status particles use those same visible
+pixels.
+
+The imbue overlay now copies the same full transform and only offsets
+uncentered sprites. Focused offline MCP diagnostics pass for the changed HUD,
+aura, particle, combat, reward, and item scripts. Visual alignment remains
+unverified; no test suite or game runtime was launched.
+
+The reported translucent player sprite on death is not confirmed to be caused
+by Demon Cloak. `PlayerAnimationContext` carries the death-state callback used
+by the animation guard, and source tracing found attack-animation completion
+branches that could set player visibility back to true. Animation frame/tick
+entry points now keep the player and attack layer hidden once death starts, and
+death entry restores opaque white before hiding the sprite. The registered
+`player_death_visibility_smoke` remains unrun, and cloak/death visual acceptance
+is open.
+
+The transient magenta rectangle over the actor and hitbox remains unresolved.
+No capture was available, and no explicit magenta assignment was found in the
+audited render scripts/shaders. The cause is unknown; reproduce it in a color
+playtest before making a shader or overlay change.
 
 ### Doorway geometry — verified
 

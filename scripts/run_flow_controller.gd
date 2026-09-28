@@ -56,7 +56,7 @@ func chest_item_drop_count(root: Object, roll: float) -> int:
 
 func chest_item_drop_count_for_values(profile: PlayerProfile, tier: StringName, roll: float) -> int:
 	if tier == DungeonGraph.REWARD_VAULT:
-		return 1
+		return _reward_definition().vault_item_drop_count
 	var run_rank := run_rank_for_profile(profile)
 	var grade := profile.last_run_grade if profile != null else "D"
 	var completed_runs := profile.completed_runs if profile != null else 0
@@ -115,8 +115,6 @@ func claim_chest_item_reward(context: ChestRewardContext) -> ChestRewardResult:
 		return result
 	result.presentation_required = true
 	var drop_count := chest_item_drop_count_for_values(profile, result.reward_tier, reward_rng.randf())
-	if result.reward_tier == DungeonGraph.REWARD_VAULT:
-		drop_count = 1
 	result.requested_item_count = drop_count
 	var item_drops: Array[ItemInstance] = []
 	var catalog := ItemCatalog.new()
@@ -267,6 +265,9 @@ func apply_run_rank_grade(root: Object, grade: String) -> void:
 
 
 func begin_new_run(root: GameplayState, preserve_current_dungeon := false) -> void:
+	var player_status := root.player.get_node_or_null("Status") as StatusComponent if root.player != null else null
+	if player_status != null:
+		player_status.clear_all()
 	var debug_session := root.get_node_or_null("DebugSessionController") as Node
 	if debug_session == null or not bool(debug_session.get("active")):
 		debug_run_number = 0
@@ -373,6 +374,9 @@ func restore_active_run(root: Object, snapshot: Dictionary) -> bool:
 	if chroma != null and chroma.has_method("restore_runtime_state"):
 		chroma.call("restore_runtime_state", int(chroma_state.get("current_aspect", 0)), int(chroma_state.get("current_chroma", 0)), int(chroma_state.get("bound_aspect", 0)))
 	root.call("_sync_current_element_state")
+	var restored_player_status := root.player.get_node_or_null("Status") as StatusComponent if root.player != null else null
+	if restored_player_status != null:
+		restored_player_status.clear_all()
 	var active_palette: String = AspectCatalogScript.palette_for_flame(StringName(chroma.call("aspect_name"))) if chroma != null else root.player_profile.palette_name
 	if active_palette.is_empty():
 		active_palette = "grey"

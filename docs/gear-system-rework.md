@@ -127,10 +127,12 @@ is genuinely rarer than a plain drop of the same rarity:
 | Legendary | 1–3 | No plain; ~45% `+`, ~37% `++`, ~18% `+++` |
 | Mythic | 2–3 | No plain/`+`; ~55% `++`, ~45% `+++` |
 
-Every assigned random stat grows at the same pace as the item's authored
-primary stat through rarity and fusion. The growth is additive, never a
-separate multiplier. A `++` item that rolled `STR +1, MND +1` keeps those same
-two lanes and advances both on the primary-stat ladder.
+Every positive authored attribute and every assigned random stat grows through
+rarity and fusion. The growth is additive, never a separate multiplier; explicit
+negative tradeoffs stay fixed. A `++` item that rolled `STR +1, MND +1` keeps
+those same lanes, and any other positive authored lines on the item advance too.
+Positive shield guard durability and reduction improve on every Fusion step,
+including rarity promotions; their growth uses the item's total Fusion count.
 
 Shop pricing also scales with the `+` package and enhancement level, not just
 rarity. A single `+` is a meaningful surcharge; `++` and especially `+++` are
@@ -173,6 +175,6 @@ gear should use only this model.
 RARE SOLDIER SWORD ++
 Base: STR +3
 Random: STR +1, MND +1
-Fusion: both random lanes grow with the authored primary ladder
+Fusion: every positive authored/random lane grows; penalties stay fixed
 Tradeoff: Soldier-set gear carries a visible AGI penalty
 ```

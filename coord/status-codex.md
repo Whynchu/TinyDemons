@@ -2,10 +2,26 @@
 
 _Only codex writes this file._
 
-**Focus:** Refine the healing burst particle art while continuing M1 reference-aware lifecycle work
+**Focus:** Prepare version 0.3.19 with current status, gear reward, and Fusion changes; runtime acceptance remains open
 **Updated:** 2026-09-28
 
 ## In flight
+
+The elemental status source pass now includes four catalog-backed definitions,
+actor-local status state, player/enemy proc and tick paths, slow/stun behavior,
+HUD marks, and a typed-configured `ElementAuraComponent` shared with weapon
+imbue overlays. Player death entry restores opaque modulation and the animation
+component checks the configured `player_dead_get` callback before exposing the
+player or attack sprite. Focused checks are registered but unrun.
+
+Two user-reported runtime errors in this source pass were corrected: HUD status
+marker registration no longer casts a stored Array to `Array[Sprite2D]`, and
+`PlayerAnimationContext` now declares and receives the death-state callback.
+Offline MCP script diagnostics pass for the corrected HUD, aura/context owners,
+animation component, setup owners, and death visibility check. No game or test
+suite was launched. The transient magenta rectangle has no capture or confirmed
+source cause and remains open; the death/cloak appearance also needs runtime
+acceptance.
 
 Version 0.3.16 updates the web README and in-game title. This release includes
 the current M1 source work plus the Fusion comparison, healing visibility, and
@@ -85,10 +101,35 @@ changes. Do not stage them with M1.
 
 ## Handoff / next
 
-Continue M1 with reference-aware content create/duplicate/move/delete, preview
-revision and stale-state reporting, and the export/lifecycle proof. Keep the
-create/edit/duplicate/move/delete/undo/reimport/restart acceptance open until
-the connected editor can verify it. The recorded Godot process restriction
-still applies; when the environment is safe, run the registered authoring-dock
-and PreviewSession smokes plus the definition validator and editor-side
-isolation checks.
+The user redirected the active task to finish the elemental status plan and
+implement its four statuses, while removing the chest and grayscale acceptance
+premises. Source and docs now reflect current behavior; catalog validation,
+registered owner checks, native-resolution readability, cloak/death rendering,
+and web playtesting remain open. The user confirmed no magenta capture is
+available. The editor is connected but no playtest is running; do not launch
+another Godot process in this session.
+
+## Current work
+
+The gear-volume and Fusion-growth follow-up is implemented in source. Chest
+frequency remains unchanged; standard/risk chests drop gear more often,
+multi-item thresholds are higher, run-clear drops have a higher floor, and a
+vault grants two items. Completed-run progression remains completed-runs-only.
+Every positive authored/random attribute and every positive shield-guard line
+improves through Fusion; negative tradeoffs stay fixed. Focused offline MCP
+script diagnostics and `git diff --check` pass; no tests or runtime were run.
+
+The playtest rendering follow-up is also implemented in source: HUD marker
+arrays and cached sprites are checked before casts, status and imbue overlays
+copy the actor's global transform, and both outlines and status-particle source
+pixels crop the displayed atlas, region, or animation-sheet frame. Burn uses
+the imbue-like upward ember trail; Poison, Stun, and Slow use distinct styles.
+Focused offline MCP script diagnostics pass. Visual alignment, readability,
+death/cloak behavior, and the uncaptured magenta artifact remain open for a
+color playtest. Do not launch a Godot process in this session.
+
+Version metadata is aligned at 0.3.19 for the in-game title, web README, and
+release references. The web Compatibility renderer override is retained. The
+release excludes the local `.mcp.json` configuration and timed-floor design
+edits. Focused diagnostics were already run for the source changes; no runtime
+or test suite was run for this release.

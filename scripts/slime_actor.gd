@@ -55,6 +55,9 @@ func _ready() -> void:
 
 func ensure_components() -> void:
 	_ensure_component("Health", HealthComponent)
+	var status_component := _ensure_component("Status", StatusComponent) as StatusComponent
+	var aura := _ensure_component("ElementAura", ElementAuraComponent) as ElementAuraComponent
+	aura.configure(self, get_parent() as Node2D, status_component)
 	_ensure_component("Brain", SlimeBrain)
 	_ensure_component("Combat", SlimeCombatComponent)
 	_ensure_component("BossJumpSlam", load("res://scripts/boss_jump_slam_component.gd"))
@@ -287,6 +290,8 @@ static func apply_attack_hit(root: Object, slime: Sprite2D, ranged_hit: bool = f
 		damage = float(guard_result["health_damage"])
 	var health := root.get("player_health_component") as HealthComponent
 	if health != null: health.apply_damage(damage)
+	if damage > 0.0 and damage_result != null:
+		root.call("_try_apply_status", player, damage_result.element, damage_result.effectiveness)
 	if blocked or damage > 0.0:
 		var state := root as GameplayState
 		if state != null:
@@ -369,6 +374,9 @@ func reset_runtime_state(start_pos: Vector2, initial_target: Vector2, repath_del
 		combat.flash_timer = 0.0
 		combat.hitstun_timer = 0.0
 		combat.knockback_velocity = Vector2.ZERO
+	var statuses := get_node_or_null("Status") as StatusComponent
+	if statuses != null:
+		statuses.clear_all()
 	combat.knockback_timer = 0.0
 	combat.timer = 0.0
 	combat.frame = 0

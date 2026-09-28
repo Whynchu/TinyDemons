@@ -557,6 +557,36 @@ Verify Gray/Normal collection, bound depletion, temporary fusion depletion,
 pickup coloring, save/load at zero, and any relevant gate route. Do not fold a
 new element into the player aspect state without an explicit mapping decision.
 
+## Adding or tuning an elemental status
+
+The current status authoring path is a typed resource list, not the M1 generated
+definition manifest:
+
+1. Edit one of `resources/tuning/status_burn.tres`, `status_poison.tres`,
+   `status_slow.tres`, or `status_stun.tres`, using the
+   `StatusEffectDefinition` schema. Stable status ID, element, family, proc
+   chance, duration, stack cap, family-specific values, particle style, and
+   particle interval live on the resource. Use the registered styles
+   `ember`, `poison_mote`, `electric_spark`, and `frost_crystal`.
+2. `resources/definitions/element_catalog.tres` references these through
+   `ElementCatalogData.status_effects`. Its validator enforces unique IDs,
+   one current passive status per element, and the registered status set.
+   A new status ID must also be added to
+   `StatusEffectDefinition.STATUS_IDS`; adding a new behavior family requires
+   the corresponding generic `StatusComponent` family implementation.
+3. Set `EnemyDefinition.status_immunities` to stable status IDs for enemies
+   that reject a status regardless of their elemental matchup. Element matchup
+   immunity and zero effectiveness also block proc application.
+4. Update [`GAMEPLAY_TUNING.md`](GAMEPLAY_TUNING.md) and the
+   [`elemental-status-implementation-plan.md`](elemental-status-implementation-plan.md)
+   with any behavior or balance change. Keep values as initial defaults until
+   runtime evidence supports a balance decision.
+
+M1 acceptance remains open, so this registry is currently authoritative at
+runtime but is not yet discovered through the workbench definition manifest.
+The migration should preserve these stable IDs and add editor validation and
+preview support before moving the resources.
+
 ## Adding tuning
 
 The intended tuning classes are `PlayerTuning`, `CombatTuning`, `SlimeTuning`,

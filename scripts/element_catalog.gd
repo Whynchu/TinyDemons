@@ -42,6 +42,23 @@ static func matchup_table() -> Array:
 	return DATA.matchup_table
 
 
+static func status_effect_for_element(element: int) -> StatusEffectDefinition:
+	var normalized_element := normalize(element)
+	for resource in DATA.status_effects:
+		var definition := resource as StatusEffectDefinition
+		if definition != null and definition.element == normalized_element:
+			return definition
+	return null
+
+
+static func status_effect_for_id(status_id: StringName) -> StatusEffectDefinition:
+	for resource in DATA.status_effects:
+		var definition := resource as StatusEffectDefinition
+		if definition != null and definition.id == status_id:
+			return definition
+	return null
+
+
 static func is_valid(element: int) -> bool:
 	return element >= Element.NEUTRAL and element < element_count()
 

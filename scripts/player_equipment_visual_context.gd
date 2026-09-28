@@ -16,6 +16,7 @@ var effects_spawner: EffectsSpawner = null
 var rng: RandomNumberGenerator = null
 var player_equipment: EquipmentComponent = null
 var player_guard_component: PlayerGuardComponent = null
+var element_aura_component: ElementAuraComponent = null
 var combat_tuning: CombatTuning = null
 var player_tuning: PlayerTuning = null
 

@@ -84,11 +84,11 @@ static func enemy_level_cap_for_rank(run_rank: int) -> int:
 	return 3 if normalized_rank <= 1 else normalized_rank + 3
 
 
-func damage_slime(root: Object, slime: Sprite2D, amount: float, was_critical: bool = false, attack_element: int = ElementCatalogScript.Element.NEUTRAL, immune: bool = false) -> void:
-	damage_slime_with_number(root, slime, amount, was_critical, true, attack_element, immune)
+func damage_slime(root: Object, slime: Sprite2D, amount: float, was_critical: bool = false, attack_element: int = ElementCatalogScript.Element.NEUTRAL, immune: bool = false, effectiveness: float = -1.0) -> void:
+	damage_slime_with_number(root, slime, amount, was_critical, true, attack_element, immune, effectiveness)
 
 
-func damage_slime_with_number(root: Object, slime: Sprite2D, amount: float, was_critical: bool, show_damage_number: bool, attack_element: int = ElementCatalogScript.Element.NEUTRAL, immune: bool = false) -> void:
+func damage_slime_with_number(root: Object, slime: Sprite2D, amount: float, was_critical: bool, show_damage_number: bool, attack_element: int = ElementCatalogScript.Element.NEUTRAL, immune: bool = false, effectiveness: float = -1.0) -> void:
 	# Projectile callbacks can survive one frame past a scene transition. Do not
 	# dereference a freed target while resolving late contact.
 	if slime == null or not is_instance_valid(slime) or bool(root.call("_is_slime_dead", slime)) or (root.has_method("_is_slime_spawn_locked") and bool(root.call("_is_slime_spawn_locked", slime))):
@@ -105,7 +105,13 @@ func damage_slime_with_number(root: Object, slime: Sprite2D, amount: float, was_
 	if ambush != null:
 		var tuning := root.get("slime_tuning") as SlimeTuning
 		ambush.extend_rehide(slime, tuning.ambush_hit_extension)
+	var actor_combat := slime.get_node_or_null("Combat") as SlimeCombatComponent
+	var damage_effectiveness := effectiveness
+	if damage_effectiveness < 0.0:
+		damage_effectiveness = ElementCatalogScript.effectiveness(attack_element, slime_element(slime))
 	SlimeActor.damage_actor(root, slime, amount, was_critical, attack_element, immune, show_damage_number)
+	if not immune and amount > 0.0 and (actor_combat == null or not actor_combat.boss_jump_phase_invulnerable):
+		try_apply_status(root, slime, attack_element, damage_effectiveness)
 	if not immune and amount > 0.0:
 		var state := root as GameplayState
 		if state != null:
@@ -577,6 +583,8 @@ func apply_boss_jump_slam(root: Object, boss: Sprite2D, anchor: Vector2) -> void
 	var health := root.get("player_health_component") as HealthComponent
 	if health != null:
 		health.apply_damage(damage)
+	if damage > 0.0:
+		try_apply_status(root, player, damage_result.element, damage_result.effectiveness)
 	_spawn_combat_impact(root, player_foot, ElementCatalogScript.damage_number_color(damage_result.element), true)
 	_request_screen_shake(root, BOSS_SLAM_SHAKE_STRENGTH, 0.22)
 	root.call("_mark_player_in_combat")
@@ -683,6 +691,102 @@ func update_enemy_hit_flashes(root: Object, delta: float) -> void:
 			overlay.visible = combat.flash_timer > 0.0
 			if overlay.visible:
 				show_slime_hit_flash(root, slime)
+
+
+func try_apply_status(root: Object, target: Node, element: int, effectiveness: float) -> bool:
+	var request := StatusApplicationRequest.new()
+	request.configure(target, element, effectiveness, StatusApplicationRequest.SourceKind.ELEMENTAL_HIT, root.get("rng") as RandomNumberGenerator)
+	return StatusApplication.apply(request)
+
+
+func tick_actor_statuses(root: Object, actor: Sprite2D, delta: float, is_player: bool) -> void:
+	if actor == null or not is_instance_valid(actor):
+		return
+	if is_player and (bool(root.get("player_dead")) or bool(root.get("player_death_pending"))):
+		return
+	if not is_player and bool(root.call("_is_slime_dead", actor)):
+		return
+	var component := actor.get_node_or_null("Status") as StatusComponent
+	if component == null:
+		return
+	for result in component.advance(delta):
+		if result.kind == StatusTickResult.Kind.DAMAGE:
+			_apply_status_damage_tick(root, actor, result, is_player)
+		elif result.kind == StatusTickResult.Kind.STUN_PULSE:
+			_apply_status_stun_pulse(root, actor, result, is_player)
+	var aura := actor.get_node_or_null("ElementAura") as ElementAuraComponent
+	if aura != null and is_instance_valid(aura) and root.has_method("_pixel_particle_texture"):
+		aura.advance_status_visuals(
+			delta,
+			root.get("effects_spawner") as EffectsSpawner,
+			root.get("rng") as RandomNumberGenerator,
+			Callable(root, "_pixel_particle_texture")
+		)
+
+
+func _apply_status_damage_tick(root: Object, actor: Sprite2D, result: StatusTickResult, is_player: bool) -> void:
+	var health := actor.get_node_or_null("Health") as HealthComponent
+	if health == null or health.current_health <= 0.0:
+		return
+	var amount := maxf(result.amount, 0.0)
+	if amount <= 0.0:
+		return
+	if not is_player and not _enemy_status_tick_may_kill(root, actor):
+		amount = minf(amount, maxf(health.current_health - 1.0, 0.0))
+	if amount <= 0.0:
+		return
+	health.apply_damage(amount)
+	var slime_tuning := root.get("slime_tuning") as SlimeTuning
+	if not is_player and slime_tuning != null:
+		health.regen_delay_timer = slime_tuning.regen_delay
+		health.regen_accumulator = 0.0
+	if is_player:
+		root.call("_spawn_player_damage_number", amount, result.element, false)
+		root.call("_update_player_health_ui")
+		if health.is_dead():
+			root.set("player_death_pending", true)
+			root.call("_interrupt_player_attack")
+			root.set("player_is_rolling", false)
+	else:
+		root.call("_spawn_damage_number", actor, amount, false, result.element, false)
+		if health.is_dead():
+			root.call("_kill_slime", actor)
+
+
+func _enemy_status_tick_may_kill(root: Object, actor: Sprite2D) -> bool:
+	if not actor.visible or not actor.is_visible_in_tree():
+		return false
+	var viewport := actor.get_viewport()
+	if viewport == null or not viewport.get_visible_rect().has_point(actor.get_global_transform_with_canvas().origin):
+		return false
+	var map_controller := root.get("dungeon_map_controller") as DungeonMapController
+	if map_controller == null:
+		return false
+	return map_controller.is_room_engaged(StringName(root.get("current_room_id")))
+
+
+func _apply_status_stun_pulse(root: Object, actor: Sprite2D, result: StatusTickResult, is_player: bool) -> void:
+	var duration := maxf(result.lock_duration, 0.0)
+	if duration <= 0.0:
+		return
+	if is_player:
+		root.set("player_hitstun_timer", maxf(float(root.get("player_hitstun_timer")), duration))
+		if bool(root.get("player_is_attacking")):
+			root.call("_interrupt_player_attack")
+		if bool(root.get("player_is_magic_casting")):
+			root.call("_cancel_magic_animation")
+		return
+	var combat := actor.get_node_or_null("Combat") as SlimeCombatComponent
+	if combat == null or combat.boss_jump_phase_stun_resistant:
+		return
+	combat.active = false
+	combat.timer = 0.0
+	combat.hit_done = true
+	combat.attack_committed = false
+	combat.hitstun_timer = maxf(combat.hitstun_timer, duration)
+	var support := actor.get_node_or_null("Support") as SlimeSupportComponent
+	if support != null:
+		support.cancel_cast(&"status_stun")
 
 
 func update_enemy_health(root: Object, delta: float) -> void:
