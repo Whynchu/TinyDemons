@@ -57,13 +57,14 @@ Related: `docs/combat-and-dungeon-design-principles.md`,
   must work inside an exported web PCK and must not depend on `FileAccess` paths
   to the desktop-only, Godot-ignored `Artwork/` source folder.
 - During cast: a **green charge aura** plays on the caster (sword-beam-charge-like).
-- During cast: a slightly transparent, green curved target arc starts at the
-  top center of the caster's visible sprite and ends at the top center of the
-  target's visible sprite. Resolve both points from current sprite bounds and
-  transforms so animation frames and the boss jump are followed. Outline the
-  target with the same cached pixel silhouette highlight used by player
-  target-lock, and move glimmers over pixels in the trail. Keep the existing
-  sparkle around the target.
+- During cast: a slightly transparent, green curved target arc starts and ends
+  at the top-center pixel of each sprite's actual silhouette contour. The target
+  endpoint must land on the generated target outline, not the Sprite2D canvas
+  bounds. Recompute both points from current outline pixels and transforms so
+  animation frames and the boss jump are followed. Outline the target with the
+  same cached pixel silhouette highlight used by player target-lock, and move
+  glimmers over pixels in the trail. Keep the existing sparkle around the
+  target.
 - On resolve: **green "+" particles** drift upward, per-particle speed driven by
   noise, with varying sizes.
 - A **cast bar below the caster** fills, changes color at full, pops slightly,

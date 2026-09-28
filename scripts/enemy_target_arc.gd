@@ -82,8 +82,8 @@ func _update_anchor_points() -> void:
 		_attach_target_outline()
 	var source_outline_pixels := _actor_outline_world_points(source_visual)
 	target_outline_pixels = _actor_outline_world_points(target_visual)
-	start_point = _nearest_outline_pixel_to_top_center(source_outline_pixels, source_visual, source_anchor, source_offset)
-	end_point = _nearest_outline_pixel_to_top_center(target_outline_pixels, target_visual, target_anchor, target_offset)
+	start_point = _top_center_outline_pixel(source_outline_pixels, source_visual, source_anchor, source_offset)
+	end_point = _top_center_outline_pixel(target_outline_pixels, target_visual, target_anchor, target_offset)
 	z_index = mini(maxi(source_anchor.z_index, target_anchor.z_index) + 1, CAST_WORLD_Z_LIMIT)
 
 
@@ -113,14 +113,30 @@ func _sprite_top_center(sprite: Sprite2D, actor: Node2D, fallback_offset: Vector
 	return sprite.to_global(Vector2(rect.position.x + rect.size.x * 0.5, rect.position.y))
 
 
-func _nearest_outline_pixel_to_top_center(world_points: PackedVector2Array, sprite: Sprite2D, actor: Node2D, fallback_offset: Vector2) -> Vector2:
+func _top_center_outline_pixel(world_points: PackedVector2Array, sprite: Sprite2D, actor: Node2D, fallback_offset: Vector2) -> Vector2:
 	if world_points.is_empty():
 		return _sprite_top_center(sprite, actor, fallback_offset).round()
-	var preferred_point := _sprite_top_center(sprite, actor, fallback_offset)
-	var nearest_point := world_points[0]
-	var nearest_distance := nearest_point.distance_squared_to(preferred_point)
+	# Anchor to the upper contour itself, not the Sprite2D canvas bounds. This
+	# puts the arc on the same generated silhouette pixels used by the target ring,
+	# even when an animation frame has transparent padding above its artwork.
+	var top_y := INF
+	var min_top_x := INF
+	var max_top_x := -INF
 	for point in world_points:
-		var distance := point.distance_squared_to(preferred_point)
+		if point.y < top_y:
+			top_y = point.y
+			min_top_x = point.x
+			max_top_x = point.x
+		elif is_equal_approx(point.y, top_y):
+			min_top_x = minf(min_top_x, point.x)
+			max_top_x = maxf(max_top_x, point.x)
+	var top_center_x := (min_top_x + max_top_x) * 0.5
+	var nearest_point := Vector2(top_center_x, top_y)
+	var nearest_distance := INF
+	for point in world_points:
+		if not is_equal_approx(point.y, top_y):
+			continue
+		var distance := absf(point.x - top_center_x)
 		if distance < nearest_distance:
 			nearest_point = point
 			nearest_distance = distance
