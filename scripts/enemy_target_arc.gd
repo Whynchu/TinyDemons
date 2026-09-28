@@ -80,11 +80,10 @@ func _update_anchor_points() -> void:
 		_clear_target_outline()
 		target_visual = resolved_target_visual
 		_attach_target_outline()
-	var source_top_center := _sprite_top_center(source_visual, source_anchor, source_offset)
-	var target_top_center := _sprite_top_center(target_visual, target_anchor, target_offset)
+	var source_outline_pixels := _actor_outline_world_points(source_visual)
 	target_outline_pixels = _actor_outline_world_points(target_visual)
-	start_point = source_top_center.round()
-	end_point = target_top_center.round()
+	start_point = _nearest_outline_pixel_to_top_center(source_outline_pixels, source_visual, source_anchor, source_offset)
+	end_point = _nearest_outline_pixel_to_top_center(target_outline_pixels, target_visual, target_anchor, target_offset)
 	z_index = mini(maxi(source_anchor.z_index, target_anchor.z_index) + 1, CAST_WORLD_Z_LIMIT)
 
 
@@ -112,6 +111,20 @@ func _sprite_top_center(sprite: Sprite2D, actor: Node2D, fallback_offset: Vector
 	if not rect.has_area():
 		return sprite.global_position
 	return sprite.to_global(Vector2(rect.position.x + rect.size.x * 0.5, rect.position.y))
+
+
+func _nearest_outline_pixel_to_top_center(world_points: PackedVector2Array, sprite: Sprite2D, actor: Node2D, fallback_offset: Vector2) -> Vector2:
+	if world_points.is_empty():
+		return _sprite_top_center(sprite, actor, fallback_offset).round()
+	var preferred_point := _sprite_top_center(sprite, actor, fallback_offset)
+	var nearest_point := world_points[0]
+	var nearest_distance := nearest_point.distance_squared_to(preferred_point)
+	for point in world_points:
+		var distance := point.distance_squared_to(preferred_point)
+		if distance < nearest_distance:
+			nearest_point = point
+			nearest_distance = distance
+	return nearest_point
 
 
 func _attach_target_outline() -> void:
