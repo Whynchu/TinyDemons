@@ -228,6 +228,12 @@ func configure_slime_ambush(slime: Sprite2D, enabled: bool) -> void:
 func clear_slime_without_effects(slime: Sprite2D) -> void:
 	if slime == null:
 		return
+	var statuses := slime.get_node_or_null("Status") as StatusComponent
+	if statuses != null:
+		statuses.clear_all()
+	var aura := slime.get_node_or_null("ElementAura") as ElementAuraComponent
+	if aura != null:
+		aura.clear_status_visuals()
 	var combat := slime_combat(slime)
 	if combat != null:
 		combat.dead = true

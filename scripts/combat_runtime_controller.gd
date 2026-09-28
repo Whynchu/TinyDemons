@@ -459,7 +459,18 @@ func is_slime_dead(root: Object, slime: Sprite2D) -> bool:
 
 
 func are_all_slimes_dead(root: Object) -> bool:
-	for slime in root.get("slimes") as Array[Sprite2D]:
+	var slimes := root.get("slimes") as Array[Sprite2D]
+	if root.get("current_room_type") == DungeonGraph.ROOM_COMBAT:
+		var room_controller := root.get("room_controller") as RoomController
+		var state: Dictionary = {}
+		if room_controller != null:
+			state = room_controller.room_states.get(root.get("current_room_id"), {}) as Dictionary
+		var active_slots := state.get("enemy_variants", []) as Array
+		for slot in active_slots.size():
+			if slot >= slimes.size() or not is_slime_dead(root, slimes[slot]):
+				return false
+		return true
+	for slime in slimes:
 		if not is_slime_dead(root, slime):
 			return false
 	return true
@@ -697,6 +708,14 @@ func update_enemy_hit_flashes(root: Object, delta: float) -> void:
 
 
 func try_apply_status(root: GameplayState, target: Node, element: int, effectiveness: float) -> bool:
+	if target == null or not is_instance_valid(target):
+		return false
+	var health := target.get_node_or_null("Health") as HealthComponent
+	if health != null and health.is_dead():
+		return false
+	var combat := target.get_node_or_null("Combat") as SlimeCombatComponent
+	if combat != null and combat.dead:
+		return false
 	var request := StatusApplicationRequest.new()
 	request.configure(target, element, effectiveness, StatusApplicationRequest.SourceKind.ELEMENTAL_HIT, root.rng)
 	return StatusApplication.apply(request)

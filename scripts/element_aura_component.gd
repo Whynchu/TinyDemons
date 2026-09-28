@@ -7,6 +7,7 @@ const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
 @export var overlay_parent: Node2D
 @export var status_component: StatusComponent
 
+var health_component: HealthComponent = null
 var _outline_texture_cache: Dictionary = {}
 var _tint_texture_cache: Dictionary = {}
 var _imbue_outlines: Dictionary = {}
@@ -21,6 +22,8 @@ func _ready() -> void:
 
 func configure(new_actor_sprite: Sprite2D, new_overlay_parent: Node2D, new_status_component: StatusComponent) -> void:
 	var ownership_changed := actor_sprite != new_actor_sprite or overlay_parent != new_overlay_parent
+	if health_component != null and is_instance_valid(health_component) and health_component.died.is_connected(_on_actor_died):
+		health_component.died.disconnect(_on_actor_died)
 	if status_component != null and is_instance_valid(status_component) and status_component.status_changed.is_connected(refresh_status_aura):
 		status_component.status_changed.disconnect(refresh_status_aura)
 	if ownership_changed:
@@ -28,9 +31,24 @@ func configure(new_actor_sprite: Sprite2D, new_overlay_parent: Node2D, new_statu
 	actor_sprite = new_actor_sprite
 	overlay_parent = new_overlay_parent
 	status_component = new_status_component
+	health_component = actor_sprite.get_node_or_null("Health") as HealthComponent if actor_sprite != null else null
+	if health_component != null and not health_component.died.is_connected(_on_actor_died):
+		health_component.died.connect(_on_actor_died)
 	if status_component != null and not status_component.status_changed.is_connected(refresh_status_aura):
 		status_component.status_changed.connect(refresh_status_aura)
 	refresh_status_aura()
+
+
+func clear_status_visuals() -> void:
+	_status_particle_timers.clear()
+	_queue_status_outline()
+
+
+func _on_actor_died() -> void:
+	var component := _valid_status_component(status_component)
+	if component != null:
+		component.clear_all()
+	clear_status_visuals()
 
 
 func update_imbue_layer(layer: Sprite2D, outline_color: Color, outline_alpha: float, flash_color: Color, flash_alpha: float) -> void:
@@ -173,6 +191,8 @@ func _queue_status_outline() -> void:
 
 
 func _exit_tree() -> void:
+	if health_component != null and is_instance_valid(health_component) and health_component.died.is_connected(_on_actor_died):
+		health_component.died.disconnect(_on_actor_died)
 	clear_imbue()
 	_queue_status_outline()
 

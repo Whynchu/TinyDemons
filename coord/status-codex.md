@@ -2,7 +2,7 @@
 
 _Only codex writes this file._
 
-**Focus:** Composition floor restored after 0.3.19 status integration; prepare the 0.3.20 correction release
+**Focus:** 0.3.21 playtest follow-up; Godot process remains restricted
 **Updated:** 2026-09-28
 
 ## In flight
@@ -141,3 +141,22 @@ player status marks update through `HudController`. Both regression-floor and
 strict composition audits pass: 2,202 root accesses and 1,717 `GameplayState`
 lines / 286 fields. MCP script checks were unavailable (`DISCONNECTED`); no
 Godot process was launched due the recorded session restriction.
+
+The post-release death-outline and room-lock reports are addressed in source.
+`ElementAuraComponent` now clears status records, outline overlays, and particle
+timers on `HealthComponent.died`; room-pool cleanup clears them as well, and
+status application rejects dead health/combat components. Regular combat-room
+clear detection now checks only the configured `enemy_variants` slots instead
+of every pooled slime. The user confirmed a regular combat room with an
+immediate lock. Spawn placement validates both the sprite collision polygon
+and its collision guide against the walkable area, so static review found no
+unvalidated initial spawn path; a live reproduction is still needed to rule
+out an in-bounds slot later moving out of bounds. `git diff --check` passes.
+No tests or Godot runtime checks were run under the session restriction.
+
+Release 0.3.21 carries the actor-death status cleanup, dead-actor status
+application guard, and regular-room configured-slot clear check. The web README,
+in-game title, versioning guide, contributor guide, and roadmap are aligned.
+`origin/main` matched the local 0.3.20 release before publishing. No Godot
+runtime or test suite was run; the configured off-floor actor case still needs
+playtest confirmation.

@@ -343,3 +343,27 @@ Removed all 26 root dynamic accesses added by the status slice, routed status
 ticks directly through the typed combat controller, and returned GameplayState
 to 1,717 lines. The regression-floor and strict composition audits pass.
 MCP script checks were disconnected; no Godot process was launched.
+
+## 2026-09-28T23:03Z — codex — claim
+Trace the status outline remaining after actor death and the room-clear lock
+report. Inspect post-damage status application, actor cleanup, respawn policy,
+and the `are_all_slimes_dead` path before making focused fixes.
+
+## 2026-09-28T23:08Z — codex — done
+Status death now clears status records, sibling outline, and particle timers;
+room-slot cleanup does the same, and status application rejects dead actors.
+Regular combat-room clear checks now use that room's configured enemy slots,
+so unrelated pooled actors cannot hold the door. The user confirmed a regular
+room and an immediate lock. Spawn placement is source-validated against room
+geometry, but runtime reproduction of a configured off-floor actor remains
+open. `git diff --check` passes; no Godot process or tests were run.
+
+## 2026-09-28T23:11Z — codex — claim
+Prepare and push 0.3.21 with the status death-cleanup and regular combat-room
+clear fix. Preserve `.mcp.json` and timed-floor plan edits from the release.
+
+## 2026-09-28T23:13Z — codex — done
+Aligned release metadata at 0.3.21 and prepared the status-death and
+regular-room-clear fixes for main. Confirmed origin/main matched the 0.3.20
+base, and preserved local MCP and timed-floor design edits outside the release.
+No Godot runtime or test suite was run; runtime acceptance remains open.
