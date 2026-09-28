@@ -646,7 +646,7 @@ func begin_player_death(root: Object, depth_scale: float) -> void:
 	var sprite_shadow := root.get("player_sprite_shadow") as Sprite2D
 	if sprite_shadow != null: sprite_shadow.visible = false
 	var overlay := Sprite2D.new()
-	overlay.name = "PlayerDeathWhite"; overlay.texture = root.call("_white_texture", player.texture); overlay.centered = player.centered; overlay.offset = player.offset; overlay.scale = player.scale; overlay.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST; overlay.z_as_relative = false; overlay.z_index = int(round(root.call("_depth_key", player) * depth_scale)) + 2; overlay.global_position = player.global_position; overlay.modulate = Color(1, 1, 1, 0)
+	overlay.name = "PlayerDeathWhite"; overlay.texture = root.call("_white_texture", death_texture); overlay.centered = player.centered; overlay.offset = player.offset; overlay.scale = player.scale; overlay.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST; overlay.z_as_relative = false; overlay.z_index = int(round(root.call("_depth_key", player) * depth_scale)) + 2; overlay.global_position = player.global_position; overlay.modulate = Color(1, 1, 1, 0)
 	root.add_child(overlay); root.set("player_death_overlay", overlay)
 var roll_dust_sprite: Sprite2D = null
 var roll_dust_frame := 0

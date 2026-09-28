@@ -13,7 +13,7 @@ const ACTOR_FOOT_OFFSET := Vector2(8.0, 13.0)
 var source_anchor: Node2D
 var target_anchor: Node2D
 var occlusion_renderer: OcclusionRenderer
-var target_highlight: Sprite2D
+var target_outline: Sprite2D
 var source_offset := Vector2.ZERO
 var target_offset := Vector2.ZERO
 var start_point := Vector2.ZERO
@@ -31,7 +31,7 @@ func configure(source: Node2D, target: Node2D, source_world_point: Vector2, targ
 	occlusion_renderer = renderer
 	source_offset = source_world_point - source.global_position
 	target_offset = target_world_point - target.global_position
-	_attach_target_highlight()
+	_attach_target_outline()
 	_update_anchor_points()
 	queue_redraw()
 
@@ -45,12 +45,12 @@ func finish(cancelled: bool = false) -> void:
 func _process(delta: float) -> void:
 	elapsed += maxf(delta, 0.0)
 	_update_anchor_points()
-	_sync_target_highlight()
+	_sync_target_outline()
 	if finishing:
 		fade_remaining = maxf(fade_remaining - maxf(delta, 0.0), 0.0)
 		modulate.a = fade_remaining / maxf(fade_duration, 0.001)
-		if target_highlight != null and is_instance_valid(target_highlight):
-			target_highlight.modulate.a = modulate.a
+		if target_outline != null and is_instance_valid(target_outline):
+			target_outline.modulate = ARC_CORE * Color(1.0, 1.0, 1.0, modulate.a)
 		if fade_remaining <= 0.0:
 			queue_free()
 	queue_redraw()
@@ -77,7 +77,7 @@ func _update_anchor_points() -> void:
 		source_center = ActorGeometry.polygon_center(source_polygon)
 	if target_polygon.size() >= 3:
 		target_center = ActorGeometry.polygon_center(target_polygon)
-	target_outline_pixels = _rasterize_closed_polygon(target_polygon)
+	target_outline_pixels = _actor_outline_world_points(target_anchor as Sprite2D)
 	var direction := target_center - source_center
 	if direction.length_squared() <= 0.001:
 		direction = Vector2.RIGHT
@@ -92,42 +92,70 @@ func _update_anchor_points() -> void:
 	z_index = mini(maxi(source_anchor.z_index, target_anchor.z_index) + 1, CAST_WORLD_Z_LIMIT)
 
 
-func _attach_target_highlight() -> void:
+func _attach_target_outline() -> void:
 	var target := target_anchor as Sprite2D
 	if target == null or not is_instance_valid(target) or occlusion_renderer == null:
 		return
-	target_highlight = Sprite2D.new()
-	target_highlight.name = "SupportTargetHighlight"
-	target_highlight.centered = target.centered
-	target_highlight.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	target_highlight.show_behind_parent = true
-	target_highlight.z_as_relative = true
-	target_highlight.z_index = -1
-	target_highlight.material = target.material
-	target.add_child(target_highlight)
-	_sync_target_highlight()
+	target_outline = Sprite2D.new()
+	target_outline.name = "SupportTargetOutline"
+	target_outline.centered = target.centered
+	target_outline.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	target_outline.show_behind_parent = false
+	target_outline.z_as_relative = true
+	target_outline.z_index = 1
+	target_outline.material = null
+	target.add_child(target_outline)
+	_sync_target_outline()
 
 
-func _sync_target_highlight() -> void:
+func _sync_target_outline() -> void:
 	var target := target_anchor as Sprite2D
-	if target_highlight == null or not is_instance_valid(target_highlight) or target == null or not is_instance_valid(target):
+	if target_outline == null or not is_instance_valid(target_outline) or target == null or not is_instance_valid(target):
 		return
-	target_highlight.texture = occlusion_renderer.highlighted_texture_for_actor(target) if occlusion_renderer != null else null
-	target_highlight.centered = target.centered
-	target_highlight.offset = target.offset
-	target_highlight.flip_h = target.flip_h
-	target_highlight.flip_v = target.flip_v
-	target_highlight.texture_filter = target.texture_filter
-	target_highlight.material = target.material
-	target_highlight.self_modulate = target.self_modulate
-	target_highlight.visible = target.visible and target_highlight.texture != null
+	target_outline.texture = occlusion_renderer.outline_texture_for_actor(target) if occlusion_renderer != null else null
+	target_outline.centered = target.centered
+	target_outline.offset = target.offset
+	target_outline.flip_h = target.flip_h
+	target_outline.flip_v = target.flip_v
+	target_outline.texture_filter = target.texture_filter
+	target_outline.material = null
+	target_outline.self_modulate = Color.WHITE
+	target_outline.visible = target.visible and target_outline.texture != null
 	if not finishing:
-		target_highlight.modulate.a = 1.0
+		target_outline.modulate = ARC_CORE
 
 
 func _exit_tree() -> void:
-	if target_highlight != null and is_instance_valid(target_highlight):
-		target_highlight.queue_free()
+	if target_outline != null and is_instance_valid(target_outline):
+		target_outline.queue_free()
+
+
+func _actor_outline_world_points(sprite: Sprite2D) -> PackedVector2Array:
+	if sprite == null or not is_instance_valid(sprite) or occlusion_renderer == null:
+		return PackedVector2Array()
+	var points := occlusion_renderer.outline_local_points_for_actor(sprite)
+	var source_texture := occlusion_renderer.original_actor_textures.get(sprite) as Texture2D
+	if source_texture == null:
+		return PackedVector2Array()
+	var source_size := Vector2(source_texture.get_size())
+	var sprite_origin := sprite.offset
+	if sprite.centered:
+		sprite_origin -= source_size * 0.5
+	var world_points := PackedVector2Array()
+	var seen_pixels: Dictionary = {}
+	for point in points:
+		var local_pixel := point
+		if sprite.flip_h:
+			local_pixel.x = source_size.x - local_pixel.x
+		if sprite.flip_v:
+			local_pixel.y = source_size.y - local_pixel.y
+		var pixel := sprite.to_global(sprite_origin + local_pixel)
+		var key := Vector2i(floori(pixel.x), floori(pixel.y))
+		if seen_pixels.has(key):
+			continue
+		seen_pixels[key] = true
+		world_points.append(Vector2(key))
+	return world_points
 
 
 func _actor_body_polygon(actor: Node2D) -> PackedVector2Array:
@@ -165,21 +193,6 @@ func _polygon_edge_point(polygon: PackedVector2Array, origin: Vector2, direction
 	if is_finite(nearest_distance):
 		return origin + direction * (nearest_distance + 0.5)
 	return origin
-
-
-func _rasterize_closed_polygon(polygon: PackedVector2Array) -> PackedVector2Array:
-	var pixels := PackedVector2Array()
-	if polygon.size() < 3:
-		return pixels
-	for index in polygon.size():
-		var edge_start := polygon[index]
-		var edge_end := polygon[(index + 1) % polygon.size()]
-		var sample_count := maxi(ceili(edge_start.distance_to(edge_end) * PIXEL_SAMPLES_PER_WORLD_PIXEL), 1)
-		for sample in range(sample_count + 1):
-			var point := edge_start.lerp(edge_end, float(sample) / float(sample_count)).round()
-			if pixels.is_empty() or pixels[pixels.size() - 1] != point:
-				pixels.append(point)
-	return pixels
 
 
 func _build_arc_points() -> PackedVector2Array:

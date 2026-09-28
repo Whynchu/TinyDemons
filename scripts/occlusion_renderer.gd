@@ -22,6 +22,8 @@ var occluded_actor_textures: Dictionary = {}
 var highlighted_actor_textures: Dictionary = {}
 var grey_highlighted_actor_textures: Dictionary = {}
 var white_actor_textures: Dictionary = {}
+var actor_outline_texture_cache: Dictionary = {}
+var actor_outline_points_cache: Dictionary = {}
 var actor_default_textures: Dictionary = {}
 var actor_default_materials: Dictionary = {}
 var original_actor_textures: Dictionary = {}
@@ -170,7 +172,10 @@ func white_texture(source: Texture2D) -> Texture2D:
 		for x in image.get_width():
 			var color: Color = image.get_pixel(x, y)
 			if color.a > 0.0: image.set_pixel(x, y, Color(1, 1, 1, color.a))
-	var texture := ImageTexture.create_from_image(image); white_image_cache[key] = texture; return texture
+	var texture := ImageTexture.create_from_image(image)
+	texture.set_size_override(source.get_size())
+	white_image_cache[key] = texture
+	return texture
 
 
 func highlighted_texture(source: Texture2D) -> Texture2D:
@@ -188,6 +193,51 @@ func highlighted_texture_for_actor(actor: Sprite2D) -> Texture2D:
 	if not _ensure_sprite_registered(actor):
 		return null
 	return highlighted_actor_textures.get(actor) as Texture2D
+
+
+func outline_texture_for_actor(actor: Sprite2D) -> Texture2D:
+	if not _ensure_sprite_registered(actor):
+		return null
+	var source_texture := original_actor_textures.get(actor) as Texture2D
+	var source_image := original_actor_images.get(actor) as Image
+	if source_texture == null or source_image == null:
+		return null
+	_ensure_actor_outline_data(source_texture, source_image)
+	return actor_outline_texture_cache.get(source_texture) as Texture2D
+
+
+func outline_local_points_for_actor(actor: Sprite2D) -> PackedVector2Array:
+	if not _ensure_sprite_registered(actor):
+		return PackedVector2Array()
+	var source_texture := original_actor_textures.get(actor) as Texture2D
+	var source_image := original_actor_images.get(actor) as Image
+	if source_texture == null or source_image == null:
+		return PackedVector2Array()
+	_ensure_actor_outline_data(source_texture, source_image)
+	return actor_outline_points_cache.get(source_texture, PackedVector2Array()) as PackedVector2Array
+
+
+func _ensure_actor_outline_data(source_texture: Texture2D, source_image: Image) -> void:
+	if actor_outline_texture_cache.has(source_texture) and actor_outline_points_cache.has(source_texture):
+		return
+	var effect_image := make_effect_image(source_image)
+	var outline_image := Image.create_empty(effect_image.get_width(), effect_image.get_height(), false, Image.FORMAT_RGBA8)
+	var logical_points: Array[Vector2] = []
+	for outline_point in pixel_outline_points(effect_image, resolution_scale):
+		outline_image.set_pixel(outline_point.x, outline_point.y, Color.WHITE)
+		logical_points.append(Vector2(
+			(float(outline_point.x) + 0.5) / float(resolution_scale),
+			(float(outline_point.y) + 0.5) / float(resolution_scale)
+		))
+	var center := Vector2(source_image.get_size()) * 0.5
+	logical_points.sort_custom(func(a: Vector2, b: Vector2) -> bool:
+		return (a - center).angle() < (b - center).angle()
+	)
+	var points := PackedVector2Array()
+	for point in logical_points:
+		points.append(point)
+	actor_outline_texture_cache[source_texture] = effect_texture_with_display_size(outline_image, source_image.get_size())
+	actor_outline_points_cache[source_texture] = points
 
 
 func orb_highlighted_texture(source: Texture2D) -> Texture2D:
@@ -381,13 +431,17 @@ func make_white_image(source_image: Image) -> Image:
 
 
 func apply_pixel_outline(image: Image, pixel_size: int = 1, outline_color: Color = Color.WHITE, include_diagonals: bool = false) -> void:
+	for point in pixel_outline_points(image, pixel_size, include_diagonals):
+		image.set_pixel(point.x, point.y, outline_color)
+
+
+func pixel_outline_points(image: Image, pixel_size: int = 1, include_diagonals: bool = false) -> Array[Vector2i]:
 	var outline_points: Array[Vector2i] = []
 	for y in range(image.get_height()):
 		for x in range(image.get_width()):
 			if image.get_pixel(x, y).a <= 0.05 and has_opaque_neighbor(image, x, y, pixel_size, include_diagonals):
 				outline_points.append(Vector2i(x, y))
-	for point in outline_points:
-		image.set_pixel(point.x, point.y, outline_color)
+	return outline_points
 
 
 ## Warms every occlusion-derived image for a texture in one pass, sharing the
