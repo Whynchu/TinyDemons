@@ -66,13 +66,14 @@ Related: `docs/combat-and-dungeon-design-principles.md`,
   noise, with varying sizes.
 - A **cast bar below the caster** fills, changes color at full, pops slightly,
   then vanishes when the spell resolves.
-- Healing potency is **10 HP plus 2 HP per healer INT**, so enemy stat growth
+- Healing potency is **9 HP plus 1.8 HP per healer INT**, so enemy stat growth
   makes later-run healers restore more health.
 - The heal can reach an ally within 104 pixels. If another living enemy ally is
   present, the healer can target itself. At or below 45% health, it prioritizes
-  a self-heal at 25% potency; successful heals on another ally also heal the
-  caster for 25% of that cast's potency. If no ally needs healing, it may
-  self-heal at that potency while another ally lives.
+  a self-heal while another ally lives. A cast targeting only the healer uses
+  full potency; successful heals on another ally also heal the caster for 25%
+  of that cast's potency. If no ally needs healing, it may self-heal at full
+  potency while another ally lives.
 - When a nearby living ally is aggroed or in its notice/shock reaction, the
   healer inherits persistent aggro and follows its normal attack flow. This is
   a read-only check on neighbors; it only changes the healer's own aggro state.

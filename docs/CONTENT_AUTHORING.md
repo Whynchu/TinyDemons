@@ -385,9 +385,10 @@ channels for two seconds, and heals one primary ally per cast. It keeps seeking
 injured allies throughout the room, repeats the bounded cast as they come into
 range, and uses the normal Slime attack when no eligible healing target remains.
 The healing radius is 104 pixels. At or below 45% health, it prioritizes a
-self-heal at 25% potency while another living enemy ally remains. Successful
-heals on another ally also heal the caster for 25% potency; when no ally needs
-healing, it may self-heal at that potency if another ally is alive.
+self-heal while another living enemy ally remains. A cast that targets only the
+healer restores full potency; when healing another ally, the caster also
+receives a 25% reflected heal. When no ally needs healing, it may self-heal at
+full potency if another ally is alive.
 The healer inherits persistent aggro when a nearby living ally is aggroed or
 showing its notice/shock reaction, then follows the normal aggro and attack
 flow. The shared check reads ally state without changing the ally. A slightly
@@ -396,10 +397,11 @@ the target with the same cached pixel silhouette highlight used by player
 target-lock, and moves single-pixel glimmers along the trail while
 preserving the target sparkle. Runtime copies of the Casting and Spell Cast
 sheets live in `assets/artwork/` so Godot imports and packages them for web.
-Damage or knockback cancels the cast. Heal potency is 10 HP plus 2 HP per
+Damage or knockback cancels the cast. Heal potency is 9 HP plus 1.8 HP per
 healer INT. Cast timing, heal potency/radius,
-self-heal priority and multiplier, cooldown, preferred range, and ally steering
-bias are global `SlimeTuning` values in `resources/tuning/slime_default.tres`.
+self-heal priority and reflected-heal multiplier, cooldown, preferred range, and
+ally steering bias are global `SlimeTuning` values in
+`resources/tuning/slime_default.tres`.
 Encounter eligibility uses `encounter_min_rank`; the healer is eligible from
 rank 1 and is rolled as a companion after the regular room lineup, so a healer
 room always keeps at least one non-support enemy. The consumed room policy in

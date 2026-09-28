@@ -124,12 +124,13 @@ func _resolve_heal(context: SlimeSupportContext, actor: Sprite2D, tuning: SlimeT
 	if _is_heal_target_valid(context, actor, heal_target, tuning):
 		var target_health := heal_target.get_node_or_null("Health") as HealthComponent
 		if target_health != null:
-			var target_potency := heal_amount * clampf(tuning.support_self_heal_multiplier, 0.0, 1.0) if heal_target == actor else heal_amount
-			target_healed_amount = target_health.apply_healing(target_potency)
+			# A direct self-cast restores full potency. The reduced self-heal is
+			# only the bonus reflected when this cast heals a different ally.
+			target_healed_amount = target_health.apply_healing(heal_amount)
 			if heal_target != actor and target_healed_amount > 0.0:
 				var caster_health := actor.get_node_or_null("Health") as HealthComponent
 				if caster_health != null:
-					var reflected_heal := heal_amount * clampf(tuning.support_self_heal_multiplier, 0.0, 1.0)
+					var reflected_heal := heal_amount * clampf(tuning.support_reflected_self_heal_multiplier, 0.0, 1.0)
 					caster_healed_amount = caster_health.apply_healing(reflected_heal)
 	if target_healed_amount > 0.0 or caster_healed_amount > 0.0:
 		context.play_healing_sound.call("healing", 0.0, 1.0, 0.025)
@@ -347,7 +348,7 @@ func _begin_cast(context: SlimeSupportContext, actor: Sprite2D, target: Sprite2D
 	actor.add_child(cast_bar)
 	var player_guard := context.player_guard_component
 	var bar_offset := player_guard.bar_offset if player_guard != null else PlayerGuardComponent.BLOCK_BAR_OFFSET
-	var support_bar_offset := bar_offset + Vector2(0.0, -2.0)
+	var support_bar_offset := bar_offset + Vector2(0.0, -4.0)
 	cast_bar.global_position = actor.global_position + support_bar_offset
 	cast_bar.call("set_anchor_offset", support_bar_offset)
 	cast_bar.call("set_progress", 0.0)

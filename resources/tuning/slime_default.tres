@@ -5,5 +5,7 @@
 [resource]
 resource_name = "Default Slime Tuning"
 script = ExtResource("1_slime")
-support_self_heal_multiplier = 0.25
+support_heal_amount = 9.0
+support_heal_per_intelligence = 1.8
+support_reflected_self_heal_multiplier = 0.25
 support_heal_radius = 104.0

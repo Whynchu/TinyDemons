@@ -90,3 +90,19 @@ Restored the Web renderer override to match `main`; the working tree now has no
 `project.godot` change. The Web configuration smoke passes in no-Godot mode,
 and the script reports export skipped because its executable was intentionally
 unavailable. The Pages workflow remains responsible for the actual export.
+
+## 2026-09-28T14:50Z — codex — claim
+Adjust support healer cast-bar vertical offset and healing potency, with full
+direct self-heals and unchanged 25% caster reflection when healing an ally;
+update gameplay and authoring tuning docs. No Godot process will be launched.
+
+## 2026-09-28T15:52Z — codex — done
+Moved the healer cast bar 2px up, reduced healing to 9 HP + 1.8 HP per healer
+INT, made direct self-target healing full potency, and retained 25% caster
+reflection on ally-target casts. Updated tuning/authoring docs. MCP offline
+script checks and `git diff --check` pass; no test suite or Godot process ran.
+
+## 2026-09-28T16:25Z — codex — claim
+Prepare a 0.3.11 release containing the healer adjustment, update the in-game
+and README version, and push to `main` to trigger GitHub Pages deployment for
+mobile browser playtesting. Keep `.mcp.json` and the timed-floor plan out.
