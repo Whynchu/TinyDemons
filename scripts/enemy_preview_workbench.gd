@@ -19,6 +19,20 @@ const DESIGN_MOTION_FRAMES := 8
 const NORMAL_FRAME_SIZE := Vector2i(16, 16)
 const IDLE_BREATH_WIDTH := 0.05
 const IDLE_BREATH_HEIGHT := 0.04
+const PREVIEW_OUTER_COLOR := Color8(7, 14, 24)
+const PREVIEW_SURFACE_COLOR := Color8(16, 24, 37)
+const PREVIEW_PANEL_COLOR := Color8(27, 42, 61)
+const PREVIEW_PANEL_DARK_COLOR := Color8(13, 21, 32)
+const PREVIEW_HEADER_COLOR := Color8(34, 54, 77)
+const PREVIEW_BORDER_COLOR := Color8(90, 120, 144)
+const PREVIEW_BORDER_DARK_COLOR := Color8(44, 66, 87)
+const PREVIEW_ACCENT_COLOR := Color8(185, 233, 255)
+const PREVIEW_TEXT_COLOR := Color8(216, 231, 240)
+const PREVIEW_MUTED_TEXT_COLOR := Color8(183, 201, 216)
+const PREVIEW_SUBTLE_TEXT_COLOR := Color8(168, 193, 213)
+const PREVIEW_READY_COLOR := Color8(141, 255, 177)
+const PREVIEW_WARNING_COLOR := Color8(255, 207, 122)
+const PREVIEW_ERROR_COLOR := Color8(255, 143, 143)
 const GEOMETRY_SNAP := 0.5
 const GEOMETRY_HANDLE_HIT_RADIUS := 8.0
 const MAX_GEOMETRY_UNDO_STEPS := 64
@@ -367,6 +381,7 @@ var preview_actor: SlimeActor
 var preview_shadow: Sprite2D
 var _geometry_overlay: Node2D
 var frame_library: SpriteFrameLibrary
+var _pixel_text_renderer: EffectsSpawner
 var preview_ready := false
 var error_message := ""
 
@@ -617,6 +632,9 @@ func _set_growth_weight(stat_name: String, value: float) -> void:
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_pixel_text_renderer = EffectsSpawnerScript.new() as EffectsSpawner
+	_pixel_text_renderer.process_mode = Node.PROCESS_MODE_DISABLED
 	set_process(Engine.is_editor_hint())
 	var command_line_id := _enemy_id_from_command_line()
 	if not command_line_id.is_empty() and SlimeVariantCatalogScript.is_variant(command_line_id):
@@ -628,6 +646,13 @@ func _ready() -> void:
 	_sync_support_cast_preview_state(EnemyFactory.definition(enemy_id))
 	_build_preview()
 	_initializing_preview = false
+	queue_redraw()
+
+
+func _exit_tree() -> void:
+	if _pixel_text_renderer != null and is_instance_valid(_pixel_text_renderer):
+		_pixel_text_renderer.free()
+	_pixel_text_renderer = null
 
 
 func _enter_tree() -> void:
@@ -849,10 +874,11 @@ func _build_preview() -> void:
 		return
 	preview_actor.name = "PreviewEnemy"
 	preview_actor.centered = false
+	preview_actor.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	# The design view drives presentation itself and must never run actor logic.
+	preview_actor.process_mode = Node.PROCESS_MODE_DISABLED
 	if preview_actor is SkeletonActor:
 		preview_actor.offset = SkeletonActor.FRAME_OFFSET
-	preview_actor.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	preview_actor.process_mode = Node.PROCESS_MODE_DISABLED
 	preview_actor.set_meta("encounter_scale", 2.0 if _is_boss_preview() else 1.0)
 	preview_actor.position = _actor_preview_position()
 	preview_actor.scale = Vector2.ONE * _actor_preview_scale()
@@ -1673,41 +1699,86 @@ func get_preview_summary() -> Dictionary:
 
 
 func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO, PREVIEW_CANVAS_SIZE), Color("101825"), true)
-	draw_rect(Rect2(4, 4, 232, 152), Color("1b2a3d"), true)
-	draw_rect(Rect2(4, 4, 232, 152), Color("5a7890"), false, 1.0)
-	draw_string(ThemeDB.fallback_font, Vector2(12, 17), "ENEMY DESIGN PREVIEW", HORIZONTAL_ALIGNMENT_LEFT, 216, 10, Color("b9e9ff"))
+	_draw_preview_chrome()
+	_draw_pixel_label(self, Vector2(11, 10), "ENEMY DESIGN PREVIEW", PREVIEW_ACCENT_COLOR, 204)
+	var indicator_color := PREVIEW_READY_COLOR if preview_ready and not _definition_is_dirty() else PREVIEW_WARNING_COLOR
+	if not error_message.is_empty():
+		indicator_color = PREVIEW_ERROR_COLOR
+	draw_rect(Rect2(222, 10, 5, 5), indicator_color, true)
+	draw_rect(Rect2(221, 9, 7, 1), PREVIEW_BORDER_COLOR, true)
+	draw_rect(Rect2(221, 15, 7, 1), PREVIEW_BORDER_DARK_COLOR, true)
 
 	if definition == null:
-		draw_string(ThemeDB.fallback_font, Vector2(12, 42), error_message, HORIZONTAL_ALIGNMENT_LEFT, 216, 9, Color("ff8f8f"))
+		_draw_pixel_label(self, Vector2(12, 34), error_message, PREVIEW_ERROR_COLOR, 212)
+		_draw_pixel_label(self, Vector2(12, 45), "SELECT AN AUTHORED ENEMY TO BEGIN", PREVIEW_MUTED_TEXT_COLOR, 212)
 		return
 
 	var state_label: String = PREVIEW_STATE_LABELS[preview_state]
 	var frame_count := _selected_frame_count()
 	var playback_label := "PAUSED" if playback_paused else "PLAYING" if not _animation_finished else "FINISHED"
-	draw_string(ThemeDB.fallback_font, Vector2(12, 38), definition.display_name, HORIZONTAL_ALIGNMENT_LEFT, 142, 10, Color.WHITE)
-	draw_string(ThemeDB.fallback_font, Vector2(12, 51), "%s / %s" % [definition.type_id, definition.variant_id], HORIZONTAL_ALIGNMENT_LEFT, 142, 8, Color("b7c9d8"))
-	draw_string(ThemeDB.fallback_font, Vector2(12, 63), "element: %s" % ElementCatalogScript.display_name(definition.element), HORIZONTAL_ALIGNMENT_LEFT, 142, 8, Color("b7c9d8"))
-	draw_string(ThemeDB.fallback_font, Vector2(12, 75), "damage: %s" % definition.damage_contract, HORIZONTAL_ALIGNMENT_LEFT, 142, 8, Color("b7c9d8"))
-	draw_string(ThemeDB.fallback_font, Vector2(12, 87), "palette: %s" % SlimeVisualComponentScript.palette_for_definition(definition), HORIZONTAL_ALIGNMENT_LEFT, 142, 8, Color("b7c9d8"))
-	draw_string(ThemeDB.fallback_font, Vector2(12, 103), "STR %d DEF %d VIT %d" % [int(definition.base_stats.get("STR", 0)), int(definition.base_stats.get("DEF", 0)), int(definition.base_stats.get("VIT", 0))], HORIZONTAL_ALIGNMENT_LEFT, 142, 8, Color("d8e7f0"))
-	draw_string(ThemeDB.fallback_font, Vector2(12, 115), "AGI %d INT %d MND %d" % [int(definition.base_stats.get("AGI", 0)), int(definition.base_stats.get("INT", 0)), int(definition.base_stats.get("MND", 0))], HORIZONTAL_ALIGNMENT_LEFT, 142, 8, Color("d8e7f0"))
-	draw_string(ThemeDB.fallback_font, Vector2(12, 133), "%s  %s" % [state_label.to_upper(), playback_label], HORIZONTAL_ALIGNMENT_LEFT, 142, 8, Color("b9e9ff"))
+	_draw_pixel_label(self, Vector2(12, 29), definition.display_name.to_upper(), PREVIEW_TEXT_COLOR, 136)
+	_draw_pixel_label(self, Vector2(12, 39), "%s / %s" % [definition.type_id, definition.variant_id], PREVIEW_MUTED_TEXT_COLOR, 136)
+	_draw_pixel_label(self, Vector2(12, 53), "element: %s" % ElementCatalogScript.display_name(definition.element), PREVIEW_MUTED_TEXT_COLOR, 136)
+	_draw_pixel_label(self, Vector2(12, 62), "damage: %s" % definition.damage_contract, PREVIEW_MUTED_TEXT_COLOR, 136)
+	_draw_pixel_label(self, Vector2(12, 71), "palette: %s" % SlimeVisualComponentScript.palette_for_definition(definition), PREVIEW_MUTED_TEXT_COLOR, 136)
+	_draw_pixel_label(self, Vector2(12, 85), "STR %d DEF %d VIT %d" % [int(definition.base_stats.get("STR", 0)), int(definition.base_stats.get("DEF", 0)), int(definition.base_stats.get("VIT", 0))], PREVIEW_TEXT_COLOR, 136)
+	_draw_pixel_label(self, Vector2(12, 94), "AGI %d INT %d MND %d" % [int(definition.base_stats.get("AGI", 0)), int(definition.base_stats.get("INT", 0)), int(definition.base_stats.get("MND", 0))], PREVIEW_TEXT_COLOR, 136)
+	_draw_pixel_label(self, Vector2(12, 109), "%s  %s" % [state_label.to_upper(), playback_label], PREVIEW_ACCENT_COLOR, 136)
 	var frame_label := "frame %d / %d" % [_current_frame + 1, frame_count] if frame_count > 0 else "no frames for this mode"
-	draw_string(ThemeDB.fallback_font, Vector2(12, 145), frame_label, HORIZONTAL_ALIGNMENT_LEFT, 142, 8, Color("a8c1d5"))
+	_draw_pixel_label(self, Vector2(12, 119), frame_label, PREVIEW_SUBTLE_TEXT_COLOR, 136)
 	var status := error_message if not error_message.is_empty() else _definition_status()
 	if status.is_empty():
 		status = "READY" if preview_ready else "LOADING"
-	var status_color := Color("8dffb1") if preview_ready and not _definition_is_dirty() else Color("ffcf7a")
+	var status_color := PREVIEW_READY_COLOR if preview_ready and not _definition_is_dirty() else PREVIEW_WARNING_COLOR
 	if not error_message.is_empty():
-		status_color = Color("ff8f8f")
-	draw_string(ThemeDB.fallback_font, Vector2(12, 154), status, HORIZONTAL_ALIGNMENT_LEFT, 216, 8, status_color)
+		status_color = PREVIEW_ERROR_COLOR
+	_draw_pixel_label(self, Vector2(12, 145), status, status_color, 212)
 	if _death_effect_active:
-		draw_string(ThemeDB.fallback_font, Vector2(148, 145), "DEATH EFFECT", HORIZONTAL_ALIGNMENT_LEFT, 82, 8, Color("ffcf7a"))
+		_draw_pixel_label(self, Vector2(160, 132), "DEATH EFFECT", PREVIEW_WARNING_COLOR, 68)
 	elif _death_effect_completed:
-		draw_string(ThemeDB.fallback_font, Vector2(148, 145), "EFFECT COMPLETE", HORIZONTAL_ALIGNMENT_LEFT, 82, 8, Color("8dffb1"))
+		_draw_pixel_label(self, Vector2(160, 132), "EFFECT COMPLETE", PREVIEW_READY_COLOR, 68)
 	if preview_state in [PreviewState.BOSS_JUMP, PreviewState.BOSS_SLAM] and not _is_boss_preview():
-		draw_string(ThemeDB.fallback_font, Vector2(166, 123), "select Boss actor", HORIZONTAL_ALIGNMENT_LEFT, 70, 8, Color("ffcf7a"))
+		_draw_pixel_label(self, Vector2(160, 116), "SELECT BOSS ACTOR", PREVIEW_WARNING_COLOR, 68)
+
+
+func _draw_preview_chrome() -> void:
+	draw_rect(Rect2(Vector2.ZERO, PREVIEW_CANVAS_SIZE), PREVIEW_OUTER_COLOR, true)
+	draw_rect(Rect2(2, 2, 236, 156), PREVIEW_SURFACE_COLOR, true)
+	draw_rect(Rect2(3, 3, 234, 154), PREVIEW_BORDER_COLOR, false, 1.0)
+	draw_rect(Rect2(4, 4, 232, 152), PREVIEW_PANEL_COLOR, true)
+	draw_rect(Rect2(5, 5, 230, 17), PREVIEW_HEADER_COLOR, true)
+	draw_rect(Rect2(5, 22, 230, 1), PREVIEW_BORDER_COLOR, true)
+	draw_rect(Rect2(5, 140, 230, 14), PREVIEW_PANEL_DARK_COLOR, true)
+	draw_rect(Rect2(5, 140, 230, 1), PREVIEW_BORDER_DARK_COLOR, true)
+	# Square corner pixels give the canvas the same hard-edged frame language as
+	# the sprites and keep the accent away from the editable data itself.
+	draw_rect(Rect2(3, 3, 6, 1), PREVIEW_ACCENT_COLOR, true)
+	draw_rect(Rect2(3, 3, 1, 6), PREVIEW_ACCENT_COLOR, true)
+	draw_rect(Rect2(231, 156, 6, 1), PREVIEW_ACCENT_COLOR, true)
+	draw_rect(Rect2(236, 151, 1, 6), PREVIEW_ACCENT_COLOR, true)
+	draw_rect(Rect2(153, 27, 1, 102), PREVIEW_BORDER_DARK_COLOR, true)
+	draw_rect(Rect2(158, 27, 72, 102), PREVIEW_PANEL_DARK_COLOR, true)
+	draw_rect(Rect2(158, 27, 72, 102), PREVIEW_BORDER_COLOR, false, 1.0)
+	draw_rect(Rect2(159, 28, 70, 1), PREVIEW_BORDER_DARK_COLOR, true)
+
+
+func _draw_pixel_label(target: CanvasItem, position: Vector2, text: String, color: Color, max_width: float, alignment: int = HORIZONTAL_ALIGNMENT_LEFT) -> void:
+	if _pixel_text_renderer == null or not is_instance_valid(_pixel_text_renderer):
+		return
+	var fitted_text := text
+	var texture := _pixel_text_renderer.number_texture(fitted_text, color)
+	while texture != null and texture.get_width() > max_width and not fitted_text.is_empty():
+		var shortened := fitted_text.substr(0, fitted_text.length() - 1).strip_edges()
+		fitted_text = "%s..." % shortened if not shortened.is_empty() else "..."
+		texture = _pixel_text_renderer.number_texture(fitted_text, color)
+	if texture == null or texture.get_width() > max_width:
+		return
+	var x_position := position.x
+	if alignment == HORIZONTAL_ALIGNMENT_CENTER:
+		x_position += (max_width - float(texture.get_width())) * 0.5
+	elif alignment == HORIZONTAL_ALIGNMENT_RIGHT:
+		x_position += max_width - float(texture.get_width())
+	target.draw_texture(texture, Vector2(floorf(x_position), floorf(position.y)))
 
 
 ## Plays a deterministic, editor-only version of the shared enemy death breakup.
@@ -1861,11 +1932,13 @@ func _draw_geometry_overlay(overlay: Node2D) -> void:
 		return
 	var outline := points.duplicate()
 	outline.append(points[0])
-	overlay.draw_polyline(outline, Color("fff07a"), 2.0, true)
+	overlay.draw_polyline(outline, Color("fff07a"), 1.0, false)
 	for point in handle_points:
 		_draw_handle(overlay, point, value is Rect2)
 	var guide_name := "DRAG VERTICES" if value is PackedVector2Array else "DRAG BOX / CORNERS"
-	overlay.draw_string(ThemeDB.fallback_font, Vector2(150, 136), guide_name, HORIZONTAL_ALIGNMENT_LEFT, 84, 7, Color("fff07a"))
+	overlay.draw_rect(Rect2(148, 131, 84, 9), PREVIEW_PANEL_DARK_COLOR, true)
+	overlay.draw_rect(Rect2(148, 131, 84, 9), PREVIEW_WARNING_COLOR, false, 1.0)
+	_draw_pixel_label(overlay, Vector2(150, 133), guide_name, PREVIEW_WARNING_COLOR, 80)
 
 
 func _draw_handle(overlay: Node2D, point: Vector2, square: bool) -> void:

@@ -50,3 +50,43 @@ enemies on; no i-frames exist so a per-cycle fired-set is required). Verified th
 asset blocker: the two spike PNGs (16x16, 128x16) live in the `.gdignore`d
 `Artwork/` folder with no `.import`, and nothing is in `assets/artwork/` yet.
 No board row claimed by opencode.
+
+## 2026-09-28T00:00Z — codex — blocker
+M1 preview lifecycle slice: made all design-preview factory actors explicitly inert and added a focused lifecycle smoke plus manifest row. Script diagnostics and manifest validation pass. Godot runner was blocked by restricted user:// writes and editor startup; a direct standalone retry crashed before the test ran, so runtime and editor acceptance remain unverified. Do not start another Godot process in this session.
+
+## 2026-09-28T00:20Z — codex — note
+Workbench direction expanded from the enemy M1 proof to one shared platform with content-kind adapters. Source audit found ordinary room transitions keep the room shell authored in main.tscn and mutate geometry in place; basic_room/orb_room are not runtime definition-driven prefabs. RoomDefinition is global tuning, and DungeonSocket IDs derive from four fixed edge kinds. Updated authoring plan, content guide, and roadmap to establish a staged RoomPrefabDefinition/RoomFactory/RoomHost path with separate topology, prefab composition, per-run state, and explicit socket-ID migration.
+
+## 2026-09-28T00:35Z — codex — note
+Preview-session isolation design: ProfileSaveService is static over user:// slot paths and web builds write profile state to shared local storage. An in-process temporary slot is not safe. M1 interactive previews should launch a child game process with a unique temporary --user-data-dir, a versioned launch payload, and child-scoped stop/cleanup. Updated authoring-system-plan and Codex handoff accordingly.
+
+## 2026-09-28T00:45Z — codex — claim
+Pixel-art theme pass for the enemy preview canvas and geometry overlay in
+`scripts/enemy_preview_workbench.gd`; using the existing runtime bitmap text
+renderer and crisp pixel UI surfaces.
+
+## 2026-09-28T14:26Z — codex — done
+Replaced all fallback-font text on the enemy preview canvas and geometry overlay
+with the shared pixel-text renderer, added a hard-edged pixel palette frame,
+and made geometry strokes crisp. Corrected enemy preview transform setup for
+all actor families. Offline script diagnostics and `git diff --check` pass;
+visual/editor acceptance remains unverified because Godot must not be launched
+again in this session after the earlier crash.
+
+## 2026-09-28T14:27Z — codex — claim
+Preparing the authorized main push: reviewing only Codex-owned workbench files,
+incrementing the required game version, and running no-Godot web/export
+preflights. `.mcp.json` and `docs/timed-floor-hazard-plan.md` remain outside the
+claim and will not be included.
+
+## 2026-09-28T14:44Z — codex — blocker
+The static Web export preflight found the required
+`renderer/rendering_method.web="gl_compatibility"` override removed from the
+working `project.godot` after initial status review. Restoring the exact
+documented setting before rerunning Web configuration validation.
+
+## 2026-09-28T14:45Z — codex — done
+Restored the Web renderer override to match `main`; the working tree now has no
+`project.godot` change. The Web configuration smoke passes in no-Godot mode,
+and the script reports export skipped because its executable was intentionally
+unavailable. The Pages workflow remains responsible for the actual export.

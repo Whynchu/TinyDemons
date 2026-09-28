@@ -8,7 +8,7 @@ Hub world now has a standalone animated design preview; other content surfaces
 are still only partially wired. Read the trap table below before editing any
 `.tres`.
 
-Updated: 2026-09-26
+Updated: 2026-09-28
 
 Owner: the feature owner listed in [`FEATURE_MAP.md`](FEATURE_MAP.md). The
 content guide describes current boundaries; it does not authorize a new data
@@ -72,6 +72,30 @@ Current owners:
 - runtime topology in `scripts/dungeon_graph.gd` and
   `scripts/dungeon_map_controller.gd`; and
 - room activation and persistence in `scripts/room_controller.gd`.
+
+#### Room-scene status (current)
+
+`scenes/basic_room.tscn` and `scenes/orb_room.tscn` are editable scene
+templates, but ordinary room transitions do not resolve a scene from a
+per-room definition. `scenes/main.tscn` owns a separate copy of the active
+room shell, and `RoomGeometryController` changes its shared layers in place;
+the boss-room scene is currently consumed as a geometry template. The existing
+`RoomDefinition` resource is global encounter/traffic tuning loaded by
+`RoomController`, not a room identity or prefab reference. Editing a template
+does not by itself make a new prefab load in a run.
+
+The current `DungeonSocket.socket_id()` is derived from one of four fixed edge
+socket kinds; it is not an arbitrary authored ID. A general room workbench
+needs to separate edge placement/type from stable socket identity and migrate
+existing connections deliberately before supporting named internal or
+special-purpose sockets.
+
+The accepted target is a reusable room scene referenced by a typed
+`RoomPrefabDefinition`, selected from route data and materialized by the same
+room factory/compiler in design preview, isolated room play, and the game. Keep
+route connections, reusable room geometry, and per-run room progress as
+separate owners. The staged runtime integration and first prefab acceptance are
+in [`authoring-system-plan.md`](authoring-system-plan.md#runtime-room-prefab-seam-and-staged-proof).
 
 Workflow (current, before Slice 3):
 

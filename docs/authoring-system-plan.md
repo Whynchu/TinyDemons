@@ -407,6 +407,36 @@ allowed to change during the slice:
   validate/refresh actions, delegates field edits to Inspector or scenes, and
   uses editor undo/redo for mutations.
 
+Interactive sessions must isolate storage at the process boundary. The current
+`ProfileSaveService` uses static `user://` save paths, and browser profiles use
+shared local storage; changing a slot or temporarily swapping a save path inside
+the editor process is not isolation. On desktop, the workbench launches a
+separate game process with a unique temporary `--user-data-dir`, passes a
+versioned preview-session payload (content kind/ID, seed, loadout, arrival
+socket, and requested mode), tracks the child process, and removes the temporary
+directory after the process exits. Closing the workbench terminates only its
+own preview process and then cleans up. Full-game playtest continues to use the
+normal project profile. The editor-only interactive session does not run inside
+the exported web build; web gameplay is verified through the ordinary browser
+playtest and its existing save contract.
+
+Treat this as one game-development workbench with content-kind adapters, not a
+separate one-off tool for each feature. The dock owns discovery, selection,
+validation results, source navigation, preview launch, and refresh. Enemy, item,
+effect, and room adapters provide their typed definitions, factory/compiler,
+scene handles, validation rules, and design-preview presentation. A new kind
+should add an adapter and focused workflow without copying the dock, registry,
+preview-session, or lifecycle logic. Spatial kinds keep using Godot's scene and
+2D editors; the workbench coordinates those editors instead of replacing them
+with a bespoke level editor.
+
+The delivery order follows the dependency chain: M1 establishes the shared
+registry, validation, revision/refresh, dock, and preview-session contracts on
+the enemy proof; M2 and M3 add enemy and gear/element adapters; M4 adds room
+scene and map adapters on the same services. M1 does not need to implement every
+future content kind, but its service boundaries and stable-ID rules must not
+assume that every entry is a flat resource or that every preview is a sprite.
+
 The first dock should remain deliberately small: content kind and ID search,
 validation summary, Create/Duplicate, Open Source, Preview Design, Play
 Interactive, Refresh, and a resolved-reference list. A custom editor for every
@@ -515,9 +545,9 @@ view for route topology. The planned authority split is:
 
 | Authoritative surface | Owns | Derived consumers |
 |---|---|---|
-| Room scene | Tile/geometry placement, socket markers, landmark/hazard transforms, spawn markers referencing definitions | Room compiler, geometry validation, room preview, runtime |
-| Typed room definition | Stable ID, room-scene reference, encounter/reward/puzzle configuration | Registry and room factory/compiler |
-| Typed map definition | Room references, connections by stable socket ID, route/milestone policy | Graph view, validator, runtime graph |
+| Room prefab scene | Tile/geometry placement, stable socket markers, landmark/hazard transforms, spawn markers referencing definitions | Room compiler, geometry validation, room preview, runtime |
+| `RoomPrefabDefinition` | Stable prefab ID, room-scene reference, marker contract, supported capabilities, reusable presentation defaults | Registry and room factory/compiler |
+| Typed map definition | Room-instance IDs, prefab references, per-instance encounter/reward/puzzle policy, connections by stable socket ID, route/milestone policy | Graph view, validator, runtime graph |
 | Art resource | Textures/frames, visual anchors, palette/material policy | Preview and runtime presentation |
 | Shared actor geometry profile | Collision, targeting, and attack bounds consumed through `actor_geometry.gd` | Combat, movement, guides, and alignment checks |
 
@@ -525,6 +555,72 @@ Compiled dictionaries and generated layouts are outputs, not a second editable
 copy. Procedural policy remains an explicit input; preview uses a recorded seed
 and does not overwrite an authored scene. Art previews overlay authoritative
 geometry; art resources must not duplicate collision or attack shapes.
+
+#### Runtime room-prefab seam and staged proof
+
+Current code has authored room scenes, but ordinary runtime transitions do not
+load one. `scenes/basic_room.tscn` is a standalone spatial template and
+`scenes/orb_room.tscn` inherits it with Orb-room presentation metadata;
+`scenes/main.tscn` contains its own room-shell nodes rather than instancing
+`basic_room.tscn`. The active room shell remains in `main.tscn`, while
+`RoomGeometryController` changes shared tile maps, sprites, and guides in place.
+`RoomController` only instantiates the boss slime and boss room geometry scenes
+as unparented authoring templates. The current `RoomDefinition` is a shared
+encounter/traffic tuning resource, not an identity or scene reference for an
+individual room. Do not overload it with prefab identity.
+
+The room-prefab slice must establish this runtime chain:
+
+```text
+map/route entry (stable room instance ID, prefab ID, seed)
+        -> RoomPrefabDefinition
+        -> RoomFactory loads the authored PackedScene
+        -> active RoomHost binds scene sockets and definition-backed markers
+        -> existing encounter/puzzle/reward owners activate the room
+        -> RoomState saves transient progress separately from the scene
+```
+
+Keep route topology and room instances distinct. The map owns connections and
+stable socket IDs and per-instance policy; a prefab scene owns reusable spatial
+composition; the definition owns prefab identity and marker capabilities; a
+room-state record owns opened chests, cleared encounters, puzzle progress, and
+other run changes. Save IDs and generated seeds, not mutable scene instances.
+The normal game and the interactive room workbench must call the same
+factory/compiler and marker binding path. Room activation must report a missing
+prefab, socket, or marker as validation/runtime failure; it must not silently
+fall back to the basic room.
+
+M4 should stage the code migration before promising a general-purpose room
+builder:
+
+1. Define the scene marker contract around the existing `DungeonSocket` and
+   typed definition references. `DungeonSocket.socket_id()` currently derives
+   one of four fixed edge names from `socket_kind`; it is not a user-authored
+   socket ID. Keep edge kind/placement semantics separate from stable authored
+   socket identity, migrate existing connections explicitly if that boundary
+   changes, and define stable IDs for spawn points, landmarks, and hazards.
+   Validate duplicate/missing references before play.
+2. Add `RoomPrefabDefinition` without changing the existing global
+   `RoomDefinition` tuning owner. Register and validate one prefab and prove a
+   deterministic design preview resolves its scene, markers, and guides.
+3. Add a `RoomHost`/`RoomFactory` seam that swaps the active spatial scene while
+   preserving the existing `GameplayState`, actor ownership, frame schedule,
+   route state, and save format. First characterize current geometry capture,
+   arrival-socket placement, room activation, and checkpoint behavior.
+4. Load one distinct prefab through the ordinary graph transition and exported
+   discovery path. Use the existing Orb-room scene as the first candidate only
+   after confirming its `ROOM_ORB` interaction and map-marker semantics; its
+   current prefab metadata alone is not runtime proof.
+5. Extend the workbench to create a room from a template, edit it in the native
+   scene editor, run marker/connection validation, preview it with a fixed
+   seed, and play it in an isolated session. Undo/redo and save/reopen must
+   preserve placement IDs and socket connections.
+
+The first loaded-room acceptance should prove two distinct room prefabs, two
+stable room-instance IDs, a traversable connection between named sockets,
+return/re-entry with room state restored, and the same prefab resolution in an
+exported build. This is the point where authored room prefabs become production
+content rather than editor-only templates.
 
 - [ ] Create a room from a template; paint/place geometry; drag definition-backed
   enemy/spawn and landmark markers into the viewport; position and name sockets.
@@ -714,8 +810,12 @@ Work items:
   runtime death palette mapping and default effects tuning; editor acceptance
   is still open.
 - [ ] Add the isolated interactive enemy workbench and the first authoring dock
-  actions. It must launch the selected definition with a deterministic seed,
-  temporary profile, normal factory assembly, and explicit cleanup.
+  actions. On desktop it launches a separate game process with a unique
+  temporary `--user-data-dir` and a versioned session payload containing the
+  selected definition, deterministic seed, loadout, and start route. It uses
+  normal factory assembly; closing the session stops only that child process
+  and removes its temporary storage. Prove that the real profile and settings
+  are unchanged before and after the preview.
 - [x] Complete acceptance of the standalone `ember_guard.tres` definition through the
   registry-driven preview, round-trip, encounter, boss, and room-entry checks
   without a per-variant test edit.

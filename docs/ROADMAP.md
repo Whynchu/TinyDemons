@@ -2,7 +2,7 @@
 
 Status: working roadmap derived from the accepted refactor route
 
-Updated: 2026-09-27
+Updated: 2026-09-28
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
@@ -48,9 +48,9 @@ Work should move through one narrow slice at a time:
 | 0.30 | Establish shared menu boundaries | Planned | one migrated menu proves shared frame, cursor, list, footer, clipping, touch, and responsive contracts |
 | 0.40 | Separate room and encounter responsibilities | Complete | typed room transition/activation/entry/spawn/clear results and deterministic room fixtures |
 | 0.50 | Reduce dynamic runtime seams by feature | Complete | composition scorecard and editor composition at 100%; state bag and room owner at strict targets; legacy adapters retired; all authored definitions inspectable |
-| 0.60 | Make content authoring repeatable | In progress — owned by [`authoring-system-plan.md`](authoring-system-plan.md) | typed definitions, single-source registries, factories, previews, and a data-only workflow for enemies, items, rooms, maps, and tuning |
+| 0.60 | Build a reusable game-development workbench | In progress — owned by [`authoring-system-plan.md`](authoring-system-plan.md) | one shared dock/registry/validation/preview lifecycle with content-kind adapters; first end-to-end proof is an enemy, then gear/elements and room prefabs |
 | 0.70 | Improve test and performance feedback | In progress | device-backed timing, memory, render-cost, and reproducible performance scenarios; shared-process fast suites are owned by Slice 5 of the authoring plan |
-| 0.80 | Establish long-term content composition | In progress — owned by [`authoring-system-plan.md`](authoring-system-plan.md) | an enemy/room/map can be added through definitions and composition without central-state special cases |
+| 0.80 | Establish long-term content composition | In progress — owned by [`authoring-system-plan.md`](authoring-system-plan.md) | enemies, gear, authored room prefabs, and maps can be composed without per-content central-runtime special cases; loaded room scenes preserve route and save-state contracts |
 
 The numeric labels are sequencing markers, not release versions. The project
 version remains governed by [`VERSIONING.md`](VERSIONING.md).
