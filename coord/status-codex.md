@@ -2,7 +2,7 @@
 
 _Only codex writes this file._
 
-**Focus:** Composition audit restored; 0.3.22 correction prepared for main
+**Focus:** Fix player status outline animation tracking and status marker placement; release patch bump
 **Updated:** 2026-09-28
 
 ## In flight
@@ -168,3 +168,13 @@ in-game title, versioning guide, contributor guide, and roadmap are aligned.
 `origin/main` matched the local 0.3.20 release before publishing. No Godot
 runtime or test suite was run; the configured off-floor actor case still needs
 playtest confirmation.
+
+## 2026-09-28 — Player status presentation
+
+The player's status outline and status particles now follow the separate attack
+sprite while it is visible, then return to the base sprite. Status badges render
+in a dedicated row below the player HUD and above the minimap; the minimap is
+shifted down to leave that row clear. Release metadata is aligned at 0.3.23.
+MCP offline script diagnostics pass for all four changed gameplay scripts, and
+the editor has no new errors. No runtime playtest was run; the web build still
+needs player acceptance.

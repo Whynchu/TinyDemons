@@ -4,6 +4,8 @@ class_name ElementAuraComponent
 const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
 
 @export var actor_sprite: Sprite2D
+# Player attacks temporarily render through a separate sprite; include it in the aura source set.
+@export var alternate_actor_sprite: Sprite2D
 @export var overlay_parent: Node2D
 @export var status_component: StatusComponent
 
@@ -20,8 +22,8 @@ func _ready() -> void:
 	refresh_status_aura()
 
 
-func configure(new_actor_sprite: Sprite2D, new_overlay_parent: Node2D, new_status_component: StatusComponent) -> void:
-	var ownership_changed := actor_sprite != new_actor_sprite or overlay_parent != new_overlay_parent
+func configure(new_actor_sprite: Sprite2D, new_overlay_parent: Node2D, new_status_component: StatusComponent, new_alternate_actor_sprite: Sprite2D = null) -> void:
+	var ownership_changed := actor_sprite != new_actor_sprite or alternate_actor_sprite != new_alternate_actor_sprite or overlay_parent != new_overlay_parent
 	if health_component != null and is_instance_valid(health_component) and health_component.died.is_connected(_on_actor_died):
 		health_component.died.disconnect(_on_actor_died)
 	if status_component != null and is_instance_valid(status_component) and status_component.status_changed.is_connected(refresh_status_aura):
@@ -29,6 +31,7 @@ func configure(new_actor_sprite: Sprite2D, new_overlay_parent: Node2D, new_statu
 	if ownership_changed:
 		_queue_status_outline()
 	actor_sprite = new_actor_sprite
+	alternate_actor_sprite = new_alternate_actor_sprite
 	overlay_parent = new_overlay_parent
 	status_component = new_status_component
 	health_component = actor_sprite.get_node_or_null("Health") as HealthComponent if actor_sprite != null else null
@@ -101,7 +104,7 @@ func clear_imbue() -> void:
 
 
 func refresh_status_aura() -> void:
-	var actor := _valid_sprite(actor_sprite)
+	var actor := _active_actor_sprite()
 	var component := _valid_status_component(status_component)
 	var definition: StatusEffectDefinition = component.strongest_active_definition() if component != null else null
 	if actor == null or definition == null or actor.texture == null or overlay_parent == null or not is_instance_valid(overlay_parent):
@@ -129,7 +132,7 @@ func refresh_status_aura() -> void:
 
 func advance_status_visuals(delta: float, effects: EffectsSpawner, rng: RandomNumberGenerator, pixel_texture: Callable) -> void:
 	refresh_status_aura()
-	var actor := _valid_sprite(actor_sprite)
+	var actor := _active_actor_sprite()
 	var component := _valid_status_component(status_component)
 	if actor == null or component == null or effects == null or not is_instance_valid(effects) or not pixel_texture.is_valid():
 		_status_particle_timers.clear()
@@ -147,6 +150,13 @@ func advance_status_visuals(delta: float, effects: EffectsSpawner, rng: RandomNu
 	for status_id: Variant in _status_particle_timers.keys():
 		if not active_ids.has(status_id):
 			_status_particle_timers.erase(status_id)
+
+
+func _active_actor_sprite() -> Sprite2D:
+	var alternate := _valid_sprite(alternate_actor_sprite)
+	if alternate != null and alternate.visible and alternate.is_visible_in_tree():
+		return alternate
+	return _valid_sprite(actor_sprite)
 
 
 func _new_sibling_overlay(layer: Sprite2D, overlay_name: String) -> Sprite2D:

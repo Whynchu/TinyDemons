@@ -477,7 +477,7 @@ func update_player_status_marks(anchor: Sprite2D, status_component: StatusCompon
 			marker.visible = false
 		return
 	var definitions := status_component.active_definitions()
-	var parent := anchor.get_parent()
+	var parent := anchor.get_node_or_null(^"../../..") as Node2D
 	if parent == null:
 		return
 	while player_status_markers.size() < definitions.size():
@@ -489,7 +489,7 @@ func update_player_status_marks(anchor: Sprite2D, status_component: StatusCompon
 			continue
 		var definition := definitions[index]
 		marker.texture = status_badge_texture(definition, pixel_text)
-		marker.position = anchor.position + Vector2(18.0 + float(index) * 8.0, -3.0)
+		marker.position = Vector2(2.0 + float(index) * 8.0, 17.0)
 		marker.z_index = 5
 		marker.visible = true
 

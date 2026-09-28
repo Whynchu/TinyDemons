@@ -382,3 +382,15 @@ branch's patch-version rule for every push.
 GameplayState fields, preserving regular-room slot scope and lowering root
 accesses to 2,201. Regression-floor and strict composition audits pass. Version
 metadata is aligned at 0.3.22; origin/main still matches the 0.3.21 base.
+
+## 2026-09-28T23:41Z — codex — claim
+Fix the player status outline so it follows the visible player animation during
+attacks, move the player's status badges between the HUD and minimap, and prepare
+the requested versioned main release.
+
+## 2026-09-28T23:47Z — codex — done
+The player's status outline and particles now follow the visible attack sprite.
+Status badges occupy a dedicated row above the minimap, which was shifted down
+to make room. Release metadata is aligned at 0.3.23; MCP script diagnostics pass
+for all changed gameplay scripts, with no new editor errors. No runtime playtest
+was run.
