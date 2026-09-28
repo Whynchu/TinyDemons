@@ -52,6 +52,10 @@ Related: `docs/combat-and-dungeon-design-principles.md`,
 - When loading ends, the **Spell Cast** animation starts. The heal resolves once
   on its configured impact frame (default index 4, where the authored sheet
   blooms), then the animation plays through before the slime returns to idle.
+- Runtime copies of the Casting and Spell Cast sheets live in
+  `assets/artwork/` and load through packed Godot resources. Frame extraction
+  must work inside an exported web PCK and must not depend on `FileAccess` paths
+  to the desktop-only, Godot-ignored `Artwork/` source folder.
 - During cast: a **green charge aura** plays on the caster (sword-beam-charge-like).
 - During cast: a slightly transparent, green curved target arc starts at the
   caster's shared body-geometry edge and ends at the target's edge. It outlines
@@ -63,10 +67,11 @@ Related: `docs/combat-and-dungeon-design-principles.md`,
   then vanishes when the spell resolves.
 - Healing potency is **10 HP plus 2 HP per healer INT**, so enemy stat growth
   makes later-run healers restore more health.
-- If another living enemy ally is present, the healer can target itself. At or
-  below 45% health, it prioritizes a full-strength self-heal; otherwise, a
-  successful heal on another ally also heals the caster for 50% of that cast's
-  potency. If no ally needs healing, it may self-heal while another ally lives.
+- The heal can reach an ally within 52 pixels. If another living enemy ally is
+  present, the healer can target itself. At or below 45% health, it prioritizes
+  a self-heal at 25% potency; successful heals on another ally also heal the
+  caster for 25% of that cast's potency. If no ally needs healing, it may
+  self-heal at that potency while another ally lives.
 - Healing may begin when the caster is aggroed or a nearby living ally is
   aggroed or in its notice/shock reaction. This is a read-only local check: the
   healer does not change its neighbors' aggro or notice state.

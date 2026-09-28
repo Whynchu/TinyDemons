@@ -14,13 +14,27 @@ var recolor_cache: Dictionary = {}
 
 
 func slice_frames(path: String, frame_size: Vector2i) -> Array[Texture2D]:
-	var frames: Array[Texture2D] = []
 	if not ResourceLoader.exists(path):
+		return []
+	return slice_texture_frames(load(path) as Texture2D, frame_size)
+
+
+func slice_texture_frames(texture: Texture2D, frame_size: Vector2i) -> Array[Texture2D]:
+	if texture == null or frame_size.x <= 0 or frame_size.y <= 0:
+		return []
+	return slice_image_frames(_cached_image(texture), frame_size)
+
+
+func slice_image_frames(sheet: Image, frame_size: Vector2i) -> Array[Texture2D]:
+	var frames: Array[Texture2D] = []
+	if sheet == null or frame_size.x <= 0 or frame_size.y <= 0:
 		return frames
-	var texture := load(path) as Texture2D
-	if texture == null:
+	if sheet.is_compressed():
+		sheet = sheet.duplicate()
+		if sheet.decompress() != OK:
+			return frames
+	if sheet.is_empty() or sheet.get_width() < frame_size.x or sheet.get_height() < frame_size.y:
 		return frames
-	var sheet := _cached_image(texture)
 	var frame_count := int(float(sheet.get_width()) / float(frame_size.x))
 	for frame_index in range(frame_count):
 		var frame := Image.create_empty(frame_size.x, frame_size.y, false, sheet.get_format())
@@ -357,6 +371,11 @@ func _cached_image(texture: Texture2D) -> Image:
 	if image_cache.has(texture):
 		return image_cache[texture] as Image
 	var image := texture.get_image()
+	if image == null:
+		image = Image.new()
+	elif image.is_compressed():
+		if image.decompress() != OK:
+			image = Image.new()
 	image_cache[texture] = image
 	return image
 

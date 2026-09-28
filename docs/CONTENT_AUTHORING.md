@@ -360,16 +360,18 @@ and family routing. It selects a living, damaged enemy ally across mob families,
 channels for two seconds, and heals one primary ally per cast. It keeps seeking
 injured allies throughout the room, repeats the bounded cast as they come into
 range, and uses the normal Slime attack when no eligible healing target remains.
-At or below 45% health, it prioritizes a full-strength self-heal while
-another living enemy ally remains. Successful heals on another ally also heal
-the caster for half potency; when no ally needs healing, it may self-heal if
-another ally is alive.
+The healing radius is 52 pixels. At or below 45% health, it prioritizes a
+self-heal at 25% potency while another living enemy ally remains. Successful
+heals on another ally also heal the caster for 25% potency; when no ally needs
+healing, it may self-heal at that potency if another ally is alive.
 The healer can begin when it is aggroed or a nearby ally is aggroed or showing
 its notice/shock reaction. This reads ally state without changing it. A slightly
 transparent green arc starts and ends at the shared body-geometry edges, traces
 the target outline, and moves single-pixel glimmers along the trail while
-preserving the target sparkle. Damage or knockback cancels the cast. Heal
-potency is 10 HP plus 2 HP per healer INT. Cast timing, heal potency/radius,
+preserving the target sparkle. Runtime copies of the Casting and Spell Cast
+sheets live in `assets/artwork/` so Godot imports and packages them for web.
+Damage or knockback cancels the cast. Heal potency is 10 HP plus 2 HP per
+healer INT. Cast timing, heal potency/radius,
 self-heal priority and multiplier, cooldown, preferred range, and ally steering
 bias are global `SlimeTuning` values in `resources/tuning/slime_default.tres`.
 Encounter eligibility uses `encounter_min_rank`; the healer is eligible from

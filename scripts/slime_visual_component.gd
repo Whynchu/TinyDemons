@@ -3,6 +3,8 @@ extends Node
 class_name SlimeVisualComponent
 
 const ACTOR_PALETTE_MATERIAL_SCRIPT := preload("res://scripts/actor_palette_material.gd")
+const SUPPORT_CASTING_SHEET_PATH := "res://assets/artwork/SlimeGreen_Casting.png"
+const SUPPORT_SPELL_SHEET_PATH := "res://assets/artwork/SlimeGreen_Spell_Cast.png"
 
 var left_texture: Texture2D = null
 var right_texture: Texture2D = null
@@ -217,9 +219,9 @@ static func build_support_cast_frames(source: Texture2D) -> Array[Texture2D]:
 	return _build_support_cast_frames(source)
 
 
-static func build_authored_support_animation_frames(_frame_library: SpriteFrameLibrary, frame_size: Vector2i, warm_texture: Callable) -> Dictionary:
-	var casting_frames := _slice_authored_cast_sheet("res://Artwork/SlimeGreen_Casting.png", frame_size)
-	var spell_frames := _slice_authored_cast_sheet("res://Artwork/SlimeGreen_Spell_Cast.png", frame_size)
+static func build_authored_support_animation_frames(frame_library: SpriteFrameLibrary, frame_size: Vector2i, warm_texture: Callable) -> Dictionary:
+	var casting_frames := frame_library.slice_image_frames(_load_support_animation_sheet(SUPPORT_CASTING_SHEET_PATH), frame_size)
+	var spell_frames := frame_library.slice_image_frames(_load_support_animation_sheet(SUPPORT_SPELL_SHEET_PATH), frame_size)
 	for texture in casting_frames:
 		warm_texture.call(texture)
 	for texture in spell_frames:
@@ -227,19 +229,14 @@ static func build_authored_support_animation_frames(_frame_library: SpriteFrameL
 	return {"casting": casting_frames, "spell": spell_frames}
 
 
-static func _slice_authored_cast_sheet(path: String, frame_size: Vector2i) -> Array[Texture2D]:
-	var absolute_path := ProjectSettings.globalize_path(path)
-	if not FileAccess.file_exists(absolute_path):
-		return []
+static func _load_support_animation_sheet(path: String) -> Image:
+	var image_bytes := FileAccess.get_file_as_bytes(path)
+	if image_bytes.is_empty():
+		return null
 	var image := Image.new()
-	if image.load(absolute_path) != OK:
-		return []
-	var frames: Array[Texture2D] = []
-	for frame_index in range(image.get_width() / frame_size.x):
-		var frame := Image.create_empty(frame_size.x, frame_size.y, false, image.get_format())
-		frame.blit_rect(image, Rect2i(frame_index * frame_size.x, 0, frame_size.x, frame_size.y), Vector2i.ZERO)
-		frames.append(ImageTexture.create_from_image(frame))
-	return frames
+	if image.load_png_from_buffer(image_bytes) != OK:
+		return null
+	return image
 
 
 static func _build_support_cast_frames(source: Texture2D) -> Array[Texture2D]:

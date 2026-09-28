@@ -61,11 +61,12 @@ func spawn_slime_death_from_root(root: Object, slime: Sprite2D) -> void:
 	var tuning := root.get("effects_tuning") as EffectsTuning
 	var occlusion := root.get("occlusion_renderer") as OcclusionRenderer
 	var source_texture: Texture2D = occlusion.original_actor_textures.get(slime, slime.texture)
+	var source_image := occlusion.original_actor_images.get(slime) as Image
 	var palette := SlimeVisualComponent.frame_palette_for(slime)
 	var particle_origin := slime.global_position
 	if slime is SkeletonActor:
 		particle_origin += gameplay._actor_visual_offset(slime) * slime.scale
-	spawn_slime_death_particles(root, source_texture, particle_origin, int(round(root.call("_actor_foot", slime).y * root.get("DEPTH_Z_SCALE"))) + 1, tuning.slime_death_particle_count, tuning.slime_death_particle_speed_min, tuning.slime_death_particle_speed_max, tuning.slime_death_particle_lifetime, root.get("rng"), Callable(root, "_pixel_particle_texture"), palette)
+	spawn_slime_death_particles(root, source_texture, particle_origin, int(round(root.call("_actor_foot", slime).y * root.get("DEPTH_Z_SCALE"))) + 1, tuning.slime_death_particle_count, tuning.slime_death_particle_speed_min, tuning.slime_death_particle_speed_max, tuning.slime_death_particle_lifetime, root.get("rng"), Callable(root, "_pixel_particle_texture"), palette, source_image)
 
 
 func spawn_gold_from_root(root: Object, world_position: Vector2, amount: int) -> void:
@@ -925,11 +926,15 @@ func spawn_player_death_particles(parent: Node, texture: Texture2D, origin: Vect
 		pixel_particles.append({"sprite": particle, "velocity": Vector2(0.0, randf_range(-18.0, -7.0)), "timer": lifetime, "lifetime": lifetime, "gravity": 0.0, "effect_tag": effect_tag})
 
 
-func spawn_slime_death_particles(parent: Node, texture: Texture2D, position: Vector2, z_index: int, count: int, speed_min: float, speed_max: float, lifetime: float, random_source: RandomNumberGenerator, pixel_texture: Callable, palette_name: String = "green") -> void:
+func spawn_slime_death_particles(parent: Node, texture: Texture2D, position: Vector2, z_index: int, count: int, speed_min: float, speed_max: float, lifetime: float, random_source: RandomNumberGenerator, pixel_texture: Callable, palette_name: String = "green", source_image: Image = null) -> void:
 	if texture == null:
 		return
-	var image := texture.get_image()
-	if image == null:
+	var image := source_image
+	if image == null or image.is_empty():
+		image = texture.get_image()
+	if image == null or image.is_empty():
+		return
+	if image.is_compressed() and image.decompress() != OK:
 		return
 	var pixels: Array[Vector2i] = []
 	for y in image.get_height():

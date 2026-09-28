@@ -124,7 +124,8 @@ func _resolve_heal(context: SlimeSupportContext, actor: Sprite2D, tuning: SlimeT
 	if _is_heal_target_valid(context, actor, heal_target, tuning):
 		var target_health := heal_target.get_node_or_null("Health") as HealthComponent
 		if target_health != null:
-			target_healed_amount = target_health.apply_healing(heal_amount)
+			var target_potency := heal_amount * clampf(tuning.support_self_heal_multiplier, 0.0, 1.0) if heal_target == actor else heal_amount
+			target_healed_amount = target_health.apply_healing(target_potency)
 			if heal_target != actor and target_healed_amount > 0.0:
 				var caster_health := actor.get_node_or_null("Health") as HealthComponent
 				if caster_health != null:
