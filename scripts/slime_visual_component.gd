@@ -5,6 +5,8 @@ class_name SlimeVisualComponent
 const ACTOR_PALETTE_MATERIAL_SCRIPT := preload("res://scripts/actor_palette_material.gd")
 const SUPPORT_CASTING_SHEET_PATH := "res://assets/artwork/SlimeGreen_Casting.png"
 const SUPPORT_SPELL_SHEET_PATH := "res://assets/artwork/SlimeGreen_Spell_Cast.png"
+const SUPPORT_CASTING_FRAME_COUNT := 4
+const SUPPORT_SPELL_FRAME_COUNT := 9
 
 var left_texture: Texture2D = null
 var right_texture: Texture2D = null
@@ -206,13 +208,13 @@ static func assign_support_animation_frames(slimes: Array[Sprite2D], frames: Dic
 		var visual := slime.get_node_or_null("Visual") as SlimeVisualComponent
 		if visual == null:
 			continue
-		var fallback_frames := _build_support_cast_frames(visual.right_texture)
-		visual.support_casting_frames = frames.get("casting", []) as Array[Texture2D] if not frames.is_empty() else fallback_frames
-		visual.support_spell_frames = frames.get("spell", []) as Array[Texture2D] if not frames.is_empty() else fallback_frames
-		if visual.support_casting_frames.is_empty():
+		if frames.is_empty():
+			var fallback_frames := _build_support_cast_frames(visual.right_texture)
 			visual.support_casting_frames = fallback_frames
-		if visual.support_spell_frames.is_empty():
 			visual.support_spell_frames = fallback_frames
+			continue
+		visual.support_casting_frames = frames.get("casting", []) as Array[Texture2D]
+		visual.support_spell_frames = frames.get("spell", []) as Array[Texture2D]
 
 
 static func build_support_cast_frames(source: Texture2D) -> Array[Texture2D]:
@@ -220,23 +222,17 @@ static func build_support_cast_frames(source: Texture2D) -> Array[Texture2D]:
 
 
 static func build_authored_support_animation_frames(frame_library: SpriteFrameLibrary, frame_size: Vector2i, warm_texture: Callable) -> Dictionary:
-	var casting_frames := frame_library.slice_image_frames(_load_support_animation_sheet(SUPPORT_CASTING_SHEET_PATH), frame_size)
-	var spell_frames := frame_library.slice_image_frames(_load_support_animation_sheet(SUPPORT_SPELL_SHEET_PATH), frame_size)
+	var casting_frames := frame_library.slice_frames(SUPPORT_CASTING_SHEET_PATH, frame_size)
+	var spell_frames := frame_library.slice_frames(SUPPORT_SPELL_SHEET_PATH, frame_size)
+	if casting_frames.size() != SUPPORT_CASTING_FRAME_COUNT:
+		push_error("Healer casting sheet produced %d frames; expected %d." % [casting_frames.size(), SUPPORT_CASTING_FRAME_COUNT])
+	if spell_frames.size() != SUPPORT_SPELL_FRAME_COUNT:
+		push_error("Healer spell sheet produced %d frames; expected %d." % [spell_frames.size(), SUPPORT_SPELL_FRAME_COUNT])
 	for texture in casting_frames:
 		warm_texture.call(texture)
 	for texture in spell_frames:
 		warm_texture.call(texture)
 	return {"casting": casting_frames, "spell": spell_frames}
-
-
-static func _load_support_animation_sheet(path: String) -> Image:
-	var image_bytes := FileAccess.get_file_as_bytes(path)
-	if image_bytes.is_empty():
-		return null
-	var image := Image.new()
-	if image.load_png_from_buffer(image_bytes) != OK:
-		return null
-	return image
 
 
 static func _build_support_cast_frames(source: Texture2D) -> Array[Texture2D]:
