@@ -2,7 +2,7 @@
 
 _Only codex writes this file._
 
-**Focus:** 0.3.21 playtest follow-up; Godot process remains restricted
+**Focus:** Composition audit restored; 0.3.22 correction prepared for main
 **Updated:** 2026-09-28
 
 ## In flight
@@ -153,6 +153,14 @@ and its collision guide against the walkable area, so static review found no
 unvalidated initial spawn path; a live reproduction is still needed to rule
 out an in-bounds slot later moving out of bounds. `git diff --check` passes.
 No tests or Godot runtime checks were run under the session restriction.
+
+The 0.3.21 root-access regression came from three dynamic reads in the new
+regular-room clear check. `CombatRuntimeController.are_all_slimes_dead` now
+uses typed `GameplayState` references, preserving the configured-slot behavior
+while reducing the measured count to 2,201. Both the regression-floor and
+strict composition audits pass, and version metadata is aligned at 0.3.22 for
+the corrective main push. Only the composition audits and `git diff --check`
+were run; no Godot runtime or gameplay suite was launched.
 
 Release 0.3.21 carries the actor-death status cleanup, dead-actor status
 application guard, and regular-room configured-slot clear check. The web README,

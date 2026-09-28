@@ -458,13 +458,13 @@ func is_slime_dead(root: Object, slime: Sprite2D) -> bool:
 	return bool((root.call("_slime_combat", slime) as SlimeCombatComponent).dead)
 
 
-func are_all_slimes_dead(root: Object) -> bool:
-	var slimes := root.get("slimes") as Array[Sprite2D]
-	if root.get("current_room_type") == DungeonGraph.ROOM_COMBAT:
-		var room_controller := root.get("room_controller") as RoomController
+func are_all_slimes_dead(root: GameplayState) -> bool:
+	var slimes := root.slimes
+	if root.current_room_type == DungeonGraph.ROOM_COMBAT:
+		var room_controller := root.room_controller
 		var state: Dictionary = {}
 		if room_controller != null:
-			state = room_controller.room_states.get(root.get("current_room_id"), {}) as Dictionary
+			state = room_controller.room_states.get(root.current_room_id, {}) as Dictionary
 		var active_slots := state.get("enemy_variants", []) as Array
 		for slot in active_slots.size():
 			if slot >= slimes.size() or not is_slime_dead(root, slimes[slot]):

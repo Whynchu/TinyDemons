@@ -367,3 +367,18 @@ Aligned release metadata at 0.3.21 and prepared the status-death and
 regular-room-clear fixes for main. Confirmed origin/main matched the 0.3.20
 base, and preserved local MCP and timed-floor design edits outside the release.
 No Godot runtime or test suite was run; runtime acceptance remains open.
+
+## 2026-09-28T23:20Z — codex — claim
+Repair the 2,205 root-access audit regression introduced by regular combat-room
+clear scoping. Replace dynamic root reads with typed GameplayState references
+without changing the scoped clear behavior.
+
+## 2026-09-28T23:21Z — codex — claim
+Publish the typed-access correction as version 0.3.22, following the main
+branch's patch-version rule for every push.
+
+## 2026-09-28T23:22Z — codex — done
+`are_all_slimes_dead` now reads the current room and roster through typed
+GameplayState fields, preserving regular-room slot scope and lowering root
+accesses to 2,201. Regression-floor and strict composition audits pass. Version
+metadata is aligned at 0.3.22; origin/main still matches the 0.3.21 base.
