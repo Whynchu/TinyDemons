@@ -6,7 +6,7 @@ Updated: 2026-09-28
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.3.17`. The current smoke inventory is 149 manifest
+Current release: version `0.3.18`. The current smoke inventory is 149 manifest
 rows / 147 runnable paths / 44-path default gate; the counts quoted in older
 sections below are historical snapshots. The authoring and verification
 sequence is in [`authoring-system-plan.md`](authoring-system-plan.md).
@@ -426,21 +426,21 @@ vault. Keep existing rank/grade terms as separate legacy modifiers; do not use
 room depth or elapsed run progress for the new bonus. Record the cap and rates
 in `GAMEPLAY_TUNING.md`.
 
-### Healing plus-particle visibility
+### Healing-burst particle art
 
-**Player report:** The green healing `+` particles are too small and faint to
-read reliably during play.
+**Player report:** The green healing `+` particles were too small and faint to
+read reliably. The enlarged replacements looked harsh and cluttered, so the
+burst needs a more deliberate pixel-art treatment.
 
-**Source audit:** `EffectsSpawner.spawn_heal_burst()` uses the 3x5
-`gearplus3x5.png` glyph at a randomized 0.8–1.5 scale, blends its palette green
-toward white, and fades it over 0.42–0.68 seconds. That same 3x5 source is also
-used by the pixel-text renderer, so changing it globally would alter unrelated
-menu/text glyphs.
+**Source audit:** The first replacement repeated the same large 9x9 cross six
+times, used fractional scaling, and let noise spread the particles unevenly.
+The shared 3x5 `gearplus3x5.png` remains the pixel-text glyph and must not be
+changed for this effect.
 
-**Acceptance criteria:** Give healing particles their own larger, high-contrast
-pixel-art plus glyph. Keep nearest-neighbor rendering, preserve the 3x5 text
-glyph, and make the effect clearly visible against the dungeon without obscuring
-actors or combat feedback.
+**Acceptance criteria:** Use a crisp outlined pixel cross as the primary heal
+cue, with a few smaller sparkle accents to reduce repetition. Keep pixel-aligned
+scaling and controlled upward motion, preserve the 3x5 text glyph, and make the
+effect readable without covering actors or combat feedback.
 
 **Implemented in source:** the arc now anchors to the visible Sprite2D's
 transformed `get_rect()` top center and updates during the cast, so the boss's
@@ -451,8 +451,9 @@ sorts using precomputed name/stat keys. Shop BUY and SELL now compare the curren
 equipped item's six gear bonuses against the highlighted item's bonuses, with
 `EQUIP` and `ITEM` column headers and the existing green/red delta colors.
 Fusion uses those same equipped-piece/item comparison semantics and positions
-its headers at y=33 over the y=41 stat rows. Heal particles use a dedicated 9x9
-high-contrast plus texture; the 3x5 text glyph is unchanged. Gear rewards now
+its headers at y=33 over the y=41 stat rows. Heal bursts now pair one crisp 9x9
+outlined cross with smaller 5x5 sparkle accents, at integer scale and with
+controlled upward motion; the 3x5 text glyph is unchanged. Gear rewards now
 increase from completed-run count alone: chest chance and multi-drop thresholds,
 clear-award chance, and rarity probability all progress monotonically to their
 20-run cap. The clear award counts the run just completed; in-run chests use

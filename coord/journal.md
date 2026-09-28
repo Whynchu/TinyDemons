@@ -270,3 +270,14 @@ assignment now falls back when a sheet is empty, the release waits until heal
 impact before finishing, and the target-line endpoint crosshair is removed.
 MCP script diagnostics pass. No gameplay or test suite was run; web playtest
 acceptance remains open.
+
+## 2026-09-28T20:30Z — codex — claim
+Refining the healer burst art after player feedback. Touching
+`scripts/effects_spawner.gd`, `docs/KNOWN_ISSUES.md`, and
+`docs/healer-slime-cast-plan.md`; the active M1 claim already covers these paths.
+
+## 2026-09-28T20:45Z — codex — done
+Replaced the repetitive fractional-scaled healing crosses with crisp outlined
+crosses and smaller sparkle accents using pixel-aligned scale and controlled
+upward motion. Updated the issue and healer plan; runtime visual acceptance
+remains open under the recorded Godot process restriction.

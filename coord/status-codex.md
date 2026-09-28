@@ -2,7 +2,7 @@
 
 _Only codex writes this file._
 
-**Focus:** Fix healer regression reported after 0.3.16 while continuing M1 reference-aware lifecycle work
+**Focus:** Refine the healing burst particle art while continuing M1 reference-aware lifecycle work
 **Updated:** 2026-09-28
 
 ## In flight
@@ -20,6 +20,12 @@ fall back to actor frames, release timing waits through heal impact, and the
 healer arc endpoint crosshair is removed. MCP script diagnostics pass for the
 three changed scripts; no gameplay or test suite was run. Web playtest evidence
 remains open.
+
+Follow-up player feedback: the generated healing plus glyphs looked poor. The
+burst now uses crisp outlined crosses, smaller sparkle accents, integer pixel
+scaling, and a tighter controlled rise instead of repeating large crosses with
+fractional scales and noisy spread. Runtime visual acceptance remains open;
+the Godot process restriction still applies.
 
 This M1 step closes the enemy registry validator's duplicate-ID blind spot:
 the catalog now validates every distinct embedded and standalone source before

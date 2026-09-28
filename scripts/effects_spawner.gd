@@ -3,17 +3,23 @@ class_name EffectsSpawner
 
 const ActorPaletteMaterialScript = preload("res://scripts/actor_palette_material.gd")
 const GEAR_PLUS_TEXTURE: Texture2D = preload("res://assets/artwork/gearplus3x5.png")
-# The supplied 3x5 plus artwork is reused for every pixel-text plus glyph.
 const HEAL_PLUS_PIXELS := [
-	"___dGd___",
-	"___dGd___",
-	"___dGd___",
-	"ddddGdddd",
-	"dggGYGggd",
-	"ddddGdddd",
-	"___dGd___",
-	"___dGd___",
-	"___dGd___",
+	"....d....",
+	"...dGd...",
+	"...gGg...",
+	"dddGGGddd",
+	"dGGGYGGGd",
+	"dddGGGddd",
+	"...gGg...",
+	"...dGd...",
+	"....d....",
+]
+const HEAL_SPARK_PIXELS := [
+	"..g..",
+	".gGg.",
+	"gGYGg",
+	".gGg.",
+	"..g..",
 ]
 const HEAL_PLUS_PALETTE := {
 	"d": Color8(24, 75, 43),
@@ -33,6 +39,7 @@ var name_texture_cache: Dictionary = {}
 var keyboard_prompt_texture_cache: Dictionary = {}
 var pixel_particle_texture_cache: Dictionary = {}
 var heal_plus_texture_cache: Texture2D = null
+var heal_spark_texture_cache: Texture2D = null
 var damage_numbers: Array[Dictionary] = []
 var pixel_particles: Array[Dictionary] = []
 
@@ -55,8 +62,6 @@ var item_delivery_minimap: Node = null
 var pickup_delivery_sound_player: Callable = Callable()
 var fire_spark_timer := 0.0
 var fire_noise := FastNoiseLite.new()
-var support_heal_noise := FastNoiseLite.new()
-var support_heal_noise_cursor := 0.0
 var charge_aura_timer := 0.0
 var charge_ready_blink_timer := 0.0
 var charge_ready_opaque_timer := 0.0
@@ -446,19 +451,30 @@ func spawn_heal_charge(context: SlimeSupportContext, actor: Sprite2D, progress: 
 		})
 
 
-func _get_heal_plus_particle_texture() -> Texture2D:
-	if heal_plus_texture_cache != null:
-		return heal_plus_texture_cache
-	var image := Image.create(9, 9, false, Image.FORMAT_RGBA8)
+func _build_heal_particle_texture(pixel_rows: Array) -> Texture2D:
+	assert(not pixel_rows.is_empty(), "Heal particle art needs at least one row.")
+	var width := String(pixel_rows[0]).length()
+	var image := Image.create(width, pixel_rows.size(), false, Image.FORMAT_RGBA8)
 	image.fill(Color.TRANSPARENT)
-	for y in range(HEAL_PLUS_PIXELS.size()):
-		var row: String = HEAL_PLUS_PIXELS[y]
+	for y in range(pixel_rows.size()):
+		var row := String(pixel_rows[y])
 		for x in range(row.length()):
 			var tone := row.substr(x, 1)
-			if tone != "_":
+			if tone != ".":
 				image.set_pixel(x, y, HEAL_PLUS_PALETTE[tone] as Color)
-	heal_plus_texture_cache = ImageTexture.create_from_image(image)
+	return ImageTexture.create_from_image(image)
+
+
+func _get_heal_plus_particle_texture() -> Texture2D:
+	if heal_plus_texture_cache == null:
+		heal_plus_texture_cache = _build_heal_particle_texture(HEAL_PLUS_PIXELS)
 	return heal_plus_texture_cache
+
+
+func _get_heal_spark_particle_texture() -> Texture2D:
+	if heal_spark_texture_cache == null:
+		heal_spark_texture_cache = _build_heal_particle_texture(HEAL_SPARK_PIXELS)
+	return heal_spark_texture_cache
 
 
 func spawn_heal_burst(context: SlimeSupportContext, world_position: Vector2, particle_count: int) -> void:
@@ -468,36 +484,51 @@ func spawn_heal_burst(context: SlimeSupportContext, world_position: Vector2, par
 	if random_source == null:
 		random_source = RandomNumberGenerator.new()
 		random_source.randomize()
-	support_heal_noise.frequency = 0.32
-	support_heal_noise.seed = random_source.randi()
 	var origin: Vector2 = context.snap_half_pixel.call(world_position) as Vector2
 	var z_index := int(round(world_position.y * context.depth_z_scale)) + 5
-	for index in clampi(particle_count, 1, 12):
+	var count := clampi(particle_count, 1, 12)
+	for index in count:
+		var is_plus := index == 0
 		var particle := Sprite2D.new()
-		particle.name = "HealPlusParticle"
-		particle.texture = _get_heal_plus_particle_texture()
+		if is_plus:
+			particle.name = "HealPlusParticle"
+			particle.texture = _get_heal_plus_particle_texture()
+		else:
+			particle.name = "HealSparkParticle"
+			particle.texture = _get_heal_spark_particle_texture()
 		particle.centered = true
 		particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		particle.z_as_relative = false
 		particle.z_index = z_index
-		var particle_size := random_source.randf_range(1.05, 1.35)
-		particle.scale = Vector2.ONE * particle_size
+		particle.scale = Vector2.ONE
 		particle.modulate = Color.WHITE
 		context.world_root.add_child(particle)
-		var position := origin + Vector2(random_source.randf_range(-6.0, 6.0), random_source.randf_range(-2.0, 2.0))
+		var side := -1.0 if index % 2 == 0 else 1.0
+		var spread := random_source.randf_range(1.0, 3.0) if is_plus else random_source.randf_range(3.0, 7.0)
+		var vertical_spread := random_source.randf_range(-2.0, 1.0) if is_plus else random_source.randf_range(-5.0, 4.0)
+		var position := origin + Vector2(side * spread, vertical_spread)
+		if is_plus and index == 0:
+			position = origin
+		position = context.snap_half_pixel.call(position) as Vector2
 		particle.global_position = position
-		support_heal_noise_cursor += 0.37
-		var noise_speed := support_heal_noise.get_noise_1d(support_heal_noise_cursor)
-		var lifetime := random_source.randf_range(0.50, 0.75)
+		var lifetime := random_source.randf_range(0.40, 0.56)
+		var horizontal_speed := side * random_source.randf_range(3.0, 7.0)
+		var rise_speed := random_source.randf_range(16.0, 22.0)
+		var gravity := 28.0
+		if not is_plus:
+			lifetime = random_source.randf_range(0.30, 0.44)
+			horizontal_speed = side * random_source.randf_range(7.0, 13.0)
+			rise_speed = random_source.randf_range(10.0, 18.0)
+			gravity = 36.0
 		pixel_particles.append({
 			"sprite": particle,
-			"velocity": Vector2(noise_speed * 8.0, -15.0 - (noise_speed + 1.0) * 8.0),
+			"velocity": Vector2(horizontal_speed, -rise_speed),
 			"timer": lifetime,
 			"lifetime": lifetime,
-			"gravity": -2.0,
+			"gravity": gravity,
 			"effect_tag": SUPPORT_HEAL_BURST_TAG,
 			"logical_position": position,
-			"particle_scale": Vector2.ONE * particle_size,
+			"particle_scale": Vector2.ONE,
 			"alpha_scale": 1.0,
 		})
 
