@@ -175,6 +175,10 @@ func _cache_nodes() -> void:
 		if before != null: stat_before_texts.append(before)
 		if arrow != null: stat_arrow_texts.append(arrow)
 		if after != null: stat_after_texts.append(after)
+	for path in ["StatBeforeHeader", "StatAfterHeader"]:
+		var header := get_node_or_null(path) as Sprite2D
+		if header != null:
+			_responsive_sprites.append(header)
 	top_cursor = get_node_or_null("ShopTopCursor") as Sprite2D
 	mode_cursor = get_node_or_null("ShopModeCursor") as Sprite2D
 	item_cursor = get_node_or_null("ShopItemCursor") as Sprite2D
@@ -639,6 +643,12 @@ func render_shop(state: int, sell_mode: bool, selected_row: int, row_labels: Arr
 		_set_native_position(stat_before_texts[index], Vector2(STAT_BEFORE_RIGHT - _texture_width(stat_before_texts[index]), 54.0 + index * STAT_ROW_PITCH))
 		_set_native_position(stat_arrow_texts[index], Vector2(STAT_ARROW_X, 54.0 + index * STAT_ROW_PITCH))
 		_set_native_position(stat_after_texts[index], Vector2(STAT_AFTER_RIGHT - _texture_width(stat_after_texts[index]), 54.0 + index * STAT_ROW_PITCH))
+	var before_header := get_node_or_null("StatBeforeHeader") as Sprite2D
+	var after_header := get_node_or_null("StatAfterHeader") as Sprite2D
+	_set_text(before_header, "EQUIP", MUTED_TEXT_COLOR)
+	_set_text(after_header, "ITEM", MUTED_TEXT_COLOR)
+	_set_native_position(before_header, Vector2(STAT_BEFORE_RIGHT - 25.0, 46.0))
+	_set_native_position(after_header, Vector2(STAT_AFTER_RIGHT - 20.0, 46.0))
 
 	var amount_footer_visible := state == SELL_AMOUNT and sell_mode
 	var browsing_footer := not amount_footer_visible

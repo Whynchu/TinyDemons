@@ -8,10 +8,11 @@ const MIN_ARC_HEIGHT := 3.0
 const MAX_ARC_HEIGHT := 8.0
 const PIXEL_SAMPLES_PER_WORLD_PIXEL := 2.0
 const CAST_WORLD_Z_LIMIT := 4088
-const ACTOR_FOOT_OFFSET := Vector2(8.0, 13.0)
 
 var source_anchor: Node2D
 var target_anchor: Node2D
+var source_visual: Sprite2D
+var target_visual: Sprite2D
 var occlusion_renderer: OcclusionRenderer
 var target_outline: Sprite2D
 var source_offset := Vector2.ZERO
@@ -28,6 +29,8 @@ var fade_duration := 0.0
 func configure(source: Node2D, target: Node2D, source_world_point: Vector2, target_world_point: Vector2, renderer: OcclusionRenderer) -> void:
 	source_anchor = source
 	target_anchor = target
+	source_visual = _actor_visual_sprite(source)
+	target_visual = _actor_visual_sprite(target)
 	occlusion_renderer = renderer
 	source_offset = source_world_point - source.global_position
 	target_offset = target_world_point - target.global_position
@@ -69,31 +72,50 @@ func _update_anchor_points() -> void:
 	if source_anchor == null or not is_instance_valid(source_anchor) or target_anchor == null or not is_instance_valid(target_anchor):
 		target_outline_pixels.clear()
 		return
-	var source_polygon := _actor_body_polygon(source_anchor)
-	var target_polygon := _actor_body_polygon(target_anchor)
-	var source_center := source_anchor.global_position + source_offset
-	var target_center := target_anchor.global_position + target_offset
-	if source_polygon.size() >= 3:
-		source_center = ActorGeometry.polygon_center(source_polygon)
-	if target_polygon.size() >= 3:
-		target_center = ActorGeometry.polygon_center(target_polygon)
-	target_outline_pixels = _actor_outline_world_points(target_anchor as Sprite2D)
-	var direction := target_center - source_center
-	if direction.length_squared() <= 0.001:
-		direction = Vector2.RIGHT
-	else:
-		direction = direction.normalized()
-	if source_anchor == target_anchor:
-		start_point = source_center.round()
-		end_point = target_center.round()
-	else:
-		start_point = _polygon_edge_point(source_polygon, source_center, direction).round()
-		end_point = _polygon_edge_point(target_polygon, target_center, -direction).round()
+	var resolved_source_visual := _actor_visual_sprite(source_anchor)
+	if resolved_source_visual != null:
+		source_visual = resolved_source_visual
+	var resolved_target_visual := _actor_visual_sprite(target_anchor)
+	if resolved_target_visual != target_visual:
+		_clear_target_outline()
+		target_visual = resolved_target_visual
+		_attach_target_outline()
+	var source_top_center := _sprite_top_center(source_visual, source_anchor, source_offset)
+	var target_top_center := _sprite_top_center(target_visual, target_anchor, target_offset)
+	target_outline_pixels = _actor_outline_world_points(target_visual)
+	start_point = source_top_center.round()
+	end_point = target_top_center.round()
 	z_index = mini(maxi(source_anchor.z_index, target_anchor.z_index) + 1, CAST_WORLD_Z_LIMIT)
 
 
+func _actor_visual_sprite(actor: Node2D) -> Sprite2D:
+	if actor == null or not is_instance_valid(actor):
+		return null
+	if actor is Sprite2D:
+		return actor as Sprite2D
+	var first_sprite: Sprite2D
+	for candidate: Node in actor.find_children("*", "Sprite2D", true, false):
+		var sprite := candidate as Sprite2D
+		if sprite == null or sprite.name.ends_with("Outline") or sprite.name.ends_with("Shadow"):
+			continue
+		if first_sprite == null:
+			first_sprite = sprite
+		if sprite.visible and sprite.texture != null:
+			return sprite
+	return first_sprite
+
+
+func _sprite_top_center(sprite: Sprite2D, actor: Node2D, fallback_offset: Vector2) -> Vector2:
+	if sprite == null or not is_instance_valid(sprite):
+		return actor.global_position + fallback_offset
+	var rect := sprite.get_rect()
+	if not rect.has_area():
+		return sprite.global_position
+	return sprite.to_global(Vector2(rect.position.x + rect.size.x * 0.5, rect.position.y))
+
+
 func _attach_target_outline() -> void:
-	var target := target_anchor as Sprite2D
+	var target := target_visual
 	if target == null or not is_instance_valid(target) or occlusion_renderer == null:
 		return
 	target_outline = Sprite2D.new()
@@ -109,7 +131,7 @@ func _attach_target_outline() -> void:
 
 
 func _sync_target_outline() -> void:
-	var target := target_anchor as Sprite2D
+	var target := target_visual
 	if target_outline == null or not is_instance_valid(target_outline) or target == null or not is_instance_valid(target):
 		return
 	target_outline.texture = occlusion_renderer.outline_texture_for_actor(target) if occlusion_renderer != null else null
@@ -126,8 +148,13 @@ func _sync_target_outline() -> void:
 
 
 func _exit_tree() -> void:
+	_clear_target_outline()
+
+
+func _clear_target_outline() -> void:
 	if target_outline != null and is_instance_valid(target_outline):
 		target_outline.queue_free()
+	target_outline = null
 
 
 func _actor_outline_world_points(sprite: Sprite2D) -> PackedVector2Array:
@@ -156,43 +183,6 @@ func _actor_outline_world_points(sprite: Sprite2D) -> PackedVector2Array:
 		seen_pixels[key] = true
 		world_points.append(Vector2(key))
 	return world_points
-
-
-func _actor_body_polygon(actor: Node2D) -> PackedVector2Array:
-	var sprite := actor as Sprite2D
-	if sprite == null:
-		return PackedVector2Array()
-	var polygon := ActorGeometry.body_polygon(sprite, ACTOR_FOOT_OFFSET)
-	if polygon.size() >= 3:
-		return polygon
-	var rect := sprite.get_rect()
-	if not rect.has_area():
-		return PackedVector2Array()
-	var fallback := PackedVector2Array()
-	for local_point in [rect.position, rect.position + Vector2(rect.size.x, 0.0), rect.end, rect.position + Vector2(0.0, rect.size.y)]:
-		fallback.append(sprite.to_global(local_point))
-	return fallback
-
-
-func _polygon_edge_point(polygon: PackedVector2Array, origin: Vector2, direction: Vector2) -> Vector2:
-	if polygon.size() < 3:
-		return origin + direction * 8.0
-	var nearest_distance := INF
-	for index in polygon.size():
-		var edge_start := polygon[index]
-		var edge := polygon[(index + 1) % polygon.size()] - edge_start
-		var denominator := direction.cross(edge)
-		if absf(denominator) <= 0.0001:
-			continue
-		var start_delta := edge_start - origin
-		var ray_distance := start_delta.cross(edge) / denominator
-		var edge_progress := start_delta.cross(direction) / denominator
-		if ray_distance < 0.0 or edge_progress < -0.0001 or edge_progress > 1.0001:
-			continue
-		nearest_distance = minf(nearest_distance, ray_distance)
-	if is_finite(nearest_distance):
-		return origin + direction * (nearest_distance + 0.5)
-	return origin
 
 
 func _build_arc_points() -> PackedVector2Array:

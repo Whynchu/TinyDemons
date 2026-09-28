@@ -19,7 +19,7 @@ const MENU_CIRCLE_TEXTURE: Texture2D = preload("res://assets/artwork/circle55.pn
 const MENU_X_TEXTURE: Texture2D = preload("res://assets/artwork/x55.png")
 const MENU_TRIANGLE_TEXTURE: Texture2D = preload("res://assets/artwork/triangle55.png")
 const MENU_SQUARE_TEXTURE: Texture2D = preload("res://assets/artwork/square55.png")
-const GAME_VERSION := "0.3.11"
+const GAME_VERSION := "0.3.12"
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const HUB_STAT_ADD_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEaddition.png")
 const HUB_STAT_SUBTRACT_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEsubtract.png")
@@ -2241,7 +2241,7 @@ func _shop_item_details(catalog: ItemCatalog, item: ItemInstance, sell_mode: boo
 	return lines.slice(0, 4)
 
 
-func _shop_stat_comparison(root: GameplayState, profile: PlayerProfile, catalog: ItemCatalog, item: ItemInstance) -> Array[Dictionary]:
+func _shop_stat_comparison(_root: GameplayState, profile: PlayerProfile, catalog: ItemCatalog, item: ItemInstance) -> Array[Dictionary]:
 	var fields := [
 		{"key": "vit", "label": "VIT"},
 		{"key": "strength", "label": "STR"},
@@ -2251,52 +2251,23 @@ func _shop_stat_comparison(root: GameplayState, profile: PlayerProfile, catalog:
 		{"key": "mnd", "label": "MND"},
 	]
 	var result: Array[Dictionary] = []
-	var live_snapshot := root._player_stat_snapshot()
-	var preview_snapshot: CombatStatSnapshot = null
-	if live_snapshot != null and item != null:
+	var equipped_item: ItemInstance = null
+	if item != null:
 		var slot := catalog.definition_slot(item.definition_id)
-		var preview_equipment := EquipmentComponent.new()
-		var preview_item := item
-		if item.instance_id == ItemCatalog.UNEQUIP_SHIELD_ID:
-			preview_item = null
-		preview_equipment.configure_preview_from_profile(profile, catalog, slot, preview_item)
-		var player_stats := root.player_stats
-		if player_stats != null:
-			preview_snapshot = CombatStatSnapshot.from_components(player_stats, preview_equipment)
-		preview_equipment.free()
-	if live_snapshot != null and preview_snapshot != null:
-		for field: Dictionary in fields:
-			var key := str(field["key"])
-			var before := float(live_snapshot.get(key))
-			var after := float(preview_snapshot.get(key))
-			var delta := after - before
-			result.append({
-				"label": str(field["label"]),
-				"before": before,
-				"after": after,
-				"after_color": Color8(56, 183, 100) if delta > 0.0 else Color8(177, 62, 83) if delta < 0.0 else Color8(244, 244, 244),
-			})
-		return result
-	var stats := root.player_stats
-	var base_values := [
-		float(stats.vit) if stats != null else 0.0,
-		float(stats.strength) if stats != null else 0.0,
-		float(stats.def) if stats != null else 0.0,
-		float(stats.agi) if stats != null else 0.0,
-		float(stats.intelligence) if stats != null else 0.0,
-		float(stats.mnd) if stats != null else 0.0,
-	]
-	var bonuses := catalog.bonuses(item) if item != null else {}
-	for index in fields.size():
-		var field: Dictionary = fields[index]
+		equipped_item = profile.find_item(profile.get_equipped_instance_id(slot))
+	var equipped_bonuses := catalog.bonuses(equipped_item, profile.mastery_level(equipped_item.definition_id)) if equipped_item != null else {}
+	var highlighted_bonuses := catalog.bonuses(item, profile.mastery_level(item.definition_id)) if item != null else {}
+	for field: Dictionary in fields:
 		var key := str(field["key"])
 		var catalog_key := "vitality" if key == "vit" else "defense" if key == "def" else key
-		var after: float = base_values[index] + float(bonuses.get(catalog_key, 0.0))
-		var delta: float = after - base_values[index]
+		var before := float(equipped_bonuses.get(catalog_key, 0.0))
+		var after := float(highlighted_bonuses.get(catalog_key, 0.0))
+		var delta := after - before
 		result.append({
 			"label": str(field["label"]),
-			"before": base_values[index],
+			"before": before,
 			"after": after,
+			"before_color": Color8(244, 244, 244),
 			"after_color": Color8(56, 183, 100) if delta > 0.0 else Color8(177, 62, 83) if delta < 0.0 else Color8(244, 244, 244),
 		})
 	return result

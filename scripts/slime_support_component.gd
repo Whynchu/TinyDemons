@@ -348,7 +348,7 @@ func _begin_cast(context: SlimeSupportContext, actor: Sprite2D, target: Sprite2D
 	actor.add_child(cast_bar)
 	var player_guard := context.player_guard_component
 	var bar_offset := player_guard.bar_offset if player_guard != null else PlayerGuardComponent.BLOCK_BAR_OFFSET
-	var support_bar_offset := bar_offset + Vector2(0.0, -4.0)
+	var support_bar_offset := bar_offset + Vector2(0.0, -5.0)
 	cast_bar.global_position = actor.global_position + support_bar_offset
 	cast_bar.call("set_anchor_offset", support_bar_offset)
 	cast_bar.call("set_progress", 0.0)

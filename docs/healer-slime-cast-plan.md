@@ -58,14 +58,17 @@ Related: `docs/combat-and-dungeon-design-principles.md`,
   to the desktop-only, Godot-ignored `Artwork/` source folder.
 - During cast: a **green charge aura** plays on the caster (sword-beam-charge-like).
 - During cast: a slightly transparent, green curved target arc starts at the
-  caster's shared body-geometry edge and ends at the target's edge. Outline the
+  top center of the caster's visible sprite and ends at the top center of the
+  target's visible sprite. Resolve both points from current sprite bounds and
+  transforms so animation frames and the boss jump are followed. Outline the
   target with the same cached pixel silhouette highlight used by player
   target-lock, and move glimmers over pixels in the trail. Keep the existing
   sparkle around the target.
 - On resolve: **green "+" particles** drift upward, per-particle speed driven by
   noise, with varying sizes.
 - A **cast bar below the caster** fills, changes color at full, pops slightly,
-  then vanishes when the spell resolves.
+  then vanishes when the spell resolves. Its position is five pixels above the
+  shared block-bar offset.
 - Healing potency is **9 HP plus 1.8 HP per healer INT**, so enemy stat growth
   makes later-run healers restore more health.
 - The heal can reach an ally within 104 pixels. If another living enemy ally is

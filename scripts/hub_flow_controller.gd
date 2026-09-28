@@ -34,6 +34,7 @@ var _shop_cache_signature := ""
 var _shop_cache_items: Array[ItemInstance] = []
 var _shop_cache_groups: Array[Dictionary] = []
 var _shop_cache_group_by_key: Dictionary = {}
+var _fusion_details_by_root: Dictionary = {}
 
 
 func _set_equipment_mode(screen: Object, mode: int) -> void:
@@ -823,66 +824,84 @@ func close_hub_gear_browse(root: Object) -> void:
 
 
 func refresh_hub_fusion_candidates(root: Object) -> void:
-	root.screen_state_controller.hub_fusion_candidates.clear()
-	root.screen_state_controller.hub_fusion_candidates_dirty = false
-	if root.player_profile == null: return
+	var screen: Object = root.screen_state_controller
+	screen.hub_fusion_candidates.clear()
+	screen.hub_fusion_candidates_dirty = false
+	_fusion_details_by_root[root.get_instance_id()] = {}
+	if root.player_profile == null:
+		return
 	var catalog := ItemCatalog.new()
-	var grouped: Dictionary = {}
+	var equipped_ids: Dictionary = {}
+	for equipped_id: Variant in root.player_profile.equipped_instance_ids.values():
+		equipped_ids[str(equipped_id)] = true
+	var unequipped_count_by_fusion_key: Dictionary = {}
+	var grouped_by_stack_key: Dictionary = {}
 	for data: Dictionary in root.player_profile.inventory:
 		var item := ItemInstance.from_dictionary(data)
 		var slot := catalog.definition_slot(item.definition_id)
 		if slot not in ItemCatalog.SLOTS:
 			continue
-		var key := item.inventory_stack_key()
-		if not grouped.has(key):
-			grouped[key] = {"representative": item, "items": []}
-		var group: Dictionary = grouped[key]
-		(group["items"] as Array).append(item)
-		var item_equipped := _fusion_candidate_is_equipped(root.player_profile, item)
-		var current := group["representative"] as ItemInstance
-		var current_equipped := _fusion_candidate_is_equipped(root.player_profile, current)
-		if item_equipped and not current_equipped:
-			group["representative"] = item
+		var item_equipped: bool = equipped_ids.has(item.instance_id)
+		var fusion_key := _fusion_material_key(item)
+		if not item_equipped:
+			unequipped_count_by_fusion_key[fusion_key] = int(unequipped_count_by_fusion_key.get(fusion_key, 0)) + 1
+		var stack_key := item.inventory_stack_key()
+		if not grouped_by_stack_key.has(stack_key):
+			grouped_by_stack_key[stack_key] = {"representative": item, "equipped": item_equipped, "fusion_key": fusion_key}
+		elif item_equipped and not bool(grouped_by_stack_key[stack_key]["equipped"]):
+			grouped_by_stack_key[stack_key]["representative"] = item
+			grouped_by_stack_key[stack_key]["equipped"] = true
 	var equipped_candidates: Array[ItemInstance] = []
 	var unequipped_candidates: Array[ItemInstance] = []
-	for group_value: Variant in grouped.values():
+	var candidate_details: Dictionary = {}
+	for group_value: Variant in grouped_by_stack_key.values():
 		var group: Dictionary = group_value
 		var item := group["representative"] as ItemInstance
-		var can_salvage: bool = root.player_profile.can_salvage_overflow(item.instance_id, catalog)
-		var valid_material_count: int = int(root.player_profile.fusion_material_count(item.instance_id, catalog))
-		# One eligible duplicate is enough to fuse, whether the target is equipped
-		# or not. The previous unequipped path incorrectly demanded two materials,
-		# hiding valid targets that had exactly one duplicate.
-		if valid_material_count < 1 and not can_salvage:
+		var item_equipped := bool(group["equipped"])
+		var unequipped_count := int(unequipped_count_by_fusion_key.get(str(group["fusion_key"]), 0))
+		var available_materials := maxi(unequipped_count - (0 if item_equipped else 1), 0)
+		var material_count := mini(available_materials, root.player_profile.fusion_steps_to_next_rank(item))
+		var can_salvage: bool = not item_equipped and item.rarity == &"mythic" and item.enhancement_level >= PlayerProfile.MAX_ITEM_ENHANCEMENT
+		if material_count < 1 and not can_salvage:
 			continue
-		var equipped := _fusion_candidate_is_equipped(root.player_profile, item)
-		(equipped_candidates if equipped else unequipped_candidates).append(item)
-	_sort_fusion_candidates(equipped_candidates, root.player_profile, catalog)
-	_sort_fusion_candidates(unequipped_candidates, root.player_profile, catalog)
-	root.screen_state_controller.hub_fusion_candidates.append_array(equipped_candidates)
-	root.screen_state_controller.hub_fusion_candidates.append_array(unequipped_candidates)
+		candidate_details[item.instance_id] = {
+			"owned_count": unequipped_count,
+			"material_count": material_count,
+			"can_salvage": can_salvage,
+		}
+		(equipped_candidates if item_equipped else unequipped_candidates).append(item)
+	_sort_fusion_candidates(equipped_candidates, catalog)
+	_sort_fusion_candidates(unequipped_candidates, catalog)
+	screen.hub_fusion_candidates.append_array(equipped_candidates)
+	screen.hub_fusion_candidates.append_array(unequipped_candidates)
+	_fusion_details_by_root[root.get_instance_id()] = candidate_details
 
 
-func _fusion_candidate_is_equipped(profile: PlayerProfile, item: ItemInstance) -> bool:
-	return profile != null and item != null and profile.equipped_instance_ids.values().has(item.instance_id)
+func _fusion_material_key(item: ItemInstance) -> String:
+	return "%s::%s" % [String(item.definition_id), String(item.rarity)]
 
 
-func _sort_fusion_candidates(candidates: Array[ItemInstance], profile: PlayerProfile, catalog: ItemCatalog) -> void:
+func _sort_fusion_candidates(candidates: Array[ItemInstance], catalog: ItemCatalog) -> void:
+	var sort_values: Dictionary = {}
+	for item: ItemInstance in candidates:
+		sort_values[item.instance_id] = {
+			"total": catalog.stat_allocation_total(item),
+			"name": catalog.gear_name(item),
+			"definition": String(item.definition_id),
+		}
 	candidates.sort_custom(func(left: ItemInstance, right: ItemInstance) -> bool:
-		var left_equipped := _fusion_candidate_is_equipped(profile, left)
-		var right_equipped := _fusion_candidate_is_equipped(profile, right)
-		if left_equipped != right_equipped:
-			return left_equipped
-		var left_total := catalog.stat_allocation_total(left)
-		var right_total := catalog.stat_allocation_total(right)
+		var left_values: Dictionary = sort_values[left.instance_id]
+		var right_values: Dictionary = sort_values[right.instance_id]
+		var left_total := float(left_values["total"])
+		var right_total := float(right_values["total"])
 		if not is_equal_approx(left_total, right_total):
 			return left_total > right_total
-		var left_name := catalog.gear_name(left)
-		var right_name := catalog.gear_name(right)
+		var left_name := str(left_values["name"])
+		var right_name := str(right_values["name"])
 		if left_name != right_name:
 			return left_name < right_name
-		var left_definition := String(left.definition_id)
-		var right_definition := String(right.definition_id)
+		var left_definition := str(left_values["definition"])
+		var right_definition := str(right_values["definition"])
 		if left_definition != right_definition:
 			return left_definition < right_definition
 		return left.instance_id < right.instance_id
@@ -891,6 +910,7 @@ func _sort_fusion_candidates(candidates: Array[ItemInstance], profile: PlayerPro
 
 func invalidate_hub_fusion_candidates(root: Object) -> void:
 	root.screen_state_controller.hub_fusion_candidates_dirty = true
+	_fusion_details_by_root.erase(root.get_instance_id())
 
 
 func sell_profile_item(root: Object, instance_id: String) -> bool:
@@ -973,6 +993,20 @@ func hub_fusion_candidates(root: Object) -> Array[ItemInstance]:
 	return root.screen_state_controller.hub_fusion_candidates
 
 
+func fusion_candidate_details(root: Object, item: ItemInstance) -> Dictionary:
+	if item == null or root.player_profile == null:
+		return {}
+	hub_fusion_candidates(root)
+	var details_by_id: Dictionary = _fusion_details_by_root.get(root.get_instance_id(), {})
+	if details_by_id.has(item.instance_id):
+		return details_by_id[item.instance_id] as Dictionary
+	return {
+		"owned_count": root.player_profile.fusion_owned_count(item.instance_id),
+		"material_count": root.player_profile.fusion_material_count(item.instance_id),
+		"can_salvage": root.player_profile.can_salvage_overflow(item.instance_id),
+	}
+
+
 func fuse_profile_target(root: Object, instance_id: String, count: int) -> bool:
 	if root.player_profile == null or count <= 0 or not root.player_profile.fuse_duplicates(instance_id, count, ItemCatalog.new()):
 		return false
@@ -991,8 +1025,9 @@ func shift_hub_fusion_count(root: Object, direction: int) -> void:
 	if candidates.is_empty(): return
 	var index: int = clampi(root.screen_state_controller.hub_item_index, 0, candidates.size() - 1)
 	var target: ItemInstance = candidates[index]
-	if root.player_profile.can_salvage_overflow(target.instance_id): return
-	var material_count: int = root.player_profile.fusion_material_count(target.instance_id)
+	var target_details := fusion_candidate_details(root, target)
+	if bool(target_details.get("can_salvage", false)): return
+	var material_count := int(target_details.get("material_count", 0))
 	if material_count <= 0: return
 	root.screen_state_controller.hub_fusion_count = clampi(int(root.screen_state_controller.hub_fusion_count) + direction, 1, material_count)
 	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
@@ -1131,8 +1166,9 @@ func hub_item_action(root: Object) -> void:
 		if not fusion_candidates.is_empty():
 			var index: int = clampi(root.screen_state_controller.hub_item_index, 0, fusion_candidates.size() - 1)
 			var target: ItemInstance = fusion_candidates[index]
-			if root.player_profile.fusion_material_count(target.instance_id) > 0:
-				var material_count: int = root.player_profile.fusion_material_count(target.instance_id)
+			var target_details := fusion_candidate_details(root, target)
+			var material_count := int(target_details.get("material_count", 0))
+			if material_count > 0:
 				var count: int = clampi(int(root.screen_state_controller.hub_fusion_count), 1, material_count)
 				var batch_cost: int = root.player_profile.fusion_batch_cost(target, count)
 				if root.player_profile.souls < batch_cost:
@@ -1149,7 +1185,7 @@ func hub_item_action(root: Object) -> void:
 					else:
 						root.call("_play_sound", "ui_no_input", 0.0, 1.0)
 						fusion_feedback_played = true
-			elif root.player_profile.can_salvage_overflow(target.instance_id):
+			elif bool(target_details.get("can_salvage", false)):
 				var salvage_value: int = salvage_profile_overflow(root, target.instance_id)
 				if salvage_value > 0:
 					root.screen_state_controller.hub_fusion_message = "SALVAGED %dG" % salvage_value

@@ -551,6 +551,17 @@ theme_override_styles/disabled = SubResource("StyleBox_transparent")
 texture_filter = 1
 position = Vector2(162, 54)
 centered = false
+
+[node name="StatBeforeHeader" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(177, 46)
+centered = false
+
+[node name="StatAfterHeader" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(209, 46)
+centered = false
+
 [node name="StatBefore0" type="Sprite2D" parent="."]
 texture_filter = 1
 position = Vector2(195, 54)

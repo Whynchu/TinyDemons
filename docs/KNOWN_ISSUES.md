@@ -2,11 +2,11 @@
 
 Status: live register for the `0.3.x` cycle
 
-Updated: 2026-09-27
+Updated: 2026-09-28
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.3.09`. The current smoke inventory is 145 manifest
+Current release: version `0.3.12`. The current smoke inventory is 145 manifest
 rows / 143 runnable paths / 44-path default gate; the counts quoted in older
 sections below are historical snapshots. The authoring and verification
 sequence is in [`authoring-system-plan.md`](authoring-system-plan.md).
@@ -262,6 +262,100 @@ signal contracts. The remaining Fusion evidence is the live next-rank
 transaction matrix, not a scene-construction failure.
 No new test file was added, and the web export path was not reopened because
 the existing local gate is already accepted for this pass.
+
+## 2026-09-28 healer presentation and hub gear menus — open
+
+### Healer cast endpoints and boss jump presentation
+
+**Player report:** The healer's green casting arc appears to leave from the
+slime's foot and land around the target's middle. It should connect the top
+center of the healer sprite to the top center of the target sprite. The boss
+also has a small healer-related visual defect while jumping. The cast progress
+bar should move one more pixel upward.
+
+**Source audit:** `scripts/slime_support_component.gd` starts the effect using
+`magic_target_point`, whose enemy fallback is the combat-body center in
+`scripts/magic_runtime_controller.gd`. `scripts/enemy_target_arc.gd` then uses
+`ActorGeometry.body_polygon` and clips the line to that collision/body polygon's
+edges. The boss jump changes the root `Sprite2D.offset` in
+`scripts/boss_jump_slam_component.gd`; the body-hitbox child remains anchored to
+the floor, so re-evaluating the current polygon does not make the endpoint
+follow the raised boss sprite. The arc already updates each frame, but it is
+tracking combat geometry rather than the visible sprite. The current cast-bar
+offset is four pixels above the shared guard-bar offset.
+
+**Acceptance criteria:** Resolve the source and target anchors from each actor's
+visible sprite bounds, using the top-center point after the sprite's current
+frame, offset, and world transform are applied. Update the anchors during the
+cast so animations and the boss jump remain followed. Keep the target outline
+attached to the target's visible sprite. The same rule must work for current
+Slimes, the enlarged boss, Skeletons, and future enemy actor roots with a sprite
+visual. Move the healer bar exactly one additional world pixel upward from its
+current placement. Healing, range, and combat collision geometry must keep their
+existing behavior.
+
+### Fusion menu inventory-size slowdown
+
+**Player report:** Opening Fusion in the Demon Hub slows substantially when the
+player has a large gear pool.
+
+**Source audit:** `scripts/hub_flow_controller.gd` invalidates the cached Fusion
+list whenever the Hub opens and rebuilds it on the first Fusion-list read. The
+builder groups inventory, then calls `PlayerProfile.fusion_material_count` and
+`can_salvage_overflow` for each grouped target. Those helpers each search the
+inventory again (and the material helper reconstructs item instances while
+scanning); the sort comparator also recomputes gear names and stat totals.
+Consequently, the first open can do repeated full-inventory work for every
+distinct candidate even though later UI reads use the cached candidate list.
+
+**Acceptance criteria:** Build the same candidate set, equipped-first ordering,
+material eligibility, and overflow-salvage state with one inventory aggregation
+pass plus candidate sorting. Preserve the existing explicit invalidation on Hub
+open and gear transactions, as well as the fusion transaction rules. Opening
+Fusion and moving between rows should not trigger a full inventory scan per
+candidate.
+
+### Shop BUY/SELL gear-stat comparison
+
+**Player report:** A buyer cannot tell the highlighted item's own stats because
+the panel compares the player's current total stats with the totals after
+hypothetically equipping it. The player requested a direct comparison with the
+currently equipped piece on the left and the highlighted piece on the right,
+with the existing red/green meaning preserved. SELL should receive the same
+clarity if it currently uses the same panel.
+
+**Source audit:** `scripts/screen_state_controller.gd::_shop_stat_comparison`
+currently builds a live player snapshot, substitutes the highlighted item into
+its slot using `EquipmentComponent`, and reports before/after character totals.
+That same function supplies the Shop presenter for both BUY and SELL.
+`scripts/shop_menu_layout.gd::render_shop` already has left/right stat columns
+and colors the right value by its delta, so the presentation can show gear-piece
+bonuses directly without changing the shop's transaction or navigation flow.
+The SELL list excludes equipped pieces; its comparison currently remains the
+same hypothetical character-total panel rather than an equipped-piece versus
+selected-sale-item comparison.
+
+**Acceptance criteria:** For every highlighted BUY or SELL row, show the
+currently equipped item's six core gear-stat bonuses in the left column and the
+highlighted item's bonuses in the right column. Apply the existing green/red
+color rule to the right value when it is higher/lower than the equipped piece;
+equal values remain neutral. Use the same rarity, enhancement, and random-stat
+bonus calculation already used by gear, and show zero for an empty current slot.
+Browsing or selling must not equip or otherwise mutate either item.
+
+**Implemented in source:** the arc now anchors to the visible Sprite2D's
+transformed `get_rect()` top center and updates during the cast, so the boss's
+animated `Sprite2D.offset` is reflected. The bar uses a five-pixel upward offset
+from the shared guard-bar position. Fusion now aggregates unequipped counts by
+definition and rarity during its inventory pass, caches candidate details, and
+sorts using precomputed name/stat keys. Shop BUY and SELL now compare the current
+equipped item's six gear bonuses against the highlighted item's bonuses, with
+`EQUIP` and `ITEM` column headers and the existing green/red delta colors.
+
+**Runtime acceptance remains open:** no Godot editor/playtest or large-inventory
+timing sample was run because the current session is still under the recorded
+Godot crash restriction. Offline GDScript diagnostics passed for all five
+changed scripts, and `git diff --check` passed.
 
 ## Player-facing findings still needing runtime evidence
 
