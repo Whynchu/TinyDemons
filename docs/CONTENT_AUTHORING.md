@@ -13,7 +13,7 @@ preflight and freshness checks. Actual exported-PCK loading and add/move/delete
 lifecycle acceptance remain open M1 evidence. Read the trap table below before
 editing any `.tres`.
 
-Updated: 2026-09-28
+Updated: 2026-09-29
 
 Owner: the feature owner listed in [`FEATURE_MAP.md`](FEATURE_MAP.md). The
 content guide describes current boundaries; it does not authorize a new data
@@ -87,14 +87,21 @@ Current owners:
 
 #### Room-scene status (current)
 
-`scenes/basic_room.tscn` and `scenes/orb_room.tscn` are editable scene
-templates, but ordinary room transitions do not resolve a scene from a
-per-room definition. `scenes/main.tscn` owns a separate copy of the active
-room shell, and `RoomGeometryController` changes its shared layers in place;
-the boss-room scene is currently consumed as a geometry template. The existing
-`RoomDefinition` resource is global encounter/traffic tuning loaded by
-`RoomController`, not a room identity or prefab reference. Editing a template
-does not by itself make a new prefab load in a run.
+Ordinary route entry and active-run restore now mount the `basic` prefab through
+`RoomPrefabHost` using the typed `RoomPrefabDefinition` in
+`resources/definitions/room_prefab_basic.tres`. Room instances can carry a
+`prefab_id`; legacy room roles with no explicit ID map to `basic`, and active-run
+snapshots save that resolved mapping. On successful mount, room geometry and
+socket bindings are rebuilt and the old shell in `scenes/main.tscn` is hidden.
+
+This is an initial runtime seam. Every existing room role still resolves to
+the same generic scene, `scenes/orb_room.tscn` is not selected by route data,
+and boss geometry continues to be copied from its authoring scene. The factory
+currently registers one prefab in code; the generated definition manifest does
+not make definitions dynamically discoverable by the runtime factory. Socket
+IDs still come from the four fixed edge kinds. Runtime traversal, revisit,
+recovery, and exported-build acceptance remain open. `RoomDefinition` remains
+global encounter/traffic tuning, not a room identity or prefab reference.
 
 The current `DungeonSocket.socket_id()` is derived from one of four fixed edge
 socket kinds; it is not an arbitrary authored ID. A general room workbench
@@ -102,12 +109,14 @@ needs to separate edge placement/type from stable socket identity and migrate
 existing connections deliberately before supporting named internal or
 special-purpose sockets.
 
-The accepted target is a reusable room scene referenced by a typed
+The target is a reusable room scene referenced by a typed
 `RoomPrefabDefinition`, selected from route data and materialized by the same
-room factory/compiler in design preview, isolated room play, and the game. Keep
-route connections, reusable room geometry, and per-run room progress as
-separate owners. The staged runtime integration and first prefab acceptance are
-in [`authoring-system-plan.md`](authoring-system-plan.md#runtime-room-prefab-seam-and-staged-proof).
+room factory/compiler in design preview, isolated room play, and the game. The
+game now has the first generic host/factory path; the workbench, multiple
+prefabs, and behavioral parity are still pending. Keep route connections,
+reusable room geometry, and per-run room progress as separate owners. The
+staged runtime integration and acceptance contract are in
+[`authoring-system-plan.md`](authoring-system-plan.md#runtime-room-prefab-seam-and-staged-proof).
 
 Workflow (current, before Slice 3):
 

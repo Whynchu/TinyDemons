@@ -33,6 +33,20 @@ func configure(
 	player = new_player
 	display_controller = new_display_controller
 	scene_file_path = new_scene_file_path
+	bind_room_geometry(new_map_root, new_floor_tiles)
+
+
+func rebind_room_geometry(new_map_root: Node2D, new_floor_tiles: Node2D) -> void:
+	if map_root == new_map_root and floor_tiles == new_floor_tiles:
+		return
+	bind_room_geometry(new_map_root, new_floor_tiles)
+
+
+func bind_room_geometry(new_map_root: Node2D, new_floor_tiles: Node2D) -> void:
+	map_root = new_map_root
+	floor_tiles = new_floor_tiles
+	normal_room_geometry.clear()
+	boss_geometry_active = false
 
 
 func dispose() -> void:

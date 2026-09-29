@@ -7,6 +7,7 @@ class_name ActiveRunSnapshot
 const SCHEMA_VERSION := 1
 const FORMAT := "tiny-demons-active-run"
 const ActiveRunSnapshotContextScript = preload("res://scripts/active_run_snapshot_context.gd")
+const RoomPrefabFactoryScript = preload("res://scripts/room_prefab_factory.gd")
 
 
 static func create_context(context: ActiveRunSnapshotContext) -> Dictionary:
@@ -22,6 +23,7 @@ static func create_context(context: ActiveRunSnapshotContext) -> Dictionary:
 	var room_states: Dictionary = room_controller.room_states.duplicate(true) if room_controller != null else {}
 	var map_dictionary: Dictionary = map_state.to_dictionary() if map_state != null else {}
 	var layout: Variant = map_controller.layout if map_controller != null else null
+	var room_prefab_ids := RoomPrefabFactoryScript.snapshot_assignments(map_controller.graph if map_controller != null else null)
 	var snapshot := {
 		"format": FORMAT,
 		"schema_version": SCHEMA_VERSION,
@@ -43,6 +45,7 @@ static func create_context(context: ActiveRunSnapshotContext) -> Dictionary:
 		"arrival_socket_id": String(room_controller.arrival_socket_id) if room_controller != null else "",
 		"puzzle_attempt_rotation_quarter_turns": context.puzzle_attempt_rotation_quarter_turns,
 		"room_states": room_states,
+		"room_prefab_ids": room_prefab_ids,
 		"map_state": map_dictionary,
 		"player_health": float(health.current_health) if health != null else 1.0,
 		"player_chroma_state": {
@@ -90,7 +93,8 @@ static func validate(data: Dictionary, expected_slot: int = -1) -> bool:
 	var run_data: Variant = data.get("run_state", {})
 	var room_states: Variant = data.get("room_states", {})
 	var map_state: Variant = data.get("map_state", {})
-	if not identity is Dictionary or not run_data is Dictionary or not room_states is Dictionary or not map_state is Dictionary:
+	var room_prefab_ids: Variant = data.get("room_prefab_ids", {})
+	if not identity is Dictionary or not run_data is Dictionary or not room_states is Dictionary or not map_state is Dictionary or not room_prefab_ids is Dictionary:
 		return false
 	var run_dictionary := run_data as Dictionary
 	var map_dictionary := map_state as Dictionary
@@ -108,6 +112,9 @@ static func validate(data: Dictionary, expected_slot: int = -1) -> bool:
 		return false
 	for room_state in (room_states as Dictionary).values():
 		if not room_state is Dictionary:
+			return false
+	for room_id in (room_prefab_ids as Dictionary).keys():
+		if str(room_id).is_empty() or str((room_prefab_ids as Dictionary)[room_id]).is_empty():
 			return false
 	if not map_dictionary.has("discovered_rooms") or not map_dictionary.has("completed_rooms"):
 		return false

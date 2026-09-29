@@ -18,6 +18,7 @@ const ROOM_ENEMY_PLACEMENT_SCRIPT = preload("res://scripts/room_enemy_placement.
 const ROOM_ENEMY_RUNTIME_RESULT_SCRIPT = preload("res://scripts/room_enemy_runtime_result.gd")
 const ROOM_ACTIVATION_CONTEXT_SCRIPT = preload("res://scripts/room_activation_context.gd")
 const ROOM_GEOMETRY_CONTROLLER_SCRIPT = preload("res://scripts/room_geometry_controller.gd")
+const ROOM_PREFAB_FACTORY_SCRIPT = preload("res://scripts/room_prefab_factory.gd")
 const SKELETON_FIRST_RUN_NUMBER := 5
 
 signal room_entered(room_id: StringName, room_type: StringName)
@@ -89,6 +90,51 @@ func configure_geometry(
 		new_player,
 		new_display_controller,
 		new_scene_file_path)
+
+
+func mount_room_prefab(runtime: GameplayState, room_id: StringName) -> bool:
+	if runtime == null or runtime.dungeon_graph == null:
+		push_error("Room prefab mount requires an active graph.")
+		return false
+	var room := runtime.dungeon_graph.get_room(room_id)
+	if room == null:
+		push_error("Room prefab mount requested for missing room '%s'." % room_id)
+		return false
+	var prefab_id := ROOM_PREFAB_FACTORY_SCRIPT.prefab_id_for_room(room)
+	if prefab_id.is_empty():
+		push_error("Room '%s' has no prefab assignment or compatibility mapping." % room_id)
+		return false
+	var host := runtime.map_root.get_node_or_null("RoomPrefabHost") as RoomPrefabHost if runtime.map_root != null else null
+	if host == null:
+		push_error("Room prefab host is unavailable; refusing to activate the room.")
+		return false
+	var mount := host.mount_room(room_id, prefab_id)
+	if mount == null or not mount.succeeded():
+		if mount != null:
+			for error in mount.errors:
+				push_error("Room '%s' prefab '%s': %s" % [room_id, prefab_id, error])
+		else:
+			push_error("Room '%s' prefab factory returned no mount result." % room_id)
+		return false
+	room.prefab_id = prefab_id
+	if mount.status == RoomPrefabMountResult.Status.MOUNTED:
+		runtime.floor_tiles = mount.floor_tiles
+		runtime.sockets_root = mount.sockets_root
+		for child_name in [&"FloorTiles", &"Walls", &"Sockets"]:
+			var legacy_node := runtime.map_root.get_node_or_null(NodePath(String(child_name))) as CanvasItem
+			if legacy_node != null:
+				legacy_node.visible = false
+		if runtime.hub_stone_accent_layer != null:
+			runtime.hub_stone_accent_layer.set_room_geometry_root(mount.map_root)
+		if geometry_controller != null:
+			geometry_controller.rebind_room_geometry(mount.map_root, mount.floor_tiles)
+		dungeon_sockets.clear()
+		active_door_sockets.clear()
+		active_entrance_sockets.clear()
+		runtime._collect_dungeon_sockets()
+		validate_socket_setup()
+		hide_editor_only_guides(mount.floor_tiles)
+	return true
 
 
 func prewarm_transition_assets(stone_layer: HubStoneAccentLayer = null) -> void:
@@ -636,12 +682,17 @@ func _enter_connected_room_impl(runtime: GameplayState, transition: RoomTransiti
 		return result
 	runtime.room_transition_locked = true
 	begin_transition()
+	runtime._save_current_room_state()
+	if not mount_room_prefab(runtime, transition.destination_room_id):
+		runtime.room_transition_locked = false
+		end_transition()
+		result.status = RoomEntryResult.Status.PREFAB_MOUNT_FAILED
+		return result
 	if runtime.slime_runtime_controller != null:
 		runtime.slime_runtime_controller.clear_room_projectiles()
 	# A combo is local to an encounter. Entering a new room must not carry the
 	# previous room's timer or multiplier into the next one.
 	runtime._reset_combo()
-	runtime._save_current_room_state()
 	runtime.current_room_id = transition.destination_room_id
 	var player_status := runtime.player.get_node_or_null("Status") as StatusComponent if runtime.player != null else null
 	if player_status != null:

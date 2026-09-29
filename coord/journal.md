@@ -418,3 +418,16 @@ Updated the authoring plan and roadmap with the audited runtime boundary,
 separate room-instance/gameplay/prefab identities, active-run compatibility,
 and a staged parity order from generic rooms through treasure, Orb/puzzle, and
 boss. Only documentation changed; `git diff --check` passes and no tests ran.
+
+## 2026-09-29T22:46Z — codex — claim
+Implement the first generic room-prefab runtime mount through the ordinary
+room lifecycle. Keep route identity and room state separate, and rebind mounted
+scene sockets and geometry before existing room activation runs.
+
+## 2026-09-29T23:16Z — codex — done
+Mounted the generic `basic` room prefab before room activation, wired it through
+ordinary route transitions and active-run restore, persisted prefab assignment
+IDs, and refreshed geometry/socket/puzzle/accent references. Updated the room
+authoring plan, content guide, roadmap, and generated script index. Static
+manifest/UID/line-count checks and `git diff --check` pass. Godot runtime and
+export acceptance remain open; no test suite or Godot process was launched.

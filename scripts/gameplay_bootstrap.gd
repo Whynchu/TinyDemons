@@ -26,6 +26,7 @@ const PERFORMANCE_CAPTURE_SERVICE_SCRIPT = preload("res://scripts/performance_ca
 const DEBUG_SESSION_CONTROLLER_SCRIPT = preload("res://scripts/debug_session_controller.gd")
 const CLOUD_SAVE_SERVICE_SCRIPT = preload("res://scripts/cloud_save_service.gd")
 const CLOUD_SAVE_PANEL_SCRIPT = preload("res://scripts/cloud_save_panel.gd")
+const ROOM_PREFAB_HOST_SCRIPT = preload("res://scripts/room_prefab_host.gd")
 ## Runtime enemy capacity is a pool size, not an authored content roster. Every
 ## slot is materialized by EnemyFactory so a new definition never needs a scene
 ## node added to main.tscn.
@@ -140,9 +141,14 @@ func initialize(root: GameplayState, preview_session: RefCounted = null) -> void
 	# to avoid multiplying every actor pixel on weaker mobile CPUs. Desktop keeps
 	# the inspector-selected scale unchanged.
 	occlusion.resolution_scale = 1 if OS.has_feature("web") else effects_tuning.resolution_scale; root.occlusion_renderer = occlusion
+	var room_prefab_host := _add_runtime_node(root, ROOM_PREFAB_HOST_SCRIPT, "RoomPrefabHost", root.map_root) as RoomPrefabHost
+	if root.hub_stone_accent_layer != null:
+		var accent_index := root.map_root.get_children().find(root.hub_stone_accent_layer)
+		if accent_index >= 0 and room_prefab_host != null:
+			root.map_root.move_child(room_prefab_host, accent_index)
 	root.room_controller = _add_runtime_node(root, RoomController, "RoomController") as RoomController
 	root.room_controller.configure_geometry(
-		root.map_root,
+		root.floor_tiles.get_parent() as Node2D,
 		root.floor_tiles,
 		root.player,
 		root.display_controller,

@@ -194,6 +194,7 @@ var placement_static_fit_cache: Dictionary = {}
 var candidate_offsets_cache: Dictionary = {}
 var translated_footprint_cache: Dictionary = {}
 var current_constraint_signature := ""
+var room_geometry_root: Node2D = null
 var last_room_id: StringName = &""
 var last_room_type: StringName = &""
 var last_selected_ids: Array[StringName] = []
@@ -1078,7 +1079,7 @@ func _refresh_room_constraints() -> void:
 	door_blocked_point_lookup.clear()
 	door_block_polygons.clear()
 	floor_clearance_cache.clear()
-	var map_root := get_parent() as Node2D
+	var map_root := room_geometry_root if room_geometry_root != null else get_parent() as Node2D
 	if map_root == null:
 		return
 	var floor_guide := map_root.get_node_or_null("FloorTiles/FloorCollisionGuide") as Polygon2D
@@ -1102,6 +1103,14 @@ func _refresh_room_constraints() -> void:
 				if Vector2(dx, dy).length() <= DOOR_CLEARANCE:
 					door_blocked_point_lookup[door_point + Vector2(dx, dy)] = true
 	current_constraint_signature = str(hash([floor_boundary_polygon, door_block_points, door_block_polygons]))
+
+
+func set_room_geometry_root(new_room_geometry_root: Node2D) -> void:
+	if room_geometry_root == new_room_geometry_root:
+		return
+	room_geometry_root = new_room_geometry_root
+	current_constraint_signature = ""
+	_refresh_room_constraints()
 
 
 func _append_opaque_sprite_points(sprite: Sprite2D) -> void:

@@ -14,6 +14,7 @@ func _reward_definition() -> RewardDefinition:
 	return reward_definition
 const ActiveRunSnapshotScript = preload("res://scripts/active_run_snapshot.gd")
 const ActiveRunSaveServiceScript = preload("res://scripts/active_run_save_service.gd")
+const ROOM_PREFAB_FACTORY_SCRIPT = preload("res://scripts/room_prefab_factory.gd")
 const ChestRewardResultScript = preload("res://scripts/chest_reward_result.gd")
 const RunSettlementContextScript = preload("res://scripts/run_settlement_context.gd")
 
@@ -353,6 +354,9 @@ func restore_active_run(root: Object, snapshot: Dictionary) -> bool:
 	var room: DungeonGraph.RoomRecord = root.dungeon_graph.get_room(room_id)
 	if room == null:
 		return false
+	var saved_prefab_ids: Variant = snapshot.get("room_prefab_ids", null)
+	if saved_prefab_ids != null and not ROOM_PREFAB_FACTORY_SCRIPT.apply_snapshot_assignments(root.dungeon_graph, saved_prefab_ids):
+		return false
 	if not bool(map_controller.call("restore_map_state", ActiveRunSnapshotScript.denormalize(snapshot.get("map_state", {})) as Dictionary)):
 		return false
 	root.run_state = restored_run
@@ -363,6 +367,8 @@ func restore_active_run(root: Object, snapshot: Dictionary) -> bool:
 	root.call("_sync_current_room_metadata", recovery_arrival_socket)
 	root.room_controller.room_states = ActiveRunSnapshotScript.room_states_from_snapshot(snapshot.get("room_states", {}))
 	root.room_controller.progression_run_rank = maxi(int(snapshot.get("run_rank", root.player_profile.difficulty_rank)), 1)
+	if not root.room_controller.mount_room_prefab(root as GameplayState, room_id):
+		return false
 	root.room_controller.set_current_room(room_id, root.current_room_type)
 	root.call("_ensure_current_room_layout")
 	root.call("_apply_room_state")

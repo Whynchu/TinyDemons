@@ -31,6 +31,9 @@ class RoomSpec extends RefCounted:
 	var encounter_tier: StringName = DungeonGraph.ENCOUNTER_NORMAL
 	var reward_tier: StringName = DungeonGraph.REWARD_STANDARD
 	var vault_id: StringName = &""
+	## Optional spatial template identity; empty means an older layout that needs
+	## the explicit room-type compatibility mapping.
+	var prefab_id: StringName = &""
 	var seed_salt := 0
 
 	func _init(
@@ -46,7 +49,8 @@ class RoomSpec extends RefCounted:
 		new_route_role: StringName = DungeonGraph.ROUTE_MAIN,
 		new_encounter_tier: StringName = DungeonGraph.ENCOUNTER_NORMAL,
 		new_reward_tier: StringName = DungeonGraph.REWARD_STANDARD,
-		new_vault_id: StringName = &""
+		new_vault_id: StringName = &"",
+		new_prefab_id: StringName = &""
 	) -> void:
 		id = new_id
 		coordinate = new_coordinate
@@ -61,6 +65,7 @@ class RoomSpec extends RefCounted:
 		encounter_tier = new_encounter_tier
 		reward_tier = new_reward_tier
 		vault_id = new_vault_id
+		prefab_id = new_prefab_id
 
 
 	func to_dictionary() -> Dictionary:
@@ -77,6 +82,7 @@ class RoomSpec extends RefCounted:
 			"encounter_tier": encounter_tier,
 			"reward_tier": reward_tier,
 			"vault_id": vault_id,
+			"prefab_id": prefab_id,
 			"seed_salt": seed_salt,
 		}
 

@@ -88,8 +88,8 @@ const MAGIC_PROJECTILE_SIZE := 3
 const OCCLUDER_PATHS: Array[NodePath] = [
 	^"Actors/Props/Chest",
 ]
-@onready var floor_tiles: Node2D = $Map/FloorTiles
 @onready var map_root: Node2D = $Map
+@onready var floor_tiles: Node2D = $Map/FloorTiles
 @onready var hub_stone_accent_layer: HubStoneAccentLayer = $Map/HubStoneAccentLayer
 @onready var background_environment: Sprite2D = $BackgroundCanvas/Background
 @onready var ui: Node2D = $InterfaceCanvas/UI
@@ -1262,6 +1262,7 @@ func _collect_dungeon_sockets() -> void:
 	room_controller.dungeon_sockets.clear()
 	if sockets_root == null: return
 	for child in sockets_root.get_children(): var socket := child as DungeonSocket; if socket != null: room_controller.dungeon_sockets[socket.socket_id()] = socket
+
 func _sync_current_room_metadata(arrival_socket_id: StringName = &"") -> void:
 	run_flow_controller.call("sync_current_room_metadata", self)
 	if dungeon_map_controller != null:
@@ -1283,7 +1284,7 @@ func _finalize_run_enemy_total() -> void:
 	run_flow_controller.call("finalize_run_enemy_total", self)
 func _ensure_current_room_layout() -> void:
 	var room := dungeon_graph.get_room(current_room_id)
-	if room == null: return
+	if room == null or not room_controller.mount_room_prefab(self, current_room_id): return
 	# Flat per-run difficulty: enemy level, count, and variant pool all key off
 	# the profile's difficulty_rank. room_controller.progression_run_rank mirrors
 	# the completed-run curve so rank milestones (boss minors, popcorn, etc.)

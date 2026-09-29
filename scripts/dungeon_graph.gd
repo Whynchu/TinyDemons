@@ -132,6 +132,7 @@ class RoomRecord extends RefCounted:
 	var display_number: int
 	var generation_seed: int
 	var room_type: StringName
+	var prefab_id: StringName = &""
 	var outgoing_connections: Dictionary = {}
 	var incoming_connections: Dictionary = {}
 	var milestone_dead_end := false
@@ -268,6 +269,7 @@ func initialize_from_layout(new_seed: int, layout) -> RoomRecord:
 		room.encounter_tier = spec.encounter_tier
 		room.reward_tier = spec.reward_tier
 		room.vault_id = spec.vault_id
+		room.prefab_id = spec.prefab_id
 		room.authored = true
 		_rooms[room.id] = room
 		_rooms_by_coordinate[room.coordinate] = room.id

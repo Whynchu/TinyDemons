@@ -7,6 +7,7 @@ enum Status {
 	INVALID_CONTEXT,
 	MISSING_PLAYER,
 	ENTERED,
+	PREFAB_MOUNT_FAILED,
 }
 
 var status := Status.INVALID_CONTEXT

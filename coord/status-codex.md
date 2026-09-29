@@ -2,17 +2,18 @@
 
 _Only codex writes this file._
 
-**Focus:** Room-prefab engine replacement plan and compatibility boundary
+**Focus:** Generic room-prefab runtime mount and transition compatibility
 **Updated:** 2026-09-29
 
 ## In flight
 
-The elemental status source pass now includes four catalog-backed definitions,
-actor-local status state, player/enemy proc and tick paths, slow/stun behavior,
-HUD marks, and a typed-configured `ElementAuraComponent` shared with weapon
-imbue overlays. Player death entry restores opaque modulation and the animation
-component checks the configured `player_dead_get` callback before exposing the
-player or attack sprite. Focused checks are registered but unrun.
+The user approved the first generic room-prefab runtime slice. A typed prefab
+definition, factory, host, and mount result are connected to initial room setup,
+ordinary transitions, and active-run restore. Legacy room roles map explicitly
+to `basic`; room identity and state stay in their existing owners. Static shell,
+socket, geometry, accent, and Orb presentation references were audited and
+rebound where needed. Source and documentation review is in progress; no Godot
+runtime or test suite has been launched.
 
 Two user-reported runtime errors in this source pass were corrected: HUD status
 marker registration no longer casts a stored Array to `Array[Sprite2D]`, and
@@ -101,13 +102,12 @@ changes. Do not stage them with M1.
 
 ## Handoff / next
 
-The user redirected the active task to finish the elemental status plan and
-implement its four statuses, while removing the chest and grayscale acceptance
-premises. Source and docs now reflect current behavior; catalog validation,
-registered owner checks, native-resolution readability, cloak/death rendering,
-and web playtesting remain open. The user confirmed no magenta capture is
-available. The editor is connected but no playtest is running; do not launch
-another Godot process in this session.
+Next, prove route traversal, return/re-entry state, active-run recovery, and a
+web export with the mounted room. Then add a second prefab and migrate treasure,
+Orb/puzzle, and boss room behavior as separate parity steps. The four existing
+socket IDs remain edge-kind identifiers; the room authoring workbench and
+dynamic prefab registry are still future work. No release bump or push was
+requested. Do not launch another Godot process or test suite in this session.
 
 ## Current work
 
@@ -194,3 +194,23 @@ The authoring plan and roadmap now specify separate room-instance, gameplay-role
 and prefab identities; a host/factory binding boundary; legacy assignment
 recovery; and generic-room, treasure-room, Orb/puzzle, and boss parity stages.
 No runtime files changed or tests launched; `git diff --check` passes.
+
+The user approved moving into the generic room-prefab runtime slice. I have
+added a typed definition/factory/host boundary and integrated it before
+walkability, socket, and room-state activation. The legacy shell stays as a
+fallback until a mount succeeds. No Godot process or test suite may be launched
+in this session; static review only.
+
+## 2026-09-29 — Generic room-prefab runtime slice
+
+Mounted `basic` before room activation and on ordinary route entry. Run
+checkpoints retain resolved prefab assignments; older snapshots continue
+through the explicit room-role compatibility mapping. Successful mounts rebind
+floor tiles, sockets, geometry, puzzle surfaces, and Hub-stone constraints,
+then hide the old static shell. The static manifest comparison covers 29
+resources, all 227 script UIDs are unique, `GameplayState` remains at 1,718
+lines, `RoomController` is at 2,294 lines, and `git diff --check` passes. The
+offline MCP parser's local class cache does not contain the new global script
+classes, so it cannot provide a clean compile result without refreshing that
+cache. Runtime, traversal, recovery, and exported-build acceptance remain
+open; no Godot process or test suite was launched.
