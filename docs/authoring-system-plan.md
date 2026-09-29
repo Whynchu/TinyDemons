@@ -483,6 +483,14 @@ acceptance. Record a responsible engineer and production reviewer when
 assigning each milestone. The current enemy design preview is an M0/M1
 baseline, not the final live-editor experience.
 
+Execution sequencing decision (2026-09-29): after M1's preview and lifecycle
+acceptance, advance the M4 runtime prefab foundation before completing the
+broader M2/M3 content migrations. The initial room slice is the scene host,
+stable marker/socket contract, and room-state parity proof; it does not claim
+that the room/map editor milestone is complete. This pulls forward the runtime
+seam needed to replace the shared room shell while keeping M2/M3 and the full
+room authoring workflow in the overall production exit gates.
+
 ### Editor interaction and content lifecycle (M1 foundation)
 
 - [ ] Provide discoverable Create, Duplicate, Preview, Validate, and Refresh
@@ -587,6 +595,56 @@ as unparented authoring templates. The current `RoomDefinition` is a shared
 encounter/traffic tuning resource, not an identity or scene reference for an
 individual room. Do not overload it with prefab identity.
 
+#### Live transition parity contract (source audit, 2026-09-29)
+
+`GameplayBootstrap` configures room geometry against nodes in `main.tscn`, then
+`GameplayState._collect_dungeon_sockets()` indexes the four live `DungeonSocket`
+nodes once. On a connected transition, `RoomController` saves the outgoing
+room, updates the destination identity and route metadata, calls
+`_ensure_current_room_layout()`, positions the player at the destination
+socket, restores that instance's state, and checkpoints the safe boundary. The
+layout step applies room geometry before collecting walkable tiles and building
+door portals, spawn constraints, puzzle/orb presentation, tint, and room
+accents. Mounting a new prefab therefore has to precede those geometry and
+activation steps, and it has to rebuild the cached socket and walkability
+bindings before gameplay resumes.
+
+Today `main.tscn` owns the player and attack/shadow visuals, the enemy pool,
+chest, Rest Fire, NPC, and UI beside its shared `Map`. Keep the player, enemy
+pool, HUD, run state, and stateful service actors owned by the gameplay root.
+Room scenes supply reusable geometry and stable placement markers; room owners
+place or configure the chest, fire, NPC, puzzle props, and enemies from those
+markers, then reapply saved state for the current room instance. A prefab scene
+must not become the save record for a run.
+
+`DungeonSocket.socket_id()` currently returns the socket-kind enum name, and
+graph connections store those four names. The runtime socket also owns edge
+placement, paired-edge convention, trigger polygon, closed-door blockers,
+arrival offset, and a player arrival marker. Introduce an authored stable
+socket ID separately from edge kind and keep a compatibility mapping for the
+existing four connection names. Rebind the host's socket index on every mount;
+do not retain node references from the scene being released.
+
+`DungeonGraph.RoomRecord` stores a room-instance ID and gameplay `room_type`,
+but no prefab identity. `RoomController.room_states` is keyed by room-instance
+ID and carries encounter, clear, chest, pickup, and puzzle progress. Active-run
+snapshots persist the layout ID and dungeon seed, current room ID/type, arrival
+socket, and those per-room states; they do not currently persist a resolved
+prefab assignment. Keep three identities separate: room instance ID, gameplay
+role/capabilities, and reusable prefab ID. Authored layouts can name a prefab
+directly. Generated layouts must resolve one deterministically and persist the
+resolved room-ID-to-prefab-ID mapping in the active-run snapshot. Old layouts
+and snapshots without a prefab ID use an explicit room-type compatibility
+mapping during migration. Existing type aliases such as FIRE/REST, CLOAKED/NPC,
+and BOSS/DOWNSTAIRS remain behavior aliases; visual variation must not create
+extra gameplay types.
+
+The scene examples are not equivalent to live runtime rooms yet. `orb_room.tscn`
+inherits the generic shell and adds an orb presentation node, while the current
+Orb interaction and map palette follow runtime room state. The boss authoring
+scene is copied into the shared shell and also selects a larger camera. Treat
+these as separate runtime behavior/presentation contracts when migrating.
+
 The room-prefab slice must establish this runtime chain:
 
 ```text
@@ -611,25 +669,28 @@ fall back to the basic room.
 M4 should stage the code migration before promising a general-purpose room
 builder:
 
-1. Define the scene marker contract around the existing `DungeonSocket` and
-   typed definition references. `DungeonSocket.socket_id()` currently derives
-   one of four fixed edge names from `socket_kind`; it is not a user-authored
-   socket ID. Keep edge kind/placement semantics separate from stable authored
-   socket identity, migrate existing connections explicitly if that boundary
-   changes, and define stable IDs for spawn points, landmarks, and hazards.
-   Validate duplicate/missing references before play.
+1. Characterize and pin the current transition sequence, geometry/walkability
+   construction, closed-door and gate behavior, enemy spawn constraints,
+   checkpoint/re-entry state, boss camera, and authored pixel output. Define
+   stable IDs for sockets, spawn points, landmarks, and hazards; validate
+   duplicate/missing references before play.
 2. Add `RoomPrefabDefinition` without changing the existing global
    `RoomDefinition` tuning owner. Register and validate one prefab and prove a
    deterministic design preview resolves its scene, markers, and guides.
 3. Add a `RoomHost`/`RoomFactory` seam that swaps the active spatial scene while
    preserving the existing `GameplayState`, actor ownership, frame schedule,
-   route state, and save format. First characterize current geometry capture,
-   arrival-socket placement, room activation, and checkpoint behavior.
-4. Load one distinct prefab through the ordinary graph transition and exported
-   discovery path. Use the existing Orb-room scene as the first candidate only
-   after confirming its `ROOM_ORB` interaction and map-marker semantics; its
-   current prefab metadata alone is not runtime proof.
-5. Extend the workbench to create a room from a template, edit it in the native
+   route state, and active-run recovery. Return a typed mount result and rebuild
+   socket, walkability, spawn, and presentation bindings before room activation.
+   Mount the generic combat room first to prove the shared shell can be loaded
+   through the ordinary route path.
+4. Add one treasure-room prefab with authored chest placement. Prove combat
+   clear, reward claim, departure, revisit, and run recovery while the existing
+   room services keep owning encounter and chest state.
+5. Migrate Orb/puzzle and boss presentation as separate capability proofs. Keep
+   Orb's global palette/map behavior and the boss's expanded floor/camera
+   contract explicit. Retire static shell geometry and the boss-copy adapter
+   only after all migrated room types pass the same parity checks.
+6. Extend the workbench to create a room from a template, edit it in the native
    scene editor, run marker/connection validation, preview it with a fixed
    seed, and play it in an isolated session. Undo/redo and save/reopen must
    preserve placement IDs and socket connections.

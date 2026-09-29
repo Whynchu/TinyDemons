@@ -48,7 +48,7 @@ Work should move through one narrow slice at a time:
 | 0.30 | Establish shared menu boundaries | Planned | one migrated menu proves shared frame, cursor, list, footer, clipping, touch, and responsive contracts |
 | 0.40 | Separate room and encounter responsibilities | Complete | typed room transition/activation/entry/spawn/clear results and deterministic room fixtures |
 | 0.50 | Reduce dynamic runtime seams by feature | Complete | composition scorecard and editor composition at 100%; state bag and room owner at strict targets; legacy adapters retired; all authored definitions inspectable |
-| 0.60 | Build a reusable game-development workbench | In progress — owned by [`authoring-system-plan.md`](authoring-system-plan.md) | one shared dock/registry/validation/preview lifecycle with content-kind adapters; first end-to-end proof is an enemy, then gear/elements and room prefabs |
+| 0.60 | Build a reusable game-development workbench | In progress — owned by [`authoring-system-plan.md`](authoring-system-plan.md) | one shared dock/registry/validation/preview lifecycle with content-kind adapters; enemy proof, then the early room-prefab runtime seam, followed by gear/elements and full room/map authoring |
 | 0.70 | Improve test and performance feedback | In progress | device-backed timing, memory, render-cost, and reproducible performance scenarios; shared-process fast suites are owned by Slice 5 of the authoring plan |
 | 0.80 | Establish long-term content composition | In progress — owned by [`authoring-system-plan.md`](authoring-system-plan.md) | enemies, gear, authored room prefabs, and maps can be composed without per-content central-runtime special cases; loaded room scenes preserve route and save-state contracts |
 
@@ -280,6 +280,13 @@ design previews, isolated interactive workbenches, and validators at each
 boundary. A second piece of each kind must be added with data only. Keep stable
 IDs, asset import/move behavior, cache invalidation, and save migrations part
 of every data change.
+
+After M1 preview and lifecycle acceptance, the runtime room-prefab foundation
+is intentionally pulled forward ahead of the broader M2/M3 migrations. The
+bounded proof replaces the shared spatial shell with a prefab host while
+preserving route, room-state, encounter, reward, and save behavior. The full
+room/map authoring workflow remains in M4; see the parity contract and staged
+proof in [`authoring-system-plan.md`](authoring-system-plan.md).
 
 ## Phase 0.70 — Feedback infrastructure
 

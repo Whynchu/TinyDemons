@@ -2,7 +2,7 @@
 
 _Only codex writes this file._
 
-**Focus:** Complete selected enemy-preview looping and death-effect state support
+**Focus:** Room-prefab engine replacement plan and compatibility boundary
 **Updated:** 2026-09-29
 
 ## In flight
@@ -186,3 +186,11 @@ loop setting now applies uniformly, including to Death Effect. The separate
 Inspector button restores the selected animation's pause/finished state after
 the breakup. GDScript diagnostics pass and the editor has no new errors; no
 interactive runtime preview was run.
+
+The player accepted the room-prefab direction. The source audit found that
+normal transitions mutate Main's shared Map shell, bind four fixed edge sockets
+once at bootstrap, and apply per-instance state from RoomController.room_states.
+The authoring plan and roadmap now specify separate room-instance, gameplay-role,
+and prefab identities; a host/factory binding boundary; legacy assignment
+recovery; and generic-room, treasure-room, Orb/puzzle, and boss parity stages.
+No runtime files changed or tests launched; `git diff --check` passes.

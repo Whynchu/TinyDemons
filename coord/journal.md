@@ -407,3 +407,14 @@ Support Casting, Support Spell, and the new Death Effect state. The separate
 death-effect button restores the selected animation's previous playback state
 when its particles finish. Updated content-authoring guidance; GDScript
 diagnostics and `git diff --check` pass. No interactive runtime preview was run.
+
+## 2026-09-29T22:30Z — codex — claim
+Record a source-backed room-prefab engine replacement contract in the active
+authoring plan. Preserve room route/gameplay/state behavior while specifying
+independent prefab identity, scene binding, and parity stages.
+
+## 2026-09-29T22:34Z — codex — done
+Updated the authoring plan and roadmap with the audited runtime boundary,
+separate room-instance/gameplay/prefab identities, active-run compatibility,
+and a staged parity order from generic rooms through treasure, Orb/puzzle, and
+boss. Only documentation changed; `git diff --check` passes and no tests ran.
