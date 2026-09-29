@@ -2,8 +2,8 @@
 
 _Only codex writes this file._
 
-**Focus:** Fix player status outline animation tracking and status marker placement; release patch bump
-**Updated:** 2026-09-28
+**Focus:** Complete selected enemy-preview looping and death-effect state support
+**Updated:** 2026-09-29
 
 ## In flight
 
@@ -176,5 +176,13 @@ sprite while it is visible, then return to the base sprite. Status badges render
 in a dedicated row below the player HUD and above the minimap; the minimap is
 shifted down to leave that row clear. Release metadata is aligned at 0.3.23.
 MCP offline script diagnostics pass for all four changed gameplay scripts, and
-the editor has no new errors. No runtime playtest was run; the web build still
-needs player acceptance.
+the editor had no new errors at release. The player later confirmed the status
+outline and HUD placement looked good in playtesting.
+
+The player confirmed the 0.3.23 status outline and HUD placement looked good in
+playtesting, then reported that enemy preview looping was inconsistent and
+asked to include the death breakup with other preview states. The selected-state
+loop setting now applies uniformly, including to Death Effect. The separate
+Inspector button restores the selected animation's pause/finished state after
+the breakup. GDScript diagnostics pass and the editor has no new errors; no
+interactive runtime preview was run.

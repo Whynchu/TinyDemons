@@ -5,11 +5,11 @@ extends Node2D
 ## Animation frames come from the same visual component and frame library as
 ## gameplay; this node never starts enemy AI, combat, timers, or save services.
 
-enum PreviewState { IDLE, MOVE, ATTACK, SHOCKED, SPAWN, BOSS_JUMP, BOSS_SLAM, SUPPORT_CASTING, SUPPORT_SPELL }
+enum PreviewState { IDLE, MOVE, ATTACK, SHOCKED, SPAWN, BOSS_JUMP, BOSS_SLAM, SUPPORT_CASTING, SUPPORT_SPELL, DEATH_EFFECT }
 enum PreviewActorSize { REGULAR, BOSS }
 enum GeometryEditTarget { NONE, COLLISION_SHAPE, BODY_HITBOX, COLLISION_GUIDE, ATTACK_LEFT, ATTACK_RIGHT }
 
-const PREVIEW_STATE_LABELS := ["Idle", "Move", "Attack", "Shocked", "Spawn", "Boss Jump", "Boss Slam", "Support Casting", "Support Spell"]
+const PREVIEW_STATE_LABELS := ["Idle", "Move", "Attack", "Shocked", "Spawn", "Boss Jump", "Boss Slam", "Support Casting", "Support Spell", "Death Effect"]
 const SUPPORT_CAST_PREVIEW_STATES := [PreviewState.SUPPORT_CASTING, PreviewState.SUPPORT_SPELL]
 const PREVIEW_CANVAS_SIZE := Vector2(240.0, 160.0)
 const BASE_PREVIEW_SCALE := 4.0
@@ -274,15 +274,23 @@ const EffectsSpawnerScript = preload("res://scripts/effects_spawner.gd")
 
 @export_group("Preview")
 @export_subgroup("State & Facing")
-@export_enum("Idle", "Move", "Attack", "Shocked", "Spawn", "Boss Jump", "Boss Slam", "Support Casting", "Support Spell") var preview_state: int = PreviewState.IDLE:
+@export_enum("Idle", "Move", "Attack", "Shocked", "Spawn", "Boss Jump", "Boss Slam", "Support Casting", "Support Spell", "Death Effect") var preview_state: int = PreviewState.IDLE:
 	set(value):
-		preview_state = clampi(value, PreviewState.IDLE, PreviewState.SUPPORT_SPELL)
+		var previous_state := preview_state
+		preview_state = clampi(value, PreviewState.IDLE, PreviewState.DEATH_EFFECT)
 		if preview_state in SUPPORT_CAST_PREVIEW_STATES and _selected_definition_behavior_id() not in SUPPORT_CAST_STATE_DEFINITIONS:
 			preview_state = PreviewState.IDLE
+		if previous_state != preview_state or _death_effect_active or _death_effect_completed:
+			_clear_death_effect_preview(true)
 		_current_frame = 0
 		_frame_accumulator = 0.0
 		_animation_finished = false
-		_apply_preview_frame()
+		if preview_state == PreviewState.DEATH_EFFECT:
+			if is_node_ready() and preview_actor != null and is_instance_valid(preview_actor):
+				_apply_preview_frame()
+				preview_death_effect()
+		else:
+			_apply_preview_frame()
 		queue_redraw()
 
 @export_enum("Left", "Right") var facing_direction := 1:
@@ -304,7 +312,17 @@ const EffectsSpawnerScript = preload("res://scripts/effects_spawner.gd")
 		_frame_accumulator = 0.0
 		queue_redraw()
 
-@export var loop_animation := true
+@export var loop_selected_animation := true:
+	set(value):
+		loop_selected_animation = value
+		if is_node_ready() and _animation_finished and loop_selected_animation:
+			if preview_state == PreviewState.DEATH_EFFECT:
+				preview_death_effect()
+			else:
+				_current_frame = 0
+				_animation_finished = false
+				_apply_preview_frame()
+		queue_redraw()
 
 @export_range(0.03, 0.5, 0.01) var frame_duration := DESIGN_FRAME_TIME:
 	set(value):
@@ -390,6 +408,9 @@ var _frame_accumulator := 0.0
 var _animation_finished := false
 var _death_effect_active := false
 var _death_effect_completed := false
+var _death_effect_restores_playback := false
+var _death_effect_previous_playback_paused := false
+var _death_effect_previous_animation_finished := false
 var _death_effect_particles: Array[Dictionary] = []
 var _death_particle_textures: Dictionary = {}
 var _initializing_preview := true
@@ -838,6 +859,7 @@ func _enemy_id_from_command_line() -> StringName:
 
 
 func _build_preview() -> void:
+	_clear_death_effect_preview(true)
 	preview_ready = false
 	error_message = ""
 	definition = null
@@ -845,7 +867,6 @@ func _build_preview() -> void:
 	_current_frame = 0
 	_frame_accumulator = 0.0
 	_animation_finished = false
-	_clear_death_effect_preview()
 	_release_preview_actor()
 	if frame_library == null:
 		frame_library = SpriteFrameLibraryScript.new() as SpriteFrameLibrary
@@ -890,6 +911,8 @@ func _build_preview() -> void:
 	_show_geometry()
 	_apply_preview_frame()
 	_update_preview_status()
+	if preview_state == PreviewState.DEATH_EFFECT:
+		preview_death_effect()
 	queue_redraw()
 
 
@@ -976,7 +999,7 @@ func _poll_definition_edits() -> void:
 func _apply_definition_edits_to_preview() -> void:
 	if definition == null or preview_actor == null or not is_instance_valid(preview_actor):
 		return
-	_clear_death_effect_preview()
+	_clear_death_effect_preview(true)
 	preview_actor.variant = String(_original_variant_id)
 	preview_actor.combat_element = definition.element
 	preview_actor.set_meta("element", definition.element)
@@ -1515,12 +1538,9 @@ func _support_animation_frames(visual: SlimeVisualComponent, property_name: Stri
 	return frames
 
 
+## The loop switch applies to the selected animation, including Death Effect.
 func _preview_state_loops() -> bool:
-	if preview_state == PreviewState.SUPPORT_CASTING:
-		return true
-	if preview_state == PreviewState.SUPPORT_SPELL:
-		return false
-	return loop_animation
+	return loop_selected_animation
 
 
 func _selected_shadow_frames() -> Array[Texture2D]:
@@ -1623,6 +1643,9 @@ func _apply_preview_frame() -> void:
 
 func _toggle_playback() -> void:
 	if _animation_finished:
+		if preview_state == PreviewState.DEATH_EFFECT:
+			preview_death_effect()
+			return
 		_current_frame = 0
 		_animation_finished = false
 		_apply_preview_frame()
@@ -1634,6 +1657,13 @@ func _toggle_playback() -> void:
 func _step_preview_frame() -> void:
 	playback_paused = true
 	_animation_finished = false
+	if preview_state == PreviewState.DEATH_EFFECT:
+		if not _death_effect_active:
+			preview_death_effect()
+			playback_paused = true
+		if _death_effect_active:
+			_update_death_effect_preview(frame_duration)
+		return
 	_advance_preview_frame()
 
 
@@ -1641,6 +1671,9 @@ func _restart_preview_state() -> void:
 	_current_frame = 0
 	_frame_accumulator = 0.0
 	_animation_finished = false
+	if preview_state == PreviewState.DEATH_EFFECT:
+		preview_death_effect()
+		return
 	_apply_preview_frame()
 	queue_redraw()
 
@@ -1724,7 +1757,7 @@ func _draw() -> void:
 	_draw_pixel_label(self, Vector2(12, 85), "STR %d DEF %d VIT %d" % [int(definition.base_stats.get("STR", 0)), int(definition.base_stats.get("DEF", 0)), int(definition.base_stats.get("VIT", 0))], PREVIEW_TEXT_COLOR, 136)
 	_draw_pixel_label(self, Vector2(12, 94), "AGI %d INT %d MND %d" % [int(definition.base_stats.get("AGI", 0)), int(definition.base_stats.get("INT", 0)), int(definition.base_stats.get("MND", 0))], PREVIEW_TEXT_COLOR, 136)
 	_draw_pixel_label(self, Vector2(12, 109), "%s  %s" % [state_label.to_upper(), playback_label], PREVIEW_ACCENT_COLOR, 136)
-	var frame_label := "frame %d / %d" % [_current_frame + 1, frame_count] if frame_count > 0 else "no frames for this mode"
+	var frame_label := "particle breakup" if preview_state == PreviewState.DEATH_EFFECT else "frame %d / %d" % [_current_frame + 1, frame_count] if frame_count > 0 else "no frames for this mode"
 	_draw_pixel_label(self, Vector2(12, 119), frame_label, PREVIEW_SUBTLE_TEXT_COLOR, 136)
 	var status := error_message if not error_message.is_empty() else _definition_status()
 	if status.is_empty():
@@ -1783,7 +1816,7 @@ func _draw_pixel_label(target: CanvasItem, position: Vector2, text: String, colo
 
 ## Plays a deterministic, editor-only version of the shared enemy death breakup.
 func preview_death_effect() -> void:
-	_clear_death_effect_preview()
+	_clear_death_effect_preview(true)
 	if definition == null or preview_actor == null or preview_actor.texture == null:
 		_set_workbench_error("Select an enemy with a visible frame before previewing its death effect.")
 		return
@@ -1799,6 +1832,9 @@ func preview_death_effect() -> void:
 	if source_pixels.is_empty():
 		_set_workbench_error("The selected enemy frame has no visible pixels to preview.")
 		return
+	_death_effect_restores_playback = preview_state != PreviewState.DEATH_EFFECT
+	_death_effect_previous_playback_paused = playback_paused
+	_death_effect_previous_animation_finished = _animation_finished
 
 	var random_source := RandomNumberGenerator.new()
 	random_source.seed = 426731
@@ -1872,9 +1908,17 @@ func _update_death_effect_preview(delta: float) -> void:
 		particle_data["logical_position"] = logical_position
 		_death_effect_particles[index] = particle_data
 	if _death_effect_particles.is_empty():
+		if preview_state == PreviewState.DEATH_EFFECT and loop_selected_animation and not playback_paused:
+			preview_death_effect()
+			return
 		_death_effect_active = false
 		_death_effect_completed = true
-		_animation_finished = true
+		if _death_effect_restores_playback:
+			playback_paused = _death_effect_previous_playback_paused
+			_animation_finished = _death_effect_previous_animation_finished
+			_death_effect_restores_playback = false
+		else:
+			_animation_finished = true
 		if preview_actor != null and is_instance_valid(preview_actor):
 			preview_actor.visible = true
 		if preview_shadow != null and is_instance_valid(preview_shadow):
@@ -1882,7 +1926,10 @@ func _update_death_effect_preview(delta: float) -> void:
 	queue_redraw()
 
 
-func _clear_death_effect_preview() -> void:
+func _clear_death_effect_preview(restore_playback: bool = false) -> void:
+	if restore_playback and _death_effect_restores_playback:
+		playback_paused = _death_effect_previous_playback_paused
+		_animation_finished = _death_effect_previous_animation_finished
 	for particle_data in _death_effect_particles:
 		var particle := particle_data.get("sprite") as Node
 		if particle != null and is_instance_valid(particle):
@@ -1890,6 +1937,7 @@ func _clear_death_effect_preview() -> void:
 	_death_effect_particles.clear()
 	_death_effect_active = false
 	_death_effect_completed = false
+	_death_effect_restores_playback = false
 	if preview_actor != null and is_instance_valid(preview_actor):
 		preview_actor.visible = true
 	if preview_shadow != null and is_instance_valid(preview_shadow):

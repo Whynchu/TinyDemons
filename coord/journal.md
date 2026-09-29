@@ -394,3 +394,16 @@ Status badges occupy a dedicated row above the minimap, which was shifted down
 to make room. Release metadata is aligned at 0.3.23; MCP script diagnostics pass
 for all changed gameplay scripts, with no new editor errors. No runtime playtest
 was run.
+
+## 2026-09-29T00:00Z — codex — claim
+Fix enemy design-preview looping so the loop option applies consistently to the
+selected state, and make the death effect available alongside other preview
+states. The user confirmed the 0.3.23 player-status change looked good and
+clarified that only the selected animation should loop.
+
+## 2026-09-29T20:51Z — codex — done
+The loop control now governs the selected preview state consistently, including
+Support Casting, Support Spell, and the new Death Effect state. The separate
+death-effect button restores the selected animation's previous playback state
+when its particles finish. Updated content-authoring guidance; GDScript
+diagnostics and `git diff --check` pass. No interactive runtime preview was run.

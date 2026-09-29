@@ -309,10 +309,13 @@ choices read `Normal`, `Fire`, `Guard`, and so on. `Selected Variant ID` shows
 the stable ID. The picker adds an ID only if two variants in one family share
 a display name. `Ember Guard` keeps its authored name. `Selected Type ID` shows
 its actor family (`slime`), and `Selected Enemy Name` shows its friendly name.
-Use the Inspector's `Preview Death Effect` button to play a deterministic
-palette-colored breakup for the currently visible enemy frame. It uses the
-shared death-particle color mapping and `effects_default.tres` tuning; it does
-not start enemy combat or mutate the selected definition.
+`Preview > State & Facing` selects the animation state, and
+`Loop Selected Animation` controls only that state. The `Death Effect` state
+previews the particle breakup alongside the frame-based animations and follows
+the same loop setting. The Inspector's `Preview Death Effect` button also plays
+the effect without changing the selected state. It uses the shared
+death-particle color mapping and `effects_default.tres` tuning; it does not
+start enemy combat or mutate the selected definition.
 Slime entries use the `slime` type and share the Slime actor implementation.
 Skeleton has its own factory actor route and authored idle, walk, attack, and
 between-attack sheets. Its attack throws the authored four-frame bone projectile.
