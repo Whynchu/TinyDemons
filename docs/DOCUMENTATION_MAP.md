@@ -63,6 +63,14 @@ For an external product/design review, use the curated [`review/00-astra-review-
     pipeline shared by the player and enemies. Decision log:
     [`elemental-ability-and-status-system-addendum.md`](elemental-ability-and-status-system-addendum.md).
     Execution: [`elemental-status-implementation-plan.md`](elemental-status-implementation-plan.md).
+22. [`game-design-document.md`](game-design-document.md) — whole-game design
+    authority: concept, pillars, systems, shipped content inventory, and 1.0
+    direction. `S`/`T`/`O` tags mark shipped, target, and open items; subsystem
+    design docs remain the detail authority.
+23. [`elemental-spell-forms-plan.md`](elemental-spell-forms-plan.md) — active
+    plan for the player's Triangle spell: one form per element plus a neutral
+    stub, binding-selects-form / current-element-selects-payload, the delivery
+    model, and the build sequence.
 
 ## Authority by question
 
@@ -73,6 +81,7 @@ For an external product/design review, use the curated [`review/00-astra-review-
 | Where should a feature go? | [`ARCHITECTURE.md`](ARCHITECTURE.md) and [`FEATURE_MAP.md`](FEATURE_MAP.md) | implementation details |
 | What is the accepted refactor route? | [`refactor-route.md`](refactor-route.md) | historical checkpoints |
 | What is the player-facing direction? | [`project_direction.md`](project_direction.md) and the current feature design | proposals and rationale |
+| What is the whole-game design (concept, pillars, systems, 1.0 direction)? | [`game-design-document.md`](game-design-document.md) | subsystem design docs and [`GAMEPLAY_TUNING.md`](GAMEPLAY_TUNING.md) for numbers |
 | Where are balance values? | [`GAMEPLAY_TUNING.md`](GAMEPLAY_TUNING.md) | tuning plans and design notes |
 | What is the current dungeon/content contract? | The relevant generator or layout definition ([`procedural-dungeon-design.md`](procedural-dungeon-design.md), [`r6-plus-risk-reward-generation-plan.md`](r6-plus-risk-reward-generation-plan.md)) | [`runtime-map.md`](runtime-map.md) — historical map only |
 | What is the approved R6+ generation direction? | [`r6-plus-risk-reward-generation-plan.md`](r6-plus-risk-reward-generation-plan.md) | compact-generator implementation history and tuning evidence |
@@ -94,6 +103,7 @@ For an external product/design review, use the curated [`review/00-astra-review-
 | Which product and design questions remain unresolved? | [`design-philosophy-interview-questionnaire.md`](design-philosophy-interview-questionnaire.md) | current design authorities and interview decision records |
 | What is the ratified design contract? | [`design-interview-record-2026-09-18.md`](design-interview-record-2026-09-18.md) | feature-specific plans and tuning values |
 | How should elemental abilities, statuses, and auras be built? | [`elemental-ability-and-status-system.md`](elemental-ability-and-status-system.md) | component contract, design principles, and the authoring plan |
+| What is the player's Triangle spell (forms, binding, per-element behavior)? | [`elemental-spell-forms-plan.md`](elemental-spell-forms-plan.md) | [`elemental-ability-and-status-system.md`](elemental-ability-and-status-system.md) for the shared status pipeline |
 
 ## Document lifecycle
 

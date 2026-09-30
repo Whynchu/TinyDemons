@@ -431,3 +431,24 @@ IDs, and refreshed geometry/socket/puzzle/accent references. Updated the room
 authoring plan, content guide, roadmap, and generated script index. Static
 manifest/UID/line-count checks and `git diff --check` pass. Godot runtime and
 export acceptance remain open; no test suite or Godot process was launched.
+
+## 2026-09-29T23:45Z — opencode — claim
+Element spell forms. Added `docs/game-design-document.md` and
+`docs/elemental-spell-forms-plan.md` (docs only), then implemented P1: spells now
+guarantee their payload status by threading a guaranteed flag from
+`magic_hit_slime` through `damage_slime_with_number` → `try_apply_status` →
+`StatusApplicationRequest`; melee and the sword beam keep the chance-based roll.
+Touching shared combat/magic/status scripts while codex is active. Offline
+`script_check` passes for the four non-`gameplay_state` files; `gameplay_state`
+reports only the known stale-class-cache parse error on untouched lines.
+Runtime/playtest acceptance blocked by the recorded no-Godot restriction.
+
+## 2026-09-29T23:55Z — opencode — done
+P2 form/payload seam, behavior-neutral: added `scripts/spell_form_definition.gd`
+and `scripts/spell_form_catalog.gd` (interim code registry; all eight forms still
+`PROJECTILE`) and routed the cast through a new `deliver_spell` seam in
+`magic_runtime_controller.gd`. `script_check` clean on all three new/edited files.
+Also surfaced a pre-existing composition-floor failure: `RoomController` is 2,294
+lines vs the recorded baseline 2,251 with `room_controller.gd` unmodified in the
+working tree (HEAD growth from the room-prefab work); P2 changed no counted
+metric. Runtime acceptance remains open; no Godot process launched.

@@ -88,7 +88,7 @@ func damage_slime(root: Object, slime: Sprite2D, amount: float, was_critical: bo
 	damage_slime_with_number(root, slime, amount, was_critical, true, attack_element, immune, effectiveness)
 
 
-func damage_slime_with_number(root: Object, slime: Sprite2D, amount: float, was_critical: bool, show_damage_number: bool, attack_element: int = ElementCatalogScript.Element.NEUTRAL, immune: bool = false, effectiveness: float = -1.0) -> void:
+func damage_slime_with_number(root: Object, slime: Sprite2D, amount: float, was_critical: bool, show_damage_number: bool, attack_element: int = ElementCatalogScript.Element.NEUTRAL, immune: bool = false, effectiveness: float = -1.0, guaranteed_status: bool = false) -> void:
 	# Projectile callbacks can survive one frame past a scene transition. Do not
 	# dereference a freed target while resolving late contact.
 	if slime == null or not is_instance_valid(slime) or bool(root.call("_is_slime_dead", slime)) or (root.has_method("_is_slime_spawn_locked") and bool(root.call("_is_slime_spawn_locked", slime))):
@@ -113,7 +113,7 @@ func damage_slime_with_number(root: Object, slime: Sprite2D, amount: float, was_
 	if not immune and amount > 0.0 and (actor_combat == null or not actor_combat.boss_jump_phase_invulnerable):
 		var status_runtime := root as GameplayState
 		if status_runtime != null:
-			try_apply_status(status_runtime, slime, attack_element, damage_effectiveness)
+			try_apply_status(status_runtime, slime, attack_element, damage_effectiveness, guaranteed_status)
 	if not immune and amount > 0.0:
 		var state := root as GameplayState
 		if state != null:
@@ -707,7 +707,7 @@ func update_enemy_hit_flashes(root: Object, delta: float) -> void:
 				show_slime_hit_flash(root, slime)
 
 
-func try_apply_status(root: GameplayState, target: Node, element: int, effectiveness: float) -> bool:
+func try_apply_status(root: GameplayState, target: Node, element: int, effectiveness: float, guaranteed := false) -> bool:
 	if target == null or not is_instance_valid(target):
 		return false
 	var health := target.get_node_or_null("Health") as HealthComponent
@@ -717,7 +717,7 @@ func try_apply_status(root: GameplayState, target: Node, element: int, effective
 	if combat != null and combat.dead:
 		return false
 	var request := StatusApplicationRequest.new()
-	request.configure(target, element, effectiveness, StatusApplicationRequest.SourceKind.ELEMENTAL_HIT, root.rng)
+	request.configure(target, element, effectiveness, StatusApplicationRequest.SourceKind.ELEMENTAL_HIT, root.rng, guaranteed)
 	return StatusApplication.apply(request)
 
 

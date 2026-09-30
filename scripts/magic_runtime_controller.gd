@@ -4,6 +4,8 @@ class_name MagicRuntimeController
 const AspectCatalogScript = preload("res://scripts/aspect_catalog.gd")
 const ChromaComponentScript = preload("res://scripts/player_chroma_component.gd")
 const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
+const SpellFormCatalogScript = preload("res://scripts/spell_form_catalog.gd")
+const SpellFormDefinitionScript = preload("res://scripts/spell_form_definition.gd")
 
 const GREY_MAGIC_DAMAGE_MULTIPLIER := 1.10
 const ELEMENTAL_MAGIC_DAMAGE_MULTIPLIER := 1.15
@@ -360,8 +362,17 @@ func _spawn_pending_magic_projectile(context: MagicRuntimeContext) -> void:
 	pending_magic_projectile_spawned = true
 	var target := pending_magic_target if pending_magic_target != null and is_instance_valid(pending_magic_target) else null
 	var origin := player_visual_center(context) + Vector2(signf(pending_magic_direction.x) * 5.0, 1.0)
-	spawn_magic_projectile(context, origin, pending_magic_direction, target, pending_magic_mode)
+	deliver_spell(context, origin, pending_magic_direction, target, pending_magic_mode)
 	context.play_sound.call("magic_cast", -8.0, 1.0)
+
+
+func deliver_spell(context: MagicRuntimeContext, origin: Vector2, direction: Vector2, target: Sprite2D, mode: int) -> void:
+	var form := SpellFormCatalogScript.selected_form_for(context.player_chroma_component)
+	match SpellFormCatalogScript.delivery_of(form):
+		SpellFormDefinitionScript.Delivery.PROJECTILE:
+			spawn_magic_projectile(context, origin, direction, target, mode)
+		_:
+			spawn_magic_projectile(context, origin, direction, target, mode)
 
 
 func _finish_magic_animation(context: MagicRuntimeContext) -> void:
@@ -665,7 +676,7 @@ func magic_hit_slime(context: MagicRuntimeContext, slime: Sprite2D, world_positi
 	var was_critical := damage_result != null and damage_result.critical
 	var immune := damage_result != null and damage_result.immune
 	var resolved_element := damage_result.element if damage_result != null else attack_element
-	context.damage_slime_with_number.call(slime, damage, was_critical, false, resolved_element, immune, damage_result.effectiveness if damage_result != null else 0.0)
+	context.damage_slime_with_number.call(slime, damage, was_critical, false, resolved_element, immune, damage_result.effectiveness if damage_result != null else 0.0, not is_beam)
 	if not immune and damage > 0.0 and context.record_run_style_action.is_valid():
 		context.record_run_style_action.call(&"magic")
 	if not immune:
