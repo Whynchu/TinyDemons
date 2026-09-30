@@ -3,17 +3,30 @@ class_name RoomPrefabDefinition
 
 ## Stable, reusable spatial room content. Room state and route identity belong
 ## to the graph/runtime; this resource only describes the scene and its marker
-## contract.
+## contract. Marker2D children declare their stable IDs with room_marker_id
+## metadata; runtime bindings resolve those IDs through RoomPrefabHost.
 
 @export var prefab_id: StringName = &""
 @export var room_scene: PackedScene
 @export var map_root_path: NodePath = ^"Map"
+@export var capability_ids: Array[StringName] = []
+@export var required_marker_ids: Array[StringName] = []
 @export var required_socket_ids: Array[StringName] = [
 	&"WALL_LEFT",
 	&"WALL_RIGHT",
 	&"BOTTOM_LEFT",
 	&"BOTTOM_RIGHT",
 ]
+
+
+func supports_capability(capability_id: StringName) -> bool:
+	return not capability_id.is_empty() and capability_ids.has(capability_id)
+
+
+func resolve_marker(room_instance: Node, marker_id: StringName) -> Marker2D:
+	if room_instance == null or marker_id.is_empty():
+		return null
+	return _find_marker(room_instance, marker_id)
 
 
 func validate_instance(room_instance: Node) -> Array[String]:
@@ -50,4 +63,45 @@ func validate_instance(room_instance: Node) -> Array[String]:
 	for required_socket_id in required_socket_ids:
 		if not socket_ids.has(required_socket_id):
 			problems.append("room scene is missing required socket '%s'" % required_socket_id)
+	var marker_nodes: Dictionary = {}
+	_collect_markers(room_instance, marker_nodes, problems)
+	var seen_required_markers: Dictionary = {}
+	for required_marker_id in required_marker_ids:
+		if required_marker_id.is_empty() or seen_required_markers.has(required_marker_id):
+			problems.append("room prefab has an empty or duplicate required marker ID '%s'" % required_marker_id)
+		elif not marker_nodes.has(required_marker_id):
+			problems.append("room scene is missing required marker '%s'" % required_marker_id)
+		else:
+			seen_required_markers[required_marker_id] = true
+	var seen_capabilities: Dictionary = {}
+	for capability_id in capability_ids:
+		if capability_id.is_empty() or seen_capabilities.has(capability_id):
+			problems.append("room prefab has an empty or duplicate capability ID '%s'" % capability_id)
+		else:
+			seen_capabilities[capability_id] = true
 	return problems
+
+
+func _collect_markers(node: Node, marker_nodes: Dictionary, problems: Array[String]) -> void:
+	if node.has_meta("room_marker_id"):
+		var marker_id := StringName(str(node.get_meta("room_marker_id")))
+		if marker_id.is_empty():
+			problems.append("room scene has a marker with an empty room_marker_id")
+		elif not node is Marker2D:
+			problems.append("room marker '%s' must be a Marker2D" % marker_id)
+		elif marker_nodes.has(marker_id):
+			problems.append("room scene has duplicate marker ID '%s'" % marker_id)
+		else:
+			marker_nodes[marker_id] = node
+	for child in node.get_children():
+		_collect_markers(child, marker_nodes, problems)
+
+
+func _find_marker(node: Node, marker_id: StringName) -> Marker2D:
+	if node.has_meta("room_marker_id") and StringName(str(node.get_meta("room_marker_id"))) == marker_id:
+		return node as Marker2D
+	for child in node.get_children():
+		var marker := _find_marker(child, marker_id)
+		if marker != null:
+			return marker
+	return null

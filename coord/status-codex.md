@@ -2,8 +2,8 @@
 
 _Only codex writes this file._
 
-**Focus:** Generic room-prefab runtime mount and transition compatibility
-**Updated:** 2026-09-29
+**Focus:** Room-prefab identity, marker contracts, and Treasure/Orb routing
+**Updated:** 2026-09-30
 
 ## In flight
 
@@ -102,14 +102,23 @@ changes. Do not stage them with M1.
 
 ## Handoff / next
 
-Next, prove route traversal, return/re-entry state, active-run recovery, and a
-web export with the mounted room. Then add a second prefab and migrate treasure,
-Orb/puzzle, and boss room behavior as separate parity steps. The four existing
-socket IDs remain edge-kind identifiers; the room authoring workbench and
-dynamic prefab registry are still future work. No release bump or push was
-requested. Do not launch another Godot process or test suite in this session.
+Next, get Godot runtime access and prove role routing, marker placement, socket
+traversal, return/re-entry state, active-run migration, boss camera and
+walkability, and a web export. The room authoring workbench and dynamic prefab
+registry are still future work. Elemental spell-form files remain under the
+active opencode claim; continue them after that claim is released. No release
+bump or push was requested. Do not launch another Godot process or test suite in
+this session.
 
 ## Current work
+
+Source wiring registers `basic`, `orb`, `treasure`, and `boss` room
+definitions. Role capabilities are checked during mount; Orb and Treasure use
+validated stable markers, boss geometry is authored in its own scene, and old
+all-basic active-run assignments migrate by room role. The boss copy adapter
+remains for debug/prewarm compatibility. I left the active elemental spell-form
+files untouched under the opencode claim. Runtime, traversal, recovery, export,
+and authoring-workbench acceptance remain open under the no-Godot restriction.
 
 The gear-volume and Fusion-growth follow-up is implemented in source. Chest
 frequency remains unchanged; standard/risk chests drop gear more often,

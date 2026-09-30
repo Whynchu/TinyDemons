@@ -452,3 +452,15 @@ Also surfaced a pre-existing composition-floor failure: `RoomController` is 2,29
 lines vs the recorded baseline 2,251 with `room_controller.gd` unmodified in the
 working tree (HEAD growth from the room-prefab work); P2 changed no counted
 metric. Runtime acceptance remains open; no Godot process launched.
+## 2026-09-30T23:13Z — codex — claim
+Room-prefab follow-up: claim definition, factory, host, room-controller, Orb
+marker, Treasure marker, boss scene, generated definition manifest, and authoring
+docs. Do not edit the elemental spell-form paths under the active opencode claim.
+
+## 2026-09-30T23:14Z — codex — done
+Registered and routed the Orb, Treasure, and boss prefab scenes with typed
+capabilities and required markers. Treasure and Orb runtime owners now consume
+the authored anchors; boss geometry is mounted from its prefab and retains the
+debug/prewarm copy adapter. Old all-basic run snapshots migrate by room role.
+Static manifest/index refresh and `git diff --check` pass; no tests or Godot
+runtime were run. Traversal, recovery, web export, and visual parity remain open.

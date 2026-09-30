@@ -1,0 +1,21 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" uid="uid://dm1ohbthvop2c" path="res://scenes/basic_room.tscn" id="1_basic_room"]
+[ext_resource type="Texture2D" path="res://assets/artwork/ChestGrey.png" id="2_chest_preview"]
+
+[node name="TreasureRoom" instance=ExtResource("1_basic_room")]
+metadata/prefab_role = "treasure_room_authoring_template"
+metadata/map_marker = "gold_treasure_room"
+
+[node name="Landmarks" type="Node2D" parent="Map" index="3"]
+
+[node name="TreasureChest" type="Marker2D" parent="Map/Landmarks"]
+position = Vector2(157, 69)
+metadata/authoring_note = "Runtime chest placement binds to this marker."
+metadata/room_marker_id = "TREASURE_CHEST"
+
+[node name="ChestPreview" type="Sprite2D" parent="Map/Landmarks"]
+position = Vector2(157, 69)
+texture = ExtResource("2_chest_preview")
+centered = false
+metadata/room_preview_only = true

@@ -584,25 +584,33 @@ geometry; art resources must not duplicate collision or attack shapes.
 
 #### Runtime room-prefab seam and staged proof
 
-Runtime status (2026-09-29): the first generic room-prefab mount is wired through
-ordinary route entry and active-run restore. `RoomPrefabDefinition` references
-`scenes/basic_room.tscn`; `RoomPrefabFactory` resolves the `basic` definition;
-`RoomPrefabHost` owns the mounted scene; and `RoomController` mounts it before
-room activation, then rebinds floor, socket, accent, and geometry consumers.
-The old shell in `main.tscn` remains a fallback until a mount succeeds and is
-hidden after success. `DungeonGraph.RoomRecord` carries optional `prefab_id`,
-and snapshots persist the resolved room-ID-to-prefab-ID assignments while old
-snapshots remain valid through the explicit compatibility table.
+Runtime status (2026-09-30): the generic room-prefab mount is wired through
+ordinary route entry and active-run restore. `RoomPrefabFactory` registers
+typed `basic`, `orb`, `treasure`, and `boss` definitions. The route selects
+`orb` for Orb rooms, `treasure` for Treasure rooms, and `boss` for boss rooms;
+other current roles keep the basic shell. Definitions declare supported
+capabilities and required stable marker IDs. Mount validation checks marker
+uniqueness, marker type, required sockets, and the capability required by the
+gameplay room role. The Treasure Room's `TREASURE_CHEST` marker positions the
+persistent chest actor, while the Orb owner resolves `ORB_CENTER` from the
+active prefab. Editor-only preview sprites stay visible in the authored scene
+and are hidden on runtime mount.
 
-This is the runtime seam, not full room-prefab parity. Existing room roles
-currently resolve to the same `basic` scene; `orb_room.tscn` is not selected by
-the route yet, Orb and boss behavior still use their existing runtime owners,
-and the four socket IDs remain the legacy edge-kind names. The prefab factory
-currently has one code-registered definition. `RoomController` still adapts
-boss geometry from its authoring scene into the mounted room. No Godot runtime,
-export, or traversal acceptance has been run for this slice in this session.
-The current `RoomDefinition` remains shared encounter/traffic tuning; do not
-overload it with prefab identity.
+`RoomPrefabHost` owns the mounted scene; `RoomController` mounts it before room
+activation, then rebinds floor, socket, accent, and geometry consumers. The old
+shell in `main.tscn` remains a fallback until a mount succeeds and is hidden
+after success. `DungeonGraph.RoomRecord` carries optional `prefab_id`, and
+snapshots persist the resolved room-ID-to-prefab-ID assignments. Legacy active
+run snapshots that assigned `basic` to every role are migrated through the
+current explicit room-type compatibility table.
+
+This is source-wired room variation, not full room-prefab parity. Orb and
+treasure interactions still use their existing runtime owners, four socket IDs
+remain the legacy edge-kind names, and the boss geometry copy adapter remains
+for debug/prewarm paths. The factory remains a code-registered definition list.
+No Godot runtime, traversal, recovery, or exported-build acceptance has been
+run for this slice. The current `RoomDefinition` remains shared encounter/
+traffic tuning; do not overload it with prefab identity.
 
 #### Live transition parity contract (source audit, 2026-09-29)
 
@@ -640,17 +648,19 @@ snapshots now persist the resolved room-ID-to-prefab-ID mapping alongside the
 layout ID and dungeon seed, current room ID/type, arrival socket, and room
 states. Keep three identities separate: room instance ID, gameplay
 role/capabilities, and reusable prefab ID. `RoomSpec` can name a prefab
-directly; legacy layouts currently resolve through the explicit room-type
-mapping to the one registered `basic` definition. Older snapshots without the
-mapping remain accepted. Existing type aliases such as FIRE/REST, CLOAKED/NPC,
-and BOSS/DOWNSTAIRS remain behavior aliases; visual variation must not create
-extra gameplay types.
+directly; legacy layouts resolve through the explicit room-type mapping to the
+`basic`, `orb`, `treasure`, or `boss` definition. Older snapshots that recorded
+the former all-basic assignment are migrated by the same role mapping. Existing
+type aliases such as FIRE/REST, CLOAKED/NPC, and BOSS/DOWNSTAIRS remain behavior
+aliases; visual variation must not create extra gameplay types.
 
-The scene examples are not equivalent to live runtime rooms yet. `orb_room.tscn`
-inherits the generic shell and adds an orb presentation node, while the current
-Orb interaction and map palette follow runtime room state. The boss authoring
-scene is copied into the shared shell and also selects a larger camera. Treat
-these as separate runtime behavior/presentation contracts when migrating.
+`orb_room.tscn` and `treasure_room.tscn` inherit the generic shell and define
+their presentation anchors. The Orb interaction and map palette remain owned
+by runtime state. `boss_room.tscn` owns the expanded floor, socket spawn
+positions, and return guides; the existing geometry controller still owns the
+large camera and keeps the old copy adapter for debug/prewarm compatibility.
+Treat these as separate runtime behavior/presentation contracts while parity
+acceptance is open.
 
 The room-prefab slice must establish this runtime chain:
 
@@ -695,13 +705,15 @@ builder:
    socket, walkability, spawn, and presentation bindings before room activation.
    The generic combat room is currently mounted through the ordinary route
    path; acceptance remains open until runtime and export proof pass.
-4. Add one treasure-room prefab with authored chest placement. Prove combat
-   clear, reward claim, departure, revisit, and run recovery while the existing
-   room services keep owning encounter and chest state.
-5. Migrate Orb/puzzle and boss presentation as separate capability proofs. Keep
-   Orb's global palette/map behavior and the boss's expanded floor/camera
-   contract explicit. Retire static shell geometry and the boss-copy adapter
-   only after all migrated room types pass the same parity checks.
+4. [x] Add a treasure-room prefab with an authored `TREASURE_CHEST` marker and
+   bind the persistent chest actor to it. [ ] Prove combat clear, reward claim,
+   departure, revisit, and run recovery while the existing room services keep
+   owning encounter and chest state.
+5. [x] Register the Orb scene with an `ORB_CENTER` marker and resolve that
+   marker through the prefab host. Register the boss prefab with its expanded
+   floor and authored return guides; keep Orb's global palette/map behavior and
+   the boss camera contract in their existing runtime owners. [ ] Retire the
+   boss-copy adapter after parity proof for runtime entry and prewarm.
 6. Extend the workbench to create a room from a template, edit it in the native
    scene editor, run marker/connection validation, preview it with a fixed
    seed, and play it in an isolated session. Undo/redo and save/reopen must

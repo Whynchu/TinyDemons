@@ -2,11 +2,20 @@ extends RefCounted
 class_name RoomPrefabFactory
 
 const BASIC_ROOM_DEFINITION: RoomPrefabDefinition = preload("res://resources/definitions/room_prefab_basic.tres")
+const BOSS_ROOM_DEFINITION: RoomPrefabDefinition = preload("res://resources/definitions/room_prefab_boss.tres")
+const ORB_ROOM_DEFINITION: RoomPrefabDefinition = preload("res://resources/definitions/room_prefab_orb.tres")
+const TREASURE_ROOM_DEFINITION: RoomPrefabDefinition = preload("res://resources/definitions/room_prefab_treasure.tres")
 
 
 static func definition(prefab_id: StringName) -> RoomPrefabDefinition:
 	if prefab_id == BASIC_ROOM_DEFINITION.prefab_id:
 		return BASIC_ROOM_DEFINITION
+	if prefab_id == BOSS_ROOM_DEFINITION.prefab_id:
+		return BOSS_ROOM_DEFINITION
+	if prefab_id == ORB_ROOM_DEFINITION.prefab_id:
+		return ORB_ROOM_DEFINITION
+	if prefab_id == TREASURE_ROOM_DEFINITION.prefab_id:
+		return TREASURE_ROOM_DEFINITION
 	return null
 
 
@@ -19,16 +28,30 @@ static func prefab_id_for_room(room: DungeonGraph.RoomRecord) -> StringName:
 
 
 static func compatibility_prefab_id(room_type: StringName) -> StringName:
-	# Older authored/generated layouts have only gameplay room type. Preserve
-	# those IDs with an explicit compatibility table while scenes migrate.
+	# Older authored/generated layouts only carry gameplay room type. Resolve
+	# them through this explicit role table rather than guessing a fallback.
 	match room_type:
-		DungeonGraph.ROOM_START, DungeonGraph.ROOM_COMBAT, DungeonGraph.ROOM_PUZZLE, DungeonGraph.ROOM_REST, DungeonGraph.ROOM_TRADER, DungeonGraph.ROOM_NPC, DungeonGraph.ROOM_DOWNSTAIRS, DungeonGraph.ROOM_SPECIAL_ENEMY, DungeonGraph.ROOM_TREASURE, DungeonGraph.ROOM_ORB:
+		DungeonGraph.ROOM_TREASURE:
+			return TREASURE_ROOM_DEFINITION.prefab_id
+		DungeonGraph.ROOM_ORB:
+			return ORB_ROOM_DEFINITION.prefab_id
+		DungeonGraph.ROOM_DOWNSTAIRS:
+			return BOSS_ROOM_DEFINITION.prefab_id
+		DungeonGraph.ROOM_START, DungeonGraph.ROOM_COMBAT, DungeonGraph.ROOM_PUZZLE, DungeonGraph.ROOM_REST, DungeonGraph.ROOM_TRADER, DungeonGraph.ROOM_NPC, DungeonGraph.ROOM_SPECIAL_ENEMY:
 			return BASIC_ROOM_DEFINITION.prefab_id
 		_:
 			return &""
 
 
-static func create_mount(room_id: StringName, prefab_id: StringName) -> RoomPrefabMountResult:
+static func required_capability_for_room(room_type: StringName) -> StringName:
+	match room_type:
+		DungeonGraph.ROOM_TREASURE: return &"treasure_chest"
+		DungeonGraph.ROOM_ORB: return &"orb_interaction"
+		DungeonGraph.ROOM_DOWNSTAIRS: return &"boss_arena"
+		_: return &"room_shell"
+
+
+static func create_mount(room_id: StringName, prefab_id: StringName, room_type: StringName) -> RoomPrefabMountResult:
 	var result := RoomPrefabMountResult.new()
 	result.room_id = room_id
 	result.prefab_id = prefab_id
@@ -38,6 +61,10 @@ static func create_mount(room_id: StringName, prefab_id: StringName) -> RoomPref
 		return result
 	if resolved_definition.room_scene == null:
 		result.errors.append("room prefab '%s' has no PackedScene" % prefab_id)
+		return result
+	var required_capability := required_capability_for_room(room_type)
+	if not resolved_definition.supports_capability(required_capability):
+		result.errors.append("room prefab '%s' does not support room role '%s' (requires '%s')" % [prefab_id, room_type, required_capability])
 		return result
 	var room_node := resolved_definition.room_scene.instantiate()
 	var room_instance := room_node as Node2D
@@ -80,15 +107,22 @@ static func apply_snapshot_assignments(graph: DungeonGraph, value: Variant) -> b
 	if graph == null or not value is Dictionary:
 		return false
 	var assignments := value as Dictionary
+	var resolved_assignments: Dictionary = {}
 	for raw_room_id in assignments.keys():
 		var room_id := StringName(str(raw_room_id))
 		var room := graph.get_room(room_id)
 		var prefab_id := StringName(str(assignments[raw_room_id]))
-		if room == null or definition(prefab_id) == null:
+		if room == null:
 			return false
+		# Prior snapshots persisted the generic shell for every room role. Resolve
+		# those old assignments through today's explicit role mapping.
+		if prefab_id == BASIC_ROOM_DEFINITION.prefab_id:
+			prefab_id = compatibility_prefab_id(room.room_type)
+		if definition(prefab_id) == null:
+			return false
+		resolved_assignments[room_id] = prefab_id
 	for raw_room_id in assignments.keys():
 		var room_id := StringName(str(raw_room_id))
 		var room := graph.get_room(room_id)
-		var prefab_id := StringName(str(assignments[raw_room_id]))
-		room.prefab_id = prefab_id
+		room.prefab_id = resolved_assignments[room_id]
 	return true

@@ -87,19 +87,23 @@ Current owners:
 
 #### Room-scene status (current)
 
-Ordinary route entry and active-run restore now mount the `basic` prefab through
-`RoomPrefabHost` using the typed `RoomPrefabDefinition` in
-`resources/definitions/room_prefab_basic.tres`. Room instances can carry a
-`prefab_id`; legacy room roles with no explicit ID map to `basic`, and active-run
-snapshots save that resolved mapping. On successful mount, room geometry and
-socket bindings are rebuilt and the old shell in `scenes/main.tscn` is hidden.
+Ordinary route entry and active-run restore mount a typed room prefab through
+`RoomPrefabHost`. The code registry currently resolves `basic`, `orb`,
+`treasure`, and `boss` definitions. Orb, Treasure, and boss roles select their
+corresponding scenes; the other current roles use `basic`. Each definition
+declares its capabilities and required marker IDs, and the mount validates
+those markers and the room role before activation. The Treasure Room marker
+positions the shared chest actor, the Orb owner uses its marker for Orb
+presentation, and the boss scene owns its expanded floor and return guides.
+Room instances can carry a `prefab_id`; snapshots save the resolved mapping,
+and old snapshots that recorded `basic` for every room are migrated through
+the current role table. On a successful mount, geometry and socket bindings
+are rebuilt and the old shell in `scenes/main.tscn` is hidden.
 
-This is an initial runtime seam. Every existing room role still resolves to
-the same generic scene, `scenes/orb_room.tscn` is not selected by route data,
-and boss geometry continues to be copied from its authoring scene. The factory
-currently registers one prefab in code; the generated definition manifest does
-not make definitions dynamically discoverable by the runtime factory. Socket
-IDs still come from the four fixed edge kinds. Runtime traversal, revisit,
+This is source-wired prefab variation. The generated definition manifest does
+not make room definitions dynamically discoverable by the runtime factory,
+socket IDs still come from the four fixed edge kinds, and the boss geometry
+copy adapter remains for debug and prewarm paths. Runtime traversal, revisit,
 recovery, and exported-build acceptance remain open. `RoomDefinition` remains
 global encounter/traffic tuning, not a room identity or prefab reference.
 
@@ -112,10 +116,10 @@ special-purpose sockets.
 The target is a reusable room scene referenced by a typed
 `RoomPrefabDefinition`, selected from route data and materialized by the same
 room factory/compiler in design preview, isolated room play, and the game. The
-game now has the first generic host/factory path; the workbench, multiple
-prefabs, and behavioral parity are still pending. Keep route connections,
-reusable room geometry, and per-run room progress as separate owners. The
-staged runtime integration and acceptance contract are in
+game now has four source-wired prefabs, while the workbench, dynamic registry,
+and runtime parity are still pending. Keep route connections, reusable room
+geometry, and per-run room progress as separate owners. The staged runtime
+integration and acceptance contract are in
 [`authoring-system-plan.md`](authoring-system-plan.md#runtime-room-prefab-seam-and-staged-proof).
 
 Workflow (current, before Slice 3):

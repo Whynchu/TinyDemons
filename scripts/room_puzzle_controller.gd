@@ -273,18 +273,13 @@ func build_orb_room_orb(root: Object, state: Dictionary) -> void:
 	if root.walkable_outline.is_empty():
 		clear_puzzle_torches(root)
 		return
-	# Generated rooms do not carry the OrbRoom authoring scene, so the fixed
-	# prefab coordinate is not a reliable runtime position (notably in R8,
-	# whose puzzle footprint is shifted). Derive the fallback from the actual
-	# loaded walkable bounds and only use the prefab marker when it exists.
+	# Use the authored ORB_CENTER for prefab rooms. The walkable bounds remain a
+	# fallback for older or custom room scenes that do not provide that marker.
 	var bounds := Rect2(root.walkable_outline[0], Vector2.ZERO)
 	for point in root.walkable_outline:
 		bounds = bounds.expand(point)
 	var center_position: Vector2 = bounds.get_center()
-	var authored_center: Marker2D = null
-	var room_map_root := root.floor_tiles.get_parent() as Node2D if root.floor_tiles != null else null
-	if room_map_root != null:
-		authored_center = room_map_root.get_node_or_null("OrbCenterGuide") as Marker2D
+	var authored_center := RoomPrefabHost.resolve_marker_in_map((root as GameplayState).map_root, &"ORB_CENTER")
 	if authored_center != null:
 		center_position = authored_center.global_position
 	var positions: Array[Vector2] = [center_position + ORB_ROOM_VISUAL_OFFSET]

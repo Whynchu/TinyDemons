@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="ContentDefinitionManifestData" load_steps=31 format=3]
+[gd_resource type="Resource" script_class="ContentDefinitionManifestData" load_steps=34 format=3]
 
 [ext_resource type="Script" path="res://scripts/content_definition_manifest_data.gd" id="manifest_script"]
 [ext_resource type="Resource" path="res://resources/definitions/dungeon_generation_policy.tres" id="content_0000"]
@@ -20,17 +20,20 @@
 [ext_resource type="Resource" path="res://resources/definitions/reward_definition.tres" id="content_0016"]
 [ext_resource type="Resource" path="res://resources/definitions/room_definition.tres" id="content_0017"]
 [ext_resource type="Resource" path="res://resources/definitions/room_prefab_basic.tres" id="content_0018"]
-[ext_resource type="Resource" path="res://resources/definitions/skeleton.tres" id="content_0019"]
-[ext_resource type="Resource" path="res://resources/definitions/skeleton_electric.tres" id="content_0020"]
-[ext_resource type="Resource" path="res://resources/definitions/skeleton_fire.tres" id="content_0021"]
-[ext_resource type="Resource" path="res://resources/definitions/skeleton_grass.tres" id="content_0022"]
-[ext_resource type="Resource" path="res://resources/definitions/skeleton_ground.tres" id="content_0023"]
-[ext_resource type="Resource" path="res://resources/definitions/skeleton_ice.tres" id="content_0024"]
-[ext_resource type="Resource" path="res://resources/definitions/skeleton_shadow.tres" id="content_0025"]
-[ext_resource type="Resource" path="res://resources/definitions/skeleton_water.tres" id="content_0026"]
-[ext_resource type="Resource" path="res://resources/definitions/slime_variant_catalog.tres" id="content_0027"]
-[ext_resource type="Resource" path="res://resources/definitions/touch_controls_layout.tres" id="content_0028"]
+[ext_resource type="Resource" path="res://resources/definitions/room_prefab_boss.tres" id="content_0019"]
+[ext_resource type="Resource" path="res://resources/definitions/room_prefab_orb.tres" id="content_0020"]
+[ext_resource type="Resource" path="res://resources/definitions/room_prefab_treasure.tres" id="content_0021"]
+[ext_resource type="Resource" path="res://resources/definitions/skeleton.tres" id="content_0022"]
+[ext_resource type="Resource" path="res://resources/definitions/skeleton_electric.tres" id="content_0023"]
+[ext_resource type="Resource" path="res://resources/definitions/skeleton_fire.tres" id="content_0024"]
+[ext_resource type="Resource" path="res://resources/definitions/skeleton_grass.tres" id="content_0025"]
+[ext_resource type="Resource" path="res://resources/definitions/skeleton_ground.tres" id="content_0026"]
+[ext_resource type="Resource" path="res://resources/definitions/skeleton_ice.tres" id="content_0027"]
+[ext_resource type="Resource" path="res://resources/definitions/skeleton_shadow.tres" id="content_0028"]
+[ext_resource type="Resource" path="res://resources/definitions/skeleton_water.tres" id="content_0029"]
+[ext_resource type="Resource" path="res://resources/definitions/slime_variant_catalog.tres" id="content_0030"]
+[ext_resource type="Resource" path="res://resources/definitions/touch_controls_layout.tres" id="content_0031"]
 
 [resource]
 script = ExtResource("manifest_script")
-entries = Array[Resource]([ExtResource("content_0000"), ExtResource("content_0001"), ExtResource("content_0002"), ExtResource("content_0003"), ExtResource("content_0004"), ExtResource("content_0005"), ExtResource("content_0006"), ExtResource("content_0007"), ExtResource("content_0008"), ExtResource("content_0009"), ExtResource("content_0010"), ExtResource("content_0011"), ExtResource("content_0012"), ExtResource("content_0013"), ExtResource("content_0014"), ExtResource("content_0015"), ExtResource("content_0016"), ExtResource("content_0017"), ExtResource("content_0018"), ExtResource("content_0019"), ExtResource("content_0020"), ExtResource("content_0021"), ExtResource("content_0022"), ExtResource("content_0023"), ExtResource("content_0024"), ExtResource("content_0025"), ExtResource("content_0026"), ExtResource("content_0027"), ExtResource("content_0028")])
+entries = Array[Resource]([ExtResource("content_0000"), ExtResource("content_0001"), ExtResource("content_0002"), ExtResource("content_0003"), ExtResource("content_0004"), ExtResource("content_0005"), ExtResource("content_0006"), ExtResource("content_0007"), ExtResource("content_0008"), ExtResource("content_0009"), ExtResource("content_0010"), ExtResource("content_0011"), ExtResource("content_0012"), ExtResource("content_0013"), ExtResource("content_0014"), ExtResource("content_0015"), ExtResource("content_0016"), ExtResource("content_0017"), ExtResource("content_0018"), ExtResource("content_0019"), ExtResource("content_0020"), ExtResource("content_0021"), ExtResource("content_0022"), ExtResource("content_0023"), ExtResource("content_0024"), ExtResource("content_0025"), ExtResource("content_0026"), ExtResource("content_0027"), ExtResource("content_0028"), ExtResource("content_0029"), ExtResource("content_0030"), ExtResource("content_0031")])

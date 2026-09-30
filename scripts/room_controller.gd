@@ -108,7 +108,7 @@ func mount_room_prefab(runtime: GameplayState, room_id: StringName) -> bool:
 	if host == null:
 		push_error("Room prefab host is unavailable; refusing to activate the room.")
 		return false
-	var mount := host.mount_room(room_id, prefab_id)
+	var mount := host.mount_room(room_id, prefab_id, room.room_type)
 	if mount == null or not mount.succeeded():
 		if mount != null:
 			for error in mount.errors:
@@ -1895,6 +1895,9 @@ func reset_chest_for_room(root: Object, show_chest: bool = true) -> void:
 
 func _chest_position_for_room(root: Object) -> Vector2:
 	var default_position: Vector2 = root.get("chest_start_position")
+	var marker_position: Variant = RoomPrefabHost.marker_position_in_gameplay_root(root as GameplayState, &"TREASURE_CHEST")
+	if marker_position is Vector2:
+		return marker_position
 	var graph := root.get("dungeon_graph") as DungeonGraph
 	var room_id: StringName = StringName(root.get("current_room_id"))
 	var room: DungeonGraph.RoomRecord = graph.get_room(room_id) if graph != null else null

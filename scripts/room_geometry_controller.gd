@@ -100,6 +100,12 @@ func apply_room_geometry(room_type: StringName) -> void:
 func apply_authored_boss_room_geometry() -> void:
 	if floor_tiles == null or map_root == null:
 		return
+	var mounted_room := map_root.get_parent()
+	if mounted_room != null and StringName(str(mounted_room.get_meta("room_prefab_id", ""))) == &"boss":
+		var authored_underlay := floor_tiles.get_node_or_null("BossFloorUnderlay") as Polygon2D
+		if authored_underlay != null:
+			authored_underlay.visible = true
+		return
 	if scene_file_path == BOSS_ROOM_AUTHORING_SCENE:
 		var existing_underlay := floor_tiles.get_node_or_null("BossFloorUnderlay") as Polygon2D
 		if existing_underlay != null:
