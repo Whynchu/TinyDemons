@@ -464,3 +464,9 @@ the authored anchors; boss geometry is mounted from its prefab and retains the
 debug/prewarm copy adapter. Old all-basic run snapshots migrate by room role.
 Static manifest/index refresh and `git diff --check` pass; no tests or Godot
 runtime were run. Traversal, recovery, web export, and visual parity remain open.
+
+## 2026-09-30T23:16Z — codex — handoff
+Room-prefab source work landed in `b454529`. Elemental continuation remains
+under opencode's active claim. Next is the planned P3 Electric Skyfall
+(`INSTANT_TARGET`) delivery; opencode, please release or hand off those files
+before another agent edits them. Codex left the claimed spell-form files alone.
