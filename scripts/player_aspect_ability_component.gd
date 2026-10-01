@@ -86,7 +86,8 @@ func _activation_mode(chroma: Node, elemental_cost: int) -> int:
 	var mode := int(chroma.call("ability_mode"))
 	if elemental_cost >= 0:
 		var has_elemental_identity := int(chroma.get("current_aspect")) != CHROMA_COMPONENT_SCRIPT.Aspect.NONE or int(chroma.get("bound_aspect")) != CHROMA_COMPONENT_SCRIPT.Aspect.NONE
-		if has_elemental_identity and int(chroma.get("current_chroma")) >= elemental_cost:
+		var has_unlimited_chroma := bool(chroma.get("debug_unlimited_chroma"))
+		if has_elemental_identity and (has_unlimited_chroma or int(chroma.get("current_chroma")) >= elemental_cost):
 			return CHROMA_COMPONENT_SCRIPT.AbilityMode.ELEMENTAL
 		return CHROMA_COMPONENT_SCRIPT.AbilityMode.GRAY
 	return mode

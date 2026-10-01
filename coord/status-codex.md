@@ -2,10 +2,14 @@
 
 _Only codex writes this file._
 
-**Focus:** Elemental spell forms P4–P7 source complete; runtime acceptance pending
-**Updated:** 2026-09-30
+**Focus:** Triangle ability hookup audit complete; runtime acceptance pending
+**Updated:** 2026-10-01
 
 ## In flight
+
+Static hookup audit is complete. All eight Triangle forms trace from Chroma acceptance through the cast frame to delivery and hit effects. Fixed puzzle-object routing, pointer-aim target resolution for Skyfall and Leechvine, and debug-unlimited form-cost selection.
+
+Offline GDScript diagnostics and git diff --check pass. Runtime playtest and balance/readability acceptance remain open; no Godot process or suite was launched.
 
 The elemental spell-form track was handed off from opencode after P3. P4–P7
 source implementation is complete: each form has its delivery, first-pass

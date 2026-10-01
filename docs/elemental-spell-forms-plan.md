@@ -341,6 +341,21 @@ Sequenced so the balance change (status on magic) and the structural change
    complete;** 240×160 crowd readability and balance ratification still require
    a runtime playtest.
 
+### Source hook audit — 2026-10-01
+
+The input/cast path resolves the selected form and payload before Chroma is
+spent, then dispatches through the cast-frame timeline by delivery type. The
+shared hit resolver carries elemental damage, guaranteed payload statuses,
+knockback, Shadow's mark, and Grass lifesteal. Target-only Skyfall and Leechvine
+also resolve a valid target when a cast began in pointer-aim mode. Form-cost
+selection respects debug-unlimited Chroma; zero Chroma still rejects casting.
+
+Puzzle torches and the Orb are valid targets, so all deliveries now route them
+as object interactions: projectiles and target-only deliveries activate direct
+hits, while splash, cone, and radial deliveries query their area. Object hits
+change puzzle color and do not enter enemy damage/status handling. This uses
+existing puzzle behavior and does not add elemental reactions.
+
 ## 8. Verification
 
 - One characterization test per delivery type: cone hits N in the arc and none
@@ -348,6 +363,11 @@ Sequenced so the balance change (status on magic) and the structural change
   applies its status; beam drains and ends on break; ring hits all around.
 - Selection test: bound vs unbound × chroma bands (0 / 1–cost−1 / ≥cost) picks
   the form and payload in §1.2.
+- Target-only forms resolve a valid target from pointer-aim casts; Grass also
+  rejects targets outside its range without spending Chroma.
+- Puzzle-object routing: direct projectile, instant, and tether hits activate
+  the object; splash, cone, and radial areas activate objects in their geometry
+  without attempting enemy damage.
 - Status-on-magic test: each payload element applies its status on every hit
   (guaranteed); Water, Grass, and Ground apply nothing; DoT ticks do not
   re-proc.

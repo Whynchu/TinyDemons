@@ -226,7 +226,16 @@ func sync_chroma_presentation(context: MagicRuntimeContext) -> void:
 func execute_current_aspect_ability(context: MagicRuntimeContext, mode: int) -> bool:
 	if magic_animation_active and magic_hold_active and not magic_animation_is_imbue:
 		var candidate_form := SpellFormCatalogScript.cast_form_for(context.player_chroma_component, mode)
-		if not _form_has_required_target(context, candidate_form, pending_magic_target):
+		var candidate_delivery := SpellFormCatalogScript.delivery_of(candidate_form)
+		var candidate_target := pending_magic_target if pending_magic_target != null and is_instance_valid(pending_magic_target) and bool(context.is_slime_targetable.call(pending_magic_target)) else null
+		if candidate_delivery == SpellFormDefinitionScript.Delivery.INSTANT_TARGET or candidate_delivery == SpellFormDefinitionScript.Delivery.BEAM:
+			if candidate_target == null:
+				var current := context.valid_current_target.call() as Sprite2D
+				candidate_target = current if current != null and bool(context.is_slime_targetable.call(current)) else context.closest_target.call() as Sprite2D
+			if not _form_has_required_target(context, candidate_form, candidate_target):
+				return false
+			pending_magic_target = candidate_target
+		elif not _form_has_required_target(context, candidate_form, candidate_target):
 			return false
 		pending_magic_mode = mode as ChromaComponentScript.AbilityMode
 		_capture_spell_selection(context, mode)
@@ -427,6 +436,8 @@ func deliver_instant_strike(context: MagicRuntimeContext, target: Sprite2D, mode
 		return
 	var hit_point := magic_target_point(context, strike_target)
 	spawn_sky_strike(context, hit_point, palette)
+	if _try_activate_puzzle_torch(context, strike_target, hit_point, palette):
+		return
 	magic_hit_slime(context, strike_target, hit_point, palette, mode, false, form)
 
 
@@ -440,6 +451,7 @@ func deliver_cone(context: MagicRuntimeContext, origin: Vector2, direction: Vect
 		var body := context.slime_body_polygon.call(slime) as PackedVector2Array
 		if body.size() >= 3 and not Geometry2D.intersect_polygons(body, sector).is_empty():
 			magic_hit_slime(context, slime, magic_target_point(context, slime), palette, mode, false, form)
+	_activate_puzzle_torches_in_sector(context, sector, palette)
 	spawn_cone_effect(context, origin, direction, radius, half_angle, palette)
 
 
@@ -448,6 +460,7 @@ func deliver_quake(context: MagicRuntimeContext, origin: Vector2, mode: int, for
 	for slime in hits:
 		var push_direction := (magic_target_point(context, slime) - origin).normalized()
 		magic_hit_slime(context, slime, magic_target_point(context, slime), palette, mode, false, form, push_direction)
+	_activate_puzzle_torches_in_radius(context, origin, float(form.get("delivery_radius")), palette)
 	spawn_radial_burst(context, origin, palette, 16, 32.0, 52.0)
 
 
@@ -457,6 +470,8 @@ func deliver_leechvine(context: MagicRuntimeContext, target: Sprite2D, mode: int
 		return
 	var source_point := player_visual_center(context)
 	if source_point.distance_to(magic_target_point(context, beam_target)) > float(form.get("delivery_range")):
+		return
+	if _try_activate_puzzle_torch(context, beam_target, magic_target_point(context, beam_target), palette):
 		return
 	var player := context.player
 	var tether := Line2D.new()
@@ -489,6 +504,66 @@ func magic_targets_in_radius(context: MagicRuntimeContext, center: Vector2, radi
 		if bool(context.is_slime_targetable.call(slime)) and _circle_intersects_polygon(center, radius, context.slime_body_polygon.call(slime) as PackedVector2Array):
 			targets.append(slime)
 	return targets
+
+
+func _is_puzzle_torch(context: MagicRuntimeContext, target: Sprite2D) -> bool:
+	return target != null and is_instance_valid(target) and context.puzzle_torches.has(target)
+
+
+func _try_activate_puzzle_torch(context: MagicRuntimeContext, target: Sprite2D, world_position: Vector2, palette: String) -> bool:
+	if not _is_puzzle_torch(context, target):
+		return false
+	if context.activate_puzzle_torch.is_valid():
+		context.activate_puzzle_torch.call(target, world_position, palette, false)
+	return true
+
+
+func _puzzle_torch_rect(torch: Sprite2D) -> Rect2:
+	return Rect2(torch.global_position - Vector2(3.0, 3.0), Vector2(6.0, 6.0))
+
+
+func _puzzle_torch_snapshot(context: MagicRuntimeContext) -> Array[Sprite2D]:
+	var snapshot: Array[Sprite2D] = []
+	for torch in context.puzzle_torches:
+		if torch != null and is_instance_valid(torch):
+			snapshot.append(torch)
+	return snapshot
+
+
+func _activate_puzzle_torches_in_sector(context: MagicRuntimeContext, sector: PackedVector2Array, palette: String) -> void:
+	for torch in _puzzle_torch_snapshot(context):
+		if not is_instance_valid(torch) or not bool(context.is_slime_targetable.call(torch)):
+			continue
+		if not Geometry2D.intersect_polygons(_rect_polygon(_puzzle_torch_rect(torch)), sector).is_empty():
+			_try_activate_puzzle_torch(context, torch, torch.global_position, palette)
+
+
+func _activate_puzzle_torches_in_radius(context: MagicRuntimeContext, center: Vector2, radius: float, palette: String, direct_target: Sprite2D = null) -> void:
+	var torch_snapshot := _puzzle_torch_snapshot(context)
+	var activated_instance_ids: Dictionary = {}
+	if _is_puzzle_torch(context, direct_target):
+		activated_instance_ids[direct_target.get_instance_id()] = true
+		_try_activate_puzzle_torch(context, direct_target, center, palette)
+	for torch in torch_snapshot:
+		if not is_instance_valid(torch) or activated_instance_ids.has(torch.get_instance_id()) or not bool(context.is_slime_targetable.call(torch)):
+			continue
+		if _circle_intersects_rect(center, radius, _puzzle_torch_rect(torch)):
+			activated_instance_ids[torch.get_instance_id()] = true
+			_try_activate_puzzle_torch(context, torch, torch.global_position, palette)
+
+
+func _circle_intersects_rect(center: Vector2, radius: float, rect: Rect2) -> bool:
+	var closest := Vector2(clampf(center.x, rect.position.x, rect.end.x), clampf(center.y, rect.position.y, rect.end.y))
+	return center.distance_squared_to(closest) <= radius * radius
+
+
+func _rect_polygon(rect: Rect2) -> PackedVector2Array:
+	return PackedVector2Array([
+		rect.position,
+		Vector2(rect.end.x, rect.position.y),
+		rect.end,
+		Vector2(rect.position.x, rect.end.y),
+	])
 
 
 func spawn_cone_effect(context: MagicRuntimeContext, origin: Vector2, direction: Vector2, radius: float, half_angle: float, palette: String) -> void:
@@ -805,18 +880,19 @@ func _spawn_magic_trail_callback(world_position: Vector2, palette: String, is_be
 
 
 func resolve_magic_projectile_hit(context: MagicRuntimeContext, target: Sprite2D, world_position: Vector2, palette: String, ability_mode: int = ChromaComponentScript.AbilityMode.GRAY, is_beam: bool = false, form: Resource = null) -> void:
-	var torches := context.puzzle_torches
-	if torches.has(target):
-		context.activate_puzzle_torch.call(target, world_position, palette, false)
-		return
 	if form != null and SpellFormCatalogScript.delivery_of(form) == SpellFormDefinitionScript.Delivery.PROJECTILE_SPLASH:
-		var victims := magic_targets_in_radius(context, world_position, float(form.get("delivery_radius")))
-		if bool(context.is_slime_targetable.call(target)) and not victims.has(target):
+		var splash_radius := float(form.get("delivery_radius"))
+		var target_is_puzzle_torch := _is_puzzle_torch(context, target)
+		_activate_puzzle_torches_in_radius(context, world_position, splash_radius, palette, target)
+		var victims := magic_targets_in_radius(context, world_position, splash_radius)
+		if not target_is_puzzle_torch and target != null and is_instance_valid(target) and bool(context.is_slime_targetable.call(target)) and not victims.has(target):
 			victims.append(target)
 		for victim in victims:
 			var push_direction := (magic_target_point(context, victim) - world_position).normalized()
 			magic_hit_slime(context, victim, magic_target_point(context, victim), palette, ability_mode, false, form, push_direction)
 		spawn_radial_burst(context, world_position, palette, 12, 20.0, 34.0)
+		return
+	if _try_activate_puzzle_torch(context, target, world_position, palette):
 		return
 	magic_hit_slime(context, target, world_position, palette, ability_mode, is_beam, form)
 
@@ -826,10 +902,9 @@ func magic_projectile_hit_target(context: MagicRuntimeContext, sprite: Sprite2D)
 	var radius := float(projectile_size) * 0.5 + 2.0
 	var torches := context.puzzle_torches
 	for torch in torches:
-		if not bool(context.is_slime_targetable.call(torch)):
+		if torch == null or not is_instance_valid(torch) or not bool(context.is_slime_targetable.call(torch)):
 			continue
-		var torch_rect := Rect2(torch.global_position - Vector2(3.0, 3.0), Vector2(6.0, 6.0))
-		if torch_rect.grow(radius).has_point(sprite.global_position):
+		if _puzzle_torch_rect(torch).grow(radius).has_point(sprite.global_position):
 			return torch
 	var slimes := context.slimes
 	for slime in slimes:

@@ -504,3 +504,9 @@ Completed P4–P7 source delivery paths, first-pass form tuning, and the updated
 spell-form plan. Offline checks pass for 11 scripts; the existing
 `gameplay_state.gd:391` class-cache diagnostic remains. No Godot process or
 test suite was launched; runtime acceptance is still open.
+
+## 2026-10-01T00:27Z — codex — claim
+Auditing the Triangle spell-form paths from Chroma acceptance through target delivery and effects. The main source gaps are puzzle-object handling in nonprojectile/AoE deliveries and form selection under debug-unlimited Chroma. Static-only checks; no runtime or suite launch.
+
+## 2026-10-01T00:34Z — codex — done
+Audited all eight Triangle forms from Chroma/input through cast timing, delivery, combat effects, and frame callbacks. Fixed puzzle-object handling across direct and area deliveries, pointer-aim targeting for Skyfall/Leechvine, and debug-unlimited form-cost selection. The spell-form plan records the source wiring. Offline parser checks and git diff --check pass; runtime playtest remains open and no Godot process or suite was launched.
