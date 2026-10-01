@@ -6,14 +6,16 @@ enum Family {
 	DAMAGE_OVER_TIME,
 	MOVEMENT_SLOW,
 	PERIODIC_STUN,
+	DAMAGE_AMPLIFICATION,
 }
 
 const STATUS_IDS: Array[StringName] = [&"burn", &"poison", &"slow", &"stun"]
+const AUXILIARY_STATUS_IDS: Array[StringName] = [&"hex_mark"]
 const PARTICLE_STYLES: Array[StringName] = [&"ember", &"poison_mote", &"electric_spark", &"frost_crystal"]
 
 @export var id: StringName = &""
 @export_range(1, 7, 1) var element := 1
-@export_enum("Damage over time", "Movement slow", "Periodic stun") var family: int = Family.DAMAGE_OVER_TIME
+@export_enum("Damage over time", "Movement slow", "Periodic stun", "Damage amplification") var family: int = Family.DAMAGE_OVER_TIME
 @export_range(0.0, 1.0, 0.01) var proc_chance := 0.2
 @export_range(0.05, 30.0, 0.05) var duration := 2.5
 @export_range(1, 10, 1) var maximum_stacks := 3
@@ -31,11 +33,11 @@ const PARTICLE_STYLES: Array[StringName] = [&"ember", &"poison_mote", &"electric
 
 func validate() -> Array[String]:
 	var problems: Array[String] = []
-	if not STATUS_IDS.has(id):
+	if not STATUS_IDS.has(id) and not AUXILIARY_STATUS_IDS.has(id):
 		problems.append("status id '%s' is not registered" % String(id))
 	if element < 1 or element > 7:
 		problems.append("status element must be a non-neutral element")
-	if family < Family.DAMAGE_OVER_TIME or family > Family.PERIODIC_STUN:
+	if family < Family.DAMAGE_OVER_TIME or family > Family.DAMAGE_AMPLIFICATION:
 		problems.append("status family is invalid")
 	if proc_chance < 0.0 or proc_chance > 1.0:
 		problems.append("proc chance must be between 0 and 1")

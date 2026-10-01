@@ -7,12 +7,16 @@ class_name MagicProjectileController
 var projectiles: Array[Dictionary] = []
 
 
-func spawn(sprite: Sprite2D, outline: Sprite2D, direction: Vector2, lifetime: float, palette: String, target: Sprite2D = null, ability_mode: int = 0) -> void:
-	projectiles.append({"sprite": sprite, "outline": outline, "direction": direction, "timer": lifetime, "hit": false, "palette": palette, "target": target, "ability_mode": ability_mode})
+func spawn(sprite: Sprite2D, outline: Sprite2D, direction: Vector2, lifetime: float, palette: String, target: Sprite2D = null, ability_mode: int = 0, form: Resource = null, speed: float = 70.0) -> void:
+	projectiles.append({"sprite": sprite, "outline": outline, "direction": direction, "timer": lifetime, "hit": false, "palette": palette, "target": target, "ability_mode": ability_mode, "form": form, "speed": speed})
 
 
 func spawn_beam(sprite: Sprite2D, direction: Vector2, lifetime: float, palette: String, ability_mode: int) -> void:
-	projectiles.append({"sprite": sprite, "outline": null, "direction": direction, "timer": lifetime, "hit": false, "palette": palette, "target": null, "ability_mode": ability_mode, "beam": true, "speed": 60.0, "beam_hit_counts": {}, "beam_hit_cooldowns": {}})
+	projectiles.append({"sprite": sprite, "outline": null, "direction": direction, "timer": lifetime, "hit": false, "palette": palette, "target": null, "ability_mode": ability_mode, "form": null, "beam": true, "speed": 60.0, "beam_hit_counts": {}, "beam_hit_cooldowns": {}})
+
+
+func spawn_tether(line: Line2D, source: Sprite2D, target: Sprite2D, lifetime: float, max_range: float, palette: String, ability_mode: int, form: Resource) -> void:
+	projectiles.append({"tether": true, "line": line, "source": source, "target": target, "timer": lifetime, "max_range": max_range, "palette": palette, "ability_mode": ability_mode, "form": form, "tick_timer": 0.0, "tick_interval": float(form.get("tick_interval"))})
 
 
 func remove(index: int) -> void:
@@ -24,20 +28,58 @@ func clear() -> void:
 	for data in projectiles:
 		var sprite := _valid_sprite(data.get("sprite"))
 		var outline := _valid_sprite(data.get("outline"))
+		var line := _valid_line(data.get("line"))
 		if sprite != null and is_instance_valid(sprite): sprite.queue_free()
 		if outline != null and is_instance_valid(outline): outline.queue_free()
+		if line != null and is_instance_valid(line): line.queue_free()
 	projectiles.clear()
 
 
 func tick(delta: float, speed: float, snap_position: Callable, target_point: Callable, is_targetable: Callable, hit_query: Callable, hit_resolve: Callable, trail: Callable) -> void:
 	for index in range(projectiles.size() - 1, -1, -1):
 		var data: Dictionary = projectiles[index]
+		var timer := float(data.get("timer", 0.0)) - delta
+		if bool(data.get("tether", false)):
+			var line := _valid_line(data.get("line"))
+			var source := _valid_sprite(data.get("source"))
+			var tether_target := _valid_sprite(data.get("target"))
+			if line == null or source == null or tether_target == null or timer <= 0.0 or not bool(is_targetable.call(tether_target)):
+				if line != null: line.queue_free()
+				remove(index)
+				continue
+			var source_position: Vector2 = source.global_position + Vector2(8.0, 7.0)
+			var target_position: Vector2 = target_point.call(tether_target)
+			if source_position.distance_to(target_position) > float(data.get("max_range", 0.0)):
+				line.queue_free()
+				remove(index)
+				continue
+			line.global_position = snap_position.call(source_position)
+			line.points = PackedVector2Array([Vector2.ZERO, line.to_local(snap_position.call(target_position))])
+			var line_tint := line.modulate
+			line_tint.a = 0.72 + 0.18 * sin((float(data.get("initial_timer", timer + delta)) - timer) * 18.0)
+			line.modulate = line_tint
+			var tick_timer := float(data.get("tick_timer", 0.0)) - delta
+			var target_died := false
+			while tick_timer <= 0.0 and timer > 0.0:
+				hit_resolve.call(tether_target, target_position, String(data.get("palette", "grey")), int(data.get("ability_mode", 0)), true, data.get("form") as Resource)
+				if not bool(is_targetable.call(tether_target)):
+					target_died = true
+					break
+				tick_timer += maxf(float(data.get("tick_interval", 0.45)), 0.05)
+			if target_died:
+				line.queue_free()
+				remove(index)
+				continue
+			data["tick_timer"] = tick_timer
+			data["timer"] = timer
+			data["initial_timer"] = float(data.get("initial_timer", timer + delta))
+			projectiles[index] = data
+			continue
 		# Do not cast a freed Object before checking it. Godot reports the cast
 		# itself, so the old `as Sprite2D` followed by is_instance_valid() still
 		# logged errors during scene transitions.
 		var sprite := _valid_sprite(data.get("sprite"))
 		var outline := _valid_sprite(data.get("outline"))
-		var timer := float(data.get("timer", 0.0)) - delta
 		if sprite == null or not is_instance_valid(sprite) or timer <= 0.0:
 			if sprite != null and is_instance_valid(sprite): sprite.queue_free()
 			if outline != null and is_instance_valid(outline): outline.queue_free()
@@ -75,7 +117,7 @@ func tick(delta: float, speed: float, snap_position: Callable, target_point: Cal
 					continue
 				if float(beam_hit_cooldowns.get(target_id, 0.0)) > 0.0:
 					continue
-				hit_resolve.call(target, sprite.global_position, String(data.get("palette", "grey")), int(data.get("ability_mode", 0)), true)
+				hit_resolve.call(target, sprite.global_position, String(data.get("palette", "grey")), int(data.get("ability_mode", 0)), true, data.get("form") as Resource)
 				beam_hit_counts[target_id] = int(beam_hit_counts.get(target_id, 0)) + 1
 				beam_hit_cooldowns[target_id] = 0.12
 			data["beam_hit_counts"] = beam_hit_counts
@@ -83,7 +125,7 @@ func tick(delta: float, speed: float, snap_position: Callable, target_point: Cal
 		elif not bool(data.get("hit", false)):
 			var target := hit_query.call(sprite, false) as Sprite2D
 			if target != null:
-				hit_resolve.call(target, sprite.global_position, String(data.get("palette", "grey")), int(data.get("ability_mode", 0)), false)
+				hit_resolve.call(target, sprite.global_position, String(data.get("palette", "grey")), int(data.get("ability_mode", 0)), false, data.get("form") as Resource)
 				if sprite != null and is_instance_valid(sprite): sprite.queue_free()
 				if outline != null and is_instance_valid(outline): outline.queue_free()
 				remove(index)
@@ -97,3 +139,7 @@ func tick(delta: float, speed: float, snap_position: Callable, target_point: Cal
 
 func _valid_sprite(value: Variant) -> Sprite2D:
 	return value as Sprite2D if is_instance_valid(value) else null
+
+
+func _valid_line(value: Variant) -> Line2D:
+	return value as Line2D if is_instance_valid(value) else null

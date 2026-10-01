@@ -28,6 +28,8 @@ var pending_magic_direction := Vector2.RIGHT
 var pending_magic_target: Sprite2D = null
 var pending_magic_mode := ChromaComponentScript.AbilityMode.GRAY
 var pending_magic_projectile_spawned := false
+var pending_magic_form: Resource = null
+var pending_magic_palette := "grey"
 var magic_animation_is_imbue := false
 var pending_imbue_element := ElementCatalogScript.Element.NEUTRAL
 var pending_imbue_activated := false
@@ -160,9 +162,11 @@ func try_cast_magic(context: MagicRuntimeContext, allow_candidate := false) -> b
 	var chroma := context.player_chroma_component
 	if ability == null or chroma == null:
 		return false
+	var selected_form := SpellFormCatalogScript.selected_form_for(chroma)
+	var neutral_stub := SpellFormCatalogScript.form_for_element(ElementCatalogScript.Element.NEUTRAL)
 	var chroma_before := current_player_chroma(context)
 	var feedback_color := chroma_highlight_color(context)
-	var accepted := bool(ability.call("try_activate", chroma, context.execute_current_aspect_ability))
+	var accepted := bool(ability.call("try_activate", chroma, context.execute_current_aspect_ability, false, int(selected_form.get("chroma_cost")), float(selected_form.get("cooldown")), float(neutral_stub.get("cooldown"))))
 	if accepted:
 		context.sync_chroma_presentation.call()
 		context.update_player_mp_ui.call()
@@ -221,13 +225,20 @@ func sync_chroma_presentation(context: MagicRuntimeContext) -> void:
 
 func execute_current_aspect_ability(context: MagicRuntimeContext, mode: int) -> bool:
 	if magic_animation_active and magic_hold_active and not magic_animation_is_imbue:
+		var candidate_form := SpellFormCatalogScript.cast_form_for(context.player_chroma_component, mode)
+		if not _form_has_required_target(context, candidate_form, pending_magic_target):
+			return false
 		pending_magic_mode = mode as ChromaComponentScript.AbilityMode
+		_capture_spell_selection(context, mode)
 		magic_cast_decided = true
 		if magic_animation_frame >= MAGIC_CAST_FRAME_INDEX and not pending_magic_projectile_spawned:
 			_spawn_pending_magic_projectile(context)
 		return true
 	var current := context.valid_current_target.call() as Sprite2D
 	var target := current if current != null and bool(context.is_slime_targetable.call(current)) else context.closest_target.call() as Sprite2D
+	var selected_form := SpellFormCatalogScript.cast_form_for(context.player_chroma_component, mode)
+	if not _form_has_required_target(context, selected_form, target):
+		return false
 	var direction := Vector2.RIGHT
 	if target != null:
 		var to_target: Vector2 = magic_target_point(context, target) - player_visual_center(context)
@@ -236,6 +247,17 @@ func execute_current_aspect_ability(context: MagicRuntimeContext, mode: int) -> 
 		var last_input: Vector2 = context.last_player_input_direction_get.call()
 		direction = last_input.normalized() if last_input.length_squared() > 0.0001 else Vector2.RIGHT
 	return begin_magic_animation(context, direction, target, mode)
+
+
+func _form_has_required_target(context: MagicRuntimeContext, form: Resource, target: Sprite2D) -> bool:
+	var delivery := SpellFormCatalogScript.delivery_of(form)
+	if delivery != SpellFormDefinitionScript.Delivery.INSTANT_TARGET and delivery != SpellFormDefinitionScript.Delivery.BEAM:
+		return true
+	if target == null or not is_instance_valid(target) or not bool(context.is_slime_targetable.call(target)):
+		return false
+	if delivery == SpellFormDefinitionScript.Delivery.BEAM:
+		return player_visual_center(context).distance_to(magic_target_point(context, target)) <= float(form.get("delivery_range"))
+	return true
 
 
 func begin_magic_animation(context: MagicRuntimeContext, direction: Vector2, target: Sprite2D, mode: int, is_imbue := false, is_candidate := false) -> bool:
@@ -248,6 +270,11 @@ func begin_magic_animation(context: MagicRuntimeContext, direction: Vector2, tar
 	pending_magic_target = target if target != null and is_instance_valid(target) else null
 	pending_magic_mode = mode as ChromaComponentScript.AbilityMode
 	pending_magic_projectile_spawned = false
+	if not is_imbue and not is_candidate:
+		_capture_spell_selection(context, mode)
+	else:
+		pending_magic_form = null
+		pending_magic_palette = "grey"
 	magic_animation_is_imbue = is_imbue
 	pending_imbue_activated = false
 	magic_cast_decided = not is_candidate
@@ -263,6 +290,19 @@ func begin_magic_animation(context: MagicRuntimeContext, direction: Vector2, tar
 		player.flip_h = magic_facing_left
 	_apply_magic_animation_frame(context, 0)
 	return true
+
+
+func _capture_spell_selection(context: MagicRuntimeContext, mode: int) -> void:
+	pending_magic_form = SpellFormCatalogScript.cast_form_for(context.player_chroma_component, mode)
+	var payload := ElementCatalogScript.Element.NEUTRAL
+	if mode == ChromaComponentScript.AbilityMode.ELEMENTAL:
+		var chroma := context.player_chroma_component
+		if chroma != null and is_instance_valid(chroma):
+			var current_aspect := int(chroma.get("current_aspect"))
+			if current_aspect == ChromaComponentScript.Aspect.NONE:
+				current_aspect = int(chroma.get("bound_aspect"))
+			payload = ElementCatalogScript.element_for_aspect(current_aspect)
+	pending_magic_palette = ElementCatalogScript.palette_key(payload)
 
 
 func _apply_magic_animation_frame(context: MagicRuntimeContext, frame: int) -> void:
@@ -362,17 +402,146 @@ func _spawn_pending_magic_projectile(context: MagicRuntimeContext) -> void:
 	pending_magic_projectile_spawned = true
 	var target := pending_magic_target if pending_magic_target != null and is_instance_valid(pending_magic_target) else null
 	var origin := player_visual_center(context) + Vector2(signf(pending_magic_direction.x) * 5.0, 1.0)
-	deliver_spell(context, origin, pending_magic_direction, target, pending_magic_mode)
+	deliver_spell(context, origin, pending_magic_direction, target, pending_magic_mode, pending_magic_form, pending_magic_palette)
 	context.play_sound.call("magic_cast", -8.0, 1.0)
 
 
-func deliver_spell(context: MagicRuntimeContext, origin: Vector2, direction: Vector2, target: Sprite2D, mode: int) -> void:
-	var form := SpellFormCatalogScript.selected_form_for(context.player_chroma_component)
-	match SpellFormCatalogScript.delivery_of(form):
-		SpellFormDefinitionScript.Delivery.PROJECTILE:
-			spawn_magic_projectile(context, origin, direction, target, mode)
-		_:
-			spawn_magic_projectile(context, origin, direction, target, mode)
+func deliver_spell(context: MagicRuntimeContext, origin: Vector2, direction: Vector2, target: Sprite2D, mode: int, form: Resource = null, palette: String = "grey") -> void:
+	var resolved_form := form if form != null else SpellFormCatalogScript.cast_form_for(context.player_chroma_component, mode)
+	match SpellFormCatalogScript.delivery_of(resolved_form):
+		SpellFormDefinitionScript.Delivery.PROJECTILE, SpellFormDefinitionScript.Delivery.PROJECTILE_SPLASH:
+			spawn_magic_projectile(context, origin, direction, target, mode, resolved_form, palette)
+		SpellFormDefinitionScript.Delivery.CONE:
+			deliver_cone(context, player_visual_center(context), direction, mode, resolved_form, palette)
+		SpellFormDefinitionScript.Delivery.INSTANT_TARGET:
+			deliver_instant_strike(context, target, mode, resolved_form, palette)
+		SpellFormDefinitionScript.Delivery.BEAM:
+			deliver_leechvine(context, target, mode, resolved_form, palette)
+		SpellFormDefinitionScript.Delivery.RADIAL_SELF:
+			deliver_quake(context, player_visual_center(context), mode, resolved_form, palette)
+
+
+func deliver_instant_strike(context: MagicRuntimeContext, target: Sprite2D, mode: int, form: Resource, palette: String) -> void:
+	var strike_target := target if target != null and is_instance_valid(target) else context.closest_target.call() as Sprite2D
+	if strike_target == null or not is_instance_valid(strike_target) or not bool(context.is_slime_targetable.call(strike_target)):
+		return
+	var hit_point := magic_target_point(context, strike_target)
+	spawn_sky_strike(context, hit_point, palette)
+	magic_hit_slime(context, strike_target, hit_point, palette, mode, false, form)
+
+
+func deliver_cone(context: MagicRuntimeContext, origin: Vector2, direction: Vector2, mode: int, form: Resource, palette: String) -> void:
+	var radius := float(form.get("delivery_radius"))
+	var half_angle := deg_to_rad(float(form.get("delivery_angle_degrees")) * 0.5)
+	var sector := _sector_polygon(origin, direction, radius, half_angle)
+	for slime in context.slimes:
+		if not bool(context.is_slime_targetable.call(slime)):
+			continue
+		var body := context.slime_body_polygon.call(slime) as PackedVector2Array
+		if body.size() >= 3 and not Geometry2D.intersect_polygons(body, sector).is_empty():
+			magic_hit_slime(context, slime, magic_target_point(context, slime), palette, mode, false, form)
+	spawn_cone_effect(context, origin, direction, radius, half_angle, palette)
+
+
+func deliver_quake(context: MagicRuntimeContext, origin: Vector2, mode: int, form: Resource, palette: String) -> void:
+	var hits := magic_targets_in_radius(context, origin, float(form.get("delivery_radius")))
+	for slime in hits:
+		var push_direction := (magic_target_point(context, slime) - origin).normalized()
+		magic_hit_slime(context, slime, magic_target_point(context, slime), palette, mode, false, form, push_direction)
+	spawn_radial_burst(context, origin, palette, 16, 32.0, 52.0)
+
+
+func deliver_leechvine(context: MagicRuntimeContext, target: Sprite2D, mode: int, form: Resource, palette: String) -> void:
+	var beam_target := target if target != null and is_instance_valid(target) else context.closest_target.call() as Sprite2D
+	if beam_target == null or not bool(context.is_slime_targetable.call(beam_target)):
+		return
+	var source_point := player_visual_center(context)
+	if source_point.distance_to(magic_target_point(context, beam_target)) > float(form.get("delivery_range")):
+		return
+	var player := context.player
+	var tether := Line2D.new()
+	tether.name = "LeechvineTether"
+	tether.width = 2.0
+	tether.default_color = PaletteLibrary.normal(palette)
+	tether.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	tether.antialiased = false
+	tether.z_as_relative = false
+	tether.z_index = player.z_index + 1
+	tether.add_point(Vector2.ZERO)
+	tether.add_point(Vector2.ZERO)
+	_add_child_to_runtime(context, tether, source_point)
+	(context.magic_projectile_controller as MagicProjectileController).spawn_tether(tether, player, beam_target, float(form.get("delivery_duration")), float(form.get("delivery_range")), palette, mode, form)
+
+
+func _sector_polygon(origin: Vector2, direction: Vector2, radius: float, half_angle: float) -> PackedVector2Array:
+	var points := PackedVector2Array([origin])
+	var base_angle := direction.angle()
+	const ARC_SEGMENTS := 12
+	for index in range(ARC_SEGMENTS + 1):
+		var angle := base_angle - half_angle + (2.0 * half_angle * float(index) / float(ARC_SEGMENTS))
+		points.append(origin + Vector2(cos(angle), sin(angle)) * radius)
+	return points
+
+
+func magic_targets_in_radius(context: MagicRuntimeContext, center: Vector2, radius: float) -> Array[Sprite2D]:
+	var targets: Array[Sprite2D] = []
+	for slime in context.slimes:
+		if bool(context.is_slime_targetable.call(slime)) and _circle_intersects_polygon(center, radius, context.slime_body_polygon.call(slime) as PackedVector2Array):
+			targets.append(slime)
+	return targets
+
+
+func spawn_cone_effect(context: MagicRuntimeContext, origin: Vector2, direction: Vector2, radius: float, half_angle: float, palette: String) -> void:
+	var rng := context.rng
+	var player := context.player
+	var effects := context.effects_spawner
+	var color := PaletteLibrary.normal(palette)
+	for index in 12:
+		var angle := direction.angle() + rng.randf_range(-half_angle, half_angle)
+		var ray := Vector2(cos(angle), sin(angle))
+		var particle := Sprite2D.new()
+		particle.texture = context.pixel_particle_texture.call(color, 1) as Texture2D
+		particle.centered = false
+		particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		particle.z_as_relative = false
+		particle.z_index = player.z_index + 1
+		_add_child_to_runtime(context, particle, origin + ray * rng.randf_range(4.0, radius))
+		var lifetime := 0.2
+		effects.pixel_particles.append({"sprite": particle, "velocity": ray * rng.randf_range(12.0, 24.0), "timer": lifetime, "lifetime": lifetime, "gravity": 0.0})
+
+
+func spawn_radial_burst(context: MagicRuntimeContext, origin: Vector2, palette: String, count: int, speed_min: float, speed_max: float) -> void:
+	var player := context.player
+	var effects := context.effects_spawner
+	var color := PaletteLibrary.normal(palette)
+	for index in count:
+		var particle := Sprite2D.new()
+		particle.texture = context.pixel_particle_texture.call(color, 1) as Texture2D
+		particle.centered = false
+		particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		particle.z_as_relative = false
+		particle.z_index = player.z_index + 1
+		_add_child_to_runtime(context, particle, origin)
+		var angle := TAU * float(index) / float(count)
+		var lifetime := 0.24
+		effects.pixel_particles.append({"sprite": particle, "velocity": Vector2(cos(angle), sin(angle)) * context.rng.randf_range(speed_min, speed_max), "timer": lifetime, "lifetime": lifetime, "gravity": 0.0})
+
+
+func spawn_sky_strike(context: MagicRuntimeContext, world_position: Vector2, palette: String) -> void:
+	var player := context.player
+	var effects := context.effects_spawner
+	var rng := context.rng
+	var color := PaletteLibrary.normal(palette)
+	for i in 10:
+		var particle := Sprite2D.new()
+		particle.texture = context.pixel_particle_texture.call(color, 1) as Texture2D
+		particle.centered = false
+		particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		particle.z_as_relative = false
+		particle.z_index = player.z_index + 1
+		_add_child_to_runtime(context, particle, world_position + Vector2(rng.randf_range(-3.0, 3.0), -float(6 + i * 2)))
+		var lifetime := 0.16
+		effects.pixel_particles.append({"sprite": particle, "velocity": Vector2(0.0, 220.0), "timer": lifetime, "lifetime": lifetime, "gravity": 0.0})
 
 
 func _finish_magic_animation(context: MagicRuntimeContext) -> void:
@@ -391,6 +560,8 @@ func _finish_magic_animation(context: MagicRuntimeContext) -> void:
 	magic_animation_frame = 0
 	pending_magic_target = null
 	pending_magic_projectile_spawned = false
+	pending_magic_form = null
+	pending_magic_palette = "grey"
 	magic_animation_is_imbue = false
 	pending_imbue_element = ElementCatalogScript.Element.NEUTRAL
 	pending_imbue_activated = false
@@ -418,6 +589,8 @@ func cancel_magic_animation(context: MagicRuntimeContext) -> void:
 	magic_animation_frame = 0
 	pending_magic_target = null
 	pending_magic_projectile_spawned = false
+	pending_magic_form = null
+	pending_magic_palette = "grey"
 	magic_animation_is_imbue = false
 	pending_imbue_element = ElementCatalogScript.Element.NEUTRAL
 	pending_imbue_activated = false
@@ -481,14 +654,26 @@ func magic_target_point(context: MagicRuntimeContext, slime: Sprite2D) -> Vector
 	return ActorGeometry.combat_target_point(context.collision_rect.call(slime) as Rect2)
 
 
-func spawn_magic_projectile(context: MagicRuntimeContext, origin: Vector2, direction: Vector2, homing_target: Sprite2D = null, ability_mode: int = ChromaComponentScript.AbilityMode.GRAY) -> void:
-	var palette := String(context.current_player_palette_name_get.call())
+func spawn_magic_projectile(context: MagicRuntimeContext, origin: Vector2, direction: Vector2, homing_target: Sprite2D = null, ability_mode: int = ChromaComponentScript.AbilityMode.GRAY, form: Resource = null, palette_override: String = "") -> void:
+	var resolved_form := form if form != null else SpellFormCatalogScript.cast_form_for(context.player_chroma_component, ability_mode)
+	var palette := palette_override
+	if palette.is_empty():
+		var payload := ElementCatalogScript.Element.NEUTRAL
+		if ability_mode == ChromaComponentScript.AbilityMode.ELEMENTAL and context.player_chroma_component != null:
+			var current_aspect := int(context.player_chroma_component.get("current_aspect"))
+			if current_aspect == ChromaComponentScript.Aspect.NONE:
+				current_aspect = int(context.player_chroma_component.get("bound_aspect"))
+			payload = ElementCatalogScript.element_for_aspect(current_aspect)
+		palette = ElementCatalogScript.palette_key(payload)
 	var base_color := PaletteLibrary.normal(palette)
 	var accent_color := PaletteLibrary.accent(palette)
 	var player := context.player
+	var projectile_size := context.magic_projectile_size if resolved_form == null else int(resolved_form.get("projectile_size"))
+	var projectile_lifetime := context.magic_projectile_lifetime if resolved_form == null else float(resolved_form.get("projectile_lifetime"))
+	var projectile_speed := 70.0 if resolved_form == null else float(resolved_form.get("projectile_speed"))
 	var projectile := Sprite2D.new()
 	projectile.name = "MagicProjectile"
-	projectile.texture = context.pixel_particle_texture.call(base_color, context.magic_projectile_size) as Texture2D
+	projectile.texture = magic_projectile_texture(context, base_color, accent_color, projectile_size, resolved_form)
 	projectile.centered = true
 	projectile.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	projectile.z_as_relative = false
@@ -496,14 +681,14 @@ func spawn_magic_projectile(context: MagicRuntimeContext, origin: Vector2, direc
 	_add_child_to_runtime(context, projectile, origin)
 	var outline := Sprite2D.new()
 	outline.name = "MagicProjectileOutline"
-	outline.texture = magic_projectile_outline_texture(context, base_color, accent_color)
+	outline.texture = magic_projectile_outline_texture(context, base_color, accent_color, projectile_size, resolved_form)
 	outline.centered = true
 	outline.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	outline.z_as_relative = false
 	outline.z_index = player.z_index + 1
 	_add_child_to_runtime(context, outline, origin)
-	var controller := context.magic_projectile_controller
-	controller.spawn(projectile, outline, direction, context.magic_projectile_lifetime, palette, homing_target, ability_mode)
+	var controller := context.magic_projectile_controller as MagicProjectileController
+	controller.spawn(projectile, outline, direction, projectile_lifetime, palette, homing_target, ability_mode, resolved_form, projectile_speed)
 
 
 func _add_child_to_runtime(context: MagicRuntimeContext, node: Node2D, world_position: Vector2) -> void:
@@ -552,17 +737,44 @@ func sword_beam_texture(context: MagicRuntimeContext, palette: String) -> Textur
 	return texture
 
 
-func magic_projectile_outline_texture(context: MagicRuntimeContext, base_color: Color, accent_color: Color) -> Texture2D:
+func magic_projectile_texture(context: MagicRuntimeContext, base_color: Color, accent_color: Color, size: int, form: Resource) -> Texture2D:
+	if form == null or int(form.get("projectile_shape")) != SpellFormDefinitionScript.ProjectileShape.SHARD:
+		return context.pixel_particle_texture.call(base_color, size) as Texture2D
 	var effects := context.effects_spawner
-	var key := "magic_outline:%s:%s" % [base_color.to_html(false), accent_color.to_html(false)]
+	var key := "magic_shard:%s:%s:%d" % [base_color.to_html(false), accent_color.to_html(false), size]
 	if effects.pixel_particle_texture_cache.has(key):
-		return effects.pixel_particle_texture_cache[key]
-	var size := context.magic_projectile_size + 2
+		return effects.pixel_particle_texture_cache[key] as Texture2D
 	var image := Image.create(size, size, false, Image.FORMAT_RGBA8)
 	image.fill(Color.TRANSPARENT)
+	var center := (size - 1) >> 1
 	for y in size:
 		for x in size:
-			if x == 0 or y == 0 or x == size - 1 or y == size - 1:
+			if absi(x - center) + absi(y - center) <= center:
+				image.set_pixel(x, y, accent_color if x == center and y <= center else base_color)
+	var texture := ImageTexture.create_from_image(image)
+	effects.pixel_particle_texture_cache[key] = texture
+	return texture
+
+
+func magic_projectile_outline_texture(context: MagicRuntimeContext, base_color: Color, accent_color: Color, projectile_size: int = -1, form: Resource = null) -> Texture2D:
+	var effects := context.effects_spawner
+	var size := context.magic_projectile_size if projectile_size < 0 else projectile_size
+	var shard_shape := form != null and int(form.get("projectile_shape")) == SpellFormDefinitionScript.ProjectileShape.SHARD
+	var key := "magic_outline:%s:%s:%d:%s" % [base_color.to_html(false), accent_color.to_html(false), size, "shard" if shard_shape else "orb"]
+	if effects.pixel_particle_texture_cache.has(key):
+		return effects.pixel_particle_texture_cache[key]
+	var outline_size := size + 2
+	var image := Image.create(outline_size, outline_size, false, Image.FORMAT_RGBA8)
+	image.fill(Color.TRANSPARENT)
+	var center := (outline_size - 1) >> 1
+	for y in outline_size:
+		for x in outline_size:
+			var on_outline := false
+			if shard_shape:
+				on_outline = absi(x - center) + absi(y - center) == center
+			else:
+				on_outline = x == 0 or y == 0 or x == outline_size - 1 or y == outline_size - 1
+			if on_outline:
 				image.set_pixel(x, y, accent_color)
 	var texture := ImageTexture.create_from_image(image)
 	effects.pixel_particle_texture_cache[key] = texture
@@ -584,24 +796,34 @@ func _magic_projectile_hit_target_callback(sprite: Sprite2D, is_beam: bool, cont
 	return magic_projectile_hit_target(context, sprite)
 
 
-func _resolve_magic_projectile_hit_callback(target: Sprite2D, world_position: Vector2, palette: String, ability_mode: int, is_beam: bool, context: MagicRuntimeContext) -> void:
-	resolve_magic_projectile_hit(context, target, world_position, palette, ability_mode, is_beam)
+func _resolve_magic_projectile_hit_callback(target: Sprite2D, world_position: Vector2, palette: String, ability_mode: int, is_beam: bool, form: Resource, context: MagicRuntimeContext) -> void:
+	resolve_magic_projectile_hit(context, target, world_position, palette, ability_mode, is_beam, form)
 
 
 func _spawn_magic_trail_callback(world_position: Vector2, palette: String, is_beam: bool, facing_left: bool, context: MagicRuntimeContext) -> void:
 	spawn_magic_trail(context, world_position, palette, is_beam, facing_left)
 
 
-func resolve_magic_projectile_hit(context: MagicRuntimeContext, target: Sprite2D, world_position: Vector2, palette: String, ability_mode: int = ChromaComponentScript.AbilityMode.GRAY, is_beam: bool = false) -> void:
+func resolve_magic_projectile_hit(context: MagicRuntimeContext, target: Sprite2D, world_position: Vector2, palette: String, ability_mode: int = ChromaComponentScript.AbilityMode.GRAY, is_beam: bool = false, form: Resource = null) -> void:
 	var torches := context.puzzle_torches
 	if torches.has(target):
 		context.activate_puzzle_torch.call(target, world_position, palette, false)
-	else:
-		context.magic_hit_slime.call(target, world_position, palette, ability_mode, is_beam)
+		return
+	if form != null and SpellFormCatalogScript.delivery_of(form) == SpellFormDefinitionScript.Delivery.PROJECTILE_SPLASH:
+		var victims := magic_targets_in_radius(context, world_position, float(form.get("delivery_radius")))
+		if bool(context.is_slime_targetable.call(target)) and not victims.has(target):
+			victims.append(target)
+		for victim in victims:
+			var push_direction := (magic_target_point(context, victim) - world_position).normalized()
+			magic_hit_slime(context, victim, magic_target_point(context, victim), palette, ability_mode, false, form, push_direction)
+		spawn_radial_burst(context, world_position, palette, 12, 20.0, 34.0)
+		return
+	magic_hit_slime(context, target, world_position, palette, ability_mode, is_beam, form)
 
 
 func magic_projectile_hit_target(context: MagicRuntimeContext, sprite: Sprite2D) -> Sprite2D:
-	var radius := context.magic_projectile_size * 0.5 + 2.0
+	var projectile_size := context.magic_projectile_size if sprite.texture == null else int(maxf(sprite.texture.get_size().x, sprite.texture.get_size().y))
+	var radius := float(projectile_size) * 0.5 + 2.0
 	var torches := context.puzzle_torches
 	for torch in torches:
 		if not bool(context.is_slime_targetable.call(torch)):
@@ -663,7 +885,7 @@ func magic_attack_element(palette: String, ability_mode: int) -> int:
 	return ElementCatalogScript.element_for_palette(palette)
 
 
-func magic_hit_slime(context: MagicRuntimeContext, slime: Sprite2D, world_position: Vector2, palette: String, ability_mode: int = ChromaComponentScript.AbilityMode.GRAY, is_beam: bool = false) -> void:
+func magic_hit_slime(context: MagicRuntimeContext, slime: Sprite2D, world_position: Vector2, palette: String, ability_mode: int = ChromaComponentScript.AbilityMode.GRAY, is_beam: bool = false, form: Resource = null, knockback_direction: Vector2 = Vector2.ZERO) -> void:
 	if slime == null or not is_instance_valid(slime) or not bool(context.is_slime_targetable.call(slime)):
 		return
 	var attack_element := magic_attack_element(palette, ability_mode)
@@ -671,17 +893,41 @@ func magic_hit_slime(context: MagicRuntimeContext, slime: Sprite2D, world_positi
 	var magic_base_bonus := combat_tuning.elemental_magic_bonus if ability_mode == ChromaComponentScript.AbilityMode.ELEMENTAL and combat_tuning != null else 0.0
 	var damage_result := context.player_magic_damage_result_against.call(slime, attack_element, magic_base_bonus) as CombatCalculator.DamageResult
 	var damage := 0.0 if damage_result == null or damage_result.immune else damage_result.amount
-	if is_beam and damage > 0.0:
-		damage = maxf(floorf(damage * 0.35), 1.0)
+	var damage_multiplier := float(form.get("damage_multiplier")) if form != null else (0.35 if is_beam else 1.0)
+	if damage > 0.0:
+		damage = maxf(floorf(damage * damage_multiplier), 1.0)
 	var was_critical := damage_result != null and damage_result.critical
 	var immune := damage_result != null and damage_result.immune
 	var resolved_element := damage_result.element if damage_result != null else attack_element
-	context.damage_slime_with_number.call(slime, damage, was_critical, false, resolved_element, immune, damage_result.effectiveness if damage_result != null else 0.0, not is_beam)
-	if not immune and damage > 0.0 and context.record_run_style_action.is_valid():
+	var target_health := slime.get_node_or_null("Health") as HealthComponent
+	var health_before := target_health.current_health if target_health != null else -1.0
+	context.damage_slime_with_number.call(slime, damage, was_critical, false, resolved_element, immune, damage_result.effectiveness if damage_result != null else 0.0, form != null or not is_beam)
+	var damage_dealt := damage
+	if target_health != null:
+		damage_dealt = maxf(health_before - target_health.current_health, 0.0)
+	if not immune and damage_dealt > 0.0 and context.record_run_style_action.is_valid():
 		context.record_run_style_action.call(&"magic")
-	if not immune:
-		context.knockback_slime.call(slime, MAGIC_KNOCKBACK_MULTIPLIER, false)
-	context.spawn_damage_number.call(slime, damage, was_critical, resolved_element, immune)
+	var knockback_multiplier := MAGIC_KNOCKBACK_MULTIPLIER if form == null else float(form.get("knockback_multiplier"))
+	if not immune and damage_dealt > 0.0 and knockback_multiplier > 0.0:
+		if knockback_direction.length_squared() > 0.0001:
+			context.knockback_slime.call(slime, knockback_multiplier, false, true, false, knockback_direction)
+		else:
+			context.knockback_slime.call(slime, knockback_multiplier, false)
+	context.spawn_damage_number.call(slime, damage_dealt, was_critical, resolved_element, immune)
+	if form != null and not immune and damage_dealt > 0.0:
+		var mark_duration := float(form.get("mark_duration"))
+		if (
+			mark_duration > 0.0
+			and float(form.get("mark_damage_multiplier")) > 1.0
+			and is_instance_valid(slime)
+			and bool(context.is_slime_targetable.call(slime))
+		):
+			var status := slime.get_node_or_null("Status") as StatusComponent
+			if status != null:
+				status.apply_damage_mark(mark_duration, float(form.get("mark_damage_multiplier")), ElementCatalogScript.element_for_palette(palette))
+		var lifesteal_ratio := float(form.get("lifesteal_ratio"))
+		if lifesteal_ratio > 0.0 and context.apply_player_lifesteal.is_valid():
+			context.apply_player_lifesteal.call(damage_dealt, lifesteal_ratio)
 	context.play_sound.call("magic_hit", -8.0, 1.0)
 	spawn_magic_impact(context, world_position, palette)
 

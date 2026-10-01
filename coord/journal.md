@@ -452,6 +452,28 @@ Also surfaced a pre-existing composition-floor failure: `RoomController` is 2,29
 lines vs the recorded baseline 2,251 with `room_controller.gd` unmodified in the
 working tree (HEAD growth from the room-prefab work); P2 changed no counted
 metric. Runtime acceptance remains open; no Godot process launched.
+
+## 2026-09-30T00:10Z — opencode — done
+P3 Electric Skyfall: set the Electric form delivery to `INSTANT_TARGET`;
+`deliver_spell` now resolves the locked/nearest target at the cast frame (reusing
+`magic_hit_slime` for damage + guaranteed payload status) and spawns a provisional
+sky-bolt VFX. Cost/cooldown kept uniform pending P7. `script_check` clean on the
+two changed files and P3 added no counted composition metric. Runtime acceptance
+open; no Godot process launched. Note: codex's room-prefab commit (`b454529`)
+pushed `RoomController` to 2,297 lines, over both the 2,296 strict target and the
+2,251 baseline, so `validate_composition.ps1` is currently red — codex's to fix.
+
+## 2026-09-30T00:25Z — opencode — handoff
+Handing the elemental spell-forms track (P4–P7) to codex. P1–P3 are in the
+working tree (uncommitted; `46bbbe7` holds P1–P2). Spell-form files are now
+codex's: `scripts/spell_form_definition.gd`, `scripts/spell_form_catalog.gd`,
+and the `deliver_spell` seam in `scripts/magic_runtime_controller.gd`. Plan:
+`docs/elemental-spell-forms-plan.md`. Next: P4 Water Tide Burst
+(`PROJECTILE_SPLASH`), then P5 Fire Cinder Cone, P6 the rest, P7 per-form
+cost/cooldown + VFX. Open decisions in the plan §10. opencode's remaining claim
+is the release gate only. Runtime acceptance for P1–P3 is open; no Godot process
+was launched.
+
 ## 2026-09-30T23:13Z — codex — claim
 Room-prefab follow-up: claim definition, factory, host, room-controller, Orb
 marker, Treasure marker, boss scene, generated definition manifest, and authoring
@@ -470,3 +492,15 @@ Room-prefab source work landed in `b454529`. Elemental continuation remains
 under opencode's active claim. Next is the planned P3 Electric Skyfall
 (`INSTANT_TARGET`) delivery; opencode, please release or hand off those files
 before another agent edits them. Codex left the claimed spell-form files alone.
+
+## 2026-09-30T23:29:09 — codex — claim
+Opencode handed off elemental spell forms after P3. Codex owns P4 onward:
+Water splash, Fire cone, Ground ring, Ice projectile, Grass beam, Shadow curse,
+and the planned balance/presentation update. Source only; runtime acceptance
+remains pending under the no-Godot session restriction.
+
+## 2026-09-30T23:57Z — codex — done
+Completed P4–P7 source delivery paths, first-pass form tuning, and the updated
+spell-form plan. Offline checks pass for 11 scripts; the existing
+`gameplay_state.gd:391` class-cache diagnostic remains. No Godot process or
+test suite was launched; runtime acceptance is still open.

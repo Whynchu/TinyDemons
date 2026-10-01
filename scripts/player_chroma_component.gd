@@ -105,14 +105,16 @@ func restore_neutral_chroma(value: int = chroma_pickup_value) -> bool:
 	return true
 
 
-func can_use_elemental_ability() -> bool:
-	return current_aspect != Aspect.NONE and (debug_unlimited_chroma or current_chroma >= elemental_ability_cost)
+func can_use_elemental_ability(cost: int = -1) -> bool:
+	var resolved_cost := elemental_ability_cost if cost < 0 else maxi(cost, 0)
+	return (current_aspect != Aspect.NONE or bound_aspect != Aspect.NONE) and (debug_unlimited_chroma or current_chroma >= resolved_cost)
 
 
-func spend_elemental_ability() -> bool:
-	if not can_use_elemental_ability():
+func spend_elemental_ability(cost: int = -1) -> bool:
+	var resolved_cost := elemental_ability_cost if cost < 0 else maxi(cost, 0)
+	if not can_use_elemental_ability(resolved_cost):
 		return false
-	return spend_chroma(elemental_ability_cost)
+	return spend_chroma(resolved_cost)
 
 
 func can_spend_chroma(amount: int) -> bool:
@@ -194,10 +196,10 @@ func aspect_for_flame(flame: StringName) -> Aspect:
 
 
 func ability_mode() -> AbilityMode:
+	if current_chroma >= elemental_ability_cost and (current_aspect != Aspect.NONE or bound_aspect != Aspect.NONE):
+		return AbilityMode.ELEMENTAL
 	if current_aspect == Aspect.NONE:
 		return AbilityMode.GRAY
-	if current_chroma >= elemental_ability_cost:
-		return AbilityMode.ELEMENTAL
 	if current_is_bound() and current_chroma == 0:
 		return AbilityMode.BOUND_WEAKENED
 	return AbilityMode.GRAY

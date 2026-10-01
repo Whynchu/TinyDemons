@@ -1,8 +1,9 @@
 # Tiny Demons — Elemental Spell Forms Plan
 
-Status: active plan; P1 (guaranteed spell proc) and P2 (form/payload seam) are
-implemented in source, with every form still on the projectile delivery;
-per-element deliveries (P3+) are not.
+Status: P1–P7 are implemented in source. All planned delivery types now have
+runtime paths. Balance values and visuals remain provisional until a focused
+Godot playtest. Spell forms still use the interim code registry, not M1-authored
+`.tres` definitions.
 
 Scope: the player's Triangle spell. One **form** per element plus a neutral
 stub. Binding selects the form; the current element selects the payload
@@ -18,16 +19,12 @@ Owner: `PlayerAspectAbilityComponent` (acceptance, cost, cooldown),
 (payload: element, status, palette), and the authoring pipeline for the
 `SpellFormDefinition` registry.
 
-Current code: all eight elements fire one uniform homing orb; the element only
-changes the palette, the matchup, and the resulting status proc
-(`magic_runtime_controller.gd:220`, `:473`, `:649`). **Elemental magic already
-rolls the payload status**: `magic_hit_slime` resolves through the shared
-`damage_slime_with_number`, which calls `try_apply_status` on any non-immune
-elemental hit (`magic_runtime_controller.gd:668`;
-`combat_runtime_controller.gd:113-116`). P1 has since made **spells guarantee**
-that status (melee keeps its roll). What remains missing is *behavior* — the
-delivery is identical for every element, and cost/cooldown are uniform
-(`player_chroma_component.gd:112`, `player_aspect_ability_component.gd:34`).
+Current code resolves the bound/current form before Chroma is spent and freezes
+the current aspect as the payload for the cast. The form chooses delivery,
+damage factor, cost, and cooldown; the payload chooses damage type, status, and
+palette. Gray fallback uses the neutral stub. Spell hits guarantee payload
+status while melee and the sword beam retain their chance-based proc. Shadow
+Hex also applies a separate visible damage mark.
 
 Verification: focused magic smokes (`imbue_spell_scene_smoke`,
 `chroma_projectile_scene_smoke`) plus in-editor MCP playtest per form. The
@@ -133,28 +130,29 @@ table; reconcile names when that definition is implemented.
 
 ## 4. The spells
 
-Numbers below are **initial playtest defaults**, to live in
-`resources/tuning/*.tres` and be indexed in `GAMEPLAY_TUNING.md` — never
-hardcoded.
+Numbers below are **first-pass playtest defaults**. They currently live on the
+typed definitions created by `SpellFormCatalog`; move them to M1-discovered
+`.tres` definitions when that authoring slice can own this content. These
+values have not yet been accepted through runtime playtesting.
 
 ### 4.1 Summary
 
-| Element | Form | Delivery | Chroma | Cooldown | Payload status | Role |
-| --- | --- | --- | ---: | ---: | --- | --- |
-| Neutral | Stub | `PROJECTILE` | 0 (needs ≥1) | 2.5 s | none | baseline |
-| Fire | Cinder Cone | `CONE` | 15 | 3.0 s | Burn | front crowd burst |
-| Water | Tide Burst | `PROJECTILE_SPLASH` | 10 | 2.0 s | none | ranged AoE control |
-| Electric | Skyfall | `INSTANT_TARGET` | 10 | 1.2 s | Stun | priority target, tempo |
-| Grass | Leechvine | `BEAM` | 10 | 2.5 s | none | sustain / drain |
-| Shadow | Hex | `PROJECTILE` | 12 | 2.5 s | Poison | debuff / amp |
-| Ground | Quake | `RADIAL_SELF` | 12 | 2.5 s | none | panic / crowd reset |
-| Ice | Frostbite Shard | `PROJECTILE` | 10 | 2.2 s | Slow | control / kiting |
+| Element | Form | Delivery | Chroma | Cooldown | Damage factor | Payload status | Role |
+| --- | --- | --- | ---: | ---: | ---: | --- | --- |
+| Neutral | Stub | `PROJECTILE` | 0 (needs ≥1) | 2.5 s | 1.10x | none | baseline |
+| Fire | Cinder Cone | `CONE` | 15 | 3.0 s | 1.35x | Burn | front crowd burst |
+| Water | Tide Burst | `PROJECTILE_SPLASH` | 10 | 2.0 s | 0.85x | none | ranged AoE control |
+| Electric | Skyfall | `INSTANT_TARGET` | 10 | 1.2 s | 1.15x | Stun | priority target, tempo |
+| Grass | Leechvine | `BEAM` | 10 | 2.5 s | 0.40x per tick | none | sustain / drain |
+| Shadow | Hex | `PROJECTILE` | 12 | 2.5 s | 1.10x | Poison | debuff / amp |
+| Ground | Quake | `RADIAL_SELF` | 12 | 2.5 s | 0.75x | none | panic / crowd reset |
+| Ice | Frostbite Shard | `PROJECTILE` | 10 | 2.2 s | 1.00x | Slow | control / kiting |
 
 ### 4.2 Stub — Neutral (`PROJECTILE`)
 
-Today's Triangle orb, unchanged. Homing or facing-aimed, modest damage, no
-status, Neutral damage, grey. Castable at ≥ 1 Chroma and costs nothing. This is
-the canonical form the other seven are measured against.
+Homing or facing-aimed, Neutral damage, and no status. Castable at ≥ 1 Chroma
+and costs nothing. This is the fallback below the selected elemental form's
+cost and the baseline the other forms are measured against.
 
 ### 4.3 Fire — Cinder Cone (`CONE`)
 
@@ -162,6 +160,8 @@ the canonical form the other seven are measured against.
 - **Behavior:** at the cast frame, a frontal arc (~90°, ~2.5 tiles) is sampled.
   Every enemy body polygon intersecting the arc takes damage once. No travel;
   the player is committed and vulnerable for the cast.
+- **Source defaults:** 90° arc, 40px reach, 1.35x damage, 15 Chroma, 3.0s
+  cooldown.
 - **Payload:** Fire → **Burn** on every target hit.
 - **Feel:** the highest burst and the highest cost; rewards facing and timing.
 
@@ -170,6 +170,8 @@ the canonical form the other seven are measured against.
 - **Identity:** efficiency, control, knockback, area shaping.
 - **Behavior:** travels like the orb; on impact, a radial AoE (~1.5 tiles)
   damages and knocks back everything in range.
+- **Source defaults:** 24px impact radius, 0.85x damage, 10 Chroma, 2.0s
+  cooldown.
 - **Payload:** Water → no status (ratified status-free).
 - **Feel:** the safe, efficient ranged AoE; repositions crowds.
 
@@ -177,17 +179,23 @@ the canonical form the other seven are measured against.
 
 - **Identity:** stun, chaining, targeting, tempo.
 - **Behavior:** no projectile. Instantly resolves against the locked target (or
-  nearest) with a bolt from above; applies **Stun**. The shortest cooldown in
-  the set.
+  nearest) with a bolt from above; applies **Stun**. The cast requires a valid
+  target. This has the shortest cooldown in the set.
 - **Synergy:** lands on the FOCUS/lock target, so the skill layer and the
   element reinforce each other.
 - **Deferred:** chaining to further targets is out of scope here (see §9).
+- **Implemented in source (P3):** resolves the locked/nearest target at the cast
+  frame and applies the payload status. Its 10 Chroma / 1.2s cooldown and
+  1.15x damage are the current source defaults. Sky-bolt VFX remains provisional.
 
 ### 4.6 Grass — Leechvine (`BEAM`)
 
 - **Identity:** sustain, drain, regeneration, restraint.
 - **Behavior:** a short tether that ticks damage into the target and returns HP
-  to the player while connected; ends on target death, range break, or expiry.
+  to the player while connected; only accepts a target within range, then ends
+  on target death, range break, or expiry.
+- **Source defaults:** 64px range, 1.8s duration, 0.45s tick interval, 0.40x
+  damage per tick, and healing equal to 40% of damage dealt; no knockback.
 - **Payload:** Grass → no status.
 - **Feel:** lower burst, high sustain; the survival form.
 
@@ -196,6 +204,8 @@ the canonical form the other seven are measured against.
 - **Identity:** deception, curse, phase, lifesteal.
 - **Behavior:** a curse projectile that applies **Poison** and marks the target
   (amplified damage taken for a short window).
+- **Source defaults:** the mark increases later damage by 25% for 3s; 12 Chroma,
+  2.5s cooldown, 1.10x projectile damage.
 - **Payload:** Shadow → Poison.
 - **Deferred:** a phase/blink movement component is out of scope for this pass.
 
@@ -204,6 +214,8 @@ the canonical form the other seven are measured against.
 - **Identity:** defense, armor, stagger, force.
 - **Behavior:** a point-blank ring that staggers and knocks back everything
   around the player. Optional: briefly raise a cover block.
+- **Source defaults:** 24px radius, 0.75x damage, 0.70x normal magic knockback,
+  12 Chroma, 2.5s cooldown.
 - **Payload:** Ground → no status.
 - **Feel:** the panic button; turns being surrounded into an advantage.
 
@@ -212,6 +224,8 @@ the canonical form the other seven are measured against.
 - **Identity:** slow, freeze, preservation, momentum.
 - **Behavior:** a shard that applies **Slow**; repeated application stacks
   toward longer control.
+- **Source defaults:** five-pixel diamond projectile at 90px/s, 1.00x damage,
+  10 Chroma, 2.2s cooldown.
 - **Payload:** Ice → Slow.
 - **Deferred:** hard "freeze" (full action lock at max stacks) is an optional
   escalation, not part of the first pass.
@@ -222,15 +236,16 @@ the canonical form the other seven are measured against.
   Fire **Burns**, not Wets. This is what makes the cross-product mean anything.
 - Status is resolved by `ElementCatalog.status_effect_for_element`
   (`element_catalog.gd:45`). Fire, Shadow, Electric, and Ice resolve a status;
-  **Water and Ground are deliberately status-free** and return null — consistent
-  with the ratified set in the ability/status authority and its non-goals.
-- **Magic already reaches the status path.** `magic_hit_slime` resolves through
-  `damage_slime_with_number`, which proc-gates status on any non-immune
-  elemental hit (`combat_runtime_controller.gd:113-116`). No wiring is needed for
-  the single-target orb; the work is to keep that path intact as multi-hit
-  deliveries land, so cone, splash, ring, and beam apply the status per target
-  they hit.
-- **Spells guarantee their payload status.** Melee keeps its chance-based proc
+  Water and Ground are deliberately status-free in the ratified ability/status
+  authority. Grass currently has no status definition in the catalog, though
+  that authority does not explicitly classify Grass.
+- **Magic uses the shared status path.** `magic_hit_slime` resolves through
+  `damage_slime_with_number` and `try_apply_status`; the spell supplies the
+  guaranteed flag while melee and the sword beam retain their proc chance.
+  Every delivery preserves that behavior when its payload element has an
+  authored status. Water, Grass, and Ground currently have none.
+- **Spells guarantee their payload status.** Melee and the sword beam keep their
+  chance-based proc
   (0.2, 0.1 for Stun); the spell path applies its status on every successful,
   non-immune hit, so the element is always perceivable. Implemented by
   threading a guaranteed flag from `magic_hit_slime` through
@@ -254,15 +269,22 @@ delivery           PROJECTILE | PROJECTILE_SPLASH | CONE | INSTANT_TARGET | BEAM
 chroma_cost        int
 cooldown           float (seconds)
 damage_multiplier  float (replaces the GRAY/ELEMENTAL constants)
-delivery_params    speed, lifetime, size, arc_angle, radius, beam_length, tick_interval
-impact_style       presentation preset key
-cast_sfx / hit_sfx audio keys
+projectile_shape   ORB | SHARD
+projectile_size / projectile_speed / projectile_lifetime
+delivery_radius / delivery_angle_degrees / delivery_range / delivery_duration
+tick_interval / lifesteal_ratio / knockback_multiplier
+mark_duration / mark_damage_multiplier
 ```
 
-Registry: `resources/definitions/spell_forms.tres` (or one `.tres` per form),
-discovered through the M1 catalog/manifest pipeline the same way enemy
-definitions are. Until M1 closes, register through the existing
-`ElementCatalogData`-style single registry to avoid a parallel table.
+These are the typed fields used by the current source registry. Authored VFX and
+audio keys such as `impact_style`, `cast_sfx`, and `hit_sfx` remain future M1
+definition fields; runtime presentation currently uses the existing effect and
+sound owners.
+
+Registry target: `resources/definitions/spell_forms.tres` (or one `.tres` per
+form), discovered through the M1 catalog/manifest pipeline the same way enemy
+definitions are. Current source uses the typed `SpellFormCatalog` code registry;
+do not edit duplicate tuning constants elsewhere.
 
 **Resolution (single decision point):**
 
@@ -283,9 +305,9 @@ deliver(form.delivery, payload)
 | Binding / current | `player_chroma_component.gd` (`ability_mode`, `current_aspect`) |
 | Cast timeline + delivery | `magic_runtime_controller.gd` (`execute_current_aspect_ability`, `_spawn_pending_magic_projectile`) |
 | Context plumbing | `magic_runtime_context.gd` (form/payload fields + callables) |
-| Projectile records / AoE | `magic_projectile_controller.gd` (add an optional on-hit radius to the record) |
+| Projectile records / AoE | `magic_projectile_controller.gd` (carry the selected typed form; delivery reads its radius and projectile values) |
 | Payload data | `element_catalog.gd` / `element_catalog.tres` (element, status, palette) |
-| Form data | new `SpellFormDefinition` + registry + validator |
+| Form data | `SpellFormDefinition` + interim `SpellFormCatalog`; move to M1 discovery/validation when definitions become authored resources |
 
 ## 7. Build phases
 
@@ -304,15 +326,20 @@ Sequenced so the balance change (status on magic) and the structural change
    (`spell_form_definition.gd`, `spell_form_catalog.gd`); the registry
    instantiates the forms in code as an interim until M1 carries them as `.tres`.
 3. **P3 — Electric Skyfall** (`INSTANT_TARGET`). Smallest genuinely new
-   delivery; proves the no-projectile branch.
+   delivery; proves the no-projectile branch. **Implemented in source**
+   (provisional bolt VFX).
 4. **P4 — Water Tide Burst** (`PROJECTILE_SPLASH`). Proves on-hit AoE on the
-   projectile record.
+   projectile record. **Implemented in source**; radius and radial knockback
+   read the typed form definition.
 5. **P5 — Fire Cinder Cone** (`CONE`). Proves the no-projectile area query and
-   per-form VFX.
-6. **P6 — Ground Quake + Ice Shard + Grass Leechvine + Shadow Hex.** Remaining
-   deliveries; each is now mechanical.
-7. **P7 — Balance and readability pass.** Tune costs, cooldowns, and form VFX;
-   verify each form reads at 240×160 with a full crowd and HUD.
+   per-form VFX. **Implemented in source**; actor polygons are checked against a
+   fan sector at the cast frame.
+6. **P6 — Ground Quake + Ice Shard + Grass Leechvine + Shadow Hex.**
+   **Implemented in source** with radial, shard, tether, and curse-mark behavior.
+7. **P7 — Balance and readability pass.** First-pass costs, cooldowns, damage
+   factors, and pixel effects are implemented and indexed. **Source pass
+   complete;** 240×160 crowd readability and balance ratification still require
+   a runtime playtest.
 
 ## 8. Verification
 
@@ -322,7 +349,8 @@ Sequenced so the balance change (status on magic) and the structural change
 - Selection test: bound vs unbound × chroma bands (0 / 1–cost−1 / ≥cost) picks
   the form and payload in §1.2.
 - Status-on-magic test: each payload element applies its status on every hit
-  (guaranteed); Water and Ground apply nothing; DoT ticks do not re-proc.
+  (guaranteed); Water, Grass, and Ground apply nothing; DoT ticks do not
+  re-proc.
 - Guardrail: a grep of the resolver finds no `if element ==`; only `delivery`
   and data lookups. New definition surface stays typed (composition score holds).
 - In-editor MCP playtest per form. Do not run the smoke suite from an MCP
@@ -341,13 +369,17 @@ Sequenced so the balance change (status on magic) and the structural change
 
 ## 10. Open decisions
 
-- **O** Exact per-form cost/cooldown numbers (defaults in §4.1 are proposals).
-- **O** Bound player with `current_aspect == NONE`: confirm the payload defaults
-  to the bound element (recommended) rather than Neutral.
-- **O** Whether the guaranteed spell proc should apply full stacks every hit, or
-  one stack per hit up to the cap (current status stacking already caps).
-- **O** Form VFX budget at 240×160 — verify the six deliveries stay readable
-  under a full crowd.
+- **O** Ratify or tune the per-form costs, cooldowns, and damage factors in §4.1
+  after playtesting; the listed values are provisional source defaults.
+- **O** Confirm Grass remains status-free or define an ailment for it. The
+  current catalog has no Grass status; the status authority names Fire, Shadow,
+  Electric, and Ice as status-bearing, and Water/Ground as status-free.
+- **Resolved in source:** when a bound player has `current_aspect == NONE`, use
+  the bound element for both the selected form and payload.
+- **Resolved in source:** each guaranteed successful spell hit adds one status
+  stack, up to that status definition's cap.
+- **O** Form VFX budget at 240×160 — verify all seven deliveries stay readable
+  under a full crowd and HUD.
 
 ## 11. References
 
@@ -356,7 +388,7 @@ Sequenced so the balance change (status on magic) and the structural change
 - [`elemental-ability-and-status-system.md`](elemental-ability-and-status-system.md)
   — shared status pipeline, `ElementalAbilityDefinition`, no-per-element-branch
   rule, status scope (Fire Burn / Shadow Poison / Electric stun / Ice slow;
-  Water and Ground status-free).
+  Water and Ground status-free; Grass currently has no catalog status).
 - [`elemental-status-implementation-plan.md`](elemental-status-implementation-plan.md)
   — status runtime and presentation.
 - [`combat-and-dungeon-design-principles.md`](combat-and-dungeon-design-principles.md)

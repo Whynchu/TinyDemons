@@ -33,6 +33,20 @@ func apply_effect(definition: StatusEffectDefinition, source_element: int) -> bo
 	return true
 
 
+func apply_damage_mark(duration: float, damage_multiplier: float, source_element: int) -> bool:
+	var mark := StatusEffectDefinition.new()
+	mark.id = &"hex_mark"
+	mark.element = source_element
+	mark.family = StatusEffectDefinition.Family.DAMAGE_AMPLIFICATION
+	mark.duration = maxf(duration, 0.05)
+	mark.maximum_stacks = 1
+	mark.magnitude_per_stack = maxf(damage_multiplier - 1.0, 0.0)
+	mark.badge_glyph = "X"
+	mark.particle_style = &"poison_mote"
+	mark.particle_interval = 0.18
+	return apply_effect(mark, source_element)
+
+
 func advance(delta: float) -> Array[StatusTickResult]:
 	var results: Array[StatusTickResult] = []
 	var step := maxf(delta, 0.0)
@@ -140,4 +154,16 @@ func movement_speed_multiplier() -> float:
 			continue
 		var slow_fraction := definition.magnitude_per_stack * float(int(record.get("stacks", 1)))
 		result = minf(result, maxf(definition.movement_multiplier_floor, 1.0 - slow_fraction))
+	return result
+
+
+func damage_taken_multiplier() -> float:
+	var result := 1.0
+	for record_value in _active.values():
+		var record := record_value as Dictionary
+		var definition := record.get("definition") as StatusEffectDefinition
+		if definition == null or definition.family != StatusEffectDefinition.Family.DAMAGE_AMPLIFICATION:
+			continue
+		var stacks := maxi(int(record.get("stacks", 1)), 1)
+		result = maxf(result, 1.0 + definition.magnitude_per_stack * float(stacks))
 	return result

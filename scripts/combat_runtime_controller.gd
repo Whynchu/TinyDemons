@@ -97,6 +97,10 @@ func damage_slime_with_number(root: Object, slime: Sprite2D, amount: float, was_
 		# A room locks only after a real player hit. Empty swings and passive
 		# enemy aggro deliberately leave the arrival entrance available.
 		root.call("_mark_current_room_engaged")
+	if not immune:
+		var status := slime.get_node_or_null("Status") as StatusComponent
+		if status != null:
+			amount *= status.damage_taken_multiplier()
 	# Combo is a damage-confirmed streak, not a swing/projectile-contact
 	# counter. Immune hits and zero-damage packets must not refresh it.
 	if not immune and amount > 0.0:
@@ -751,6 +755,9 @@ func _apply_status_damage_tick(root: GameplayState, actor: Sprite2D, result: Sta
 	if health == null or health.current_health <= 0.0:
 		return
 	var amount := maxf(result.amount, 0.0)
+	var status := actor.get_node_or_null("Status") as StatusComponent
+	if status != null:
+		amount *= status.damage_taken_multiplier()
 	if amount <= 0.0:
 		return
 	if not is_player and not _enemy_status_tick_may_kill(root, actor):
@@ -852,12 +859,12 @@ func spawn_player_healing_number(root: Object, amount: float, color: Color) -> v
 	spawn_player_number(root, "+%d" % maxi(value, 0), value, color, true, "")
 
 
-func apply_player_lifesteal(root: Object, damage: float) -> void:
+func apply_player_lifesteal(root: Object, damage: float, heal_ratio: float = -1.0) -> void:
 	var transmutation := root.get("equipment_transmutation_component") as EquipmentTransmutationComponent
 	var health := root.get("player_health_component") as HealthComponent
-	if transmutation == null or health == null:
+	if health == null or (heal_ratio < 0.0 and transmutation == null):
 		return
-	var heal := transmutation.life_steal_amount(damage)
+	var heal := transmutation.life_steal_amount(damage) if heal_ratio < 0.0 else maxf(damage, 0.0) * clampf(heal_ratio, 0.0, 1.0)
 	if heal <= 0.0:
 		return
 	var applied := health.apply_healing(heal)

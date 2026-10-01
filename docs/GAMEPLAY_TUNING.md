@@ -134,6 +134,31 @@ runtime playtest yet. The owner checks are registered but unrun. HUD marker
 lifetime and aura transforms now have source guards; particle and outline
 readability remain open for runtime acceptance.
 
+## Triangle spell form defaults
+
+`SpellFormCatalog` is the current source of these typed first-pass values while
+the spell-form authoring slice awaits M1 resource discovery. Form selects the
+delivery, damage factor, cost, cooldown, and delivery geometry. Current aspect
+selects the payload element and its status/palette. Under the form's Chroma cost
+the cast falls back to the neutral stub; zero Chroma blocks all casts. Values
+are provisional until the player confirms balance and 240×160 readability.
+
+| Form | Delivery | Cost / cooldown | Damage factor | Delivery values |
+| --- | --- | --- | ---: | --- |
+| Neutral Stub | Homing projectile | 0 / 2.5s | 1.10x | At least 1 Chroma required to cast |
+| Fire Cinder Cone | 90° cone | 15 / 3.0s | 1.35x | 40px reach; 0.40x magic knockback |
+| Water Tide Burst | Splash projectile | 10 / 2.0s | 0.85x | 24px impact radius; 0.65x magic knockback |
+| Electric Skyfall | Instant target strike | 10 / 1.2s | 1.15x | Locked/nearest target |
+| Grass Leechvine | Target tether | 10 / 2.5s | 0.40x per tick | 64px range; 1.8s; 0.45s tick; heals 40% of dealt damage |
+| Shadow Hex | Curse projectile | 12 / 2.5s | 1.10x | Mark increases damage taken by 25% for 3s |
+| Ground Quake | Self-centered ring | 12 / 2.5s | 0.75x | 24px radius; 0.70x magic knockback |
+| Ice Frostbite Shard | Shard projectile | 10 / 2.2s | 1.00x | 5px diamond; 90px/s |
+
+Every form's elemental payload uses the current element. Any status configured
+for that element is guaranteed on each successful spell hit; Neutral, Water,
+Grass, and Ground payloads have no status. Melee and the sword beam retain
+their chance-based status rolls. DoT ticks do not reapply status.
+
 ## Elemental slime definitions
 
 The planned shared boss behavior for Normal and all seven elemental variants is
@@ -266,8 +291,8 @@ These affect dungeon generation and room behavior and are `const` in
 | R6+ route risk | Risk shortcuts use a stronger local encounter tier and improved reward tier; vault branches use elite encounters and enhanced guaranteed gear | `room_controller.gd`, `run_flow_controller.gd`, `gameplay.gd` |
 | Collision sizes | 9x4 actor, 3.6 radius | `gameplay_state.gd` |
 | Vertical movement scale | 0.5 | `gameplay_state.gd:VERTICAL_MOVEMENT_SCALE` |
-| Triangle spell cooldown | 2.0s elemental / 2.5s grey | `gameplay_state.gd:MAGIC_COOLDOWN`, `gameplay_state.gd:GREY_MAGIC_COOLDOWN` |
-| Triangle knockback | `0.25x` normal attack knockback | `magic_runtime_controller.gd:MAGIC_KNOCKBACK_MULTIPLIER` |
+| Triangle spell cooldown | Per-form: 1.2–3.0s elemental; 2.5s neutral stub | `spell_form_catalog.gd`, `player_aspect_ability_component.gd` |
+| Triangle knockback | 0.25x neutral default; Water/Fire/Ground override by form; Leechvine does not knock back | `spell_form_catalog.gd`, `magic_runtime_controller.gd` |
 | Enemy Soul drop | 1 Soul per defeated ordinary enemy; scaled bosses drop 5 Souls on Run 1 and +2 Souls per completed run, with +1 per encounter-scale step above the authored 3.0 boss scale | `combat_runtime_controller.gd:soul_drop_value_for_slime` |
 | Soul pickup | Authored 5x5 `Souls.png` sprite with `#A73BA7` soul-purple body (matching the Square-button icon) and a lighter highlight outline derived from that base; 10.0 collection distance, 0.38s launch arc | `soul_visuals.gd`, `pickup_runtime_controller.gd`, `gameplay_state.gd` |
 | Fire use / Swap | Full HP, full active Chroma, and earned element attunement for 5 Souls; first starter use is also paid | `gameplay_state.gd:FLAME_SWAP_SOUL_COST` |
@@ -278,7 +303,7 @@ These affect dungeon generation and room behavior and are `const` in
 | Permanent Binding | 50 Souls at the Cloaked Demon for every new bound element; same-element bind is free | `gameplay_state.gd:ELEMENT_BIND_SOUL_COST` |
 | Hub flame identity | The selected starter flame remains the hub fire until an explicit permanent Bind; temporary run attunements/fusions do not replace it | `player_profile.gd:hub_flame`, `run_flow_controller.gd`, `room_controller.gd` |
 | Chroma identity at zero | Bound elements remain bound and use the weakened/desaturated mode at zero; unbound players resolve to Gray | `player_chroma_component.gd` |
-| Magic requires Chroma | At zero Chroma the player cannot cast magic at all (gray triangle and bound-weakened spells are blocked); a non-zero bar is required, but only the elemental Triangle spends the `elemental_ability_cost` | `player_aspect_ability_component.gd:can_activate` |
+| Magic requires Chroma | At zero Chroma no Triangle cast is allowed. Elemental form costs vary from 10–15; below the selected form's cost, any nonzero bar uses the free neutral stub | `player_aspect_ability_component.gd`, `spell_form_catalog.gd` |
 | Neutral Chroma storage | Gray players can collect neutral Chroma without acquiring an elemental identity; pickups stop collecting when the bar is full | `player_chroma_component.gd`, `pickup_runtime_controller.gd` |
 | Adaptive Chroma pickup color | Pickup tint follows the player's current effective element; Gray uses the neutral accent | `player_chroma_component.gd:chroma_palette_name`, `pickup_runtime_controller.gd` |
 | Flame map travel | The expanded map is available in gameplay; travel may target the Hub or a visited flame, and may begin only from the Hub or a flame room | `dungeon_minimap_controller.gd`, `dungeon_map_controller.gd`, `room_controller.gd` |

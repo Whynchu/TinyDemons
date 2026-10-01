@@ -2,10 +2,19 @@
 
 _Only codex writes this file._
 
-**Focus:** Room-prefab identity, marker contracts, and Treasure/Orb routing
+**Focus:** Elemental spell forms P4–P7 source complete; runtime acceptance pending
 **Updated:** 2026-09-30
 
 ## In flight
+
+The elemental spell-form track was handed off from opencode after P3. P4–P7
+source implementation is complete: each form has its delivery, first-pass
+cost/cooldown and damage values, and its planned status, knockback, tether,
+lifesteal, or mark behavior. Runtime balance/readability acceptance remains
+open. Whether Grass should remain status-free is unratified; the catalog has no
+Grass status definition, but the status authority does not explicitly classify
+Grass as status-free. Do not launch Godot or the test suite in this session; use
+static checks only.
 
 The user approved the first generic room-prefab runtime slice. A typed prefab
 definition, factory, host, and mount result are connected to initial room setup,
@@ -102,12 +111,8 @@ changes. Do not stage them with M1.
 
 ## Handoff / next
 
-Next, get Godot runtime access and prove role routing, marker placement, socket
-traversal, return/re-entry state, active-run migration, boss camera and
-walkability, and a web export. The room authoring workbench and dynamic prefab
-registry are still future work. Elemental spell-form files remain under the
-active opencode claim; continue them after that claim is released. No release
-bump or push was requested. Do not launch another Godot process or test suite in
+No release bump or push was requested. Keep room-prefab acceptance open for a
+future runtime session. Do not launch another Godot process or test suite in
 this session.
 
 ## Current work
@@ -136,6 +141,15 @@ the imbue-like upward ember trail; Poison, Stun, and Slow use distinct styles.
 Focused offline MCP script diagnostics pass. Visual alignment, readability,
 death/cloak behavior, and the uncaptured magenta artifact remain open for a
 color playtest. Do not launch a Godot process in this session.
+
+## 2026-09-30 — Elemental spell-form continuation
+
+Opencode handed off the spell-form paths after implementing P3 Electric Skyfall.
+P1–P3 runtime acceptance remains open. Codex is implementing P4 Water Tide
+Burst, P5 Fire Cinder Cone, P6 Ground Quake / Ice Shard / Grass Leechvine /
+Shadow Hex, and P7 tuning/presentation updates. No Godot process or tests may
+run in this session; update the plan only to reflect source evidence and leave
+runtime acceptance pending.
 
 Version metadata is aligned at 0.3.20 for the in-game title, web README, and
 release references. The web Compatibility renderer override is retained. The
@@ -223,3 +237,17 @@ offline MCP parser's local class cache does not contain the new global script
 classes, so it cannot provide a clean compile result without refreshing that
 cache. Runtime, traversal, recovery, and exported-build acceptance remain
 open; no Godot process or test suite was launched.
+
+## 2026-09-30 — Elemental spell forms P4–P7
+
+Completed the typed delivery paths for Water splash, Fire cone, Electric
+Skyfall, Grass Leechvine, Shadow Hex, Ground Quake, and the Ice shard, with the
+neutral stub retained as the low-Chroma fallback. Dynamic form costs and
+cooldowns now use the selected definition; target-only forms reject casts when
+their target is missing or outside Leechvine range. Hex marks only living
+targets, and Leechvine removes its tether on a killing tick. The spell plan and
+tuning index record the provisional source defaults and keep M1-authored
+definitions plus runtime tuning/readability acceptance open. Offline diagnostics
+pass for 11 changed scripts; `gameplay_state.gd:391` retains the previously
+noted class-cache diagnostic. `git diff --check` passes. No Godot process or
+test suite was launched.

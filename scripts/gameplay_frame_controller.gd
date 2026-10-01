@@ -241,6 +241,7 @@ func magic_context(root: GameplayState) -> MagicRuntimeContext:
 	context.damage_slime_with_number = Callable(root, "_damage_slime_with_number")
 	context.knockback_slime = Callable(root, "_knockback_slime")
 	context.magic_hit_slime = Callable(root, "_magic_hit_slime")
+	context.apply_player_lifesteal = Callable(root, "_apply_player_lifesteal")
 	context.activate_puzzle_torch = Callable(root, "_activate_puzzle_torch")
 	context.spawn_damage_number = Callable(root, "_spawn_damage_number")
 	context.play_sound = Callable(root, "_play_sound")
