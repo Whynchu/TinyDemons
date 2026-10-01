@@ -21,10 +21,12 @@ Owner: `PlayerAspectAbilityComponent` (acceptance, cost, cooldown),
 
 Current code resolves the bound/current form before Chroma is spent and freezes
 the current aspect as the payload for the cast. The form chooses delivery,
-damage factor, cost, and cooldown; the payload chooses damage type, status, and
-palette. Gray fallback uses the neutral stub. Spell hits guarantee payload
-status while melee and the sword beam retain their chance-based proc. Shadow
-Hex also applies a separate visible damage mark.
+damage factor, cost, and cooldown; the payload chooses damage type, status,
+palette, and impact particles. A low Chroma bar no longer swaps an elemental
+form to the neutral stub: it rejects the cast until the selected form's cost is
+available. Paying exactly that cost is allowed and can reduce Chroma to zero.
+Spell hits guarantee payload status while melee and the sword beam retain their
+chance-based proc. Shadow Hex also applies a separate visible damage mark.
 
 Verification: focused magic smokes (`imbue_spell_scene_smoke`,
 `chroma_projectile_scene_smoke`) plus in-editor MCP playtest per form. The
@@ -61,33 +63,34 @@ small authored set — "massively tiny" delivered rather than described.
 
 The neutral stub is **exactly today's Triangle orb**. It is not discarded; it
 becomes the identity-less baseline. It deals Neutral damage, applies no status,
-and looks the same for every player. It is the fallback for an unbound player
-with no affordable element, and the spell of a neutral player.
+and looks the same for every player. It is the spell of a player with no
+elemental identity. Low Chroma does not select this form for an elemental
+player.
 
 ### 1.2 Chroma / binding resolution rules
 
-No free cast at zero. The stub already requires at least one Chroma and spends
-none (`player_aspect_ability_component.gd:47`; GRAY never spends in
-`try_activate`). That gate is preserved.
+The neutral stub still requires at least one Chroma and spends none. Elemental
+casts require their selected form's full cost; an exact-cost cast is accepted
+and can empty the bar. Below cost, the cast is rejected without changing the
+selected form or spending Chroma.
 
-**Nothing casts at zero Chroma, bound or unbound.** There is no zero-Chroma
-spell of any kind.
+Without debug-unlimited Chroma, no paid elemental cast starts at zero. The
+neutral stub also requires a positive bar; it never consumes Chroma.
 
-| Binding | Chroma | Mode | Form | Payload |
+| Binding / identity | Chroma | Form selected | Triangle result | Payload |
 | --- | --- | --- | --- | --- |
-| Unbound, neutral | ≥ 1 | GRAY | Stub | Neutral, no status |
-| Unbound, neutral | 0 | — | no cast | — |
-| Unbound, elemental | ≥ cost | ELEMENTAL | Current element's form | Current element |
-| Unbound, elemental | 1–cost−1 | GRAY | Stub | Neutral, no status |
-| Unbound, elemental | 0 | — | no cast | — |
-| Bound | ≥ cost | ELEMENTAL | Bound form | Current element |
-| Bound | 1–cost−1 | GRAY | Stub | Neutral, no status |
-| Bound | 0 | — | no cast | — |
+| Unbound, neutral | ≥ 1 | Stub | Casts for free | Neutral, no status |
+| Unbound, neutral | 0 | Stub | Rejected | — |
+| Unbound, elemental | ≥ cost | Current element's form | Casts; exact cost may empty the bar | Current element |
+| Unbound, elemental | 1–cost−1 | Current element's form | Rejected; no substitute spell and no spend | Current element |
+| Bound | ≥ cost | Bound form | Casts; exact cost may empty the bar | Current element, or bound element if current is NONE |
+| Bound | 1–cost−1 or 0 | Bound form | Rejected without debug-unlimited Chroma; no substitute spell and no spend | Current element, or bound element if current is NONE |
 
-Binding's payoff is the **form**, not a zero-Chroma cushion: a bound demon uses
-its own form whenever it can cast at all, and an unbound demon's form follows the
-element it currently holds. Below the elemental cost, everyone falls back to the
-neutral stub; at zero, no one casts.
+Binding's payoff is the **form**: a bound demon keeps its own form whenever it
+has an elemental identity, and an unbound demon's form follows the element it
+currently holds. The form stays selected at low Chroma, but Triangle does
+nothing until the full cost is available. The neutral stub is reserved for a
+player with no elemental identity.
 
 `BOUND_WEAKENED` is no longer a cast state. It remains only as a presentation
 state (the bound element desaturates at zero Chroma) and never produces a spell.
@@ -116,9 +119,9 @@ switch on `delivery`, but never on element id.
 | Delivery | Behavior | Generic pieces it needs |
 | --- | --- | --- |
 | `PROJECTILE` | Travels; optional homing; single-target on contact | Existing projectile record |
-| `PROJECTILE_SPLASH` | As `PROJECTILE`, plus a radial AoE on impact | On-hit AoE query + radius on the record |
-| `CONE` | Instant frontal sector sampled at the cast frame; hits all bodies in the arc | Cone/polygon query, arc VFX |
-| `INSTANT_TARGET` | No travel; resolves against the locked/nearest target at the cast frame | Target resolve + sky/ground VFX |
+| `PROJECTILE_SPLASH` | Travels, directly hits its first enemy, then splashes nearby targets for reduced damage | On-hit AoE query + radius and secondary-damage ratio |
+| `CONE` | Fire's frontal area sweep is sampled at the cast frame; hits all bodies in the arc | Cone/polygon query, arc VFX |
+| `INSTANT_TARGET` | Electric only: no travel; resolves against the locked/nearest target at the cast frame | Target resolve + sky/ground VFX |
 | `BEAM` | Short-lived tether; ticks damage while connected; feeds the player | Beam geometry + tick + link VFX |
 | `RADIAL_SELF` | Point-blank ring at the player; hits all bodies in radius | Radial query + ring VFX |
 
@@ -141,18 +144,18 @@ values have not yet been accepted through runtime playtesting.
 | --- | --- | --- | ---: | ---: | ---: | --- | --- |
 | Neutral | Stub | `PROJECTILE` | 0 (needs ≥1) | 2.5 s | 1.10x | none | baseline |
 | Fire | Cinder Cone | `CONE` | 15 | 3.0 s | 1.35x | Burn | front crowd burst |
-| Water | Tide Burst | `PROJECTILE_SPLASH` | 10 | 2.0 s | 0.85x | none | ranged AoE control |
+| Water | Tide Burst | `PROJECTILE_SPLASH` | 10 | 2.0 s | 0.85x direct | none | traveling ranged AoE; secondary hits deal 50% of direct spell damage |
 | Electric | Skyfall | `INSTANT_TARGET` | 10 | 1.2 s | 1.15x | Stun | priority target, tempo |
 | Grass | Leechvine | `BEAM` | 10 | 2.5 s | 0.40x per tick | none | sustain / drain |
-| Shadow | Hex | `PROJECTILE` | 12 | 2.5 s | 1.10x | Poison | debuff / amp |
+| Shadow | Hex | `PROJECTILE` | 12 | 2.5 s | 1.10x | Poison | hex-sigil curse projectile; debuff / amp |
 | Ground | Quake | `RADIAL_SELF` | 12 | 2.5 s | 0.75x | none | panic / crowd reset |
 | Ice | Frostbite Shard | `PROJECTILE` | 10 | 2.2 s | 1.00x | Slow | control / kiting |
 
 ### 4.2 Stub — Neutral (`PROJECTILE`)
 
 Homing or facing-aimed, Neutral damage, and no status. Castable at ≥ 1 Chroma
-and costs nothing. This is the fallback below the selected elemental form's
-cost and the baseline the other forms are measured against.
+and costs nothing. This is only selected when the player has no elemental
+identity; it does not replace an elemental form when Chroma is low.
 
 ### 4.3 Fire — Cinder Cone (`CONE`)
 
@@ -170,8 +173,10 @@ cost and the baseline the other forms are measured against.
 - **Identity:** efficiency, control, knockback, area shaping.
 - **Behavior:** travels like the orb; on impact, a radial AoE (~1.5 tiles)
   damages and knocks back everything in range.
-- **Source defaults:** 24px impact radius, 0.85x damage, 10 Chroma, 2.0s
-  cooldown.
+- **Source defaults:** 24px impact radius, 0.85x direct damage, 10 Chroma, 2.0s
+  cooldown; droplet projectile at 54px/s for up to 1.25s, with a 0.16s minimum
+  travel before collision. The direct target takes full form damage; enemies
+  caught only in the splash take 50% of that damage.
 - **Payload:** Water → no status (ratified status-free).
 - **Feel:** the safe, efficient ranged AoE; repositions crowds.
 
@@ -205,7 +210,8 @@ cost and the baseline the other forms are measured against.
 - **Behavior:** a curse projectile that applies **Poison** and marks the target
   (amplified damage taken for a short window).
 - **Source defaults:** the mark increases later damage by 25% for 3s; 12 Chroma,
-  2.5s cooldown, 1.10x projectile damage.
+  2.5s cooldown, 1.10x projectile damage, and a 5px pixel-art hex sigil for
+  the curse projectile.
 - **Payload:** Shadow → Poison.
 - **Deferred:** a phase/blink movement component is out of scope for this pass.
 
@@ -253,7 +259,10 @@ cost and the baseline the other forms are measured against.
   Status tick damage still never re-procs.
 - Color and particles come from the payload element via
   `ElementCatalog.palette_key` and the status's `particle_style`; the form
-  supplies the delivery VFX.
+  supplies the delivery VFX. Magic impacts use distinct pixel shapes and
+  motion: Fire embers rise, Water droplets arc and fall, Electric sparks burst,
+  Grass leaves lift, Shadow motes drift, Ground chips fall, and Ice crystals
+  burst outward.
 - **Reactions are not in this plan.** Water↔Fire extinguish, Wet-conduct, etc.
   belong to the deferred environmental/object system
   (`elemental-ability-and-status-system.md:74`), not the spell path.
@@ -269,9 +278,9 @@ delivery           PROJECTILE | PROJECTILE_SPLASH | CONE | INSTANT_TARGET | BEAM
 chroma_cost        int
 cooldown           float (seconds)
 damage_multiplier  float (replaces the GRAY/ELEMENTAL constants)
-projectile_shape   ORB | SHARD
-projectile_size / projectile_speed / projectile_lifetime
-delivery_radius / delivery_angle_degrees / delivery_range / delivery_duration
+projectile_shape   ORB | SHARD | DROPLET | HEX
+projectile_size / projectile_speed / projectile_lifetime / minimum travel time
+delivery_radius / splash secondary damage ratio / delivery_angle_degrees / delivery_range / delivery_duration
 tick_interval / lifesteal_ratio / knockback_multiplier
 mark_duration / mark_damage_multiplier
 ```
@@ -289,9 +298,11 @@ do not edit duplicate tuning constants elsewhere.
 **Resolution (single decision point):**
 
 ```text
-cast    = chroma >= cost                         # else stub (>=1) or no cast (0)
-form    = bound ? form_for(bound_aspect) : form_for(current_aspect)  # stub when no element
-payload = element_for(current_aspect)
+identity = bound_aspect if bound else current_aspect
+form     = form_for(identity) if identity exists else neutral_stub
+payload  = current_aspect, or bound_aspect when current_aspect is NONE
+cast     = identity exists ? chroma >= form.cost : chroma > 0
+# An unaffordable elemental form is rejected; it never changes to the stub.
 deliver(form.delivery, payload)
 ```
 
@@ -361,8 +372,12 @@ existing puzzle behavior and does not add elemental reactions.
 - One characterization test per delivery type: cone hits N in the arc and none
   behind; splash hits the impact radius; instant resolves with no travel and
   applies its status; beam drains and ends on break; ring hits all around.
-- Selection test: bound vs unbound × chroma bands (0 / 1–cost−1 / ≥cost) picks
-  the form and payload in §1.2.
+- Selection test: elemental form identity stays stable at zero, below cost,
+  exactly at cost, and above cost; below cost rejects without spending or
+  falling back, and exactly cost can cast down to zero.
+- Water splash test: the traveling droplet collides after its minimum travel
+  time, the directly hit enemy receives full form damage, and nearby enemies
+  receive 50% of the direct spell damage.
 - Target-only forms resolve a valid target from pointer-aim casts; Grass also
   rejects targets outside its range without spending Chroma.
 - Puzzle-object routing: direct projectile, instant, and tether hits activate
@@ -375,6 +390,12 @@ existing puzzle behavior and does not add elemental reactions.
   and data lookups. New definition surface stays typed (composition score holds).
 - In-editor MCP playtest per form. Do not run the smoke suite from an MCP
   session (per `AGENTS.md`).
+
+Current source pass: form-specific delivery remains distinct, Water uses an
+oriented traveling droplet and reduced secondary splash, and all seven payload
+elements have unique impact particle silhouettes and motion. The source changes
+have not yet received a rendered playtest; confirm 240×160 readability when a
+Godot runtime session is available.
 
 ## 9. Non-goals and deferred
 

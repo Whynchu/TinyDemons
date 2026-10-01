@@ -49,6 +49,12 @@ static func _ensure_forms() -> void:
 	water.chroma_cost = 10
 	water.delivery_radius = 24.0
 	water.knockback_multiplier = 0.65
+	water.projectile_shape = SpellFormDefinitionScript.ProjectileShape.DROPLET
+	water.projectile_size = 7
+	water.projectile_speed = 54.0
+	water.projectile_lifetime = 1.25
+	water.projectile_minimum_travel_time = 0.16
+	water.splash_secondary_damage_ratio = 0.5
 	_forms[ElementCatalogScript.Element.WATER] = water
 
 	var electric := _make(&"electric", ElementCatalogScript.Element.ELECTRIC, 1.2, 1.15, SpellFormDefinitionScript.Delivery.INSTANT_TARGET)
@@ -66,6 +72,8 @@ static func _ensure_forms() -> void:
 
 	var shadow := _make(&"shadow", ElementCatalogScript.Element.SHADOW, 2.5, 1.10, SpellFormDefinitionScript.Delivery.PROJECTILE)
 	shadow.chroma_cost = 12
+	shadow.projectile_shape = SpellFormDefinitionScript.ProjectileShape.HEX
+	shadow.projectile_size = 5
 	shadow.mark_duration = 3.0
 	shadow.mark_damage_multiplier = 1.25
 	_forms[ElementCatalogScript.Element.SHADOW] = shadow

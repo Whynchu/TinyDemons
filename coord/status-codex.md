@@ -2,12 +2,22 @@
 
 _Only codex writes this file._
 
-**Focus:** Mobile-web release 0.3.24 prepared; runtime acceptance pending
+**Focus:** Spell delivery, elemental impact effects, and mobile-web release 0.3.25 — implementation complete
 **Updated:** 2026-10-01
 
-## In flight
+## Completed
 
-Release preparation is complete: room-prefab mount and chest-position binding moved into `RoomPrefabHost`, release metadata aligned at 0.3.24, and composition plus focused offline script checks pass. No Godot process or test suite was launched under the recorded session restriction.
+Triangle keeps its elemental form at low Chroma, rejects casts below cost, and
+can spend exactly to zero. Water now travels before it collides, deals full form
+damage to its primary target, and reduced damage to nearby splash targets. Its
+droplet projectile and the Shadow hex projectile have element-specific shapes.
+Each elemental payload emits a different pixel impact profile; the spell plan
+and gameplay tuning guide document source behavior and open runtime acceptance.
+
+Offline GDScript diagnostics, `git diff --check`, and the strict composition
+audit pass. No Godot process or test suite was launched due the session
+restriction. Release metadata is aligned at 0.3.25; mobile-web playtest remains
+the next acceptance step.
 
 
 Static hookup audit is complete. All eight Triangle forms trace from Chroma acceptance through the cast frame to delivery and hit effects. Fixed puzzle-object routing, pointer-aim target resolution for Skyfall and Leechvine, and debug-unlimited form-cost selection.
@@ -118,10 +128,9 @@ changes. Do not stage them with M1.
 
 ## Handoff / next
 
-Version 0.3.24 is prepared for mobile-web playtesting. A push to `main` triggers
-the GitHub Pages export workflow; room-prefab runtime acceptance remains open
-for a future runtime session. Do not launch another Godot process or test suite
-in this session.
+Version 0.3.25 is prepared for mobile-web playtesting. Runtime visual and balance
+acceptance for each Triangle form remains open. Do not launch another Godot
+process or test suite in this session.
 
 ## Current work
 

@@ -1,14 +1,42 @@
 extends Node
 class_name MagicProjectileController
 
+const SpellFormDefinitionScript = preload("res://scripts/spell_form_definition.gd")
+
 ## Owns active projectile records. Movement, collision, and effects remain
 ## callback-driven while gameplay migrates off coordinator-held arrays.
 
 var projectiles: Array[Dictionary] = []
 
 
-func spawn(sprite: Sprite2D, outline: Sprite2D, direction: Vector2, lifetime: float, palette: String, target: Sprite2D = null, ability_mode: int = 0, form: Resource = null, speed: float = 70.0) -> void:
-	projectiles.append({"sprite": sprite, "outline": outline, "direction": direction, "timer": lifetime, "hit": false, "palette": palette, "target": target, "ability_mode": ability_mode, "form": form, "speed": speed})
+func spawn(
+	sprite: Sprite2D,
+	outline: Sprite2D,
+	direction: Vector2,
+	lifetime: float,
+	palette: String,
+	target: Sprite2D = null,
+	ability_mode: int = 0,
+	form: Resource = null,
+	speed: float = 70.0
+) -> void:
+	var minimum_travel_time: float = float(form.get("projectile_minimum_travel_time")) if form != null else 0.0
+	var orient_to_direction := form != null and int(form.get("projectile_shape")) == SpellFormDefinitionScript.ProjectileShape.DROPLET
+	projectiles.append({
+		"sprite": sprite,
+		"outline": outline,
+		"direction": direction,
+		"timer": lifetime,
+		"travel_age": 0.0,
+		"minimum_travel_time": maxf(minimum_travel_time, 0.0),
+		"orient_to_direction": orient_to_direction,
+		"hit": false,
+		"palette": palette,
+		"target": target,
+		"ability_mode": ability_mode,
+		"form": form,
+		"speed": speed,
+	})
 
 
 func spawn_beam(sprite: Sprite2D, direction: Vector2, lifetime: float, palette: String, ability_mode: int) -> void:
@@ -39,6 +67,7 @@ func tick(delta: float, speed: float, snap_position: Callable, target_point: Cal
 	for index in range(projectiles.size() - 1, -1, -1):
 		var data: Dictionary = projectiles[index]
 		var timer := float(data.get("timer", 0.0)) - delta
+		var travel_age := float(data.get("travel_age", 0.0)) + maxf(delta, 0.0)
 		if bool(data.get("tether", false)):
 			var line := _valid_line(data.get("line"))
 			var source := _valid_sprite(data.get("source"))
@@ -100,7 +129,11 @@ func tick(delta: float, speed: float, snap_position: Callable, target_point: Cal
 				data["direction"] = direction
 		var travel_speed := float(data.get("speed", speed))
 		sprite.global_position = snap_position.call(sprite.global_position + direction * travel_speed * delta)
+		if bool(data.get("orient_to_direction", false)):
+			sprite.rotation = direction.angle() + PI * 0.5
 		if outline != null: outline.global_position = sprite.global_position
+		if outline != null and bool(data.get("orient_to_direction", false)):
+			outline.rotation = sprite.rotation
 		var is_beam := bool(data.get("beam", false))
 		if is_beam:
 			var beam_hit_cooldowns: Dictionary = data.get("beam_hit_cooldowns", {})
@@ -122,7 +155,7 @@ func tick(delta: float, speed: float, snap_position: Callable, target_point: Cal
 				beam_hit_cooldowns[target_id] = 0.12
 			data["beam_hit_counts"] = beam_hit_counts
 			data["beam_hit_cooldowns"] = beam_hit_cooldowns
-		elif not bool(data.get("hit", false)):
+		elif not bool(data.get("hit", false)) and travel_age >= float(data.get("minimum_travel_time", 0.0)):
 			var target := hit_query.call(sprite, false) as Sprite2D
 			if target != null:
 				hit_resolve.call(target, sprite.global_position, String(data.get("palette", "grey")), int(data.get("ability_mode", 0)), false, data.get("form") as Resource)
@@ -133,6 +166,7 @@ func tick(delta: float, speed: float, snap_position: Callable, target_point: Cal
 		if not bool(data.get("beam", false)):
 			trail.call(sprite.global_position, String(data.get("palette", "grey")), false, false)
 		data["timer"] = timer
+		data["travel_age"] = travel_age
 		data["initial_timer"] = float(data.get("initial_timer", timer + delta))
 		projectiles[index] = data
 

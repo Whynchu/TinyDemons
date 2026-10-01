@@ -139,18 +139,22 @@ readability remain open for runtime acceptance.
 `SpellFormCatalog` is the current source of these typed first-pass values while
 the spell-form authoring slice awaits M1 resource discovery. Form selects the
 delivery, damage factor, cost, cooldown, and delivery geometry. Current aspect
-selects the payload element and its status/palette. Under the form's Chroma cost
-the cast falls back to the neutral stub; zero Chroma blocks all casts. Values
-are provisional until the player confirms balance and 240×160 readability.
+selects the payload element, status/palette, and impact particle style. An
+elemental form remains selected at every Chroma value. Below its cost, Triangle
+is rejected without spending Chroma or swapping to the neutral stub; exactly
+the cost is enough and can reduce the bar to zero. The neutral stub is used
+only when the player has no elemental identity, and still requires a positive
+bar. Values are provisional until the player confirms balance and 240×160
+readability.
 
 | Form | Delivery | Cost / cooldown | Damage factor | Delivery values |
 | --- | --- | --- | ---: | --- |
 | Neutral Stub | Homing projectile | 0 / 2.5s | 1.10x | At least 1 Chroma required to cast |
 | Fire Cinder Cone | 90° cone | 15 / 3.0s | 1.35x | 40px reach; 0.40x magic knockback |
-| Water Tide Burst | Splash projectile | 10 / 2.0s | 0.85x | 24px impact radius; 0.65x magic knockback |
+| Water Tide Burst | Traveling droplet / splash | 10 / 2.0s | 0.85x direct | 54px/s, 1.25s lifetime, 0.16s minimum travel, 24px impact radius; secondary hits deal 50% of direct damage; 0.65x magic knockback |
 | Electric Skyfall | Instant target strike | 10 / 1.2s | 1.15x | Locked/nearest target |
 | Grass Leechvine | Target tether | 10 / 2.5s | 0.40x per tick | 64px range; 1.8s; 0.45s tick; heals 40% of dealt damage |
-| Shadow Hex | Curse projectile | 12 / 2.5s | 1.10x | Mark increases damage taken by 25% for 3s |
+| Shadow Hex | Hex-sigil curse projectile | 12 / 2.5s | 1.10x | 5px glyph; mark increases damage taken by 25% for 3s |
 | Ground Quake | Self-centered ring | 12 / 2.5s | 0.75x | 24px radius; 0.70x magic knockback |
 | Ice Frostbite Shard | Shard projectile | 10 / 2.2s | 1.00x | 5px diamond; 90px/s |
 
@@ -158,6 +162,13 @@ Every form's elemental payload uses the current element. Any status configured
 for that element is guaranteed on each successful spell hit; Neutral, Water,
 Grass, and Ground payloads have no status. Melee and the sword beam retain
 their chance-based status rolls. DoT ticks do not reapply status.
+
+Impact particles are payload-specific: Fire embers rise, Water droplets arc and
+fall, Electric sparks burst, Grass leaves lift, Shadow motes drift, Ground
+chips fall, and Ice crystals burst outward. The selected form still controls
+the cast path: Fire uses a forward cone, Water travels before it splashes,
+Electric is the only instant-target strike, Grass tethers, Ground rings around
+the player, Ice throws a shard, and Shadow throws a curse projectile.
 
 ## Elemental slime definitions
 
@@ -303,7 +314,7 @@ These affect dungeon generation and room behavior and are `const` in
 | Permanent Binding | 50 Souls at the Cloaked Demon for every new bound element; same-element bind is free | `gameplay_state.gd:ELEMENT_BIND_SOUL_COST` |
 | Hub flame identity | The selected starter flame remains the hub fire until an explicit permanent Bind; temporary run attunements/fusions do not replace it | `player_profile.gd:hub_flame`, `run_flow_controller.gd`, `room_controller.gd` |
 | Chroma identity at zero | Bound elements remain bound and use the weakened/desaturated mode at zero; unbound players resolve to Gray | `player_chroma_component.gd` |
-| Magic requires Chroma | At zero Chroma no Triangle cast is allowed. Elemental form costs vary from 10–15; below the selected form's cost, any nonzero bar uses the free neutral stub | `player_aspect_ability_component.gd`, `spell_form_catalog.gd` |
+| Magic requires Chroma | Elemental form stays selected; below its 10–15 Chroma cost, Triangle is rejected without spending or switching forms; exact cost can drain to zero. Neutral stub costs nothing but requires a positive bar and no elemental identity | `player_aspect_ability_component.gd`, `spell_form_catalog.gd` |
 | Neutral Chroma storage | Gray players can collect neutral Chroma without acquiring an elemental identity; pickups stop collecting when the bar is full | `player_chroma_component.gd`, `pickup_runtime_controller.gd` |
 | Adaptive Chroma pickup color | Pickup tint follows the player's current effective element; Gray uses the neutral accent | `player_chroma_component.gd:chroma_palette_name`, `pickup_runtime_controller.gd` |
 | Flame map travel | The expanded map is available in gameplay; travel may target the Hub or a visited flame, and may begin only from the Hub or a flame room | `dungeon_minimap_controller.gd`, `dungeon_map_controller.gd`, `room_controller.gd` |

@@ -520,3 +520,9 @@ Expanded the release claim to include RoomPrefabHost, which will take ownership 
 
 ## 2026-10-01T00:46Z — codex — done
 Prepared version 0.3.24 for mobile-web playtesting. Room-prefab mount/chest binding moved into `RoomPrefabHost`; offline script diagnostics, composition self-test, regression-floor audit, strict audit, and `git diff --check` pass. Origin was fetched and remains eight commits behind local `main`. No Godot runtime or test suite was launched under the recorded restriction.
+
+## 2026-10-01T09:44Z — codex — claim
+Auditing Triangle spell form selection and delivery so form identity stays fixed across mana values, zero-cost casting works, Water travels before a reduced splash, Fire remains a forward cone, and each element gets a distinct impact effect. Updating the spell plan/tuning docs and versioning to 0.3.25. Static-only session restriction remains active.
+
+## 2026-10-01T10:00Z — codex — done
+Implemented and documented the Triangle spell behavior corrections for release 0.3.25: selected elemental forms no longer fall back at low Chroma and can cast exactly to zero; Water's droplet must travel before impact, then damages its direct target fully and nearby targets at half damage; each payload element has a distinct pixel impact particle profile. Release metadata is aligned. Offline script diagnostics, the strict composition audit, and `git diff --check` pass. No Godot process or test suite was launched under the recorded session restriction; visual/balance acceptance remains open for playtest.

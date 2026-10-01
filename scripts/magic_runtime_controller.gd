@@ -602,6 +602,25 @@ func spawn_radial_burst(context: MagicRuntimeContext, origin: Vector2, palette: 
 		effects.pixel_particles.append({"sprite": particle, "velocity": Vector2(cos(angle), sin(angle)) * context.rng.randf_range(speed_min, speed_max), "timer": lifetime, "lifetime": lifetime, "gravity": 0.0})
 
 
+func spawn_magic_splash_ring(context: MagicRuntimeContext, origin: Vector2, palette: String) -> void:
+	var player := context.player
+	var effects := context.effects_spawner
+	var rng := context.rng
+	var texture := _magic_impact_particle_texture(context, palette, &"droplet", 3)
+	for index in 10:
+		var side := -1.0 if index % 2 == 0 else 1.0
+		var particle := Sprite2D.new()
+		particle.texture = texture
+		particle.centered = true
+		particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		particle.z_as_relative = false
+		particle.z_index = player.z_index + 1
+		_add_child_to_runtime(context, particle, origin)
+		var lifetime := rng.randf_range(0.28, 0.42)
+		var velocity := Vector2(side * rng.randf_range(14.0, 30.0), -rng.randf_range(12.0, 24.0))
+		effects.pixel_particles.append({"sprite": particle, "velocity": velocity, "timer": lifetime, "lifetime": lifetime, "gravity": 42.0})
+
+
 func spawn_sky_strike(context: MagicRuntimeContext, world_position: Vector2, palette: String) -> void:
 	var player := context.player
 	var effects := context.effects_spawner
@@ -746,10 +765,14 @@ func spawn_magic_projectile(context: MagicRuntimeContext, origin: Vector2, direc
 	var projectile_size := context.magic_projectile_size if resolved_form == null else int(resolved_form.get("projectile_size"))
 	var projectile_lifetime := context.magic_projectile_lifetime if resolved_form == null else float(resolved_form.get("projectile_lifetime"))
 	var projectile_speed := 70.0 if resolved_form == null else float(resolved_form.get("projectile_speed"))
+	var projectile_shape := SpellFormDefinitionScript.ProjectileShape.ORB if resolved_form == null else int(resolved_form.get("projectile_shape"))
+	var orient_to_direction := projectile_shape == SpellFormDefinitionScript.ProjectileShape.DROPLET
 	var projectile := Sprite2D.new()
 	projectile.name = "MagicProjectile"
 	projectile.texture = magic_projectile_texture(context, base_color, accent_color, projectile_size, resolved_form)
 	projectile.centered = true
+	if orient_to_direction:
+		projectile.rotation = direction.angle() + PI * 0.5
 	projectile.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	projectile.z_as_relative = false
 	projectile.z_index = player.z_index + 1
@@ -758,6 +781,7 @@ func spawn_magic_projectile(context: MagicRuntimeContext, origin: Vector2, direc
 	outline.name = "MagicProjectileOutline"
 	outline.texture = magic_projectile_outline_texture(context, base_color, accent_color, projectile_size, resolved_form)
 	outline.centered = true
+	outline.rotation = projectile.rotation
 	outline.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	outline.z_as_relative = false
 	outline.z_index = player.z_index + 1
@@ -813,29 +837,52 @@ func sword_beam_texture(context: MagicRuntimeContext, palette: String) -> Textur
 
 
 func magic_projectile_texture(context: MagicRuntimeContext, base_color: Color, accent_color: Color, size: int, form: Resource) -> Texture2D:
-	if form == null or int(form.get("projectile_shape")) != SpellFormDefinitionScript.ProjectileShape.SHARD:
+	if form == null:
+		return context.pixel_particle_texture.call(base_color, size) as Texture2D
+	var shape := int(form.get("projectile_shape"))
+	if shape == SpellFormDefinitionScript.ProjectileShape.ORB:
 		return context.pixel_particle_texture.call(base_color, size) as Texture2D
 	var effects := context.effects_spawner
-	var key := "magic_shard:%s:%s:%d" % [base_color.to_html(false), accent_color.to_html(false), size]
+	var key := "magic_projectile:%d:%s:%s:%d" % [shape, base_color.to_html(false), accent_color.to_html(false), size]
 	if effects.pixel_particle_texture_cache.has(key):
 		return effects.pixel_particle_texture_cache[key] as Texture2D
 	var image := Image.create(size, size, false, Image.FORMAT_RGBA8)
 	image.fill(Color.TRANSPARENT)
-	var center := (size - 1) >> 1
+	var center := size >> 1
 	for y in size:
 		for x in size:
-			if absi(x - center) + absi(y - center) <= center:
-				image.set_pixel(x, y, accent_color if x == center and y <= center else base_color)
+			if not _magic_projectile_shape_contains(shape, size, x, y):
+				continue
+			var highlight := x == center and (shape == SpellFormDefinitionScript.ProjectileShape.DROPLET or y <= center)
+			image.set_pixel(x, y, accent_color if highlight else base_color)
 	var texture := ImageTexture.create_from_image(image)
 	effects.pixel_particle_texture_cache[key] = texture
 	return texture
 
 
+func _magic_projectile_shape_contains(shape: int, size: int, x: int, y: int) -> bool:
+	if x < 0 or y < 0 or x >= size or y >= size:
+		return false
+	var center := float(size - 1) * 0.5
+	match shape:
+		SpellFormDefinitionScript.ProjectileShape.SHARD:
+			return absi(x - int(center)) + absi(y - int(center)) <= int(center)
+		SpellFormDefinitionScript.ProjectileShape.DROPLET:
+			var progress := float(y) / maxf(float(size - 1), 1.0)
+			var radius := center * sqrt(progress)
+			return absf(float(x) - center) <= radius
+		SpellFormDefinitionScript.ProjectileShape.HEX:
+			var dx := absf(float(x) - center)
+			var dy := absf(float(y) - center)
+			return maxf(dx, dy) <= center and dx + dy <= center + 1.0
+	return true
+
+
 func magic_projectile_outline_texture(context: MagicRuntimeContext, base_color: Color, accent_color: Color, projectile_size: int = -1, form: Resource = null) -> Texture2D:
 	var effects := context.effects_spawner
 	var size := context.magic_projectile_size if projectile_size < 0 else projectile_size
-	var shard_shape := form != null and int(form.get("projectile_shape")) == SpellFormDefinitionScript.ProjectileShape.SHARD
-	var key := "magic_outline:%s:%s:%d:%s" % [base_color.to_html(false), accent_color.to_html(false), size, "shard" if shard_shape else "orb"]
+	var shape := int(form.get("projectile_shape")) if form != null else SpellFormDefinitionScript.ProjectileShape.ORB
+	var key := "magic_outline:%s:%s:%d:%d" % [base_color.to_html(false), accent_color.to_html(false), size, shape]
 	if effects.pixel_particle_texture_cache.has(key):
 		return effects.pixel_particle_texture_cache[key]
 	var outline_size := size + 2
@@ -845,8 +892,19 @@ func magic_projectile_outline_texture(context: MagicRuntimeContext, base_color: 
 	for y in outline_size:
 		for x in outline_size:
 			var on_outline := false
-			if shard_shape:
+			if shape == SpellFormDefinitionScript.ProjectileShape.SHARD:
 				on_outline = absi(x - center) + absi(y - center) == center
+			elif shape in [SpellFormDefinitionScript.ProjectileShape.DROPLET, SpellFormDefinitionScript.ProjectileShape.HEX]:
+				var source_x := x - 1
+				var source_y := y - 1
+				var outside_shape := not _magic_projectile_shape_contains(shape, size, source_x, source_y)
+				var touches_shape := (
+					_magic_projectile_shape_contains(shape, size, source_x - 1, source_y)
+					or _magic_projectile_shape_contains(shape, size, source_x + 1, source_y)
+					or _magic_projectile_shape_contains(shape, size, source_x, source_y - 1)
+					or _magic_projectile_shape_contains(shape, size, source_x, source_y + 1)
+				)
+				on_outline = outside_shape and touches_shape
 			else:
 				on_outline = x == 0 or y == 0 or x == outline_size - 1 or y == outline_size - 1
 			if on_outline:
@@ -884,13 +942,27 @@ func resolve_magic_projectile_hit(context: MagicRuntimeContext, target: Sprite2D
 		var splash_radius := float(form.get("delivery_radius"))
 		var target_is_puzzle_torch := _is_puzzle_torch(context, target)
 		_activate_puzzle_torches_in_radius(context, world_position, splash_radius, palette, target)
+		var direct_target_is_slime := (
+			not target_is_puzzle_torch
+			and target != null
+			and is_instance_valid(target)
+			and context.slimes.has(target)
+			and bool(context.is_slime_targetable.call(target))
+		)
+		if direct_target_is_slime:
+			var direct_direction := (magic_target_point(context, target) - world_position).normalized()
+			magic_hit_slime(context, target, magic_target_point(context, target), palette, ability_mode, false, form, direct_direction)
 		var victims := magic_targets_in_radius(context, world_position, splash_radius)
-		if not target_is_puzzle_torch and target != null and is_instance_valid(target) and bool(context.is_slime_targetable.call(target)) and not victims.has(target):
-			victims.append(target)
 		for victim in victims:
+			if direct_target_is_slime and victim == target:
+				continue
 			var push_direction := (magic_target_point(context, victim) - world_position).normalized()
-			magic_hit_slime(context, victim, magic_target_point(context, victim), palette, ability_mode, false, form, push_direction)
-		spawn_radial_burst(context, world_position, palette, 12, 20.0, 34.0)
+			var secondary_ratio := clampf(float(form.get("splash_secondary_damage_ratio")), 0.0, 1.0)
+			var secondary_damage_multiplier := float(form.get("damage_multiplier")) * secondary_ratio
+			magic_hit_slime(
+				context, victim, magic_target_point(context, victim), palette,
+				ability_mode, false, form, push_direction, secondary_damage_multiplier)
+		spawn_magic_splash_ring(context, world_position, palette)
 		return
 	if _try_activate_puzzle_torch(context, target, world_position, palette):
 		return
@@ -960,7 +1032,17 @@ func magic_attack_element(palette: String, ability_mode: int) -> int:
 	return ElementCatalogScript.element_for_palette(palette)
 
 
-func magic_hit_slime(context: MagicRuntimeContext, slime: Sprite2D, world_position: Vector2, palette: String, ability_mode: int = ChromaComponentScript.AbilityMode.GRAY, is_beam: bool = false, form: Resource = null, knockback_direction: Vector2 = Vector2.ZERO) -> void:
+func magic_hit_slime(
+	context: MagicRuntimeContext,
+	slime: Sprite2D,
+	world_position: Vector2,
+	palette: String,
+	ability_mode: int = ChromaComponentScript.AbilityMode.GRAY,
+	is_beam: bool = false,
+	form: Resource = null,
+	knockback_direction: Vector2 = Vector2.ZERO,
+	damage_multiplier_override: float = -1.0
+) -> void:
 	if slime == null or not is_instance_valid(slime) or not bool(context.is_slime_targetable.call(slime)):
 		return
 	var attack_element := magic_attack_element(palette, ability_mode)
@@ -968,11 +1050,21 @@ func magic_hit_slime(context: MagicRuntimeContext, slime: Sprite2D, world_positi
 	var magic_base_bonus := combat_tuning.elemental_magic_bonus if ability_mode == ChromaComponentScript.AbilityMode.ELEMENTAL and combat_tuning != null else 0.0
 	var damage_result := context.player_magic_damage_result_against.call(slime, attack_element, magic_base_bonus) as CombatCalculator.DamageResult
 	var damage := 0.0 if damage_result == null or damage_result.immune else damage_result.amount
-	var damage_multiplier := float(form.get("damage_multiplier")) if form != null else (0.35 if is_beam else 1.0)
-	if damage > 0.0:
-		damage = maxf(floorf(damage * damage_multiplier), 1.0)
 	var was_critical := damage_result != null and damage_result.critical
 	var immune := damage_result != null and damage_result.immune
+	var damage_multiplier := float(form.get("damage_multiplier")) if form != null else (0.35 if is_beam else 1.0)
+	if damage_multiplier_override >= 0.0:
+		damage_multiplier = damage_multiplier_override
+	if damage > 0.0:
+		if damage_multiplier_override >= 0.0 and form != null:
+			var primary_damage := maxf(floorf(damage * float(form.get("damage_multiplier"))), 1.0)
+			var splash_damage := floorf(damage * damage_multiplier)
+			damage = minf(maxf(splash_damage, 0.0), maxf(primary_damage - 1.0, 0.0))
+		else:
+			damage = maxf(floorf(damage * damage_multiplier), 1.0)
+	if damage_multiplier_override >= 0.0 and damage <= 0.0 and not immune:
+		spawn_magic_impact(context, world_position, palette)
+		return
 	var resolved_element := damage_result.element if damage_result != null else attack_element
 	var target_health := slime.get_node_or_null("Health") as HealthComponent
 	var health_before := target_health.current_health if target_health != null else -1.0
@@ -988,7 +1080,8 @@ func magic_hit_slime(context: MagicRuntimeContext, slime: Sprite2D, world_positi
 			context.knockback_slime.call(slime, knockback_multiplier, false, true, false, knockback_direction)
 		else:
 			context.knockback_slime.call(slime, knockback_multiplier, false)
-	context.spawn_damage_number.call(slime, damage_dealt, was_critical, resolved_element, immune)
+	if damage_dealt > 0.0 or immune:
+		context.spawn_damage_number.call(slime, damage_dealt, was_critical, resolved_element, immune)
 	if form != null and not immune and damage_dealt > 0.0:
 		var mark_duration := float(form.get("mark_duration"))
 		if (
@@ -1045,16 +1138,118 @@ func spawn_magic_impact(context: MagicRuntimeContext, world_position: Vector2, p
 	var player := context.player
 	var rng := context.rng
 	var effects := context.effects_spawner
-	var color := PaletteLibrary.normal(palette)
-	for i in 8:
+	var profile := _magic_impact_profile(ElementCatalogScript.element_for_palette(palette))
+	var shape := StringName(profile.get("shape", &"spark"))
+	var particle_size := int(profile.get("size", 3))
+	var texture := _magic_impact_particle_texture(context, palette, shape, particle_size)
+	var count := int(profile.get("count", 8))
+	var speed_min := float(profile.get("speed_min", 14.0))
+	var speed_max := float(profile.get("speed_max", 30.0))
+	var motion := StringName(profile.get("motion", &"burst"))
+	var gravity := float(profile.get("gravity", 20.0))
+	var lifetime_min := float(profile.get("lifetime_min", 0.3))
+	var lifetime_max := float(profile.get("lifetime_max", 0.5))
+	var alpha_scale := float(profile.get("alpha", 1.0))
+	for index in count:
 		var particle := Sprite2D.new()
-		particle.texture = context.pixel_particle_texture.call(color, 1) as Texture2D
-		particle.centered = false
+		particle.texture = texture
+		particle.centered = true
 		particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		particle.z_as_relative = false
 		particle.z_index = player.z_index + 1
+		particle.modulate = Color(1.0, 1.0, 1.0, alpha_scale)
 		_add_child_to_runtime(context, particle, world_position)
-		var angle := float(i) / 8.0 * TAU
-		var speed := float(rng.randf_range(14.0, 30.0))
-		var lifetime := float(rng.randf_range(0.3, 0.5))
-		effects.pixel_particles.append({"sprite": particle, "velocity": Vector2(cos(angle), sin(angle)) * speed, "timer": lifetime, "lifetime": lifetime, "gravity": 20.0})
+		var speed := rng.randf_range(speed_min, speed_max)
+		var velocity := _magic_impact_velocity(motion, speed, rng)
+		var lifetime := rng.randf_range(lifetime_min, lifetime_max)
+		effects.pixel_particles.append({
+			"sprite": particle,
+			"velocity": velocity,
+			"timer": lifetime,
+			"lifetime": lifetime,
+			"gravity": gravity,
+			"alpha_scale": alpha_scale,
+		})
+
+
+func _magic_impact_profile(element: int) -> Dictionary:
+	match element:
+		ElementCatalogScript.Element.FIRE:
+			return {"shape": &"flame", "motion": &"rise", "count": 8, "size": 3, "speed_min": 14.0, "speed_max": 26.0, "gravity": -5.0, "lifetime_min": 0.25, "lifetime_max": 0.42}
+		ElementCatalogScript.Element.WATER:
+			return {"shape": &"droplet", "motion": &"splash", "count": 9, "size": 3, "speed_min": 16.0, "speed_max": 29.0, "gravity": 36.0, "lifetime_min": 0.24, "lifetime_max": 0.42}
+		ElementCatalogScript.Element.ELECTRIC:
+			return {"shape": &"spark", "motion": &"burst", "count": 10, "size": 5, "speed_min": 28.0, "speed_max": 42.0, "gravity": 0.0, "lifetime_min": 0.12, "lifetime_max": 0.24}
+		ElementCatalogScript.Element.GRASS:
+			return {"shape": &"leaf", "motion": &"rise", "count": 8, "size": 4, "speed_min": 12.0, "speed_max": 21.0, "gravity": -2.0, "lifetime_min": 0.3, "lifetime_max": 0.5}
+		ElementCatalogScript.Element.SHADOW:
+			return {"shape": &"mote", "motion": &"drift", "count": 7, "size": 3, "speed_min": 5.0, "speed_max": 12.0, "gravity": -3.0, "lifetime_min": 0.42, "lifetime_max": 0.68, "alpha": 0.86}
+		ElementCatalogScript.Element.GROUND:
+			return {"shape": &"rock", "motion": &"burst", "count": 8, "size": 4, "speed_min": 14.0, "speed_max": 26.0, "gravity": 52.0, "lifetime_min": 0.28, "lifetime_max": 0.48}
+		ElementCatalogScript.Element.ICE:
+			return {"shape": &"crystal", "motion": &"burst", "count": 9, "size": 5, "speed_min": 18.0, "speed_max": 31.0, "gravity": 5.0, "lifetime_min": 0.25, "lifetime_max": 0.45}
+	return {"shape": &"spark", "motion": &"burst", "count": 8, "size": 3, "speed_min": 14.0, "speed_max": 30.0, "gravity": 20.0, "lifetime_min": 0.3, "lifetime_max": 0.5}
+
+
+func _magic_impact_velocity(motion: StringName, speed: float, rng: RandomNumberGenerator) -> Vector2:
+	match motion:
+		&"rise":
+			return Vector2(rng.randf_range(-0.55, 0.55) * speed, -speed)
+		&"splash":
+			return Vector2(rng.randf_range(-0.9, 0.9) * speed, -rng.randf_range(0.45, 1.0) * speed)
+		&"drift":
+			return Vector2(rng.randf_range(-0.65, 0.65) * speed, -rng.randf_range(0.1, 0.75) * speed)
+	return Vector2.from_angle(rng.randf_range(0.0, TAU)) * speed
+
+
+func _magic_impact_particle_texture(context: MagicRuntimeContext, palette: String, shape: StringName, size: int) -> Texture2D:
+	var effects := context.effects_spawner
+	var base_color := PaletteLibrary.normal(palette)
+	var accent_color := PaletteLibrary.accent(palette)
+	var key := "magic_impact:%s:%s:%s:%d" % [String(shape), base_color.to_html(false), accent_color.to_html(false), size]
+	if effects.pixel_particle_texture_cache.has(key):
+		return effects.pixel_particle_texture_cache[key] as Texture2D
+	var image := Image.create(size, size, false, Image.FORMAT_RGBA8)
+	image.fill(Color.TRANSPARENT)
+	var center := size >> 1
+	for y in size:
+		for x in size:
+			if not _magic_impact_shape_contains(shape, size, x, y):
+				continue
+			var highlight := _magic_impact_pixel_highlight(shape, center, x, y)
+			image.set_pixel(x, y, accent_color if highlight else base_color)
+	var texture := ImageTexture.create_from_image(image)
+	effects.pixel_particle_texture_cache[key] = texture
+	return texture
+
+
+func _magic_impact_shape_contains(shape: StringName, size: int, x: int, y: int) -> bool:
+	if x < 0 or y < 0 or x >= size or y >= size:
+		return false
+	var center := size >> 1
+	match shape:
+		&"flame", &"droplet":
+			var progress := float(y) / maxf(float(size - 1), 1.0)
+			return absf(float(x - center)) <= float(center) * sqrt(progress)
+		&"spark":
+			return x == center or y == center or absi(x - center) == absi(y - center)
+		&"leaf":
+			return absi(x - y) <= 1 and x + y >= center and x + y <= (size - 1) * 2 - center
+		&"mote", &"crystal":
+			return absi(x - center) + absi(y - center) <= center
+		&"rock":
+			return not ((x == 0 or x == size - 1) and (y == 0 or y == size - 1))
+	return true
+
+
+func _magic_impact_pixel_highlight(shape: StringName, center: int, x: int, y: int) -> bool:
+	match shape:
+		&"spark", &"crystal":
+			return x == center or y == 0
+		&"leaf":
+			return x == y
+		&"rock":
+			return y == 0
+		&"mote":
+			return x == center and y <= center
+	return x == center and y <= 1

@@ -42,14 +42,13 @@ func tick(delta: float) -> void:
 func can_activate(chroma: Node, blocked: bool = false, elemental_cost: int = -1) -> bool:
 	if blocked or chroma == null or cooldown_remaining > 0.0:
 		return false
-	# Magic always requires Chroma: at zero the player cannot cast even the
-	# gray baseline triangle. The elemental branch keeps its own cost gate.
-	if int(chroma.get("current_chroma")) <= 0:
-		return false
 	var mode := _activation_mode(chroma, elemental_cost)
 	if mode == CHROMA_COMPONENT_SCRIPT.AbilityMode.ELEMENTAL:
 		return bool(chroma.call("can_use_elemental_ability", _resolved_elemental_cost(chroma, elemental_cost)))
-	return true
+	# The neutral stub costs nothing, but still requires a positive Chroma bar.
+	# Elemental forms use their own cost gate above, so a cast at exactly its
+	# cost can spend the bar down to zero.
+	return int(chroma.get("current_chroma")) > 0
 
 
 func try_activate(chroma: Node, execute: Callable, blocked: bool = false, elemental_cost: int = -1, elemental_cooldown: float = -1.0, grey_cooldown: float = -1.0) -> bool:
@@ -86,8 +85,10 @@ func _activation_mode(chroma: Node, elemental_cost: int) -> int:
 	var mode := int(chroma.call("ability_mode"))
 	if elemental_cost >= 0:
 		var has_elemental_identity := int(chroma.get("current_aspect")) != CHROMA_COMPONENT_SCRIPT.Aspect.NONE or int(chroma.get("bound_aspect")) != CHROMA_COMPONENT_SCRIPT.Aspect.NONE
-		var has_unlimited_chroma := bool(chroma.get("debug_unlimited_chroma"))
-		if has_elemental_identity and (has_unlimited_chroma or int(chroma.get("current_chroma")) >= elemental_cost):
+		if has_elemental_identity:
+			# Keep Triangle bound to the same form at every Chroma level. If its
+			# cost is unaffordable, can_activate rejects it instead of swapping to
+			# the neutral stub.
 			return CHROMA_COMPONENT_SCRIPT.AbilityMode.ELEMENTAL
 		return CHROMA_COMPONENT_SCRIPT.AbilityMode.GRAY
 	return mode
