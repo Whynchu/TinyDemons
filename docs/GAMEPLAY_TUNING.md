@@ -125,7 +125,7 @@ the catalog resource is the runtime registry.
 | Burn | Fire | 20% per eligible hit | 2.5 s | 1 damage per stack every 1 s; cap 3 | Imbue-like rising ember trail / 0.08 s |
 | Poison | Shadow | 20% per eligible hit | 2.5 s | 1 damage per stack every 1 s; cap 3 | Rising poison motes / 0.16 s |
 | Slow | Ice | 20% per eligible hit | 2.0 s | 15% movement reduction per stack; cap 3; multiplier floor 0.55 | Drifting frost crystals / 0.16 s |
-| Stun | Electric | 10% per eligible hit | 2.5 s | 0.12 s action lock on a 1 s cadence; each extra stack reduces cadence by 0.05 s to a 0.5 s floor; cap 3 | Short electric sparks / 0.12 s |
+| Stun | Electric | 10% per eligible hit | 2.5 s | Immediate 0.12 s action lock on proc, then repeat every 1 s; each extra stack reduces repeat cadence by 0.05 s to a 0.5 s floor; cap 3 | Short electric sparks and sprite-only jolt / 0.12 s |
 
 Only successful, non-immune elemental hits with positive effectiveness can
 proc. `EnemyDefinition.status_immunities` can reject named status IDs. These
@@ -150,9 +150,9 @@ readability.
 | Form | Delivery | Cost / cooldown | Damage factor | Delivery values |
 | --- | --- | --- | ---: | --- |
 | Neutral Stub | Homing projectile | 0 / 2.5s | 1.10x | At least 1 Chroma required to cast |
-| Fire Cinder Cone | Animated flame fan | 15 / 3.0s | 1.35x | 90°; 40px reach; Hub flame art mapped across one fan with rising ember streams; 0.40x magic knockback |
-| Water Tide Burst | Traveling bubble / pop splash | 10 / 2.0s | 0.85x direct | 9px bubble at 54px/s; 1.25s lifetime; 0.16s minimum travel; impact bursts fourteen 4–6px bubbles; 24px impact radius; secondary hits deal 50% of direct damage; 0.65x magic knockback |
-| Electric Skyfall | Instant target strike | 10 / 1.2s | 1.15x | Locked/nearest target |
+| Fire Cinder Cone | Animated flame fan | 15 / 3.0s | 1.35x | Horizontal left/right; 90° hit sector; 40px reach; art-only fan tip flares slightly beyond the hit sector; Hub flame art with rising ember streams; 0.40x magic knockback |
+| Water Tide Burst | Traveling bubble / pop splash | 10 / 2.0s | 0.85x direct | 9px bubble at 54px/s; 1.25s lifetime; 0.16s minimum travel; `bubblesent.ogg` on launch and `bubbleburst.ogg` on confirmed impact; impact bursts fourteen 4–6px bubbles; 24px impact radius; secondary hits deal 50% of direct damage; 0.65x magic knockback |
+| Electric Skyfall | Instant target strike | 10 / 1.2s | 1.15x | Locked/nearest target; short stepped pixel bolt from above to rendered sprite top-center, with impact sparks |
 | Grass Leechvine | Target tether | 10 / 2.5s | 0.40x per tick | 64px range; 1.8s; 0.45s tick; heals 40% of dealt damage |
 | Shadow Hex | Hex-sigil curse projectile | 12 / 2.5s | 1.10x | 5px glyph; mark increases damage taken by 25% for 3s |
 | Ground Quake | Self-centered ring | 12 / 2.5s | 0.75x | 24px radius; 0.70x magic knockback |
@@ -168,8 +168,9 @@ arc and fall, Electric sparks burst, Grass leaves lift, Shadow motes drift,
 Ground chips fall, and Ice crystals burst outward. The selected form controls
 the cast silhouette: Fire maps animated Hub flame frames across one forward fan
 and sends rising ember streams through it; Water travels as a highlighted
-bubble and pops into smaller bubbles on impact;
-Electric is the only instant-target strike, Grass tethers, Ground rings around
+bubble with a launch sound and impact-only burst sound, then pops into smaller
+bubbles; Electric uses a short top-down pixel bolt and is the only
+instant-target strike; Grass tethers, Ground rings around
 the player, Ice throws a shard, and Shadow throws a curse projectile. Bubble
 tints follow the active payload element.
 

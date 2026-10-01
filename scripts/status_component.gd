@@ -15,13 +15,15 @@ func apply_effect(definition: StatusEffectDefinition, source_element: int) -> bo
 		return false
 	var record: Dictionary = _active.get(definition.id, {})
 	if record.is_empty():
+		var is_periodic_stun := definition.family == StatusEffectDefinition.Family.PERIODIC_STUN
 		record = {
 			"definition": definition,
 			"remaining": definition.duration,
 			"stacks": 1,
 			"source_element": source_element,
 			"tick_timer": definition.tick_interval_for(1),
-			"cadence_timer": definition.stun_interval_for(1),
+			"cadence_timer": 0.0 if is_periodic_stun else definition.stun_interval_for(1),
+			"initial_stun_pulse_pending": is_periodic_stun,
 		}
 	else:
 		record["definition"] = definition
@@ -81,6 +83,7 @@ func advance(delta: float) -> Array[StatusTickResult]:
 		elif definition.family == StatusEffectDefinition.Family.PERIODIC_STUN:
 			var cadence_timer := float(record.get("cadence_timer", definition.stun_interval_for(stacks))) - elapsed
 			while cadence_timer <= 0.0:
+				var is_initial_stun_pulse := bool(record.get("initial_stun_pulse_pending", false))
 				var tick_result := StatusTickResultScript.new() as StatusTickResult
 				tick_result.configure(
 					StatusTickResultScript.Kind.STUN_PULSE,
@@ -90,7 +93,9 @@ func advance(delta: float) -> Array[StatusTickResult]:
 					0.0,
 					definition.stun_lock_duration
 				)
+				tick_result.is_initial_stun_pulse = is_initial_stun_pulse
 				results.append(tick_result)
+				record["initial_stun_pulse_pending"] = false
 				cadence_timer += definition.stun_interval_for(stacks)
 				changed = true
 			record["cadence_timer"] = cadence_timer

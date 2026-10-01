@@ -808,11 +808,17 @@ func _apply_status_stun_pulse(root: GameplayState, actor: Sprite2D, result: Stat
 	var combat := actor.get_node_or_null("Combat") as SlimeCombatComponent
 	if combat == null or combat.boss_jump_phase_stun_resistant:
 		return
+	combat.status_stun_timer = maxf(combat.status_stun_timer, duration)
 	combat.active = false
 	combat.timer = 0.0
 	combat.hit_done = true
 	combat.attack_committed = false
 	combat.hitstun_timer = maxf(combat.hitstun_timer, duration)
+	combat.knockback_velocity = Vector2.ZERO
+	combat.knockback_timer = 0.0
+	var aura := actor.get_node_or_null("ElementAura") as ElementAuraComponent
+	if aura != null:
+		aura.trigger_status_stun_shake(duration, result.is_initial_stun_pulse)
 	var support := actor.get_node_or_null("Support") as SlimeSupportComponent
 	if support != null:
 		support.cancel_cast(&"status_stun")

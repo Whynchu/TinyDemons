@@ -25,6 +25,8 @@ const CLIPS: Dictionary = {
 	"claw": BATTLE_PATH + "03_Claw_03.wav",
 	"crit": SELFMADE_PATH + "Crit.wav",
 	"sword_beam": SELFMADE_PATH + "swordbeam.wav",
+	"water_bubble_sent": SELFMADE_PATH + "bubblesent.ogg",
+	"water_bubble_burst": SELFMADE_PATH + "bubbleburst.ogg",
 	"imbue_impact": SELFMADE_PATH + "IMBUEimpact.wav",
 	"magic_cast": BATTLE_PATH + "55_Encounter_02.wav",
 	"magic_hit": BATTLE_PATH + "15_Impact_flesh_02.wav",

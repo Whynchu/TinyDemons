@@ -95,7 +95,7 @@ call the ordinary damage entry point.
 | Fire Burn | 20% per eligible hit | 2.5 s | 1 damage per stack every 1 s | 3 |
 | Shadow Poison | 20% per eligible hit | 2.5 s | 1 damage per stack every 1 s | 3 |
 | Ice Slow | 20% per eligible hit | 2.0 s | 15% movement slow per stack | 3 |
-| Electric Stun | 10% per eligible hit | 2.5 s | brief action interruption every 1 s; each extra stack shortens cadence by 0.05 s, floor 0.5 s | 3 |
+| Electric Stun | 10% per eligible hit | 2.5 s | immediate 0.12 s action lock on proc, then repeat locks every 1 s; each extra stack shortens repeat cadence by 0.05 s, floor 0.5 s | 3 |
 
 All values live on typed status definitions and remain tuneable. The numbers are
 starting values for playtesting, not a final balance sign-off.
@@ -163,8 +163,10 @@ Global rules:
   regen delay, number feedback, screen/engagement lethality policy, and normal
   enemy/player death transitions.
 - Ice Slow feeds the shared player movement multiplier and enemy scoot distance.
-- Electric Stun cancels the active attack and briefly blocks movement/attacks;
-  it observes the boss resistance flag.
+- Electric Stun immediately cancels the active attack and briefly blocks
+  movement/attacks on proc, then repeats on its stack-adjusted cadence. Enemy
+  lock windows add a short sprite-only jolt; collision geometry does not move.
+  It observes the boss resistance flag.
 
 ### S4 — Presentation and render fix
 
@@ -196,8 +198,8 @@ Global rules:
 - DoT applies to enemy and player, cannot re-proc, does not trigger hitstop,
   uses normal death handling, and follows the on-screen/engaged lethal rule.
 - Slow affects player and enemy movement and expires cleanly.
-- Stun cadence, stack reduction/floor, action interruption, boss resistance,
-  and expiry.
+- Stun's immediate proc lock, repeat cadence, stack reduction/floor, action
+  interruption, sprite-only jolt, boss resistance, and expiry.
 - Status marks add and remove for pooled actors and the player HUD.
 - Imbue overlay alignment plus the magenta artifact report case.
 

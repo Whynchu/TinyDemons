@@ -12,6 +12,7 @@ var element := 0
 var stacks := 0
 var amount := 0.0
 var lock_duration := 0.0
+var is_initial_stun_pulse := false
 
 
 func configure(

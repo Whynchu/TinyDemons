@@ -124,6 +124,10 @@ func tick_runtime(delta: float, is_dead: Callable, update_knockback: Callable, u
 	if combat == null or is_dead.call(self) or is_spawn_locked():
 		return
 	combat.cooldown = maxf(combat.cooldown - delta, 0.0)
+	if combat.status_stun_timer > 0.0:
+		combat.status_stun_timer = maxf(combat.status_stun_timer - delta, 0.0)
+		combat.hitstun_timer = maxf(combat.hitstun_timer - delta, 0.0)
+		return
 	if update_knockback.call(self, delta):
 		var support := get_node_or_null("Support") as Node
 		if support != null:
@@ -375,10 +379,14 @@ func reset_runtime_state(start_pos: Vector2, initial_target: Vector2, repath_del
 		combat.active = false
 		combat.flash_timer = 0.0
 		combat.hitstun_timer = 0.0
+		combat.status_stun_timer = 0.0
 		combat.knockback_velocity = Vector2.ZERO
 	var statuses := get_node_or_null("Status") as StatusComponent
 	if statuses != null:
 		statuses.clear_all()
+	var aura := get_node_or_null("ElementAura") as ElementAuraComponent
+	if aura != null:
+		aura.clear_status_visuals()
 	combat.knockback_timer = 0.0
 	combat.timer = 0.0
 	combat.frame = 0

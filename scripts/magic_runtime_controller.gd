@@ -14,6 +14,10 @@ const MAGIC_KNOCKBACK_MULTIPLIER := 0.25
 const FIRE_SPRITE_FRAME_SIZE := Vector2i(16, 16)
 const FIRE_CONE_FRAME_TIME := 0.11
 const FIRE_CONE_EFFECT_DURATION := 0.48
+const FIRE_CONE_ART_EDGE_WIDTH_SCALE := 1.08
+const SKYFALL_BOLT_FRAME_TIME := 0.035
+const SKYFALL_BOLT_DURATION := 0.14
+const SKYFALL_BOLT_SIZE := Vector2i(11, 31)
 const MAGIC_FRAME_COUNT := 5
 const MAGIC_CAST_FRAME_INDEX := 2
 const MAGIC_FRAME_TIME_SCALE := 1.20
@@ -48,6 +52,7 @@ var displayed_chroma := -1.0
 var fire_cone_source_frames: Array[Texture2D] = []
 var fire_cone_frames_by_palette: Dictionary = {}
 var fire_cone_animation_cache: Dictionary = {}
+var skyfall_bolt_animation_cache: Dictionary = {}
 var fire_cone_source_loaded := false
 
 
@@ -292,6 +297,15 @@ func begin_magic_animation(context: MagicRuntimeContext, direction: Vector2, tar
 	else:
 		pending_magic_form = null
 		pending_magic_palette = "grey"
+	if pending_magic_form != null:
+		var selected_delivery := SpellFormCatalogScript.delivery_of(pending_magic_form)
+		var selected_form_id := StringName(pending_magic_form.get("id"))
+		if selected_form_id == &"fire" and selected_delivery == SpellFormDefinitionScript.Delivery.CONE:
+			var cone_remembered_facing_left := bool(context.last_player_facing_left_get.call())
+			var cone_aim_left := cone_remembered_facing_left
+			if absf(pending_magic_direction.x) > ActorMotor.HORIZONTAL_FACING_DEADZONE:
+				cone_aim_left = pending_magic_direction.x < 0.0
+			pending_magic_direction = Vector2.LEFT if cone_aim_left else Vector2.RIGHT
 	magic_animation_is_imbue = is_imbue
 	pending_imbue_activated = false
 	magic_cast_decided = not is_candidate
@@ -443,7 +457,7 @@ func deliver_instant_strike(context: MagicRuntimeContext, target: Sprite2D, mode
 	if strike_target == null or not is_instance_valid(strike_target) or not bool(context.is_slime_targetable.call(strike_target)):
 		return
 	var hit_point := magic_target_point(context, strike_target)
-	spawn_sky_strike(context, hit_point, palette)
+	spawn_sky_strike(context, strike_target, magic_target_visual_top(context, strike_target), palette)
 	if _try_activate_puzzle_torch(context, strike_target, hit_point, palette):
 		return
 	magic_hit_slime(context, strike_target, hit_point, palette, mode, false, form)
@@ -667,13 +681,16 @@ func _fire_cone_animation_frames(context: MagicRuntimeContext, radius: float, ha
 				if distance > radius:
 					continue
 				var angle := atan2(local_y, local_x)
-				if absf(angle) > half_angle:
-					continue
 				var radial := clampf(distance / maxf(radius, 1.0), 0.0, 1.0)
-				var side_ratio := absf(angle) / maxf(half_angle, 0.01)
+				var edge_flare := radial * radial * (3.0 - 2.0 * radial)
+				# Art flares at the tip; deliver_cone keeps the unscaled hit angle.
+				var art_half_angle := half_angle * lerpf(1.0, FIRE_CONE_ART_EDGE_WIDTH_SCALE, edge_flare)
+				if absf(angle) > art_half_angle:
+					continue
+				var side_ratio := absf(angle) / maxf(art_half_angle, 0.01)
 				var fill_color := tones[0] if side_ratio > 0.84 else tones[1]
 				var fill_alpha := 0.22 if side_ratio > 0.84 else 0.13
-				var sample_x := roundi((angle / maxf(half_angle, 0.01) * 0.5 + 0.5) * float(source_image.get_width() - 1))
+				var sample_x := roundi((angle / maxf(art_half_angle, 0.01) * 0.5 + 0.5) * float(source_image.get_width() - 1))
 				var sample_y := roundi(radial * float(source_image.get_height() - 1))
 				var flame_pixel := source_image.get_pixel(sample_x, sample_y)
 				if flame_pixel.a > 0.0:
@@ -721,10 +738,12 @@ func _fire_cone_texture(context: MagicRuntimeContext, radius: float, half_angle:
 			if distance > radius:
 				continue
 			var angle := absf(atan2(local_y, local_x))
-			if angle > half_angle:
-				continue
 			var radial := distance / maxf(radius, 1.0)
-			var side_ratio := angle / maxf(half_angle, 0.01)
+			var edge_flare := radial * radial * (3.0 - 2.0 * radial)
+			var art_half_angle := half_angle * lerpf(1.0, FIRE_CONE_ART_EDGE_WIDTH_SCALE, edge_flare)
+			if angle > art_half_angle:
+				continue
+			var side_ratio := angle / maxf(art_half_angle, 0.01)
 			var color := tones[0]
 			var alpha := 0.36
 			if side_ratio < 0.78:
@@ -806,21 +825,103 @@ func spawn_magic_bubble_pop(context: MagicRuntimeContext, origin: Vector2, palet
 		})
 
 
-func spawn_sky_strike(context: MagicRuntimeContext, world_position: Vector2, palette: String) -> void:
+func spawn_sky_strike(context: MagicRuntimeContext, target: Sprite2D, world_position: Vector2, palette: String) -> void:
 	var player := context.player
 	var effects := context.effects_spawner
 	var rng := context.rng
-	var color := PaletteLibrary.normal(palette)
+	var bolt_palette := palette if palette in PaletteLibrary.PALETTE_NAMES else "blue"
+	var bolt_frames := _skyfall_bolt_animation_frames(bolt_palette)
+	var bolt := Sprite2D.new()
+	bolt.name = "ElectricSkyfallBolt"
+	bolt.texture = bolt_frames[0] if not bolt_frames.is_empty() else null
+	bolt.centered = false
+	bolt.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	bolt.z_as_relative = false
+	bolt.z_index = target.z_index + 1
+	_add_child_to_runtime(context, bolt, world_position - Vector2(float(SKYFALL_BOLT_SIZE.x >> 1), float(SKYFALL_BOLT_SIZE.y - 1)))
+	effects.pixel_particles.append({
+		"sprite": bolt,
+		"velocity": Vector2.ZERO,
+		"timer": SKYFALL_BOLT_DURATION,
+		"lifetime": SKYFALL_BOLT_DURATION,
+		"gravity": 0.0,
+		"alpha_scale": 1.0,
+		"animation_frames": bolt_frames,
+		"animation_frame_time": SKYFALL_BOLT_FRAME_TIME,
+		"effect_tag": &"electric_skyfall_bolt",
+	})
+	var color := PaletteLibrary.normal(bolt_palette)
 	for i in 10:
 		var particle := Sprite2D.new()
 		particle.texture = context.pixel_particle_texture.call(color, 1) as Texture2D
 		particle.centered = false
 		particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		particle.z_as_relative = false
-		particle.z_index = player.z_index + 1
+		particle.z_index = target.z_index + 1
 		_add_child_to_runtime(context, particle, world_position + Vector2(rng.randf_range(-3.0, 3.0), -float(6 + i * 2)))
 		var lifetime := 0.16
 		effects.pixel_particles.append({"sprite": particle, "velocity": Vector2(0.0, 220.0), "timer": lifetime, "lifetime": lifetime, "gravity": 0.0})
+
+
+func _skyfall_bolt_animation_frames(palette: String) -> Array[Texture2D]:
+	if skyfall_bolt_animation_cache.has(palette):
+		return skyfall_bolt_animation_cache[palette] as Array[Texture2D]
+	var normal_color := PaletteLibrary.normal(palette)
+	var accent_color := PaletteLibrary.accent(palette)
+	var white := PaletteLibrary.white()
+	var main_paths: Array[PackedVector2Array] = [
+		PackedVector2Array([Vector2(5, 0), Vector2(7, 4), Vector2(4, 8), Vector2(6, 12), Vector2(3, 16), Vector2(5, 20), Vector2(4, 25), Vector2(5, 30)]),
+		PackedVector2Array([Vector2(5, 0), Vector2(6, 4), Vector2(3, 8), Vector2(5, 12), Vector2(7, 16), Vector2(4, 20), Vector2(6, 25), Vector2(5, 30)]),
+	]
+	var left_branches: Array[PackedVector2Array] = [
+		PackedVector2Array([Vector2(4, 8), Vector2(1, 10), Vector2(0, 13)]),
+		PackedVector2Array([Vector2(3, 8), Vector2(0, 10), Vector2(1, 13)]),
+	]
+	var right_branches: Array[PackedVector2Array] = [
+		PackedVector2Array([Vector2(3, 16), Vector2(7, 19), Vector2(8, 23)]),
+		PackedVector2Array([Vector2(7, 16), Vector2(9, 18), Vector2(8, 22)]),
+	]
+	var frames: Array[Texture2D] = []
+	for frame_index in main_paths.size():
+		var image := Image.create(SKYFALL_BOLT_SIZE.x, SKYFALL_BOLT_SIZE.y, false, Image.FORMAT_RGBA8)
+		image.fill(Color.TRANSPARENT)
+		var main_path := main_paths[frame_index]
+		var left_branch := left_branches[frame_index]
+		var right_branch := right_branches[frame_index]
+		_draw_skyfall_bolt_path(image, main_path, normal_color, 3)
+		_draw_skyfall_bolt_path(image, left_branch, normal_color, 3)
+		_draw_skyfall_bolt_path(image, right_branch, normal_color, 3)
+		_draw_skyfall_bolt_path(image, main_path, accent_color, 1)
+		_draw_skyfall_bolt_path(image, left_branch, accent_color, 1)
+		_draw_skyfall_bolt_path(image, right_branch, accent_color, 1)
+		for point_index in range(0, main_path.size(), 2):
+			var point := main_path[point_index]
+			image.set_pixel(roundi(point.x), roundi(point.y), white)
+		frames.append(ImageTexture.create_from_image(image))
+	skyfall_bolt_animation_cache[palette] = frames
+	return frames
+
+
+func _draw_skyfall_bolt_path(image: Image, points: PackedVector2Array, color: Color, stroke_width: int) -> void:
+	for point_index in range(points.size() - 1):
+		var start_value := points[point_index]
+		var end_value := points[point_index + 1]
+		var start := Vector2i(roundi(start_value.x), roundi(start_value.y))
+		var finish := Vector2i(roundi(end_value.x), roundi(end_value.y))
+		var delta := finish - start
+		var steps := maxi(absi(delta.x), absi(delta.y))
+		var stroke_radius := maxi(floori(float(stroke_width - 1) * 0.5), 0)
+		for step in range(steps + 1):
+			var amount := float(step) / float(maxi(steps, 1))
+			var pixel := Vector2i(
+				roundi(lerpf(float(start.x), float(finish.x), amount)),
+				roundi(lerpf(float(start.y), float(finish.y), amount))
+			)
+			for offset_y in range(-stroke_radius, stroke_radius + 1):
+				for offset_x in range(-stroke_radius, stroke_radius + 1):
+					var sample := pixel + Vector2i(offset_x, offset_y)
+					if sample.x >= 0 and sample.y >= 0 and sample.x < image.get_width() and sample.y < image.get_height():
+						image.set_pixel(sample.x, sample.y, color)
 
 
 func _finish_magic_animation(context: MagicRuntimeContext) -> void:
@@ -933,6 +1034,15 @@ func magic_target_point(context: MagicRuntimeContext, slime: Sprite2D) -> Vector
 	return ActorGeometry.combat_target_point(context.collision_rect.call(slime) as Rect2)
 
 
+func magic_target_visual_top(context: MagicRuntimeContext, slime: Sprite2D) -> Vector2:
+	if slime == null or not is_instance_valid(slime) or slime.texture == null:
+		return magic_target_point(context, slime)
+	var visual_rect := slime.get_rect()
+	if visual_rect.size.x <= 0.0 or visual_rect.size.y <= 0.0:
+		return magic_target_point(context, slime)
+	return slime.to_global(Vector2(visual_rect.position.x + visual_rect.size.x * 0.5, visual_rect.position.y))
+
+
 func spawn_magic_projectile(context: MagicRuntimeContext, origin: Vector2, direction: Vector2, homing_target: Sprite2D = null, ability_mode: int = ChromaComponentScript.AbilityMode.GRAY, form: Resource = null, palette_override: String = "") -> void:
 	var resolved_form := form if form != null else SpellFormCatalogScript.cast_form_for(context.player_chroma_component, ability_mode)
 	var palette := palette_override
@@ -973,6 +1083,12 @@ func spawn_magic_projectile(context: MagicRuntimeContext, origin: Vector2, direc
 	_add_child_to_runtime(context, outline, origin)
 	var controller := context.magic_projectile_controller as MagicProjectileController
 	controller.spawn(projectile, outline, direction, projectile_lifetime, palette, homing_target, ability_mode, resolved_form, projectile_speed)
+	if is_water_triangle_form(resolved_form):
+		context.play_sound.call("water_bubble_sent", -4.0, 1.0)
+
+
+func is_water_triangle_form(form: Resource) -> bool:
+	return form != null and StringName(form.get("id")) == &"water"
 
 
 func _add_child_to_runtime(context: MagicRuntimeContext, node: Node2D, world_position: Vector2) -> void:
@@ -1161,6 +1277,8 @@ func _spawn_magic_trail_callback(world_position: Vector2, palette: String, is_be
 
 func resolve_magic_projectile_hit(context: MagicRuntimeContext, target: Sprite2D, world_position: Vector2, palette: String, ability_mode: int = ChromaComponentScript.AbilityMode.GRAY, is_beam: bool = false, form: Resource = null) -> void:
 	if form != null and SpellFormCatalogScript.delivery_of(form) == SpellFormDefinitionScript.Delivery.PROJECTILE_SPLASH:
+		if is_water_triangle_form(form):
+			context.play_sound.call("water_bubble_burst", -4.0, 1.0)
 		var splash_radius := float(form.get("delivery_radius"))
 		var target_is_puzzle_torch := _is_puzzle_torch(context, target)
 		_activate_puzzle_torches_in_radius(context, world_position, splash_radius, palette, target)

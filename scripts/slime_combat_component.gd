@@ -17,6 +17,7 @@ var frame := 0
 var face_left := false
 var flash_timer := 0.0
 var hitstun_timer := 0.0
+var status_stun_timer := 0.0
 var knockback_velocity := Vector2.ZERO
 var knockback_timer := 0.0
 var lunge_remaining := 0.0

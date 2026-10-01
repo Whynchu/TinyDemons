@@ -160,13 +160,16 @@ identity; it does not replace an elemental form when Chroma is low.
 ### 4.3 Fire — Cinder Cone (`CONE`)
 
 - **Identity:** burst, aggression, expensive commitment.
-- **Behavior:** at the cast frame, a frontal arc (~90°, ~2.5 tiles) is sampled.
+- **Behavior:** at the cast frame, a horizontal left/right arc (~90°, ~2.5
+  tiles) is sampled. Diagonal input chooses its horizontal side; vertical input
+  uses the player's remembered facing.
   Every enemy body polygon intersecting the arc takes damage once. No travel;
   the player is committed and vulnerable for the cast.
 - **Cast VFX:** one animated fan maps each palette-recolored Hub flame frame
-  across the 90° sector, so the cone reads as one continuous flame. Delayed
-  pixel-ember streams flow through it and rise with the same palette fade as
-  the game's Burning effect.
+  across the 90° sector, so the cone reads as one continuous flame. Its visible
+  edge flares slightly toward the far tip; this art-only flare does not enlarge
+  the damage or puzzle-activation sector. Delayed pixel-ember streams flow
+  through it and rise with the same palette fade as the game's Burning effect.
 - **Source defaults:** 90° arc, 40px reach, 1.35x damage, 15 Chroma, 3.0s
   cooldown.
 - **Payload:** Fire → **Burn** on every target hit.
@@ -182,7 +185,9 @@ identity; it does not replace an elemental form when Chroma is low.
   cooldown; 9px bubble projectile at 54px/s for up to 1.25s, with a 0.16s
   minimum travel before collision. On impact, fourteen 4–6px bubbles burst
   outward and upward. The direct target takes full form damage; enemies caught
-  only in the splash take 50% of that damage.
+  only in the splash take 50% of that damage. `bubblesent.ogg` plays once when
+  the Water Triangle bubble launches; `bubbleburst.ogg` plays once when it
+  reaches a target and pops, not when the projectile expires without a hit.
 - **Payload:** Water → no status (ratified status-free).
 - **Feel:** the safe, efficient ranged AoE; repositions crowds.
 
@@ -197,7 +202,10 @@ identity; it does not replace an elemental form when Chroma is low.
 - **Deferred:** chaining to further targets is out of scope here (see §9).
 - **Implemented in source (P3):** resolves the locked/nearest target at the cast
   frame and applies the payload status. Its 10 Chroma / 1.2s cooldown and
-  1.15x damage are the current source defaults. Sky-bolt VFX remains provisional.
+  1.15x damage are the current source defaults. The strike uses a brief,
+  stepped pixel bolt from above, aimed at the rendered sprite's top-center,
+  with the existing electric sparks as impact support. Stun locks immediately
+  on proc, then repeats on its existing cadence with a sprite-only jolt.
 
 ### 4.6 Grass — Leechvine (`BEAM`)
 
@@ -400,10 +408,13 @@ existing puzzle behavior and does not add elemental reactions.
 Current source pass: form-specific delivery remains distinct. Fire maps the
 Hub's animated flame frames into one continuous fan and sends rising pixel
 embers through it using the Burning effect's fade. Water travels as a
-highlighted bubble and pops into smaller bubbles while preserving its reduced
-secondary splash. Payload impact particles remain element-specific. These
-effects have not yet received a rendered playtest; confirm 240×160 readability
-when a Godot runtime session is available.
+highlighted bubble, plays its launch cue, then pops into smaller bubbles with
+an impact cue while preserving its reduced secondary splash. Electric resolves
+instantly under a short pixel bolt aimed at the target sprite's top-center;
+Stun starts with an immediate lock and gives enemies a sprite-only jolt during
+lock windows. Payload impact particles remain element-specific. These effects
+have not yet received a rendered playtest; confirm 240×160 readability when a
+Godot runtime session is available.
 
 ## 9. Non-goals and deferred
 

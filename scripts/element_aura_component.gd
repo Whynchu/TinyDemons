@@ -16,6 +16,9 @@ var _imbue_outlines: Dictionary = {}
 var _imbue_flashes: Dictionary = {}
 var _status_outline: Sprite2D = null
 var _status_particle_timers: Dictionary = {}
+var _stun_shake_remaining := 0.0
+var _stun_shake_duration := 0.0
+var _stun_shake_amplitude := 0.0
 
 
 func _ready() -> void:
@@ -44,6 +47,9 @@ func configure(new_actor_sprite: Sprite2D, new_overlay_parent: Node2D, new_statu
 
 func clear_status_visuals() -> void:
 	_status_particle_timers.clear()
+	_stun_shake_remaining = 0.0
+	_stun_shake_duration = 0.0
+	_stun_shake_amplitude = 0.0
 	_queue_status_outline()
 
 
@@ -120,6 +126,15 @@ func refresh_status_aura() -> void:
 		_status_outline.z_as_relative = true
 		overlay_parent.add_child(_status_outline)
 	_status_outline.texture = _outline_texture(actor, ElementCatalogScript.damage_number_color(definition.element))
+	sync_status_outline_transform()
+	_status_outline.visible = actor.visible and actor.is_visible_in_tree()
+
+
+func sync_status_outline_transform() -> void:
+	var actor := _active_actor_sprite()
+	var outline := _valid_sprite(_status_outline)
+	if actor == null or outline == null:
+		return
 	_status_outline.centered = actor.centered
 	_status_outline.global_transform = actor.global_transform
 	_status_outline.offset = actor.offset + (Vector2.ZERO if actor.centered else Vector2(-1.0, -1.0))
@@ -127,11 +142,33 @@ func refresh_status_aura() -> void:
 	_status_outline.flip_v = actor.flip_v
 	_status_outline.z_as_relative = actor.z_as_relative
 	_status_outline.z_index = actor.z_index - 1
-	_status_outline.visible = actor.visible and actor.is_visible_in_tree()
+
+
+func trigger_status_stun_shake(duration: float, is_initial_pulse: bool) -> void:
+	var lock_duration := maxf(duration, 0.0)
+	if lock_duration <= 0.0:
+		return
+	_stun_shake_remaining = lock_duration
+	_stun_shake_duration = lock_duration
+	_stun_shake_amplitude = 3.0 if is_initial_pulse else 2.0
+
+
+func status_stun_visual_offset() -> Vector2:
+	if _stun_shake_remaining <= 0.0 or _stun_shake_duration <= 0.0:
+		return Vector2.ZERO
+	var progress := clampf(1.0 - _stun_shake_remaining / _stun_shake_duration, 0.0, 1.0)
+	var envelope := 1.0 - progress
+	var phase := progress * PI * 6.0
+	var amplitude := _stun_shake_amplitude * envelope
+	return Vector2(roundf(cos(phase) * amplitude), roundf(sin(phase * 1.5) * minf(amplitude * 0.35, 1.0)))
 
 
 func advance_status_visuals(delta: float, effects: EffectsSpawner, rng: RandomNumberGenerator, pixel_texture: Callable) -> void:
 	refresh_status_aura()
+	_stun_shake_remaining = maxf(_stun_shake_remaining - maxf(delta, 0.0), 0.0)
+	if _stun_shake_remaining <= 0.0:
+		_stun_shake_duration = 0.0
+		_stun_shake_amplitude = 0.0
 	var actor := _active_actor_sprite()
 	var component := _valid_status_component(status_component)
 	if actor == null or component == null or effects == null or not is_instance_valid(effects) or not pixel_texture.is_valid():

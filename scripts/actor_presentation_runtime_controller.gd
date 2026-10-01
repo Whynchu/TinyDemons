@@ -377,6 +377,9 @@ func apply_actor_scale(root: Object, actor: Sprite2D, _use_effect_texture: bool)
 	actor.scale = actor_screen_scale(root, actor)
 	actor.offset = actor_visual_offset(root, actor)
 	sync_actor_geometry_offset(root, actor)
+	var aura := actor.get_node_or_null("ElementAura") as ElementAuraComponent
+	if aura != null:
+		aura.sync_status_outline_transform()
 	if (root.get("slimes") as Array[Sprite2D]).has(actor):
 		sync_slime_shadow(root, actor)
 
@@ -386,6 +389,10 @@ func restore_actor_base_visual_scale(root: Object, actor: Sprite2D) -> void:
 	if renderer.original_actor_scales.has(actor):
 		actor.scale = actor_screen_scale(root, actor)
 		actor.offset = actor_visual_offset(root, actor)
+		sync_actor_geometry_offset(root, actor)
+		var aura := actor.get_node_or_null("ElementAura") as ElementAuraComponent
+		if aura != null:
+			aura.sync_status_outline_transform()
 
 
 func actor_screen_scale(root: Object, actor: Sprite2D) -> Vector2:
@@ -396,6 +403,14 @@ func actor_screen_scale(root: Object, actor: Sprite2D) -> Vector2:
 
 
 func actor_visual_offset(root: Object, actor: Sprite2D) -> Vector2:
+	var visual_offset := _actor_base_visual_offset(root, actor)
+	var aura := actor.get_node_or_null("ElementAura") as ElementAuraComponent
+	if aura != null:
+		visual_offset += aura.status_stun_visual_offset()
+	return visual_offset
+
+
+func _actor_base_visual_offset(root: Object, actor: Sprite2D) -> Vector2:
 	var boss_phase := actor.get_node_or_null("BossJumpSlam") as BossJumpSlamComponent
 	if boss_phase != null and boss_phase.is_active():
 		return boss_phase.presentation_offset
@@ -416,4 +431,5 @@ func sync_actor_geometry_offset(root: Object, actor: Sprite2D) -> void:
 		# the shared floor anchor. Its collision guides are authored in that same
 		# anchored coordinate space, so shifting them with Sprite2D.offset moves
 		# the feet and body hitbox away from the visible artwork.
-		geometry.position = authored_position if actor is SkeletonActor else authored_position + actor.offset
+		var geometry_offset := _actor_base_visual_offset(root, actor)
+		geometry.position = authored_position if actor is SkeletonActor else authored_position + geometry_offset

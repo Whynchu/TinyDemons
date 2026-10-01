@@ -555,3 +555,24 @@ Replacing tiled flame sprites with one flowing fan silhouette and delayed ember 
 ## 2026-10-01T21:07Z — codex — done
 Replaced nine repeated flame sprites with one cone-mapped animation from the Hub flame sheet. Delayed ember lanes now move through the fan using the Burning palette fade. Offline script checks pass; gameplay remains stopped under the session restriction, so rendered acceptance is open.
 
+## 2026-10-01T21:26Z — codex — claim
+Following player clarification: keep Fire damage at the existing 90-degree sector, constrain its cast to left/right, and widen only the visual fan's far edge. Updating source and spell/tuning documentation; static-only verification applies.
+
+## 2026-10-01T21:29Z — codex — done
+Fire Cinder Cone now snaps diagonal aim to horizontal left/right and uses remembered facing for vertical aim. Its 90-degree hit/puzzle sectors remain unchanged; only the rendered fan widens toward the tip. Updated the spell plan and tuning index. Offline script diagnostics and `git diff --check` pass; no Godot runtime or gameplay tests were run.
+
+## 2026-10-01T21:46Z — codex — claim
+Implement the approved Electric Skyfall direction and Stun feedback. Keep strike damage instant, add a stepped pixel bolt with impact sparks, apply an immediate brief action lock on Stun proc, then add sprite-only jolts on the repeat locks; preserve enemy geometry. Static-only verification applies.
+
+## 2026-10-01T21:55Z — codex — claim
+Extend the in-flight Electric/Stun implementation with Water Triangle audio: preload and register `bubblesent.wav` for bubble launch and `bubbleburst.wav` for confirmed impact, then document both cues.
+
+## 2026-10-01T22:03Z — codex — done
+Added the top-down Skyfall bolt, immediate Stun proc lock with sprite-only jolts on lock windows, and Water Triangle launch/impact SFX registration and hooks. Updated gameplay tuning and elemental spell/status documentation. Offline diagnostics pass for changed scripts and `git diff --check` passes. No Godot runtime or test suite was launched; rendered acceptance remains open.
+
+## 2026-10-01T22:40Z — codex — claim
+Convert the Water Triangle launch and impact cues to OGG, register the OGG assets, bump to `0.3.27`, and commit/push the requested elemental spell polish while excluding unrelated shared-worktree changes.
+
+## 2026-10-01T22:45Z — codex — done
+Converted both Water Triangle cues to OGG using the repository converter's Vorbis quality 5 setting, switched the sound catalog to the OGG files, and bumped the title/web version to `0.3.27`. Offline diagnostics and audio decode checks pass; `git diff --check` passes. No Godot runtime or test suite was launched. Prepared the scoped release for the requested push.
+

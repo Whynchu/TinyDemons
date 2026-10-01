@@ -2,10 +2,36 @@
 
 _Only codex writes this file._
 
-**Focus:** Replace tiled Fire sprites with a cohesive cone and Burning-style ember flow
+**Focus:** `0.3.27` Water OGG and elemental spell release
 **Updated:** 2026-10-01
 
 ## Completed
+
+Converted both Water Triangle WAVs to OGG with the repository converter's
+Vorbis quality 5 setting and updated the catalog and spell/tuning docs to use
+the OGG files. Bumped the title and web build version to `0.3.27`. Offline
+GDScript diagnostics, OGG decode checks, and `git diff --check` pass. No Godot
+runtime or test suite was launched; rendered/mobile web playtest acceptance
+remains open.
+
+Electric Skyfall now uses a short stepped bolt aimed from above at the target
+sprite's rendered top-center, with the electric sparks retained as impact
+support. Stun applies a brief lock immediately on proc, repeats on its existing
+stack-adjusted cadence, and gives enemies a sprite-only jolt without moving
+collision geometry. Water Triangle plays the supplied `bubblesent.ogg` once at
+launch and `bubbleburst.ogg` once when the bubble reaches a target; expiry
+without impact stays silent. Both cues are registered in the shared catalog,
+warm-loaded by `SoundManager`, and exposed in the central mix profile. Updated
+spell/status plans and gameplay tuning. Offline MCP script diagnostics pass for
+all changed GDScript files and `git diff --check` passes. No game or test suite
+was launched; rendered and web-playtest acceptance remain open.
+
+Fire Cinder Cone now snaps diagonal aim to horizontal left/right and uses the
+player's remembered facing for vertical aim. The 90-degree hit and puzzle
+sectors remain unchanged; only the fan art flares slightly wider at its far tip.
+The spell plan and tuning index document the visual/hit-sector distinction.
+Offline GDScript diagnostics and `git diff --check` pass. No Godot runtime or
+gameplay tests were run.
 
 Replaced the repeated Hub flame sprites with one animated cone texture that
 maps each palette-recolored `Fire.png` frame across the 90-degree sector.
