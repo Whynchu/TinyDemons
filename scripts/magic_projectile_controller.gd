@@ -22,6 +22,7 @@ func spawn(
 ) -> void:
 	var minimum_travel_time: float = float(form.get("projectile_minimum_travel_time")) if form != null else 0.0
 	var orient_to_direction := form != null and int(form.get("projectile_shape")) == SpellFormDefinitionScript.ProjectileShape.DROPLET
+	var bubble_pulse := form != null and int(form.get("projectile_shape")) == SpellFormDefinitionScript.ProjectileShape.BUBBLE
 	projectiles.append({
 		"sprite": sprite,
 		"outline": outline,
@@ -30,6 +31,7 @@ func spawn(
 		"travel_age": 0.0,
 		"minimum_travel_time": maxf(minimum_travel_time, 0.0),
 		"orient_to_direction": orient_to_direction,
+		"bubble_pulse": bubble_pulse,
 		"hit": false,
 		"palette": palette,
 		"target": target,
@@ -131,8 +133,15 @@ func tick(delta: float, speed: float, snap_position: Callable, target_point: Cal
 		sprite.global_position = snap_position.call(sprite.global_position + direction * travel_speed * delta)
 		if bool(data.get("orient_to_direction", false)):
 			sprite.rotation = direction.angle() + PI * 0.5
+		if bool(data.get("bubble_pulse", false)):
+			var bubble_wobble := sin(travel_age * 13.0) * 0.07
+			sprite.scale = Vector2(1.0 + bubble_wobble, 1.0 - bubble_wobble)
+			sprite.rotation = sin(travel_age * 8.0) * 0.06
 		if outline != null: outline.global_position = sprite.global_position
 		if outline != null and bool(data.get("orient_to_direction", false)):
+			outline.rotation = sprite.rotation
+		if outline != null and bool(data.get("bubble_pulse", false)):
+			outline.scale = sprite.scale
 			outline.rotation = sprite.rotation
 		var is_beam := bool(data.get("beam", false))
 		if is_beam:

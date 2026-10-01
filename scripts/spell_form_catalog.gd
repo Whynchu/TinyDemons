@@ -49,8 +49,8 @@ static func _ensure_forms() -> void:
 	water.chroma_cost = 10
 	water.delivery_radius = 24.0
 	water.knockback_multiplier = 0.65
-	water.projectile_shape = SpellFormDefinitionScript.ProjectileShape.DROPLET
-	water.projectile_size = 7
+	water.projectile_shape = SpellFormDefinitionScript.ProjectileShape.BUBBLE
+	water.projectile_size = 9
 	water.projectile_speed = 54.0
 	water.projectile_lifetime = 1.25
 	water.projectile_minimum_travel_time = 0.16

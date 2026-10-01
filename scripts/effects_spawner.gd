@@ -1371,6 +1371,17 @@ func update_pixel_particles(delta: float, snap_position: Callable, default_lifet
 		var color := particle.modulate
 		var lifetime := float(particle_data.get("lifetime", default_lifetime))
 		color.a = float(particle_data.get("alpha_scale", 1.0)) * clampf(timer / lifetime, 0.0, 1.0)
+		var animation_frames: Variant = particle_data.get("animation_frames", [])
+		if animation_frames is Array and not animation_frames.is_empty():
+			var frame_time := maxf(float(particle_data.get("animation_frame_time", 0.1)), 0.01)
+			var elapsed := maxf(lifetime - timer, 0.0)
+			var frame_index := posmod(
+				floori(elapsed / frame_time),
+				animation_frames.size()
+			)
+			var frame_texture: Variant = animation_frames[frame_index]
+			if frame_texture is Texture2D:
+				particle.texture = frame_texture
 		if particle_data.get("effect_tag", &"") in [CHARGE_AURA_TAG, SUPPORT_HEAL_CHARGE_TAG]:
 			particle.rotation = velocity.angle() + PI * 0.5
 			var charge_progress := float(particle_data.get("charge_progress", 0.0))

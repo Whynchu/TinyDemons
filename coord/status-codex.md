@@ -2,22 +2,17 @@
 
 _Only codex writes this file._
 
-**Focus:** Spell delivery, elemental impact effects, and mobile-web release 0.3.25 — implementation complete
+**Focus:** Replace tiled Fire sprites with a cohesive cone and Burning-style ember flow
 **Updated:** 2026-10-01
 
 ## Completed
 
-Triangle keeps its elemental form at low Chroma, rejects casts below cost, and
-can spend exactly to zero. Water now travels before it collides, deals full form
-damage to its primary target, and reduced damage to nearby splash targets. Its
-droplet projectile and the Shadow hex projectile have element-specific shapes.
-Each elemental payload emits a different pixel impact profile; the spell plan
-and gameplay tuning guide document source behavior and open runtime acceptance.
-
-Offline GDScript diagnostics, `git diff --check`, and the strict composition
-audit pass. No Godot process or test suite was launched due the session
-restriction. Release metadata is aligned at 0.3.25; mobile-web playtest remains
-the next acceptance step.
+Replaced the repeated Hub flame sprites with one animated cone texture that
+maps each palette-recolored `Fire.png` frame across the 90-degree sector.
+Delayed pixel-spark lanes flow outward through the fan and reuse the Burning
+effect's fire palette and fade. Water and hit geometry are unchanged. Offline
+script diagnostics and `git diff --check` pass. Gameplay was not launched under
+the session restriction, so rendered acceptance remains open.
 
 
 Static hookup audit is complete. All eight Triangle forms trace from Chroma acceptance through the cast frame to delivery and hit effects. Fixed puzzle-object routing, pointer-aim target resolution for Skyfall and Leechvine, and debug-unlimited form-cost selection.
@@ -128,9 +123,9 @@ changes. Do not stage them with M1.
 
 ## Handoff / next
 
-Version 0.3.25 is prepared for mobile-web playtesting. Runtime visual and balance
-acceptance for each Triangle form remains open. Do not launch another Godot
-process or test suite in this session.
+The baseline is version 0.3.26. The Fire and Water presentation changes are
+local and need an in-game visual review before a future release. Do not launch
+another Godot process or test suite in this session.
 
 ## Current work
 

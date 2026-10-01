@@ -150,8 +150,8 @@ readability.
 | Form | Delivery | Cost / cooldown | Damage factor | Delivery values |
 | --- | --- | --- | ---: | --- |
 | Neutral Stub | Homing projectile | 0 / 2.5s | 1.10x | At least 1 Chroma required to cast |
-| Fire Cinder Cone | 90° cone | 15 / 3.0s | 1.35x | 40px reach; 0.40x magic knockback |
-| Water Tide Burst | Traveling droplet / splash | 10 / 2.0s | 0.85x direct | 54px/s, 1.25s lifetime, 0.16s minimum travel, 24px impact radius; secondary hits deal 50% of direct damage; 0.65x magic knockback |
+| Fire Cinder Cone | Animated flame fan | 15 / 3.0s | 1.35x | 90°; 40px reach; Hub flame art mapped across one fan with rising ember streams; 0.40x magic knockback |
+| Water Tide Burst | Traveling bubble / pop splash | 10 / 2.0s | 0.85x direct | 9px bubble at 54px/s; 1.25s lifetime; 0.16s minimum travel; impact bursts fourteen 4–6px bubbles; 24px impact radius; secondary hits deal 50% of direct damage; 0.65x magic knockback |
 | Electric Skyfall | Instant target strike | 10 / 1.2s | 1.15x | Locked/nearest target |
 | Grass Leechvine | Target tether | 10 / 2.5s | 0.40x per tick | 64px range; 1.8s; 0.45s tick; heals 40% of dealt damage |
 | Shadow Hex | Hex-sigil curse projectile | 12 / 2.5s | 1.10x | 5px glyph; mark increases damage taken by 25% for 3s |
@@ -163,12 +163,15 @@ for that element is guaranteed on each successful spell hit; Neutral, Water,
 Grass, and Ground payloads have no status. Melee and the sword beam retain
 their chance-based status rolls. DoT ticks do not reapply status.
 
-Impact particles are payload-specific: Fire embers rise, Water droplets arc and
-fall, Electric sparks burst, Grass leaves lift, Shadow motes drift, Ground
-chips fall, and Ice crystals burst outward. The selected form still controls
-the cast path: Fire uses a forward cone, Water travels before it splashes,
+Payload impact particles are element-specific: Fire embers rise, Water droplets
+arc and fall, Electric sparks burst, Grass leaves lift, Shadow motes drift,
+Ground chips fall, and Ice crystals burst outward. The selected form controls
+the cast silhouette: Fire maps animated Hub flame frames across one forward fan
+and sends rising ember streams through it; Water travels as a highlighted
+bubble and pops into smaller bubbles on impact;
 Electric is the only instant-target strike, Grass tethers, Ground rings around
-the player, Ice throws a shard, and Shadow throws a curse projectile.
+the player, Ice throws a shard, and Shadow throws a curse projectile. Bubble
+tints follow the active payload element.
 
 ## Elemental slime definitions
 

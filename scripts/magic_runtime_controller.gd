@@ -6,10 +6,14 @@ const ChromaComponentScript = preload("res://scripts/player_chroma_component.gd"
 const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
 const SpellFormCatalogScript = preload("res://scripts/spell_form_catalog.gd")
 const SpellFormDefinitionScript = preload("res://scripts/spell_form_definition.gd")
+const SpriteFrameLibraryScript = preload("res://scripts/sprite_frame_library.gd")
 
 const GREY_MAGIC_DAMAGE_MULTIPLIER := 1.10
 const ELEMENTAL_MAGIC_DAMAGE_MULTIPLIER := 1.15
 const MAGIC_KNOCKBACK_MULTIPLIER := 0.25
+const FIRE_SPRITE_FRAME_SIZE := Vector2i(16, 16)
+const FIRE_CONE_FRAME_TIME := 0.11
+const FIRE_CONE_EFFECT_DURATION := 0.48
 const MAGIC_FRAME_COUNT := 5
 const MAGIC_CAST_FRAME_INDEX := 2
 const MAGIC_FRAME_TIME_SCALE := 1.20
@@ -41,6 +45,10 @@ var imbue_cooldown_remaining := 0.0
 var imbue_remaining := 0.0
 var imbued_element := ElementCatalogScript.Element.NEUTRAL
 var displayed_chroma := -1.0
+var fire_cone_source_frames: Array[Texture2D] = []
+var fire_cone_frames_by_palette: Dictionary = {}
+var fire_cone_animation_cache: Dictionary = {}
+var fire_cone_source_loaded := false
 
 
 func update_player_mp_ui(context: MagicRuntimeContext, delta := 0.0) -> void:
@@ -570,19 +578,167 @@ func spawn_cone_effect(context: MagicRuntimeContext, origin: Vector2, direction:
 	var rng := context.rng
 	var player := context.player
 	var effects := context.effects_spawner
-	var color := PaletteLibrary.normal(palette)
-	for index in 12:
-		var angle := direction.angle() + rng.randf_range(-half_angle, half_angle)
-		var ray := Vector2(cos(angle), sin(angle))
-		var particle := Sprite2D.new()
-		particle.texture = context.pixel_particle_texture.call(color, 1) as Texture2D
-		particle.centered = false
-		particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		particle.z_as_relative = false
-		particle.z_index = player.z_index + 1
-		_add_child_to_runtime(context, particle, origin + ray * rng.randf_range(4.0, radius))
-		var lifetime := 0.2
-		effects.pixel_particles.append({"sprite": particle, "velocity": ray * rng.randf_range(12.0, 24.0), "timer": lifetime, "lifetime": lifetime, "gravity": 0.0})
+	var fire_palette := palette if palette in PaletteLibrary.PALETTE_NAMES else "orange"
+	var fire_tones := PaletteLibrary.fire_triple(fire_palette)
+	var cone_frames := _fire_cone_animation_frames(context, radius, half_angle, fire_palette)
+	var fan := Sprite2D.new()
+	fan.name = "FireConeFan"
+	fan.texture = cone_frames[0] if not cone_frames.is_empty() else null
+	fan.centered = false
+	fan.offset = Vector2(0.0, -ceilf(radius))
+	fan.rotation = direction.angle()
+	fan.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	fan.z_as_relative = false
+	fan.z_index = player.z_index + 1
+	_add_child_to_runtime(context, fan, origin)
+	var fan_lifetime := FIRE_CONE_EFFECT_DURATION
+	var fan_particle := {
+		"sprite": fan,
+		"velocity": Vector2.ZERO,
+		"timer": fan_lifetime,
+		"lifetime": fan_lifetime,
+		"gravity": 0.0,
+		"alpha_scale": 0.88,
+	}
+	if cone_frames.size() > 1:
+		fan_particle["animation_frames"] = cone_frames
+		fan_particle["animation_frame_time"] = FIRE_CONE_FRAME_TIME
+	effects.pixel_particles.append(fan_particle)
+	var lane_count := 7
+	var sparks_per_lane := 4
+	for lane_index in lane_count:
+		var lane_fraction := float(lane_index) / float(lane_count - 1)
+		var spread := lerpf(-0.88, 0.88, lane_fraction)
+		var angle := direction.angle() + half_angle * spread
+		var ray := Vector2.from_angle(angle)
+		var tangent := Vector2(-ray.y, ray.x)
+		for spark_index in sparks_per_lane:
+			var spark_size := 2 if rng.randf() < 0.20 else 1
+			var spark := Sprite2D.new()
+			spark.name = "FireConeEmber"
+			spark.texture = context.pixel_particle_texture.call(Color.WHITE, spark_size) as Texture2D
+			spark.centered = false
+			spark.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			spark.z_as_relative = false
+			spark.z_index = player.z_index + 2
+			var spark_origin := origin + ray * rng.randf_range(1.0, 3.0) + tangent * rng.randf_range(-1.5, 1.5)
+			_add_child_to_runtime(context, spark, spark_origin)
+			var delay := float(spark_index) * 0.045 + rng.randf_range(0.0, 0.018)
+			var travel_lifetime := rng.randf_range(0.34, 0.40)
+			var lifetime := travel_lifetime + delay
+			spark.modulate = fire_tones[0]
+			effects.pixel_particles.append({
+				"sprite": spark,
+				"velocity": ray * rng.randf_range(86.0, 106.0) + tangent * rng.randf_range(-5.0, 5.0) + Vector2(0.0, -rng.randf_range(5.0, 11.0)),
+				"timer": lifetime,
+				"lifetime": lifetime,
+				"delay": delay,
+				"gravity": -2.0,
+				"fire_spark": true,
+				"fire_palette": fire_palette,
+			})
+
+
+func _fire_cone_animation_frames(context: MagicRuntimeContext, radius: float, half_angle: float, palette: String) -> Array[Texture2D]:
+	var extent := maxi(ceili(radius), 1)
+	var cache_key := "magic_fire_cone:%d:%d:%s" % [extent, roundi(rad_to_deg(half_angle)), palette]
+	if fire_cone_animation_cache.has(cache_key):
+		return fire_cone_animation_cache[cache_key] as Array[Texture2D]
+	var source_frames := _fire_cone_frames(palette)
+	if source_frames.is_empty():
+		return [_fire_cone_texture(context, radius, half_angle, palette)]
+	var tones := PaletteLibrary.fire_triple(palette)
+	var cone_frames: Array[Texture2D] = []
+	for source_frame in source_frames:
+		var source_image := source_frame.get_image()
+		if source_image == null or source_image.is_empty():
+			continue
+		var image := Image.create(extent + 1, extent * 2 + 1, false, Image.FORMAT_RGBA8)
+		image.fill(Color.TRANSPARENT)
+		# Polar-map the authored flame once: its point faces the caster and its
+		# broad base fans toward the cone edge. This keeps one connected plume.
+		for y in image.get_height():
+			var local_y := float(y - extent)
+			for x in image.get_width():
+				var local_x := float(x)
+				if local_x <= 0.0:
+					continue
+				var distance := Vector2(local_x, local_y).length()
+				if distance > radius:
+					continue
+				var angle := atan2(local_y, local_x)
+				if absf(angle) > half_angle:
+					continue
+				var radial := clampf(distance / maxf(radius, 1.0), 0.0, 1.0)
+				var side_ratio := absf(angle) / maxf(half_angle, 0.01)
+				var fill_color := tones[0] if side_ratio > 0.84 else tones[1]
+				var fill_alpha := 0.22 if side_ratio > 0.84 else 0.13
+				var sample_x := roundi((angle / maxf(half_angle, 0.01) * 0.5 + 0.5) * float(source_image.get_width() - 1))
+				var sample_y := roundi(radial * float(source_image.get_height() - 1))
+				var flame_pixel := source_image.get_pixel(sample_x, sample_y)
+				if flame_pixel.a > 0.0:
+					image.set_pixel(x, y, Color(flame_pixel.r, flame_pixel.g, flame_pixel.b, maxf(flame_pixel.a, fill_alpha)))
+				else:
+					image.set_pixel(x, y, Color(fill_color.r, fill_color.g, fill_color.b, fill_alpha))
+		cone_frames.append(ImageTexture.create_from_image(image))
+	if cone_frames.is_empty():
+		cone_frames.append(_fire_cone_texture(context, radius, half_angle, palette))
+	fire_cone_animation_cache[cache_key] = cone_frames
+	return cone_frames
+
+
+func _fire_cone_frames(palette: String) -> Array[Texture2D]:
+	if not fire_cone_source_loaded:
+		fire_cone_source_loaded = true
+		var frame_library = SpriteFrameLibraryScript.new()
+		fire_cone_source_frames = frame_library.slice_frames("res://assets/artwork/Fire.png", FIRE_SPRITE_FRAME_SIZE)
+	if fire_cone_frames_by_palette.has(palette):
+		return fire_cone_frames_by_palette[palette] as Array[Texture2D]
+	if fire_cone_source_frames.is_empty():
+		return []
+	var frame_library = SpriteFrameLibraryScript.new()
+	var recolored_frames := frame_library.recolor_fire_frames(fire_cone_source_frames, palette)
+	fire_cone_frames_by_palette[palette] = recolored_frames
+	return recolored_frames
+
+
+func _fire_cone_texture(context: MagicRuntimeContext, radius: float, half_angle: float, palette: String) -> Texture2D:
+	var effects := context.effects_spawner
+	var extent := maxi(ceili(radius), 1)
+	var cache_key := "magic_fire_cone:%d:%d:%s" % [extent, roundi(rad_to_deg(half_angle)), palette]
+	if effects.pixel_particle_texture_cache.has(cache_key):
+		return effects.pixel_particle_texture_cache[cache_key] as Texture2D
+	var tones := PaletteLibrary.fire_triple(palette)
+	var image := Image.create(extent + 1, extent * 2 + 1, false, Image.FORMAT_RGBA8)
+	image.fill(Color.TRANSPARENT)
+	for y in image.get_height():
+		var local_y := float(y - extent)
+		for x in image.get_width():
+			var local_x := float(x)
+			if local_x <= 0.0:
+				continue
+			var distance := Vector2(local_x, local_y).length()
+			if distance > radius:
+				continue
+			var angle := absf(atan2(local_y, local_x))
+			if angle > half_angle:
+				continue
+			var radial := distance / maxf(radius, 1.0)
+			var side_ratio := angle / maxf(half_angle, 0.01)
+			var color := tones[0]
+			var alpha := 0.36
+			if side_ratio < 0.78:
+				color = tones[1]
+				alpha = 0.50
+			if side_ratio < 0.20 and radial > 0.14 and radial < 0.88:
+				color = tones[2]
+				alpha = 0.58
+			if radial < 0.10:
+				alpha *= radial / 0.10
+			image.set_pixel(x, y, Color(color.r, color.g, color.b, alpha))
+	var texture := ImageTexture.create_from_image(image)
+	effects.pixel_particle_texture_cache[cache_key] = texture
+	return texture
 
 
 func spawn_radial_burst(context: MagicRuntimeContext, origin: Vector2, palette: String, count: int, speed_min: float, speed_max: float) -> void:
@@ -602,23 +758,52 @@ func spawn_radial_burst(context: MagicRuntimeContext, origin: Vector2, palette: 
 		effects.pixel_particles.append({"sprite": particle, "velocity": Vector2(cos(angle), sin(angle)) * context.rng.randf_range(speed_min, speed_max), "timer": lifetime, "lifetime": lifetime, "gravity": 0.0})
 
 
-func spawn_magic_splash_ring(context: MagicRuntimeContext, origin: Vector2, palette: String) -> void:
+func spawn_magic_bubble_pop(context: MagicRuntimeContext, origin: Vector2, palette: String) -> void:
 	var player := context.player
 	var effects := context.effects_spawner
 	var rng := context.rng
-	var texture := _magic_impact_particle_texture(context, palette, &"droplet", 3)
-	for index in 10:
-		var side := -1.0 if index % 2 == 0 else 1.0
+	var base_color := PaletteLibrary.normal(palette)
+	var accent_color := PaletteLibrary.accent(palette)
+	var pop := Sprite2D.new()
+	pop.name = "WaterBubblePop"
+	pop.texture = _magic_bubble_texture(context, base_color, accent_color, 11)
+	pop.centered = true
+	pop.scale = Vector2(1.08, 1.08)
+	pop.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	pop.z_as_relative = false
+	pop.z_index = player.z_index + 1
+	_add_child_to_runtime(context, pop, origin)
+	var pop_lifetime := 0.13
+	effects.pixel_particles.append({
+		"sprite": pop,
+		"velocity": Vector2.ZERO,
+		"timer": pop_lifetime,
+		"lifetime": pop_lifetime,
+		"gravity": 0.0,
+		"alpha_scale": 0.90,
+	})
+	for index in 14:
+		var bubble_size := 4 + (index % 3)
 		var particle := Sprite2D.new()
-		particle.texture = texture
+		particle.texture = _magic_bubble_texture(context, base_color, accent_color, bubble_size)
+		particle.name = "WaterBubbleBurst"
 		particle.centered = true
 		particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		particle.z_as_relative = false
 		particle.z_index = player.z_index + 1
-		_add_child_to_runtime(context, particle, origin)
-		var lifetime := rng.randf_range(0.28, 0.42)
-		var velocity := Vector2(side * rng.randf_range(14.0, 30.0), -rng.randf_range(12.0, 24.0))
-		effects.pixel_particles.append({"sprite": particle, "velocity": velocity, "timer": lifetime, "lifetime": lifetime, "gravity": 42.0})
+		var spread_angle := rng.randf_range(PI, TAU)
+		var start_offset := Vector2.from_angle(spread_angle) * rng.randf_range(0.0, 2.0)
+		_add_child_to_runtime(context, particle, origin + start_offset)
+		var lifetime := rng.randf_range(0.28, 0.46)
+		var velocity := Vector2.from_angle(spread_angle) * rng.randf_range(17.0, 33.0)
+		effects.pixel_particles.append({
+			"sprite": particle,
+			"velocity": velocity,
+			"timer": lifetime,
+			"lifetime": lifetime,
+			"gravity": 19.0,
+			"alpha_scale": 0.96,
+		})
 
 
 func spawn_sky_strike(context: MagicRuntimeContext, world_position: Vector2, palette: String) -> void:
@@ -842,6 +1027,8 @@ func magic_projectile_texture(context: MagicRuntimeContext, base_color: Color, a
 	var shape := int(form.get("projectile_shape"))
 	if shape == SpellFormDefinitionScript.ProjectileShape.ORB:
 		return context.pixel_particle_texture.call(base_color, size) as Texture2D
+	if shape == SpellFormDefinitionScript.ProjectileShape.BUBBLE:
+		return _magic_bubble_texture(context, base_color, accent_color, size)
 	var effects := context.effects_spawner
 	var key := "magic_projectile:%d:%s:%s:%d" % [shape, base_color.to_html(false), accent_color.to_html(false), size]
 	if effects.pixel_particle_texture_cache.has(key):
@@ -855,6 +1042,36 @@ func magic_projectile_texture(context: MagicRuntimeContext, base_color: Color, a
 				continue
 			var highlight := x == center and (shape == SpellFormDefinitionScript.ProjectileShape.DROPLET or y <= center)
 			image.set_pixel(x, y, accent_color if highlight else base_color)
+	var texture := ImageTexture.create_from_image(image)
+	effects.pixel_particle_texture_cache[key] = texture
+	return texture
+
+
+func _magic_bubble_texture(context: MagicRuntimeContext, base_color: Color, accent_color: Color, size: int) -> Texture2D:
+	var effects := context.effects_spawner
+	var key := "magic_bubble:%s:%s:%d" % [base_color.to_html(false), accent_color.to_html(false), size]
+	if effects.pixel_particle_texture_cache.has(key):
+		return effects.pixel_particle_texture_cache[key] as Texture2D
+	var image := Image.create(size, size, false, Image.FORMAT_RGBA8)
+	image.fill(Color.TRANSPARENT)
+	var center := size >> 1
+	var white := PaletteLibrary.white()
+	for y in size:
+		for x in size:
+			if not _magic_projectile_shape_contains(SpellFormDefinitionScript.ProjectileShape.BUBBLE, size, x, y):
+				continue
+			var on_rim := not (
+				_magic_projectile_shape_contains(SpellFormDefinitionScript.ProjectileShape.BUBBLE, size, x - 1, y)
+				and _magic_projectile_shape_contains(SpellFormDefinitionScript.ProjectileShape.BUBBLE, size, x + 1, y)
+				and _magic_projectile_shape_contains(SpellFormDefinitionScript.ProjectileShape.BUBBLE, size, x, y - 1)
+				and _magic_projectile_shape_contains(SpellFormDefinitionScript.ProjectileShape.BUBBLE, size, x, y + 1)
+			)
+			var color := Color(base_color.r, base_color.g, base_color.b, 0.48)
+			if on_rim:
+				color = Color(accent_color.r, accent_color.g, accent_color.b, 0.92)
+			elif absi(x - (center - 1)) + absi(y - (center - 1)) <= 1:
+				color = Color(white.r, white.g, white.b, 0.94)
+			image.set_pixel(x, y, color)
 	var texture := ImageTexture.create_from_image(image)
 	effects.pixel_particle_texture_cache[key] = texture
 	return texture
@@ -875,6 +1092,11 @@ func _magic_projectile_shape_contains(shape: int, size: int, x: int, y: int) -> 
 			var dx := absf(float(x) - center)
 			var dy := absf(float(y) - center)
 			return maxf(dx, dy) <= center and dx + dy <= center + 1.0
+		SpellFormDefinitionScript.ProjectileShape.BUBBLE:
+			var bubble_radius := float(size) * 0.5
+			var dx := float(x) - center
+			var dy := float(y) - center
+			return dx * dx + dy * dy <= bubble_radius * bubble_radius
 	return true
 
 
@@ -894,7 +1116,7 @@ func magic_projectile_outline_texture(context: MagicRuntimeContext, base_color: 
 			var on_outline := false
 			if shape == SpellFormDefinitionScript.ProjectileShape.SHARD:
 				on_outline = absi(x - center) + absi(y - center) == center
-			elif shape in [SpellFormDefinitionScript.ProjectileShape.DROPLET, SpellFormDefinitionScript.ProjectileShape.HEX]:
+			elif shape in [SpellFormDefinitionScript.ProjectileShape.DROPLET, SpellFormDefinitionScript.ProjectileShape.HEX, SpellFormDefinitionScript.ProjectileShape.BUBBLE]:
 				var source_x := x - 1
 				var source_y := y - 1
 				var outside_shape := not _magic_projectile_shape_contains(shape, size, source_x, source_y)
@@ -962,7 +1184,7 @@ func resolve_magic_projectile_hit(context: MagicRuntimeContext, target: Sprite2D
 			magic_hit_slime(
 				context, victim, magic_target_point(context, victim), palette,
 				ability_mode, false, form, push_direction, secondary_damage_multiplier)
-		spawn_magic_splash_ring(context, world_position, palette)
+		spawn_magic_bubble_pop(context, world_position, palette)
 		return
 	if _try_activate_puzzle_torch(context, target, world_position, palette):
 		return

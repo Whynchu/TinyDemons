@@ -537,3 +537,21 @@ passes plus direct measurements; overall 6.0/10) and registered it in
 0.3.24/0.3.25 during the review and restored the composition floor
 (`RoomController` 2,250; `COMPOSITION_AUDIT_OK`). Pushing the review to `main`.
 
+## 2026-10-01T20:16Z — codex — claim
+Following up on player visual feedback: make the Fire cone visibly read as a flame fan and replace Water's droplet with a traveling bubble that pops into smaller bubbles. Update the spell plan and tuning guide; static-only verification remains required by the current session restriction.
+
+## 2026-10-01T20:22Z — codex — done
+Fire's cast VFX now uses a warm filled fan with a scalloped flame edge and moving ember tongues. Water now travels as a highlighted, pulsing bubble and pops into fourteen small bubbles with an impact ring. Updated the spell plan and tuning guide. Offline diagnostics pass for MagicRuntimeController, MagicProjectileController, SpellFormDefinition, and SpellFormCatalog; `git diff --check` passes. No runtime playtest was run under the session restriction; rendered readability still needs review.
+
+## 2026-10-01T20:35Z — codex — claim
+Reworking the Fire cone VFX with animated frames from the authored Hub flame sheet, ember particles, and a cleaned readable cone fill. Preserving the Water bubble effect. Godot runtime remains unavailable in this session.
+
+## 2026-10-01T20:40Z — codex — done
+Reworked Fire Cinder Cone with palette-recolored animation frames from the authored Hub flame sheet, a restrained cone fill, and upward ember pixels using the Burning particle fade. Added cached per-palette flame frames and frame advancement in EffectsSpawner. Updated the spell plan and tuning guide. git diff --check passes; no Godot runtime or test suite was launched, so visual acceptance remains open.
+
+## 2026-10-01T21:02Z — codex — claim
+Replacing tiled flame sprites with one flowing fan silhouette and delayed ember streams based on the game's Burning particle style. The 90-degree cone hit area stays unchanged.
+
+## 2026-10-01T21:07Z — codex — done
+Replaced nine repeated flame sprites with one cone-mapped animation from the Hub flame sheet. Delayed ember lanes now move through the fan using the Burning palette fade. Offline script checks pass; gameplay remains stopped under the session restriction, so rendered acceptance is open.
+

@@ -144,7 +144,7 @@ values have not yet been accepted through runtime playtesting.
 | --- | --- | --- | ---: | ---: | ---: | --- | --- |
 | Neutral | Stub | `PROJECTILE` | 0 (needs ≥1) | 2.5 s | 1.10x | none | baseline |
 | Fire | Cinder Cone | `CONE` | 15 | 3.0 s | 1.35x | Burn | front crowd burst |
-| Water | Tide Burst | `PROJECTILE_SPLASH` | 10 | 2.0 s | 0.85x direct | none | traveling ranged AoE; secondary hits deal 50% of direct spell damage |
+| Water | Tide Burst | `PROJECTILE_SPLASH` | 10 | 2.0 s | 0.85x direct | none | traveling bubble-pop AoE; secondary hits deal 50% of direct spell damage |
 | Electric | Skyfall | `INSTANT_TARGET` | 10 | 1.2 s | 1.15x | Stun | priority target, tempo |
 | Grass | Leechvine | `BEAM` | 10 | 2.5 s | 0.40x per tick | none | sustain / drain |
 | Shadow | Hex | `PROJECTILE` | 12 | 2.5 s | 1.10x | Poison | hex-sigil curse projectile; debuff / amp |
@@ -163,6 +163,10 @@ identity; it does not replace an elemental form when Chroma is low.
 - **Behavior:** at the cast frame, a frontal arc (~90°, ~2.5 tiles) is sampled.
   Every enemy body polygon intersecting the arc takes damage once. No travel;
   the player is committed and vulnerable for the cast.
+- **Cast VFX:** one animated fan maps each palette-recolored Hub flame frame
+  across the 90° sector, so the cone reads as one continuous flame. Delayed
+  pixel-ember streams flow through it and rise with the same palette fade as
+  the game's Burning effect.
 - **Source defaults:** 90° arc, 40px reach, 1.35x damage, 15 Chroma, 3.0s
   cooldown.
 - **Payload:** Fire → **Burn** on every target hit.
@@ -171,12 +175,14 @@ identity; it does not replace an elemental form when Chroma is low.
 ### 4.4 Water — Tide Burst (`PROJECTILE_SPLASH`)
 
 - **Identity:** efficiency, control, knockback, area shaping.
-- **Behavior:** travels like the orb; on impact, a radial AoE (~1.5 tiles)
-  damages and knocks back everything in range.
+- **Behavior:** a glassy bubble travels toward its target; on impact it pops
+  into smaller bubbles while a radial AoE (~1.5 tiles) damages and knocks back
+  everything in range.
 - **Source defaults:** 24px impact radius, 0.85x direct damage, 10 Chroma, 2.0s
-  cooldown; droplet projectile at 54px/s for up to 1.25s, with a 0.16s minimum
-  travel before collision. The direct target takes full form damage; enemies
-  caught only in the splash take 50% of that damage.
+  cooldown; 9px bubble projectile at 54px/s for up to 1.25s, with a 0.16s
+  minimum travel before collision. On impact, fourteen 4–6px bubbles burst
+  outward and upward. The direct target takes full form damage; enemies caught
+  only in the splash take 50% of that damage.
 - **Payload:** Water → no status (ratified status-free).
 - **Feel:** the safe, efficient ranged AoE; repositions crowds.
 
@@ -278,7 +284,7 @@ delivery           PROJECTILE | PROJECTILE_SPLASH | CONE | INSTANT_TARGET | BEAM
 chroma_cost        int
 cooldown           float (seconds)
 damage_multiplier  float (replaces the GRAY/ELEMENTAL constants)
-projectile_shape   ORB | SHARD | DROPLET | HEX
+projectile_shape   ORB | SHARD | DROPLET | HEX | BUBBLE
 projectile_size / projectile_speed / projectile_lifetime / minimum travel time
 delivery_radius / splash secondary damage ratio / delivery_angle_degrees / delivery_range / delivery_duration
 tick_interval / lifesteal_ratio / knockback_multiplier
@@ -375,9 +381,9 @@ existing puzzle behavior and does not add elemental reactions.
 - Selection test: elemental form identity stays stable at zero, below cost,
   exactly at cost, and above cost; below cost rejects without spending or
   falling back, and exactly cost can cast down to zero.
-- Water splash test: the traveling droplet collides after its minimum travel
-  time, the directly hit enemy receives full form damage, and nearby enemies
-  receive 50% of the direct spell damage.
+- Water splash test: the traveling bubble collides after its minimum travel
+  time, the directly hit enemy receives full form damage, nearby enemies
+  receive 50% of the direct spell damage, and the impact emits a bubble burst.
 - Target-only forms resolve a valid target from pointer-aim casts; Grass also
   rejects targets outside its range without spending Chroma.
 - Puzzle-object routing: direct projectile, instant, and tether hits activate
@@ -391,11 +397,13 @@ existing puzzle behavior and does not add elemental reactions.
 - In-editor MCP playtest per form. Do not run the smoke suite from an MCP
   session (per `AGENTS.md`).
 
-Current source pass: form-specific delivery remains distinct, Water uses an
-oriented traveling droplet and reduced secondary splash, and all seven payload
-elements have unique impact particle silhouettes and motion. The source changes
-have not yet received a rendered playtest; confirm 240×160 readability when a
-Godot runtime session is available.
+Current source pass: form-specific delivery remains distinct. Fire maps the
+Hub's animated flame frames into one continuous fan and sends rising pixel
+embers through it using the Burning effect's fade. Water travels as a
+highlighted bubble and pops into smaller bubbles while preserving its reduced
+secondary splash. Payload impact particles remain element-specific. These
+effects have not yet received a rendered playtest; confirm 240×160 readability
+when a Godot runtime session is available.
 
 ## 9. Non-goals and deferred
 

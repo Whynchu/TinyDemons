@@ -15,6 +15,7 @@ enum ProjectileShape {
 	SHARD,
 	DROPLET,
 	HEX,
+	BUBBLE,
 }
 
 @export var id: StringName = &""
@@ -23,7 +24,7 @@ enum ProjectileShape {
 @export var chroma_cost := 10
 @export var cooldown := 2.0
 @export var damage_multiplier := 1.15
-@export_enum("Orb", "Shard", "Droplet", "Hex Sigil") var projectile_shape: int = ProjectileShape.ORB
+@export_enum("Orb", "Shard", "Droplet", "Hex Sigil", "Bubble") var projectile_shape: int = ProjectileShape.ORB
 @export_range(1, 12, 1) var projectile_size := 4
 @export_range(1.0, 240.0, 1.0) var projectile_speed := 70.0
 @export_range(0.05, 5.0, 0.05) var projectile_lifetime := 0.6
