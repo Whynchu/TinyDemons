@@ -44,6 +44,60 @@ func mount_room(room_id: StringName, prefab_id: StringName, room_type: StringNam
 	return candidate
 
 
+static func mount_runtime_room(
+	runtime: GameplayState,
+	room_id: StringName,
+	geometry_rebind: Callable,
+	dungeon_sockets: Dictionary,
+	active_door_sockets: Dictionary,
+	active_entrance_sockets: Dictionary,
+	validate_sockets: Callable,
+	hide_guides: Callable
+) -> bool:
+	if runtime == null or runtime.dungeon_graph == null:
+		push_error("Room prefab mount requires an active graph.")
+		return false
+	var room := runtime.dungeon_graph.get_room(room_id)
+	if room == null:
+		push_error("Room prefab mount requested for missing room '%s'." % room_id)
+		return false
+	var prefab_id := FACTORY_SCRIPT.prefab_id_for_room(room)
+	if prefab_id.is_empty():
+		push_error("Room '%s' has no prefab assignment or compatibility mapping." % room_id)
+		return false
+	var host := runtime.map_root.get_node_or_null("RoomPrefabHost") as RoomPrefabHost if runtime.map_root != null else null
+	if host == null:
+		push_error("Room prefab host is unavailable; refusing to activate the room.")
+		return false
+	var mount := host.mount_room(room_id, prefab_id, room.room_type)
+	if mount == null or not mount.succeeded():
+		if mount != null:
+			for error in mount.errors:
+				push_error("Room '%s' prefab '%s': %s" % [room_id, prefab_id, error])
+		else:
+			push_error("Room '%s' prefab factory returned no mount result." % room_id)
+		return false
+	room.prefab_id = prefab_id
+	if mount.status == RoomPrefabMountResult.Status.MOUNTED:
+		runtime.floor_tiles = mount.floor_tiles
+		runtime.sockets_root = mount.sockets_root
+		for child_name in [&"FloorTiles", &"Walls", &"Sockets"]:
+			var legacy_node := runtime.map_root.get_node_or_null(NodePath(String(child_name))) as CanvasItem
+			if legacy_node != null:
+				legacy_node.visible = false
+		if runtime.hub_stone_accent_layer != null:
+			runtime.hub_stone_accent_layer.set_room_geometry_root(mount.map_root)
+		if geometry_rebind.is_valid():
+			geometry_rebind.call(mount.map_root, mount.floor_tiles)
+		dungeon_sockets.clear()
+		active_door_sockets.clear()
+		active_entrance_sockets.clear()
+		runtime._collect_dungeon_sockets()
+		validate_sockets.call()
+		hide_guides.call(mount.floor_tiles)
+	return true
+
+
 func resolve_marker(marker_id: StringName) -> Marker2D:
 	if active_room_instance == null or not is_instance_valid(active_room_instance):
 		return null
@@ -65,6 +119,19 @@ static func marker_position_in_gameplay_root(runtime: GameplayState, marker_id: 
 	if marker == null or not is_instance_valid(marker):
 		return null
 	return runtime.to_local(marker.global_position)
+
+
+static func chest_position_in_gameplay_root(runtime: GameplayState) -> Vector2:
+	if runtime == null:
+		return Vector2.ZERO
+	var marker_position: Variant = marker_position_in_gameplay_root(runtime, &"TREASURE_CHEST")
+	if marker_position is Vector2:
+		return marker_position
+	var graph := runtime.dungeon_graph
+	var room := graph.get_room(runtime.current_room_id) if graph != null else null
+	if room != null and room.chest_position != Vector2.ZERO:
+		return room.chest_position
+	return runtime.chest_start_position
 
 
 func _hide_editor_preview_nodes(node: Node) -> void:

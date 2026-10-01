@@ -18,7 +18,6 @@ const ROOM_ENEMY_PLACEMENT_SCRIPT = preload("res://scripts/room_enemy_placement.
 const ROOM_ENEMY_RUNTIME_RESULT_SCRIPT = preload("res://scripts/room_enemy_runtime_result.gd")
 const ROOM_ACTIVATION_CONTEXT_SCRIPT = preload("res://scripts/room_activation_context.gd")
 const ROOM_GEOMETRY_CONTROLLER_SCRIPT = preload("res://scripts/room_geometry_controller.gd")
-const ROOM_PREFAB_FACTORY_SCRIPT = preload("res://scripts/room_prefab_factory.gd")
 const SKELETON_FIRST_RUN_NUMBER := 5
 
 signal room_entered(room_id: StringName, room_type: StringName)
@@ -93,48 +92,11 @@ func configure_geometry(
 
 
 func mount_room_prefab(runtime: GameplayState, room_id: StringName) -> bool:
-	if runtime == null or runtime.dungeon_graph == null:
-		push_error("Room prefab mount requires an active graph.")
-		return false
-	var room := runtime.dungeon_graph.get_room(room_id)
-	if room == null:
-		push_error("Room prefab mount requested for missing room '%s'." % room_id)
-		return false
-	var prefab_id := ROOM_PREFAB_FACTORY_SCRIPT.prefab_id_for_room(room)
-	if prefab_id.is_empty():
-		push_error("Room '%s' has no prefab assignment or compatibility mapping." % room_id)
-		return false
-	var host := runtime.map_root.get_node_or_null("RoomPrefabHost") as RoomPrefabHost if runtime.map_root != null else null
-	if host == null:
-		push_error("Room prefab host is unavailable; refusing to activate the room.")
-		return false
-	var mount := host.mount_room(room_id, prefab_id, room.room_type)
-	if mount == null or not mount.succeeded():
-		if mount != null:
-			for error in mount.errors:
-				push_error("Room '%s' prefab '%s': %s" % [room_id, prefab_id, error])
-		else:
-			push_error("Room '%s' prefab factory returned no mount result." % room_id)
-		return false
-	room.prefab_id = prefab_id
-	if mount.status == RoomPrefabMountResult.Status.MOUNTED:
-		runtime.floor_tiles = mount.floor_tiles
-		runtime.sockets_root = mount.sockets_root
-		for child_name in [&"FloorTiles", &"Walls", &"Sockets"]:
-			var legacy_node := runtime.map_root.get_node_or_null(NodePath(String(child_name))) as CanvasItem
-			if legacy_node != null:
-				legacy_node.visible = false
-		if runtime.hub_stone_accent_layer != null:
-			runtime.hub_stone_accent_layer.set_room_geometry_root(mount.map_root)
-		if geometry_controller != null:
-			geometry_controller.rebind_room_geometry(mount.map_root, mount.floor_tiles)
-		dungeon_sockets.clear()
-		active_door_sockets.clear()
-		active_entrance_sockets.clear()
-		runtime._collect_dungeon_sockets()
-		validate_socket_setup()
-		hide_editor_only_guides(mount.floor_tiles)
-	return true
+	return RoomPrefabHost.mount_runtime_room(
+		runtime, room_id,
+		Callable(geometry_controller, "rebind_room_geometry") if geometry_controller != null else Callable(),
+		dungeon_sockets, active_door_sockets, active_entrance_sockets,
+		Callable(self, "validate_socket_setup"), Callable(self, "hide_editor_only_guides"))
 
 
 func prewarm_transition_assets(stone_layer: HubStoneAccentLayer = null) -> void:
@@ -1894,16 +1856,7 @@ func reset_chest_for_room(root: Object, show_chest: bool = true) -> void:
 
 
 func _chest_position_for_room(root: Object) -> Vector2:
-	var default_position: Vector2 = root.get("chest_start_position")
-	var marker_position: Variant = RoomPrefabHost.marker_position_in_gameplay_root(root as GameplayState, &"TREASURE_CHEST")
-	if marker_position is Vector2:
-		return marker_position
-	var graph := root.get("dungeon_graph") as DungeonGraph
-	var room_id: StringName = StringName(root.get("current_room_id"))
-	var room: DungeonGraph.RoomRecord = graph.get_room(room_id) if graph != null else null
-	if room != null and room.chest_position != Vector2.ZERO:
-		return room.chest_position
-	return default_position
+	return RoomPrefabHost.chest_position_in_gameplay_root(root as GameplayState)
 
 
 func hide_chest_presentation(root: Object) -> void:

@@ -2,10 +2,13 @@
 
 _Only codex writes this file._
 
-**Focus:** Triangle ability hookup audit complete; runtime acceptance pending
+**Focus:** Mobile-web release 0.3.24 prepared; runtime acceptance pending
 **Updated:** 2026-10-01
 
 ## In flight
+
+Release preparation is complete: room-prefab mount and chest-position binding moved into `RoomPrefabHost`, release metadata aligned at 0.3.24, and composition plus focused offline script checks pass. No Godot process or test suite was launched under the recorded session restriction.
+
 
 Static hookup audit is complete. All eight Triangle forms trace from Chroma acceptance through the cast frame to delivery and hit effects. Fixed puzzle-object routing, pointer-aim target resolution for Skyfall and Leechvine, and debug-unlimited form-cost selection.
 
@@ -115,9 +118,10 @@ changes. Do not stage them with M1.
 
 ## Handoff / next
 
-No release bump or push was requested. Keep room-prefab acceptance open for a
-future runtime session. Do not launch another Godot process or test suite in
-this session.
+Version 0.3.24 is prepared for mobile-web playtesting. A push to `main` triggers
+the GitHub Pages export workflow; room-prefab runtime acceptance remains open
+for a future runtime session. Do not launch another Godot process or test suite
+in this session.
 
 ## Current work
 

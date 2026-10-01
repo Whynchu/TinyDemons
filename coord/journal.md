@@ -510,3 +510,13 @@ Auditing the Triangle spell-form paths from Chroma acceptance through target del
 
 ## 2026-10-01T00:34Z — codex — done
 Audited all eight Triangle forms from Chroma/input through cast timing, delivery, combat effects, and frame callbacks. Fixed puzzle-object handling across direct and area deliveries, pointer-aim targeting for Skyfall/Leechvine, and debug-unlimited form-cost selection. The spell-form plan records the source wiring. Offline parser checks and git diff --check pass; runtime playtest remains open and no Godot process or suite was launched.
+
+## 2026-10-01T00:38Z — codex — claim
+Preparing mobile-web release 0.3.24 and repairing the failing composition targets. Inspecting the room-prefab integration in RoomController for a narrow typed extraction. Existing opencode release-gate claim on the smoke runner and Pages workflow remains untouched; no Godot process or suite launch.
+
+
+## 2026-10-01T00:39Z — codex — claim update
+Expanded the release claim to include RoomPrefabHost, which will take ownership of prefab mounting/binding and authored chest-marker resolution so RoomController returns to the recorded composition baseline.
+
+## 2026-10-01T00:46Z — codex — done
+Prepared version 0.3.24 for mobile-web playtesting. Room-prefab mount/chest binding moved into `RoomPrefabHost`; offline script diagnostics, composition self-test, regression-floor audit, strict audit, and `git diff --check` pass. Origin was fetched and remains eight commits behind local `main`. No Godot runtime or test suite was launched under the recorded restriction.
