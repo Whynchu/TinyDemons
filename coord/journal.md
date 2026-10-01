@@ -526,3 +526,14 @@ Auditing Triangle spell form selection and delivery so form identity stays fixed
 
 ## 2026-10-01T10:00Z — codex — done
 Implemented and documented the Triangle spell behavior corrections for release 0.3.25: selected elemental forms no longer fall back at low Chroma and can cast exactly to zero; Water's droplet must travel before impact, then damages its direct target fully and nearby targets at half damage; each payload element has a distinct pixel impact particle profile. Release metadata is aligned. Offline script diagnostics, the strict composition audit, and `git diff --check` pass. No Godot process or test suite was launched under the recorded session restriction; visual/balance acceptance remains open for playtest.
+
+## 2026-10-01 — opencode — done
+Repository review published as `0.3.26`. Added `docs/repo-review-2026-10-01.md`
+(consolidated architecture/code, modularity/buildability, and player-facing advisor
+passes plus direct measurements; overall 6.0/10) and registered it in
+`docs/DOCUMENTATION_MAP.md`. Version bumped to `0.3.26` in
+`scripts/screen_state_controller.gd` (`GAME_VERSION`), `README.md`, and
+`docs/VERSIONING.md`. Codex landed the spell-form P4-P7 work and releases
+0.3.24/0.3.25 during the review and restored the composition floor
+(`RoomController` 2,250; `COMPOSITION_AUDIT_OK`). Pushing the review to `main`.
+

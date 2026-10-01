@@ -71,12 +71,17 @@ For an external product/design review, use the curated [`review/00-astra-review-
     plan for the player's Triangle spell: one form per element plus a neutral
     stub, binding-selects-form / current-element-selects-payload, the delivery
     model, and the build sequence.
+24. [`repo-review-2026-10-01.md`](repo-review-2026-10-01.md) — repository review
+    of composition maturity, code efficiency, practicality, folder flow, and
+    player-facing delivery at `0.3.25`, with scores and a moving-forward
+    standard.
 
 ## Authority by question
 
 | Question | Authority | Use supporting material for |
 |---|---|---|
 | What is the player-facing feel and feedback direction? | [`../JUICE.md`](../JUICE.md) | pickup delivery, HUD reactions, menu motion, touch response, and audio hierarchy |
+| How healthy is the codebase (composition, efficiency, practicality, folder flow)? | [`repo-review-2026-10-01.md`](repo-review-2026-10-01.md) | [`AUDIT.md`](AUDIT.md) for source measurements |
 | What exists right now? | [`AUDIT.md`](AUDIT.md) | traced flows and source files |
 | Where should a feature go? | [`ARCHITECTURE.md`](ARCHITECTURE.md) and [`FEATURE_MAP.md`](FEATURE_MAP.md) | implementation details |
 | What is the accepted refactor route? | [`refactor-route.md`](refactor-route.md) | historical checkpoints |
