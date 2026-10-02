@@ -38,12 +38,22 @@ First correction: pickup persistence requests are coalesced and flushed once at
 the end of the gameplay frame. This bounds multiple pickups collected together
 to one save while preserving the current same-frame save boundary.
 
-Next evidence: extend the fixed-seed performance capture to record cold and warm
-frames for one gold pickup, a multi-pickup burst, first flame interaction, and
-first-use audio/effect work. Record worst frame, average, and save duration
-separately on desktop and a mobile browser/device. If one-save frames still
-exceed the target, choose a durability-safe save strategy based on those
-measurements before changing autosave timing.
+Second correction (2026-10-02): the coalescing above was real but did not
+actually remove the hitch, exactly as this section warned. The flush still ran
+on the same physics frame that queued it, so a single contact performed a full
+serialize + write + **re-read + re-parse + `PlayerProfile` rebuild** plus four
+more filesystem operations alongside the particle burst, the audio start, and
+the HUD count-up. The write is now queued rather than performed, never lands on
+the requesting frame, and the re-parse is replaced by a byte-length check; see
+`KNOWN_ISSUES.md` for the full list. `RunCheckpointService` and `RunSettlement`
+force the queue so durability boundaries are unchanged.
+
+Next evidence: the fixed-seed harness now has an `item_pickup` scenario and
+`profile_save_write` / `profile_save_queue_delay` recorded scopes. Still needed
+on real hardware: cold and warm frames for one gold pickup, a multi-pickup
+burst, first flame interaction, and first-use audio/effect work, recorded as
+worst frame, average, and save duration separately on desktop and a mobile
+browser/device. **No post-change measurement has been taken yet.**
 
 ### 2. Boss AOE freeze — open investigation
 

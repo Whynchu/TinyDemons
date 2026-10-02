@@ -700,11 +700,12 @@ func _enter_connected_room_impl(runtime: GameplayState, transition: RoomTransiti
 	runtime._set_target_ui_visible(false)
 	runtime._apply_room_state()
 	runtime._build_depth_lists()
-	# The destination layout/state is now fully applied. Persist the profile first
+	# The destination layout/state is now fully applied. Queue the profile write
 	# and then capture this safe boundary; a browser restart cannot resume from a
-	# half-applied room transition.
+	# half-applied room transition. The profile is flushed ahead of the snapshot
+	# so the snapshot can never outlive the profile it is paired with.
 	if runtime.player_profile != null:
-		ProfileSaveService.save_profile(runtime.player_profile)
+		ProfileSaveService.request_save(runtime.player_profile)
 	runtime.call_deferred("_save_active_run_checkpoint")
 	runtime.call_deferred("_release_room_transition_lock")
 	result.status = RoomEntryResult.Status.ENTERED

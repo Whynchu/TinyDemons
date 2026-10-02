@@ -34,7 +34,11 @@ func _initialize() -> void:
 			_expect(orb.hframes == 6 and orb.texture != null, "EntryOrb uses the six-frame artwork", failures)
 			_expect(String(orb.get_meta("initial_palette", "")) == "grey", "EntryOrb begins with grey authoring metadata", failures)
 		if orb != null and orb_center != null:
-			_expect(orb.position == orb_center.position, "EntryOrb shares the authored center marker", failures)
+			# The authored marker is the single source for the Orb anchor. The
+			# editor preview sprite and the runtime orb must both sit on it; a
+			# code-side visual offset here is what previously left the Orb
+			# floating above the floor and silently failed this row.
+			_expect(orb.position == orb_center.position, "EntryOrb preview shares the authored center marker", failures)
 		orb_room.free()
 	_finish(failures)
 

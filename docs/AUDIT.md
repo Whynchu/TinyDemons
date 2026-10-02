@@ -426,6 +426,13 @@ Fixed-seed harness via `tests/performance_scenario_harness.gd` /
 | room transition | 15.26 | 15.26 | — | — |
 | pause menu | 6.89 | 9.32 | 1,671 | 914 |
 
+These are 2026-09-15/16 readings and are **not** re-baselined by the
+2026-10-02 polish pass, which changed the profile-write, prefab-reuse,
+sprite-slice, and HUD count-up paths those numbers include. The harness now
+reports real `layout_ms`/`activate_ms` instead of hardcoded `-1.0`, and gained
+an `item_pickup` scenario, so the next run is comparable against these figures
+for the first time. Treat the table above as the "before" row, not as current.
+
 Readings:
 
 - Steady-state headless frame time is ~6.9 ms (~145 fps) — the desktop CPU
@@ -433,6 +440,15 @@ Readings:
 - The scene holds ~900 sprites across ~1,650 nodes. A device profile decides
   whether node count is the binding cost.
 - The regular room transition is ~15.3 ms.
+- The 2026-10-02 pass removed the largest identified contributors from both the
+  transition and the pickup frame: the synchronous profile write (which
+  serialized, wrote, re-read, re-parsed, and rebuilt a profile, then did four
+  more filesystem operations, once per transition and again on the pickup
+  contact frame), the per-door-crossing room-scene re-instantiation, and the
+  per-room-entry sprite re-slice that defeated the occlusion renderer's texture
+  caches and forced a fresh per-pixel image pass each time. The `room_transition`
+  and `profile_save_*` scopes plus the new `item_pickup` harness scenario exist
+  to measure the result; **no post-change timing has been recorded yet.**
 - **The boss room transition is the worst single case but is highly
   noisy.** The 2026-09-16 run recorded ~164.7 ms; an earlier favorable sample
   on 2026-09-15 recorded ~89 ms. Interleaved A/B runs against the `d3408b6`
@@ -613,9 +629,13 @@ Two wordings from the initial cleanup scan are corrected here: the title/save
 overlap between `save_flow_controller.gd` and `screen_state_controller.gd` is
 **circular delegation and split ownership**, not mutual recursion; and
 `hub_flow_controller.gd` is a **split owner**, not an empty facade. The
-"synchronous disk I/O in frame paths" finding was broader than the evidence -
-pickup profile saves are already coalesced into a pending flag and flushed from
-the frame schedule, and the sound-profile poll is signature-gated.
+"synchronous disk I/O in frame paths" finding was **understated** rather than
+too broad. Pickup saves were coalesced into a pending flag, but the flag was
+flushed on the same physics frame that queued it, so a single contact still
+performed a full serialize + write + re-read + re-parse + profile rebuild, and
+a room transition wrote unconditionally *and* again through gold settle — up to
+three writes in one tick. The 2026-10-02 pass moved the write itself off the
+requesting frame and removed the re-parse; see section 19.
 
 ## 18. Elemental status implementation follow-up (2026-09-28)
 
@@ -635,3 +655,66 @@ animation component, and death visibility contract. Native-resolution visual
 acceptance, cloak/death reproduction, catalog validators, and browser playtest
 remain open. The user-reported HUD startup failure from casting a stored Array
 to `Array[Sprite2D]` was corrected and its script diagnostic now passes.
+
+## 19. Player polish pass (2026-10-02)
+
+Three player reports, all fixed in source. Full detail and the pre-existing gate
+failures found while verifying are in
+[`KNOWN_ISSUES.md`](KNOWN_ISSUES.md).
+
+**Fire Cinder Cone.** The lateral-only aim rule lived in
+`begin_magic_animation`, which the ordinary tap-and-release cast never reaches
+holding a form: a magic press starts a candidate animation with
+`pending_magic_form = null` and the closest-enemy direction already resolved,
+and the form is only captured on release. The rule is now
+`apply_horizontal_cone_aim` and is called from both entry points, so the cone
+resolves to left or right and the cast sprite re-faces to match. Other forms
+keep their aimed vector. `tests/cone_aim_contract_smoke.gd` drives the real entry
+point across both paths and fails on the pre-fix source.
+
+**Orb-room Orb height.** `room_puzzle_controller.gd` carried a hard-coded
+`ORB_ROOM_VISUAL_OFFSET := Vector2(0, -7)` on top of the authored `ORB_CENTER`
+marker, floating the 9x9 art ~11 px above the floor surface, and the editor
+preview sprite in `scenes/orb_room.tscn` had been hand-mirrored to the same
+offset. The constant is removed; the authored marker is the single source for
+both the preview and the runtime orb. This also restores the release-gate
+assertion that the `-7` had been silently failing.
+
+**Transition and pickup hitches.** Both moments wrote the profile
+synchronously inside one physics tick, and that write serialized, wrote,
+re-read, re-parsed, and rebuilt a full profile before doing four more filesystem
+operations. Nine changes: byte-length write verification instead of a re-parse;
+a queued, rate-limited write that never lands on the requesting frame with
+forced drains at every safe boundary; room prefabs reused by prefab rather than
+by room ID; sprite sheets sliced once so the occlusion renderer's texture caches
+actually hit; the floor tile polygon read once instead of per room entry; a
+bounded HUD count-up with a cached reaction tint; pickup audio prewarmed at
+boot; and cached `ItemCatalogData` projections. `room_transition`,
+`profile_save_queue_delay`, and `profile_save_write` are now recorded scopes,
+and the perf harness reports real layout/activate timings plus a new
+`item_pickup` scenario.
+
+**First post-change desktop run** (2026-10-02, seed `24681357`): single gold
+contact **1.50 ms**; steady state ~6.9 ms avg / ~7.3 ms worst, unchanged;
+boss entry 52.7 ms; regular room transition 41.0 ms. These are single samples
+with no pre-fix comparison, and both transition figures sit inside the
+already-documented 300–385 ms noise band, so they are **not** evidence that
+the pass improved transitions. The 1.50 ms contact frame is consistent with the
+profile write no longer being on it, but a pre-fix run is needed to call it an
+improvement.
+
+Composition after the pass: **2,200** root accesses, `GameplayState` **1,718**
+lines / 286 fields, `RoomController` 2,251 lines. The regression floor and the
+strict target audit both pass.
+
+**Verification state.** `cone_aim_contract_smoke` (new) and
+`run1_room_prefab_smoke` pass; so do `cloud_save_contract_smoke`,
+`active_run_recovery_contract_smoke`, `demon_cloak_smoke`, `drop_art_smoke`,
+`entry_orb_visual_smoke`, `gear_catalogue_expansion_smoke`,
+`gear_drop_policy_smoke`, `item_drop_scene_smoke`, `combat_momentum_smoke`,
+`fusion_candidate_cache_smoke`, and `frame_time_smoke`. The pre-existing
+`hub_binding_smoke`, `equipment_menu_scene_smoke`, and `imbue_spell_scene_smoke`
+gate failures are unrelated to this pass and are recorded in
+`KNOWN_ISSUES.md`. **No rendered playtest, device profile, or A/B comparison
+has been captured**; the 2026-09-15/16 table in section 11 is a "before" row and
+this pass does not claim to have moved section 11.2.

@@ -54,11 +54,14 @@ func request_profile_save() -> void:
 	profile_save_pending = true
 
 
+## A pickup queues the save instead of writing it. The frame controller drains
+## the queue once, at a point in the tick with no other per-frame work behind
+## it, so the serialize/write cost never lands on the contact frame.
 func flush_pending_profile_save(root: GameplayState) -> void:
 	if not profile_save_pending or root.player_profile == null:
 		return
 	profile_save_pending = false
-	root._save_player_profile()
+	ProfileSaveService.request_save(root.player_profile)
 
 
 func placeholder_item_texture() -> Texture2D:
@@ -733,7 +736,9 @@ func settle_gold_pickups(root: GameplayState) -> int:
 		total += value
 	if total > 0 and root.player_profile != null:
 		root.player_profile.gold += total
-		root._save_player_profile()
+		# Gold settled on a room exit is queued like every other pickup save; the
+		# room's safe-boundary checkpoint drains it before it is captured.
+		ProfileSaveService.request_save(root.player_profile)
 		root._update_gold_indicator()
 	controller.clear()
 	return total

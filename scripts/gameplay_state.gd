@@ -780,6 +780,7 @@ func _begin_new_run(preserve_current_dungeon := false) -> void:
 func _save_active_run_checkpoint() -> bool:
 	if not OS.has_feature("web") or run_state == null or not run_state.active or (run_flow_controller != null and run_flow_controller.debug_run_number > 0):
 		return false
+	if player_profile != null: ProfileSaveService.flush_deferred_save(true)  # Never snapshot ahead of the profile.
 	var snapshot := ActiveRunSnapshotScript.create_context(_active_run_snapshot_context())
 	if snapshot.is_empty():
 		return false
@@ -789,7 +790,6 @@ func _save_active_run_checkpoint() -> bool:
 		if diagnostics != null and diagnostics.has_method("record_checkpoint"):
 			diagnostics.call("record_checkpoint", self)
 	return saved
-
 func _active_run_snapshot_context() -> ActiveRunSnapshotContext:
 	return ActiveRunSnapshotContextScript.new(
 		player_profile,

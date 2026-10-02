@@ -19,7 +19,7 @@ static func save_safe_state(context: RunCheckpointContext) -> RunCheckpointResul
 	if not room_result.succeeded():
 		result.status = RunCheckpointResult.Status.ROOM_SAVE_FAILED
 		return result
-	if not ProfileSaveService.save_profile(context.player_profile):
+	if not save_profile_now(context.player_profile):
 		result.status = RunCheckpointResult.Status.PROFILE_SAVE_FAILED
 		return result
 	var snapshot := ActiveRunSnapshotScript.create_context(context.snapshot_context)
@@ -31,3 +31,11 @@ static func save_safe_state(context: RunCheckpointContext) -> RunCheckpointResul
 		return result
 	result.status = RunCheckpointResult.Status.SAVED
 	return result
+
+
+## Settles any queued profile write before returning success, so a checkpoint can
+## never report a persisted profile that is still sitting in the write queue.
+static func save_profile_now(profile: PlayerProfile) -> bool:
+	if ProfileSaveService.has_pending_save():
+		return ProfileSaveService.flush_deferred_save(true)
+	return ProfileSaveService.save_profile(profile)

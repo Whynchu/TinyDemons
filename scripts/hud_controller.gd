@@ -20,6 +20,11 @@ const INVENTORY_CHEST_REACTION_DURATION := 0.24
 const RESOURCE_DELIVERY_REACTION_DURATION := 0.20
 const GOLD_COUNTUP_SPEED := 420.0
 const SOUL_COUNTUP_SPEED := 420.0
+## Each count-up step rasterizes a new pixel-text texture, and at 420/second with
+## a 60 Hz tick that is a fresh glyph table plus a GPU upload on every single
+## frame of the roll. Capping the visible steps keeps the roll readable and
+## bounds the texture churn to a couple of dozen per payout.
+const COUNTUP_MAX_STEPS := 12
 
 var target_health_fill_textures: Dictionary = {}
 var target_health_damage_fill_textures: Dictionary = {}
@@ -40,6 +45,7 @@ var enemy_overhead_offset := Vector2(3, 0)
 var enemy_overhead_frame_template: Sprite2D = null
 var enemy_overhead_fill_template: Sprite2D = null
 var bright_bar_cache: Dictionary = {}
+var bar_tint_texture_cache: Dictionary = {}
 var aggro_marker_texture_cache: Dictionary = {}
 var last_run_timer_text := ""
 var room_number_indicator: Sprite2D = null
@@ -249,9 +255,20 @@ func _finish_gold_delivery_reaction() -> void:
 func _tick_gold_counter(root: Object, delta: float) -> void:
 	if gold_amount_indicator == null or not is_instance_valid(gold_amount_indicator) or gold_display_target < 0:
 		return
-	if displayed_gold < gold_display_target:
-		displayed_gold = mini(gold_display_target, displayed_gold + maxi(1, int(ceil(GOLD_COUNTUP_SPEED * maxf(delta, 0.0)))))
-		set_gold_amount_texture(root.call("_pixel_text_texture", str(displayed_gold), Color8(255, 205, 117)) as Texture2D)
+	if displayed_gold >= gold_display_target:
+		return
+	displayed_gold = mini(gold_display_target, displayed_gold + _countup_step(displayed_gold, gold_display_target, delta))
+	set_gold_amount_texture(root.call("_pixel_text_texture", str(displayed_gold), Color8(255, 205, 117)) as Texture2D)
+
+
+## Step size for a resource count-up. The per-frame increment is capped so the
+## roll always completes in about COUNTUP_MAX_STEPS visible updates instead of
+## one update per rendered frame.
+func _countup_step(displayed: int, target: int, delta: float) -> int:
+	var remaining := maxi(target - displayed, 0)
+	if remaining <= COUNTUP_MAX_STEPS:
+		return remaining
+	return maxi(1, int(ceil(GOLD_COUNTUP_SPEED * maxf(delta, 0.0))))
 
 
 func sync_soul_value(value: int) -> void:
@@ -283,9 +300,10 @@ func acknowledge_soul_delivery(_color: Color, value: int) -> void:
 func _tick_soul_counter(root: Object, delta: float) -> void:
 	if soul_amount_indicator == null or not is_instance_valid(soul_amount_indicator) or soul_display_target < 0:
 		return
-	if displayed_souls < soul_display_target:
-		displayed_souls = mini(soul_display_target, displayed_souls + maxi(1, int(ceil(SOUL_COUNTUP_SPEED * maxf(delta, 0.0)))))
-		set_soul_amount_texture(root.call("_pixel_text_texture", str(displayed_souls), SoulVisualsScript.SOUL_HIGHLIGHT_COLOR) as Texture2D)
+	if displayed_souls >= soul_display_target:
+		return
+	displayed_souls = mini(soul_display_target, displayed_souls + _countup_step(displayed_souls, soul_display_target, delta))
+	set_soul_amount_texture(root.call("_pixel_text_texture", str(displayed_souls), SoulVisualsScript.SOUL_HIGHLIGHT_COLOR) as Texture2D)
 
 
 func acknowledge_inventory_delivery(color: Color) -> void:
@@ -982,9 +1000,15 @@ func _solid_texture(size: Vector2i, color: Color) -> Texture2D:
 	return ImageTexture.create_from_image(image)
 
 
+## Chroma reaction tint. The source bar and the reaction color are both fixed
+## per reaction, so the per-pixel pass runs once per color rather than once per
+## pickup contact.
 func _tint_bar_mask(source: Texture2D, color: Color) -> Texture2D:
 	if source == null:
 		return null
+	var cache_key := "%d:%s" % [source.get_instance_id(), color.to_html(false)]
+	if bar_tint_texture_cache.has(cache_key):
+		return bar_tint_texture_cache[cache_key] as Texture2D
 	var source_image: Image = source.get_image()
 	if source_image == null:
 		return null
@@ -994,7 +1018,9 @@ func _tint_bar_mask(source: Texture2D, color: Color) -> Texture2D:
 			var alpha := image.get_pixel(x, y).a
 			if alpha > 0.0:
 				image.set_pixel(x, y, Color(color.r, color.g, color.b, alpha))
-	return ImageTexture.create_from_image(image)
+	var texture := ImageTexture.create_from_image(image)
+	bar_tint_texture_cache[cache_key] = texture
+	return texture
 
 
 func cooldown_timer_texture(seconds: float, color: Color) -> Texture2D:

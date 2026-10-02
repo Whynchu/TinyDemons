@@ -23,6 +23,10 @@ const CONTENT_MANIFEST_SERVICE_SCRIPT := preload("res://scripts/content_definiti
 const ITEM_MANIFEST_EXPORT_DEPENDENCY := preload("res://resources/generated/item_definition_manifest.tres")
 var _authored_definition_resources_cache: Array[Resource] = []
 var _authored_definition_resources_loaded := false
+var _authored_definition_data_cache: Dictionary = {}
+var _authored_definition_data_loaded := false
+var _authored_live_ids_cache: Array[StringName] = []
+var _authored_live_ids_loaded := false
 
 
 func authored_definition_resources() -> Array[Resource]:
@@ -58,6 +62,10 @@ func authored_definition_resources() -> Array[Resource]:
 func invalidate_authored_definition_cache() -> void:
 	_authored_definition_resources_cache.clear()
 	_authored_definition_resources_loaded = false
+	_authored_definition_data_cache.clear()
+	_authored_definition_data_loaded = false
+	_authored_live_ids_cache.clear()
+	_authored_live_ids_loaded = false
 
 
 static func invalidate_default_cache() -> void:
@@ -97,7 +105,12 @@ func save_authored_definition(definition: ItemDefinition) -> int:
 	return save_error
 
 
+## Derived projections of the authored resource set. Each one is cached beside
+## authored_definition_resources() because every ItemCatalog construction needs
+## them, and pickups and chest opens construct a catalog per call.
 func authored_definition_data() -> Dictionary:
+	if _authored_definition_data_loaded:
+		return _authored_definition_data_cache
 	var result: Dictionary = {}
 	for resource: Resource in authored_definition_resources():
 		if not resource.has_method("to_record") or not resource.has_method("validate"):
@@ -106,10 +119,14 @@ func authored_definition_data() -> Dictionary:
 		if definition_id.is_empty():
 			continue
 		result[definition_id] = resource.call("to_record")
-	return result
+	_authored_definition_data_cache = result
+	_authored_definition_data_loaded = true
+	return _authored_definition_data_cache
 
 
 func authored_live_ids() -> Array[StringName]:
+	if _authored_live_ids_loaded:
+		return _authored_live_ids_cache
 	var result: Array[StringName] = []
 	for resource: Resource in authored_definition_resources():
 		if not bool(resource.get("live")):
@@ -117,7 +134,9 @@ func authored_live_ids() -> Array[StringName]:
 		var definition_id := StringName(str(resource.get("id")))
 		if not definition_id.is_empty():
 			result.append(definition_id)
-	return result
+	_authored_live_ids_cache = result
+	_authored_live_ids_loaded = true
+	return _authored_live_ids_cache
 
 
 func validate() -> Array[String]:

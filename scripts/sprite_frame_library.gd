@@ -11,12 +11,66 @@ const PLAYER_EYE_HIGHLIGHT_COLOR := Color8(65, 166, 246)
 
 var image_cache: Dictionary = {}
 var recolor_cache: Dictionary = {}
+var sliced_frame_cache: Dictionary = {}
+var sliced_sheet_row_cache: Dictionary = {}
 
 
+## Sliced frames are keyed by source path and frame size. Callers re-slice the
+## same authored sheet on every room entry, and each re-slice minted brand new
+## Texture2D objects. That defeated every downstream texture-keyed cache (the
+## occlusion warm above all), so a fresh per-pixel image pass ran on each room
+## entry and leaked its dead cache entries. The slice is now a pure function of
+## the authored asset, so it happens once.
 func slice_frames(path: String, frame_size: Vector2i) -> Array[Texture2D]:
+	var cache_key := "%s:%dx%d" % [path, frame_size.x, frame_size.y]
+	if sliced_frame_cache.has(cache_key):
+		return _copy_frames(sliced_frame_cache[cache_key] as Array[Texture2D])
 	if not ResourceLoader.exists(path):
 		return []
-	return slice_texture_frames(load(path) as Texture2D, frame_size)
+	return _cache_and_copy_slices(cache_key, slice_texture_frames(load(path) as Texture2D, frame_size))
+
+
+## Slices a horizontal run of `frame_count` frames from one 36-px-tall row of a
+## multi-row animation sheet (the authored player fullsheet layout). Attack rows
+## may pass a smaller `frame_size.y` to mirror the per-animation strip slicing.
+## Cached like slice_frames; see the caching note there.
+func slice_sheet_row(path: String, row: int, frame_size: Vector2i, frame_count: int) -> Array[Texture2D]:
+	var cache_key := "row:%s:%d:%dx%d:%d" % [path, row, frame_size.x, frame_size.y, frame_count]
+	if sliced_sheet_row_cache.has(cache_key):
+		return _copy_frames(sliced_sheet_row_cache[cache_key] as Array[Texture2D])
+	if not ResourceLoader.exists(path):
+		return []
+	var texture := load(path) as Texture2D
+	if texture == null:
+		return []
+	var sheet := _cached_image(texture)
+	var row_origin_y := row * 36
+	var frames: Array[Texture2D] = []
+	for frame_index in range(frame_count):
+		var frame := Image.create_empty(frame_size.x, frame_size.y, false, sheet.get_format())
+		frame.blit_rect(
+			sheet,
+			Rect2i(frame_index * frame_size.x, row_origin_y, frame_size.x, frame_size.y),
+			Vector2i.ZERO
+		)
+		frames.append(ImageTexture.create_from_image(frame))
+	sliced_sheet_row_cache[cache_key] = frames
+	return _copy_frames(frames)
+
+
+func _cache_and_copy_slices(cache_key: String, frames: Array[Texture2D]) -> Array[Texture2D]:
+	sliced_frame_cache[cache_key] = frames
+	return _copy_frames(frames)
+
+
+## Callers append to and reorder the arrays they receive, so hand back a fresh
+## array while sharing the cached Texture2D objects.
+func _copy_frames(frames: Array[Texture2D]) -> Array[Texture2D]:
+	var copy: Array[Texture2D] = []
+	copy.resize(frames.size())
+	for index in frames.size():
+		copy[index] = frames[index]
+	return copy
 
 
 func slice_texture_frames(texture: Texture2D, frame_size: Vector2i) -> Array[Texture2D]:
@@ -41,29 +95,6 @@ func slice_image_frames(sheet: Image, frame_size: Vector2i) -> Array[Texture2D]:
 		frame.blit_rect(
 			sheet,
 			Rect2i(frame_index * frame_size.x, 0, frame_size.x, frame_size.y),
-			Vector2i.ZERO
-		)
-		frames.append(ImageTexture.create_from_image(frame))
-	return frames
-
-
-## Slices a horizontal run of `frame_count` frames from one 36-px-tall row of a
-## multi-row animation sheet (the authored player fullsheet layout). Attack rows
-## may pass a smaller `frame_size.y` to mirror the per-animation strip slicing.
-func slice_sheet_row(path: String, row: int, frame_size: Vector2i, frame_count: int) -> Array[Texture2D]:
-	var frames: Array[Texture2D] = []
-	if not ResourceLoader.exists(path):
-		return frames
-	var texture := load(path) as Texture2D
-	if texture == null:
-		return frames
-	var sheet := _cached_image(texture)
-	var row_origin_y := row * 36
-	for frame_index in range(frame_count):
-		var frame := Image.create_empty(frame_size.x, frame_size.y, false, sheet.get_format())
-		frame.blit_rect(
-			sheet,
-			Rect2i(frame_index * frame_size.x, row_origin_y, frame_size.x, frame_size.y),
 			Vector2i.ZERO
 		)
 		frames.append(ImageTexture.create_from_image(frame))

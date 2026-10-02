@@ -105,7 +105,7 @@ func _ready() -> void:
 	_pitch_noise.seed = randi()
 	_pitch_noise.noise_type = FastNoiseLite.TYPE_PERLIN
 	_pitch_noise.frequency = 0.35
-	for sound_name in ["ui_hover", "ui_confirm", "ui_decline", "ui_no_input", "ui_pause", "pickup_counter_tick", "ui_unpause", "slime_spawn", "slime_move", "crit", "imbue_impact", "water_bubble_sent", "water_bubble_burst"]:
+	for sound_name in ["ui_hover", "ui_confirm", "ui_decline", "ui_no_input", "ui_pause", "pickup_counter_tick", "ui_unpause", "slime_spawn", "slime_move", "crit", "imbue_impact", "water_bubble_sent", "water_bubble_burst", "item_pickup", "mana_pickup", "chest_reward", "ui_use_item"]:
 		_player(sound_name)
 
 

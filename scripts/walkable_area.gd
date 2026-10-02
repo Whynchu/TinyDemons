@@ -2,6 +2,11 @@ extends Node
 class_name WalkableArea
 
 const FLOOR_TILE_GEOMETRY = preload("res://scenes/floor_tile_geometry.tscn")
+## The authored tile polygon is read from its scene once and reused. The scene
+## stays the single source of truth; instantiating and freeing it on every room
+## entry was pure overhead for four static points.
+static var _authored_tile_polygon_cache := PackedVector2Array()
+static var _authored_tile_polygon_loaded := false
 
 ## World walkability boundary. Tile extraction remains in gameplay while the
 ## scene-specific geometry is migrated incrementally.
@@ -72,10 +77,7 @@ func _collect_tile_regions(node: Node) -> bool:
 		core = boss_core
 	if core == null or core.polygon.size() < 3:
 		return false
-	var source := FLOOR_TILE_GEOMETRY.instantiate()
-	var source_polygon := source.get_node_or_null("WalkablePolygon") as Polygon2D
-	authored_tile_polygon = source_polygon.polygon.duplicate() if source_polygon != null else PackedVector2Array()
-	source.free()
+	authored_tile_polygon = _load_authored_tile_polygon()
 	if authored_tile_polygon.size() < 3:
 		return false
 	var core_world := PackedVector2Array()
@@ -87,6 +89,17 @@ func _collect_tile_regions(node: Node) -> bool:
 	base_regions = [core_world]
 	_rebuild_regions()
 	return not base_regions.is_empty()
+
+
+static func _load_authored_tile_polygon() -> PackedVector2Array:
+	if _authored_tile_polygon_loaded:
+		return _authored_tile_polygon_cache
+	_authored_tile_polygon_loaded = true
+	var source := FLOOR_TILE_GEOMETRY.instantiate()
+	var source_polygon := source.get_node_or_null("WalkablePolygon") as Polygon2D
+	_authored_tile_polygon_cache = source_polygon.polygon.duplicate() if source_polygon != null else PackedVector2Array()
+	source.free()
+	return _authored_tile_polygon_cache
 
 
 func _tile_polygon_at(owner: Node2D, local_origin: Vector2) -> PackedVector2Array:

@@ -252,6 +252,10 @@ func execute_current_aspect_ability(context: MagicRuntimeContext, mode: int) -> 
 			return false
 		pending_magic_mode = mode as ChromaComponentScript.AbilityMode
 		_capture_spell_selection(context, mode)
+		# The tap-and-release path chooses its form here, so the cone-specific aim
+		# rule has to run here too. Applying it only in begin_magic_animation left
+		# the release cast aiming at the raw closest-enemy vector.
+		apply_horizontal_cone_aim(context)
 		magic_cast_decided = true
 		if magic_animation_frame >= MAGIC_CAST_FRAME_INDEX and not pending_magic_projectile_spawned:
 			_spawn_pending_magic_projectile(context)
@@ -298,14 +302,7 @@ func begin_magic_animation(context: MagicRuntimeContext, direction: Vector2, tar
 		pending_magic_form = null
 		pending_magic_palette = "grey"
 	if pending_magic_form != null:
-		var selected_delivery := SpellFormCatalogScript.delivery_of(pending_magic_form)
-		var selected_form_id := StringName(pending_magic_form.get("id"))
-		if selected_form_id == &"fire" and selected_delivery == SpellFormDefinitionScript.Delivery.CONE:
-			var cone_remembered_facing_left := bool(context.last_player_facing_left_get.call())
-			var cone_aim_left := cone_remembered_facing_left
-			if absf(pending_magic_direction.x) > ActorMotor.HORIZONTAL_FACING_DEADZONE:
-				cone_aim_left = pending_magic_direction.x < 0.0
-			pending_magic_direction = Vector2.LEFT if cone_aim_left else Vector2.RIGHT
+		apply_horizontal_cone_aim(context)
 	magic_animation_is_imbue = is_imbue
 	pending_imbue_activated = false
 	magic_cast_decided = not is_candidate
@@ -334,6 +331,27 @@ func _capture_spell_selection(context: MagicRuntimeContext, mode: int) -> void:
 				current_aspect = int(chroma.get("bound_aspect"))
 			payload = ElementCatalogScript.element_for_aspect(current_aspect)
 	pending_magic_palette = ElementCatalogScript.palette_key(payload)
+
+
+## Fire Cinder Cone is a lateral breath: it leaves the caster's left or right
+## shoulder and never angles at a target. Every other form keeps its aimed
+## vector. Called from both cast entry points because the tap-and-release path
+## only learns the form after the candidate animation already began.
+func apply_horizontal_cone_aim(context: MagicRuntimeContext) -> void:
+	if pending_magic_form == null:
+		return
+	var selected_form_id := StringName(pending_magic_form.get("id"))
+	if selected_form_id != &"fire" or SpellFormCatalogScript.delivery_of(pending_magic_form) != SpellFormDefinitionScript.Delivery.CONE:
+		return
+	var aim_left := bool(context.last_player_facing_left_get.call())
+	if absf(pending_magic_direction.x) > ActorMotor.HORIZONTAL_FACING_DEADZONE:
+		aim_left = pending_magic_direction.x < 0.0
+	pending_magic_direction = Vector2.LEFT if aim_left else Vector2.RIGHT
+	if context.player_magic_flip_h_set.is_valid():
+		context.player_magic_flip_h_set.call(aim_left)
+	var player := context.player
+	if player != null and is_instance_valid(player):
+		player.flip_h = aim_left
 
 
 func _apply_magic_animation_frame(context: MagicRuntimeContext, frame: int) -> void:

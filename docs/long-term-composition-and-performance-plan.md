@@ -489,6 +489,42 @@ recorded. The harness must be run on a device build of this seed before any
 optimization claim. Until the A17 numbers exist, the desktop numbers above are a
 CPU floor, not a mobile budget.
 
+### Harness capability added — 2026-10-02
+
+The table above predates the transition/pickup polish pass, so treat it as the
+"before" row. Two measurement gaps that blocked attributing those hitches are now
+closed, and the pass itself is unmeasured:
+
+- `boss_room_transition` used to report `layout_ms=-1.0|activate_ms=-1.0`
+  placeholders. It now times the same two calls the room entry path makes, so
+  the transition cost can be split instead of reported as one total. The
+  2026-10-02 desktop run attributes ~38.9 ms of the 63.8 ms boss entry to
+  `_ensure_current_room_layout` and ~3.3 ms to `_apply_room_state`; **that is a
+  single sample and is not a stable number** (see the 300–385 ms band in
+  `AUDIT.md` §11.2).
+- There was no pickup scenario at all, which
+  `gameplay-stability-investigation-plan.md` had asked for. `item_pickup` now
+  times one real gold contact through the runtime's own spawner and collector.
+  First run on 2026-10-02: **1.50 ms** for the single contact frame, against a
+  ~6.9 ms steady state and a 16.67 ms budget. That is the pickup contact with
+  the profile write *deferred off it*, so it is the number the fix was aiming
+  for; it is one sample and was not compared against a pre-fix run.
+- Steady state is unchanged at ~6.90 ms avg / ~7.3 ms worst across every
+  non-transition scenario on the same run, so none of the caching work
+  regressed the common frame.
+- The `PERF_` line appended `avg_ms` to the `extra` field with no label, so a row
+  whose `extra` already ended in a value printed as
+  `...activate_ms=3.298000=63.848`. The trailing number is now labelled
+  `avg_ms_again`.
+
+New recorded scopes make the fix itself measurable under F9 capture:
+`room_transition` (the door-touch frame), `profile_save_queue_delay` (how long a
+pickup or door crossing waited for its write to land), and `profile_save_write`.
+
+**The Samsung A17 device profile is still the outstanding measurement, and it
+gates any claim that the 2026-10-02 changes improved frame times.** No device
+or rendered-playtest evidence exists for that pass.
+
 ### Measured improvement — 2026-09-15 (room-transition hitches)
 
 The harness's `boss_room_transition` scenario was corrected to enter the real

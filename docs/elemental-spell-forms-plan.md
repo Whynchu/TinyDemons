@@ -162,9 +162,21 @@ identity; it does not replace an elemental form when Chroma is low.
 - **Identity:** burst, aggression, expensive commitment.
 - **Behavior:** at the cast frame, a horizontal left/right arc (~90°, ~2.5
   tiles) is sampled. Diagonal input chooses its horizontal side; vertical input
-  uses the player's remembered facing.
+  uses the player's remembered facing. **The cone never angles at a target** —
+  this is the only form whose aim is discarded, and it is what makes Fire read
+  as a lateral breath rather than a homing sweep. Every other form keeps its
+  aimed vector. The cast sprite re-faces to the resolved side so the player and
+  the plume agree.
   Every enemy body polygon intersecting the arc takes damage once. No travel;
   the player is committed and vulnerable for the cast.
+- **Aiming contract:** the rule lives in
+  `MagicRuntimeController.apply_horizontal_cone_aim` and is applied from **both**
+  cast entry points. A tap-and-release cast starts as a GRAY candidate aimed at
+  the closest enemy and only selects its form on release, so applying the rule
+  only at candidate start left the cone on the raw closest-enemy vector. This is
+  the defect the rule's second call site exists to prevent;
+  `tests/cone_aim_contract_smoke.gd` drives both paths through the real entry
+  point and fails without it.
 - **Cast VFX:** one animated fan maps each palette-recolored Hub flame frame
   across the 90° sector, so the cone reads as one continuous flame. Its visible
   edge flares slightly toward the far tip; this art-only flare does not enlarge

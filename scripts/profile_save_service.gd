@@ -8,8 +8,16 @@ const ACTIVE_SLOT_PATH := "user://tiny_demons_active_slot.txt"
 const SLOT_COUNT := 3
 const WEB_ACTIVE_SLOT_KEY := "td_active_slot"
 const WEB_SLOT_KEY_PREFIX := "td_profile_"
+## Minimum spacing between two coalesced writes. Pickup bursts and room
+## transitions both request saves; the throttle collapses a burst into one
+## write on a later, otherwise-quiet frame instead of stacking several full
+## serializations inside one physics tick.
+const DEFERRED_SAVE_MIN_INTERVAL_MSEC := 400
 static var active_slot := -1
 static var _next_boot_route := ""
+static var _deferred_profile: PlayerProfile = null
+static var _deferred_request_frame := 0
+static var _last_deferred_write_msec := 0
 
 
 static func request_next_boot_route(route: String) -> void:
@@ -126,8 +134,12 @@ static func save_profile(profile: PlayerProfile) -> bool:
 	if file == null:
 		return false
 	file.store_string(json)
+	# A short write means the profile on disk is truncated, so the temp file is
+	# unusable. Checking the stored length is enough to catch that; re-opening
+	# and re-parsing the file here would cost a full deserialize on every save.
+	var wrote_bytes := file.get_position()
 	file.close()
-	if _read_profile(temp_path) == null:
+	if wrote_bytes != json.to_utf8_buffer().size():
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(temp_path))
 		return false
 	var save_absolute := ProjectSettings.globalize_path(save_path)
@@ -143,11 +155,67 @@ static func save_profile(profile: PlayerProfile) -> bool:
 			DirAccess.remove_absolute(temp_absolute)
 			return false
 	if DirAccess.rename_absolute(temp_absolute, save_absolute) == OK:
+		# A direct write is always at least as current as a queued one, so the
+		# queue is satisfied and must not be written again.
+		_deferred_profile = null
 		return true
 	if FileAccess.file_exists(backup_path):
 		DirAccess.copy_absolute(backup_absolute, save_absolute)
 	DirAccess.remove_absolute(temp_absolute)
 	return false
+
+## Queues `profile` for the next coalesced write instead of serializing it now.
+## Hot paths (pickups, room transitions) call this so a burst of contacts or a
+## door crossing never performs a full profile write inside the physics tick.
+## The queued profile is a live reference: whatever state it holds at flush time
+## is what gets persisted, so a deferred write is never stale.
+static func request_save(profile: PlayerProfile) -> void:
+	if profile == null:
+		return
+	_deferred_profile = profile
+	_deferred_request_frame = Engine.get_process_frames()
+
+
+static func has_pending_save() -> bool:
+	return _deferred_profile != null
+
+
+## Writes the queued profile once the frame that requested it has finished and
+## the throttle window has elapsed. The frame guard is what actually removes the
+## hitch: the serializing frame is never the frame that queued the work.
+## Returns true only when a write happened.
+static func flush_deferred_save(force := false, capture: Node = null) -> bool:
+	if _deferred_profile == null:
+		return false
+	var now_msec := Time.get_ticks_msec()
+	if not force:
+		if Engine.get_process_frames() <= _deferred_request_frame:
+			return false
+		if now_msec - _last_deferred_write_msec < DEFERRED_SAVE_MIN_INTERVAL_MSEC:
+			return false
+	var profile := _deferred_profile
+	_deferred_profile = null
+	var started_usec := Time.get_ticks_usec()
+	var write_succeeded := save_profile(profile)
+	_record_save_scope(now_msec, started_usec, capture)
+	if not write_succeeded:
+		# Keep the request alive so a failed write is retried rather than dropped.
+		_deferred_profile = profile
+		return false
+	_last_deferred_write_msec = Time.get_ticks_msec()
+	return true
+
+
+## Records where a coalesced write's wall-clock time went: the gap since the
+## request (how long a pickup or door crossing waited for its save to land) and
+## the write itself. The caller supplies the capture service so this stays a
+## static service with no scene-tree dependency.
+static func _record_save_scope(since_request_msec: int, started_usec: int, capture: Node) -> void:
+	if not OS.is_debug_build() or capture == null or not bool(capture.get("capturing")):
+		return
+	capture.call("record_scope", &"profile_save_queue_delay", (Time.get_ticks_msec() - since_request_msec) * 1000)
+	capture.call("record_scope", &"profile_save_write", Time.get_ticks_usec() - started_usec)
+
 
 static func clear_slot(slot: int) -> void:
 	var safe_slot := clampi(slot, 0, SLOT_COUNT - 1)

@@ -8,7 +8,6 @@ const ENTRY_ORB_FRAME_SIZE := Vector2i(9, 9)
 const ENTRY_ORB_FRAME_TIME := 0.12
 const ENTRY_ORB_BOB_TIME := 2.8
 const ENTRY_ORB_BOB_DISTANCE := 1.0
-const ORB_ROOM_VISUAL_OFFSET := Vector2(0, -7)
 const STARTER_FLAME_SHUT_TEXTURE_PATH := "res://assets/artwork/DoorRightFlameshut.png"
 const FIRST_ORB_TRIANGLE_PROMPT_PATH := "res://assets/artwork/triangle55.png"
 const FIRST_ORB_SQUARE_PROMPT_PATH := "res://assets/artwork/square55.png"
@@ -273,8 +272,10 @@ func build_orb_room_orb(root: Object, state: Dictionary) -> void:
 	if root.walkable_outline.is_empty():
 		clear_puzzle_torches(root)
 		return
-	# Use the authored ORB_CENTER for prefab rooms. The walkable bounds remain a
-	# fallback for older or custom room scenes that do not provide that marker.
+	# Use the authored ORB_CENTER for prefab rooms. That marker is the single
+	# source for both the editor preview sprite and the runtime orb, and its
+	# height matches the RestFire anchor in the same room. The walkable bounds
+	# remain a fallback for older or custom room scenes without that marker.
 	var bounds := Rect2(root.walkable_outline[0], Vector2.ZERO)
 	for point in root.walkable_outline:
 		bounds = bounds.expand(point)
@@ -282,7 +283,7 @@ func build_orb_room_orb(root: Object, state: Dictionary) -> void:
 	var authored_center := RoomPrefabHost.resolve_marker_in_map((root as GameplayState).map_root, &"ORB_CENTER")
 	if authored_center != null:
 		center_position = authored_center.global_position
-	var positions: Array[Vector2] = [center_position + ORB_ROOM_VISUAL_OFFSET]
+	var positions: Array[Vector2] = [center_position]
 	var default_palette: String = str(root.call("_map_orb_display_palette"))
 	var saved_palette: String = default_palette
 	# Any complete map layout owns the shared orb color. A stale room-local value

@@ -17,7 +17,7 @@ static func settle_context(context: RunSettlementContext) -> RunSettlementResult
 	if not can_settle(context.run_state, context.result):
 		outcome.status = RunSettlementResult.Status.NOT_SETTLEABLE
 		return outcome
-	if not ProfileSaveService.save_profile(context.player_profile):
+	if not RunCheckpointService.save_profile_now(context.player_profile):
 		outcome.status = RunSettlementResult.Status.SAVE_FAILED
 		return outcome
 	if not context.run_state.mark_settled(context.result):
@@ -34,7 +34,7 @@ static func settle(profile: PlayerProfile, run_state: RunState, result: StringNa
 		return false
 	if run_state.settled:
 		return false
-	if not ProfileSaveService.save_profile(profile):
+	if not RunCheckpointService.save_profile_now(profile):
 		return false
 	return run_state.mark_settled(result)
 

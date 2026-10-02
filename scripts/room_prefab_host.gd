@@ -10,13 +10,15 @@ var active_map_root: Node2D = null
 
 
 func mount_room(room_id: StringName, prefab_id: StringName, room_type: StringName) -> RoomPrefabMountResult:
-	if (active_room_instance != null
-		and is_instance_valid(active_room_instance)
-		and active_room_id == room_id
-		and active_prefab_id == prefab_id
-		and active_map_root != null
-		and is_instance_valid(active_map_root)
-	):
+	var instance_is_live := active_room_instance != null and is_instance_valid(active_room_instance)
+	var map_is_live := active_map_root != null and is_instance_valid(active_map_root)
+	# The mounted scene is a pure function of the prefab, not of the room ID. Most
+	# rooms share the generic shell, so keying reuse on the room ID re-instantiated
+	# the same 11 KB scene on every single door crossing and freed the previous
+	# one. Reusing by prefab keeps the walkable shell and every derived cache warm
+	# across rooms of the same kind; only a genuine prefab change remounts.
+	if instance_is_live and map_is_live and active_prefab_id == prefab_id:
+		active_room_id = room_id
 		var reused := RoomPrefabMountResult.new()
 		reused.status = RoomPrefabMountResult.Status.REUSED
 		reused.room_id = room_id
@@ -78,7 +80,11 @@ static func mount_runtime_room(
 			push_error("Room '%s' prefab factory returned no mount result." % room_id)
 		return false
 	room.prefab_id = prefab_id
-	if mount.status == RoomPrefabMountResult.Status.MOUNTED:
+	# A reused shell is still bound, not assumed. The socket dictionaries, the
+	# floor/socket node references and the accent-layer geometry root are all
+	# room-instance state, so the rebind runs for every mount. Remounting only
+	# skips the PackedScene.instantiate and the old instance's queue_free.
+	if runtime.floor_tiles != mount.floor_tiles:
 		runtime.floor_tiles = mount.floor_tiles
 		runtime.sockets_root = mount.sockets_root
 		for child_name in [&"FloorTiles", &"Walls", &"Sockets"]:
@@ -89,12 +95,12 @@ static func mount_runtime_room(
 			runtime.hub_stone_accent_layer.set_room_geometry_root(mount.map_root)
 		if geometry_rebind.is_valid():
 			geometry_rebind.call(mount.map_root, mount.floor_tiles)
-		dungeon_sockets.clear()
-		active_door_sockets.clear()
-		active_entrance_sockets.clear()
-		runtime._collect_dungeon_sockets()
-		validate_sockets.call()
-		hide_guides.call(mount.floor_tiles)
+	dungeon_sockets.clear()
+	active_door_sockets.clear()
+	active_entrance_sockets.clear()
+	runtime._collect_dungeon_sockets()
+	validate_sockets.call()
+	hide_guides.call(mount.floor_tiles)
 	return true
 
 

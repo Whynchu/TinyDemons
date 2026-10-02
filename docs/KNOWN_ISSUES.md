@@ -2,7 +2,7 @@
 
 Status: live register for the `0.3.x` cycle
 
-Updated: 2026-09-28
+Updated: 2026-10-02
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
@@ -26,6 +26,134 @@ reports, reproduction notes, and acceptance criteria remain in
 “Implemented in source” means that a code path and focused assertions exist. It
 does not mean that cold-start timing, every display orientation, physical
 touch input, browser behavior, or a complete player journey has been verified.
+
+## 2026-10-02 polish pass — Fire cone aim, Orb height, transition/pickup hitches
+
+Three player-reported issues. All three are fixed in source; runtime frame-time
+evidence and player acceptance are still open.
+
+### Fire Cinder Cone aimed at the closest enemy instead of sideways
+
+**Cause.** The lateral-only aim rule ran in `begin_magic_animation`, but the
+ordinary tap-and-release cast never reaches that line with a form in hand. A
+magic press starts a *candidate* animation (`_begin_magic_candidate`) with
+`pending_magic_form = null` and `pending_magic_direction` already pointing at
+the closest enemy. The form is only chosen on release, in
+`execute_current_aspect_ability`, which captured the selection and went straight
+to the cast frame. So the cone kept the raw closest-enemy vector and the
+horizontal snap was effectively dead code for the normal input.
+
+**Fix.** The rule is now `apply_horizontal_cone_aim(context)`, called from both
+entry points. It resolves to `Vector2.LEFT`/`Vector2.RIGHT` from the requested
+aim's horizontal component, falling back to the player's remembered facing when
+that component is inside `ActorMotor.HORIZONTAL_FACING_DEADZONE`, and it also
+re-faces the cast sprite so the player and the plume agree. Every other form is
+untouched and keeps its aimed vector.
+
+**Coverage.** `tests/cone_aim_contract_smoke.gd` drives
+`execute_current_aspect_ability` through both paths across eight target
+geometries and both remembered facings, with a non-cone control case. It fails
+on the pre-fix source and passes after. Registered in `tests/manifest.csv`.
+
+### Orb-room Orb floated above the floor
+
+**Cause.** `room_puzzle_controller.gd` carried a hard-coded
+`ORB_ROOM_VISUAL_OFFSET := Vector2(0, -7)` applied on top of the authored
+`ORB_CENTER` marker, so the runtime orb sat at y=73 while the editor preview
+sprite in `scenes/orb_room.tscn` was hand-mirrored to the same value. The
+authored marker (y=80) matches the RestFire anchor in the same room; the extra
+`-7` lifted the 9x9 art to 68.5–77.5 against a floor surface at ~88.5, leaving
+roughly 11 px of air under it. The same `-7` also made the release-gate
+assertion "EntryOrb shares the authored center marker" fail, since the scene
+drifted in `b454529` while the test still expected the marker value.
+
+**Fix.** The constant is gone. The authored `ORB_CENTER` marker is the single
+source for both the preview sprite and the runtime orb, and the scene was
+resynced to it. The walkable-bounds fallback is unchanged for room scenes
+without the marker.
+
+### Room transitions and item pickups hitched
+
+Both moments wrote the player profile synchronously inside one physics tick.
+`ProfileSaveService.save_profile` serializes the whole profile, writes a temp
+file, **re-opens and re-parses that file, and rebuilds a full `PlayerProfile`**
+to verify it, then does four more filesystem operations. On a transition that
+ran unconditionally plus again via the gold-settle path; on a pickup it ran on
+the exact contact frame alongside the particle burst, the audio start, and the
+HUD count-up. Three writes could land in one tick.
+
+**Fixes, in order of measured cost:**
+
+1. **Write verification no longer re-parses.** The write is checked by stored
+   byte length against the payload, which still catches a truncated write
+   without the deserialize.
+2. **The write is queued, not performed.** `ProfileSaveService.request_save`
+   records a live profile reference; `flush_deferred_save` refuses to write on
+   the requesting frame and rate-limits to one write per 400 ms. The frame
+   controller drains the queue at the front of the gameplay tick, before pickup,
+   door, and enemy work. Room transitions and pickups now only *request*.
+3. **Safe boundaries still force a write.** `RunCheckpointService.save_profile_now`
+   and `RunSettlement` force the queue before persisting, and
+   `_save_active_run_checkpoint` forces it before capturing a run snapshot, so
+   the profile can never be older than the snapshot paired with it.
+4. **Room prefabs are reused by prefab, not by room ID.** Most rooms share the
+   generic shell; the reuse guard keyed on `room_id`, so every door crossing
+   re-instantiated the same 11 KB scene and freed the previous one. Reuse is now
+   keyed on `prefab_id`, and the rebind (sockets, floor/socket references,
+   accent geometry root) still runs on every mount — only the instantiate and
+   the `queue_free` are skipped.
+5. **Sprite sheets are sliced once.** `SpriteFrameLibrary.slice_frames` and
+   `slice_sheet_row` re-sliced their sheets on every room entry and minted new
+   `ImageTexture` objects each time. That defeated every texture-keyed cache
+   downstream — including the occlusion renderer's per-pixel warm — so a fresh
+   image pass ran per room entry and its dead cache entries accumulated. Slices
+   are now cached by path and frame size; callers still receive a fresh array.
+6. **Floor tile geometry is read once.** `_collect_tile_regions` instantiated
+   and freed a 228-byte four-point scene on every room entry to read one polygon.
+7. **HUD count-up is bounded.** Gold and soul count-ups rasterized a new
+   pixel-text texture every frame of the roll (420/second at 60 Hz is ~7 new
+   keys per frame, each rebuilding a ~70-glyph table and uploading a texture).
+   The step is now capped at `COUNTUP_MAX_STEPS` visible updates per payout, and
+   the chroma reaction tint is cached per color.
+8. **Audio prewarm covers pickups.** `item_pickup`, `mana_pickup`,
+   `chest_reward`, and `ui_use_item` were absent from the boot prewarm list, so
+   their first play imported and decoded on the contact frame.
+9. **Catalog projections are cached.** `ItemCatalogData` rebuilt
+   `authored_definition_data()` and `authored_live_ids()` on every
+   `ItemCatalog.new()`, which pickups and chest opens do per call. Both are
+   derived from the already-cached authored resource set and are now cached
+   beside it, and invalidated with it.
+
+**Instrumentation added.** `room_transition` (the door-touch frame),
+`profile_save_queue_delay` (how long a pickup or door crossing waited for its
+write to land), and `profile_save_write` are now recorded scopes.
+`tests/performance_scenario_harness.gd` no longer hardcodes
+`layout_ms`/`activate_ms` to `-1.0` — it times the same calls the runtime makes
+— and gained an `item_pickup` scenario, which
+`docs/gameplay-stability-investigation-plan.md` had asked for.
+
+**Still open.** These are source-level fixes informed by reading the frame
+paths. The first post-change desktop harness run (2026-10-02, seed `24681357`)
+reports an `item_pickup` single-contact frame of **1.50 ms** and steady state
+unchanged at ~6.9 ms avg / ~7.3 ms worst, but there is **no pre-fix
+comparison, no rendered playtest, and no device profile.** The boss entry
+remains the worst transition case and this pass does not claim to have moved
+`docs/AUDIT.md` section 11.2 — the same run measured the boss entry at 52.7 ms
+and the regular room transition at 41.0 ms, both single samples inside the
+already-documented noise band. `tools/run_perf_harness.ps1`, an F9 capture, and
+the Samsung A17 profile are the next evidence.
+
+### Pre-existing failures found while verifying this pass
+
+Three gate rows fail on unmodified `main` and are **not** caused by this work.
+They are recorded here rather than fixed, because each is a separate concern
+from the three reported issues.
+
+| Test | Symptom | Evidence |
+|---|---|---|
+| `hub_binding_smoke` | `FAILED: Hub Binding owners are composed` | Fails identically with `scripts/` stashed to `HEAD` |
+| `equipment_menu_scene_smoke` | `TEST_ABORTED` after `update_hub_ui` hits a null node at `screen_state_controller.gd:2468` | Fails identically with `scripts/` stashed to `HEAD` |
+| `imbue_spell_scene_smoke` | `Invalid cast: could not convert value to 'Dictionary'` at line 191; the abort skips `quit()` so the process hangs instead of exiting | The test asserts `imbue_outline_overlays`, which `d6e1f8b` (0.3.19) removed from `player_equipment_visual_component.gd`; the property exists nowhere in the tree |
 
 ## Tooling verification gaps — Slice 0 resolved 2026-09-20
 

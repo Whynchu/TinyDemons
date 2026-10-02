@@ -596,6 +596,21 @@ persistent chest actor, while the Orb owner resolves `ORB_CENTER` from the
 active prefab. Editor-only preview sprites stay visible in the authored scene
 and are hidden on runtime mount.
 
+`ORB_CENTER` is the **single source** for the Orb's position: the runtime orb
+and the editor preview sprite both sit exactly on it, and the walkable-bounds
+centre is only a fallback for room scenes without the marker. There is no
+code-side visual offset — a 2026-09-06 change had added
+`ORB_ROOM_VISUAL_OFFSET := Vector2(0, -7)`, which floated the Orb ~11 px above
+the floor and was hand-mirrored into the preview sprite, silently failing the
+"EntryOrb shares the authored center marker" gate assertion. To move the Orb,
+move the marker and keep the preview sprite on it.
+
+Room prefab instances are reused by `prefab_id`, not by `room_id`, because most
+rooms share the generic shell; keying reuse on the room ID re-instantiated the
+same scene on every door crossing. A reuse still rebinds sockets, floor and
+socket references, and the accent geometry root — only the instantiate and the
+free are skipped.
+
 `RoomPrefabHost` owns the mounted scene; `RoomController` mounts it before room
 activation, then rebinds floor, socket, accent, and geometry consumers. The old
 shell in `main.tscn` remains a fallback until a mount succeeds and is hidden

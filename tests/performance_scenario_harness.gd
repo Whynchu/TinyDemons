@@ -129,7 +129,13 @@ func _initialize() -> void:
 	var transition_ms := await _measure_transition(gameplay, rooms)
 	_scenario_timings.append({"name": "room_transition", "avg_ms": transition_ms, "worst_ms": transition_ms, "nodes": 0, "sprites": 0, "extra": "transition_ms"})
 
-	# 8. Pause and equipment menus
+	# 8. Item pickup contact - the single-contact frame the stability plan asks
+	#    for. Measured on its own because the coalesced profile write must land
+	#    on a later frame than the contact itself.
+	var pickup_ms := await _measure_pickup(gameplay)
+	_scenario_timings.append({"name": "item_pickup", "avg_ms": pickup_ms, "worst_ms": pickup_ms, "nodes": 0, "sprites": 0, "extra": "single_contact_ms"})
+
+	# 9. Pause and equipment menus
 	gameplay.call("_open_pause_menu")
 	await process_frame
 	await _sample_scenario(gameplay, "pause_menu", func() -> void: pass)
@@ -183,15 +189,55 @@ func _measure_boss_transition(gameplay: Node, rooms: Node) -> Dictionary:
 			boss_id = rid
 			break
 	if boss_id == &"":
-		return {"total_ms": -1.0, "layout_ms": -1.0, "activate_ms": -1.0}
+		return {"total_ms": -1.0, "layout_ms": -1.0, "activate_ms": -1.0, "mount_ms": -1.0}
 	var started_usec := Time.get_ticks_usec()
 	var transition: Object = rooms.call("plan_connected_room_transition", graph, &"room_1_1", boss_id, &"", &"")
 	if transition == null:
-		return {"total_ms": -1.0, "layout_ms": -1.0, "activate_ms": -1.0}
+		return {"total_ms": -1.0, "layout_ms": -1.0, "activate_ms": -1.0, "mount_ms": -1.0}
 	var ok: bool = rooms.call("enter_connected_room", gameplay, transition)
 	var total_ms := float(Time.get_ticks_usec() - started_usec) / 1000.0
 	await process_frame
-	return {"total_ms": total_ms if ok else -1.0, "layout_ms": -1.0, "activate_ms": -1.0}
+	# enter_connected_room runs synchronously on the door-touch frame, so the
+	# whole transition is attributable to one call. Split it with the same steps
+	# the runtime performs in order.
+	var mount_ms := await _measure_one_call(gameplay, &"_ensure_current_room_layout")
+	var activate_ms := await _measure_one_call(gameplay, &"_apply_room_state")
+	return {"total_ms": total_ms if ok else -1.0, "layout_ms": mount_ms, "activate_ms": activate_ms, "mount_ms": mount_ms}
+
+
+## Times one runtime call the same way the room entry path invokes it, so the
+## harness can attribute transition cost instead of reporting a single total.
+func _measure_pickup(gameplay: Node) -> float:
+	# Time one real gold contact through the runtime's own spawner and collector.
+	# The contact frame and the frames the coalesced profile write is allowed to
+	# land on are timed separately: the hitch the player feels is the contact
+	# frame, and the write must never be part of it.
+	var profile: PlayerProfile = gameplay.get("player_profile")
+	var controller: PickupRuntimeController = gameplay.get("pickup_runtime_controller")
+	if profile == null or controller == null:
+		return -1.0
+	var gold: GoldPickupController = controller.gold_pickup_controller
+	if gold == null:
+		return -1.0
+	var before_gold := profile.gold
+	controller.spawn_chest_gold_drops(gameplay, 1)
+	await process_frame
+	if gold.values.is_empty():
+		return -1.0
+	var contact_usec := Time.get_ticks_usec()
+	controller.collect_gold_pickup(gameplay, 0)
+	var contact_ms := float(Time.get_ticks_usec() - contact_usec) / 1000.0
+	for _frame in 6:
+		await process_frame
+	return contact_ms if profile.gold > before_gold else -1.0
+
+
+func _measure_one_call(gameplay: Node, method: StringName) -> float:
+	if not gameplay.has_method(method):
+		return -1.0
+	var started_usec := Time.get_ticks_usec()
+	gameplay.call(method)
+	return float(Time.get_ticks_usec() - started_usec) / 1000.0
 
 
 func _sample_scenario(gameplay: Node, scenario_name: String, setup: Callable) -> void:
@@ -299,7 +345,9 @@ func _print_report() -> void:
 	for entry in _scenario_timings:
 		var extra := ""
 		if not String(entry["extra"]).is_empty():
-			extra = " %s=%.3f" % [entry["extra"], entry["avg_ms"]]
+			# Label the trailing number so a row whose extra already ends in a
+			# value (the transition layout/activate split) stays parseable.
+			extra = " %s avg_ms_again=%.3f" % [entry["extra"], entry["avg_ms"]]
 		print("PERF_ %s avg_ms=%.3f worst_ms=%.3f nodes=%d sprites=%d%s" % [
 			entry["name"], entry["avg_ms"], entry["worst_ms"], entry["nodes"], entry["sprites"], extra])
 	print("PERF_BASELINE_ scenarios=%d seed=%d" % [_scenario_timings.size(), RUN_SEED])

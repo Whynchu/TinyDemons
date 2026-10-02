@@ -637,6 +637,12 @@ func tick(root: GameplayState, delta: float) -> void:
 	# Cooldowns, combo timers, and spin-hit windows are gameplay state. Keep them
 	# frozen while an overlay owns input so menu idling does not spend CPU on
 	# combat bookkeeping or silently advance a paused action.
+	# The queued profile write drains here, at the front of the gameplay tick and
+	# before any pickup, door, or enemy work. ProfileSaveService only writes on a
+	# later frame than the request, so the serializing frame is a quiet one.
+	var capture_service: Node = root.performance_capture_service as Node if OS.is_debug_build() else null
+	if not bool(root.get("room_transition_locked")):
+		ProfileSaveService.flush_deferred_save(false, capture_service)
 	var aspect_ability := root.player_aspect_ability_component
 	if aspect_ability != null:
 		aspect_ability.call("tick", delta)
@@ -732,7 +738,15 @@ func tick(root: GameplayState, delta: float) -> void:
 	root.effects_spawner.update_pixel_particles_from_root(root, delta)
 	root.player_equipment_visual_component.tick(root.gameplay_frame_controller.equipment_visual_context(root), delta)
 	if not dialogue_was_active:
-		var chest_controller := root.chest_controller; chest_controller.update_interaction(root, root._is_interact_input_pressed(), root.interact_input_was_down, GameplayState.CHEST_REWARD_GOLD, GameplayState.CHEST_COLLECT_FLASH_TIME, delta); chest_controller.update_visuals_from_root(root, delta); root._update_world_item_drops(delta); root._update_chroma_pickups(delta); root._update_soul_pickups(delta); root.pickup_runtime_controller.update_gold_pickups(root, delta); root.pickup_runtime_controller.flush_pending_profile_save(root); root._update_rest_fire_animation(delta); root._update_cloaked_demon_animation(delta); root._update_door_transition(); root._update_depth_sorting(); root._update_targeting(); root._update_actor_occlusion(delta); root._update_player_palette_flash(delta); _stabilize(root)
+		var chest_controller := root.chest_controller; chest_controller.update_interaction(root, root._is_interact_input_pressed(), root.interact_input_was_down, GameplayState.CHEST_REWARD_GOLD, GameplayState.CHEST_COLLECT_FLASH_TIME, delta); chest_controller.update_visuals_from_root(root, delta); root._update_world_item_drops(delta); root._update_chroma_pickups(delta); root._update_soul_pickups(delta); root.pickup_runtime_controller.update_gold_pickups(root, delta); root.pickup_runtime_controller.flush_pending_profile_save(root); root._update_rest_fire_animation(delta); root._update_cloaked_demon_animation(delta)
+		# A door crossing is the one place a whole room is mounted, laid out, and
+		# activated inside a single tick. Time it here so the capture can separate
+		# transition cost from the rest of the frame.
+		var door_started_usec := Time.get_ticks_usec()
+		root._update_door_transition()
+		if capture_service != null and bool(capture_service.get("capturing")) and bool(root.get("room_transition_locked")):
+			capture_service.call("record_scope", &"room_transition", Time.get_ticks_usec() - door_started_usec)
+		root._update_depth_sorting(); root._update_targeting(); root._update_actor_occlusion(delta); root._update_player_palette_flash(delta); _stabilize(root)
 		# The charge pose is rendered by the base player sprite. The shared attack
 		# visual updater must not turn the previous attack frame back on after the
 		# animation component has deliberately hidden it.
