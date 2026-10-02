@@ -1,0 +1,19 @@
+[remap]
+
+importer="oggvorbisstr"
+type="AudioStreamOggVorbis"
+uid="uid://cis8u7a83ym0u"
+path="res://.godot/imported/bubbleburst.ogg-721ba2924d9b0523048515c7956a1884.oggvorbisstr"
+
+[deps]
+
+source_file="res://assets/sounds/Selfmade FX/bubbleburst.ogg"
+dest_files=["res://.godot/imported/bubbleburst.ogg-721ba2924d9b0523048515c7956a1884.oggvorbisstr"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

@@ -2,7 +2,7 @@
 
 _Only opencode writes this file._
 
-**Focus:** Player polish pass — Fire cone aim, Orb height, transition/pickup hitches
+**Focus:** Released `0.3.28` for mobile web testing
 **Updated:** 2026-10-02
 
 ## Completed (2026-10-02)
@@ -74,6 +74,9 @@ skips `quit()` so the process hangs rather than exiting).
 
 ## Open
 
+- **Rendered/mobile acceptance for all three fixes is still open** — that is
+  what this release is for. Confirm: the cone exits only left/right, the orb
+  sits on the floor, and transitions/pickups feel seamless on a real device.
 - **No rendered playtest or device profile.** The Samsung A17 measurement still
   gates any claim that the transition fix helped; the two transition figures
   from the post-change run (boss 52.7 ms, regular 41.0 ms) are single samples
@@ -88,12 +91,12 @@ skips `quit()` so the process hangs rather than exiting).
 
 ## Handoff / next
 
-1. Open the editor and run the curated gate
+1. Playtest `0.3.28` on mobile web and report against the three fixes. The
+   GitHub Pages build publishes from `main` automatically.
+2. Run the curated gate
    (`pwsh -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1`) once the
    editor peer is free; the three pre-existing failures above need triage
-   independent of this pass.
-2. Capture an F9 performance capture over a room-transition sweep and a pickup
+   independent of this work.
+3. Capture an F9 performance capture over a room-transition sweep and a pickup
    burst, then A/B the same sweep against `63e998f` to get the comparison the
    post-change numbers currently lack.
-3. Rendered acceptance for all three fixes: cone exits only left/right, orb sits
-   on the floor, transitions and pickups feel seamless.
