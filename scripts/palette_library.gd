@@ -14,15 +14,15 @@ static var SELECTABLE_PALETTES: Array = DATA.selectable_palettes
 static var REST_FIRE_PALETTES: Array = DATA.rest_fire_palettes
 static var SHADOW: Dictionary = _normalize_color_dict(_with_fallbacks(DATA.shadow, {
 	"blue": Color8(41, 54, 111), "orange": Color8(171, 82, 54), "green": Color8(37, 113, 121), "red": Color8(93, 39, 93),
-	"yellow": Color8(181, 97, 55), "grey": Color8(59, 63, 82), "purple": Color8(67, 47, 102), "aquamarine": Color8(39, 84, 116), "grey_orb": Color8(86, 108, 134)
+	"yellow": Color8(181, 97, 55), "grey": Color8(59, 63, 82), "purple": Color8(67, 47, 102), "aquamarine": Color8(39, 84, 116), "ice": Color8(37, 75, 130), "grey_orb": Color8(86, 108, 134)
 }))
 static var NORMAL: Dictionary = _normalize_color_dict(_with_fallbacks(DATA.normal, {
 	"blue": Color8(59, 93, 201), "orange": Color8(239, 125, 87), "green": Color8(56, 183, 100), "red": Color8(177, 62, 83),
-	"yellow": Color8(255, 205, 117), "grey": Color8(86, 108, 134), "purple": Color8(118, 78, 142), "aquamarine": Color8(58, 138, 151), "grey_orb": Color8(148, 176, 194)
+	"yellow": Color8(255, 205, 117), "grey": Color8(86, 108, 134), "purple": Color8(118, 78, 142), "aquamarine": Color8(58, 138, 151), "ice": Color8(71, 165, 221), "grey_orb": Color8(148, 176, 194)
 }))
 static var ACCENT: Dictionary = _normalize_color_dict(_with_fallbacks(DATA.accent, {
 	"blue": Color8(65, 166, 246), "orange": Color8(255, 205, 117), "green": Color8(167, 240, 112), "red": Color8(239, 125, 87),
-	"yellow": Color8(255, 240, 150), "purple": Color8(200, 184, 210), "grey": Color8(148, 176, 194), "aquamarine": Color8(134, 203, 255), "grey_orb": Color8(244, 244, 244)
+	"yellow": Color8(255, 240, 150), "purple": Color8(200, 184, 210), "grey": Color8(148, 176, 194), "aquamarine": Color8(134, 203, 255), "ice": Color8(189, 240, 255), "grey_orb": Color8(244, 244, 244)
 }))
 static var ARCHETYPE_HIGHLIGHTS: Array = _normalize_color_array(DATA.archetype_highlights)
 static var WHITE: Color = _normalize_color(DATA.white)

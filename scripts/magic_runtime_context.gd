@@ -45,7 +45,7 @@ var player_anim_timer_set: Callable = Callable()
 var player_magic_flip_h_set: Callable = Callable()
 var player_imbued_element_set: Callable = Callable()
 
-var imbue_mp_cost := 40
+var imbue_mp_cost := 100
 var imbue_duration := 15.0
 var imbue_cooldown := 20.0
 var imbue_hold_threshold := 0.35

@@ -189,7 +189,7 @@ Grass + Water     -> Ice
 | Grass | Sustain, drain, regeneration, restraint |
 | Shadow | Deception, curse, phase, lifesteal |
 | Ground | Defense, armor, stagger, force |
-| Ice | Slow, freeze, preservation, momentum |
+| Ice | Chill, freeze, preservation, momentum |
 
 ### 5.3 Chroma — the run-local resource S
 

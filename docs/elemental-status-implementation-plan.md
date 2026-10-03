@@ -3,7 +3,7 @@
 Status: source implementation is in the working tree; focused runtime and
 rendering acceptance remain open. Balance values are initial playtest defaults.
 
-Scope: implement Fire Burn, Shadow Poison, Electric stun, and Ice slow for the
+Scope: implement Fire Burn, Shadow Poison, Electric Shocked, and Ice Chill for the
 player and combat actors. Statuses are selected from elemental effect data on
 the existing elemental hit paths. This pass does not add a new ability delivery
 system.
@@ -23,14 +23,36 @@ Supersedes: the status-specific sequence in
 [`elemental-ability-and-status-system.md`](elemental-ability-and-status-system.md)
 and its [decision addendum](elemental-ability-and-status-system-addendum.md).
 
+## Current extension — 2026-10-03
+
+The affinity/transmission implementation extends the original four-status slice
+with Wet and innate enemy affinity. `StatusRecord` distinguishes applied and
+innate records; elemental enemies receive their matching harmless record,
+which applied ailments suppress for presentation and contact transfer. Wet
+conducts Electric damage, accelerates Shocked cadence, removes up to three
+applied Burn stacks, and uses the shared bubble texture. Contact transfer uses a
+pre-separation contact snapshot, guaranteed status transfer subject to
+immunity/special-defense gates, transmission provenance, and one three-second
+cooldown per unordered actor pair. Ordinary elemental-hit proc rates are
+unchanged.
+
+`RunState` now saves a usually-two, sometimes-three element theme (20% three
+chance at rank 3+; rank 1 Normal-only and rank 2 single-element teaching runs).
+`RoomController` constrains room and boss rosters, and elemental support
+variants all reuse the shared ally-healing behavior. Legacy active-run snapshots
+select a deterministic theme from their cached rosters and remap out-of-theme
+slots while retaining their runtime state. Focused smoke source has been updated
+or added; it is registered but has not been executed. Native visual readability,
+seed-sweep evidence, definition/catalog validation, and browser playtesting
+remain open.
 ## Implementation checkpoint — 2026-09-28
 
 The working tree now contains all four status definitions, catalog validation,
-actor-local status components, player/enemy proc and tick paths, movement slow,
-periodic stun, reset handling, HUD marks, and the shared aura extraction.
+actor-local status components, player/enemy proc and tick paths, movement and
+attack-speed slow, periodic stun, reset handling, HUD marks, and the shared aura extraction.
 Status definitions select one of four particle styles: Burn reuses imbue's
-upward ember trail, Poison uses rising motes, Stun uses short electric sparks,
-and Slow uses drifting frost crystals. The aura is a sibling overlay that
+upward ember trail, Poison uses rising motes, Shocked uses short electric sparks,
+and Chill uses drifting frost crystals. The aura is a sibling overlay that
 copies the actor sprite's global transform; AtlasTexture regions, Sprite2D
 regions, and the displayed animation-sheet frame are cropped before outline
 generation. Owner checks for status
@@ -54,14 +76,16 @@ invalid marker references are pruned before update or cast. The user also
 reported status outlines appearing offset or oversized. The outline now mirrors
 the actor's global transform as a sibling and crops AtlasTexture regions,
 Sprite2D regions, and the active h/v animation-sheet frame before dilation.
-The edge-particle source uses the same visible frame. Runtime acceptance remains
-open.
+Target highlight textures store pixels at double resolution while retaining
+the base sprite's logical display size; generated status outlines now keep that
+logical size plus their one-pixel border. The edge-particle source uses the same
+visible frame. Runtime acceptance remains open.
 
 | Slice | Source state | Evidence still open |
 |---|---|---|
 | S1 definitions/immunity | Typed status resources, catalog registration/validation, and enemy immunity IDs are present | Run catalog and definition validators |
 | S2 actor-local state | `StatusComponent`, typed request/result, reset clearing, and owner checks are present | Run the registered component check and fixed-seed coverage |
-| S3 combat/ticks/control | Player/enemy proc boundaries, DoT handling, slow, and periodic stun are wired | Run combat coverage and inspect lethal/off-screen cases |
+| S3 combat/ticks/control | Player/enemy proc boundaries, DoT handling, Chill movement/attack slow, and periodic stun are wired | Run combat coverage and inspect lethal/off-screen cases |
 | S4 presentation/render | HUD badge lifetime is guarded; status/imbue overlays share the aura owner; data-selected ember/mote/spark/crystal particles are wired; player-death visibility guard is wired | Readability and cloak/death playtest; check aura alignment; diagnose magenta artifact |
 | S5 data/docs/hardening | Tuning, authoring, architecture, audit, and known-issue docs are updated | Run data-only proof and validators; complete runtime/web acceptance |
 
@@ -75,12 +99,12 @@ open.
    status or ordinary hit feedback.
 3. Status state belongs to the affected actor. Pooled enemies clear it on reset;
    player statuses clear on room entry and run reset.
-4. Damage, death, slow, and stun remain handled by their owning combat/runtime
+4. Damage, death, movement slow, and interruption remain handled by their owning combat/runtime
    boundaries. No new `GameplayState` fields or `_process()` methods.
 5. Status marks are distinguishable in the authored game palette at native
    resolution during a representative combat room with a full crowd and HUD.
 6. Status outlines match the actor sprite's current frame, transform, and size;
-   Burn, Poison, Stun, and Slow each use their authored particle style.
+   Burn, Poison, Shocked, and Chill each use their authored particle style.
 7. The imbue visual remains aligned to its equipment sprites, and the reported
    transient magenta actor/hitbox rectangle is absent in the same playtest.
 
@@ -94,8 +118,8 @@ call the ordinary damage entry point.
 |---|---:|---:|---|---:|
 | Fire Burn | 20% per eligible hit | 2.5 s | 1 damage per stack every 1 s | 3 |
 | Shadow Poison | 20% per eligible hit | 2.5 s | 1 damage per stack every 1 s | 3 |
-| Ice Slow | 20% per eligible hit | 2.0 s | 15% movement slow per stack | 3 |
-| Electric Stun | 10% per eligible hit | 2.5 s | immediate 0.12 s action lock on proc, then repeat locks every 1 s; each extra stack shortens repeat cadence by 0.05 s, floor 0.5 s | 3 |
+| Ice Chill | 20% per eligible hit | 2.0 s | 15% movement and attack-speed slow per stack | 3 |
+| Electric Shocked | 10% per eligible hit | 2.5 s | immediate 0.2 s action lock on proc, then repeat locks every 1 s; each extra stack shortens repeat cadence by 0.05 s, floor 0.5 s | 3 |
 
 All values live on typed status definitions and remain tuneable. The numbers are
 starting values for playtesting, not a final balance sign-off.
@@ -109,15 +133,15 @@ Global rules:
 - Burn/Poison ticks may kill an actively engaged enemy while it is on-screen.
   If an enemy is not on-screen or the room has not engaged, lethal ticks hold it
   at 1 HP until it becomes eligible. Player DoT remains lethal.
-- Electric stun respects the existing boss stun-resistance flag.
+- Shocked respects the existing boss stun-resistance flag.
 - No gear-based status resistance in this pass. No exclusivity groups are
-  authored; the four statuses may coexist.
+  authored; the five statuses may coexist.
 
 ## 3. Data and runtime contracts
 
 - Add a typed `StatusEffectDefinition` with stable ID, element, family, proc
   chance, duration, stack cap, magnitude, tick/cadence settings, and icon mark.
-- Register the four definitions through `ElementCatalogData`; keep the stable
+- Register the five definitions through `ElementCatalogData`; keep the stable
   element enum and matchup policy in `element_catalog.gd`. This is the single
   bootstrap registry while M1 remains open. Do not create a parallel status
   lookup table.
@@ -128,8 +152,8 @@ Global rules:
   already owns effectiveness; preserve it through the damage boundary instead
   of trying to infer an ability payload that current attacks do not pass.
 - `StatusComponent` owns active records `{id, remaining, stacks, source_element,
-  tick_timer}` and exposes apply, clear, tick, active-state, and movement-slow
-  queries. It does not apply health damage or call `GameplayState`.
+  tick_timer}` and exposes apply, clear, tick, active-state, movement-slow, and
+  attack-speed queries. It does not apply health damage or call `GameplayState`.
 - Combat/runtime owners consume typed tick results. Enemy ticks reuse the
   existing slime kill lifecycle; player ticks set the existing pending-death
   state. Tick damage shows the existing small damage number without hitstop,
@@ -162,8 +186,9 @@ Global rules:
 - DoT uses a dedicated status tick result. The combat owner applies damage,
   regen delay, number feedback, screen/engagement lethality policy, and normal
   enemy/player death transitions.
-- Ice Slow feeds the shared player movement multiplier and enemy scoot distance.
-- Electric Stun immediately cancels the active attack and briefly blocks
+- Ice Chill feeds player/enemy movement multipliers and slows player/enemy
+  attack cadence and attack animation timing using the same stacked multiplier.
+- Electric Shocked immediately cancels the active attack and briefly blocks
   movement/attacks on proc, then repeats on its stack-adjusted cadence. Enemy
   lock windows add a short sprite-only jolt; collision geometry does not move.
   It observes the boss resistance flag.
@@ -171,7 +196,7 @@ Global rules:
 ### S4 — Presentation and render fix
 
 - Show a distinct small pixel mark for each active status in the element color;
-  fit all four possible statuses without silently dropping one. The enemy mark
+  fit all five possible statuses without silently dropping one. The enemy mark
   is attached to the existing overhead-bar presentation; the player mark sits
   beside the existing player HUD.
 - Use one `ElementAuraComponent` for status aura and imbue outline rendering.
@@ -197,7 +222,7 @@ Global rules:
   immunity, clear/reset, and fixed-seed proc determinism.
 - DoT applies to enemy and player, cannot re-proc, does not trigger hitstop,
   uses normal death handling, and follows the on-screen/engaged lethal rule.
-- Slow affects player and enemy movement and expires cleanly.
+- Chill affects player and enemy movement and attack tempo, then expires cleanly.
 - Stun's immediate proc lock, repeat cadence, stack reduction/floor, action
   interruption, sprite-only jolt, boss resistance, and expiry.
 - Status marks add and remove for pooled actors and the player HUD.
@@ -205,7 +230,7 @@ Global rules:
 
 ## 6. Risks and verification limits
 
-- All four statuses touch multiple combat boundaries. Keep status tick damage
+- All five statuses touch multiple combat boundaries. Keep status tick damage
   behind the typed result contract and keep initial tuning data-only.
 - Passive stun can chain-interrupt fast enemies; playtest the conservative
   initial proc rate and cadence before raising either value.

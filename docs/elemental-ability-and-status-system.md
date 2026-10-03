@@ -4,9 +4,10 @@ Status: design authority; the bounded status implementation lives in
 [`elemental-status-implementation-plan.md`](elemental-status-implementation-plan.md).
 
 Scope: long-term elemental ability + status + presentation direction for the
-player and combat enemies. The current implementation pass covers the four
-statuses through existing elemental hits; a generalized ability resolver and
-new delivery types remain future work.
+player and combat enemies. The current implementation covers five statuses
+through existing elemental hits, plus Water conductivity, innate enemy affinity,
+contact transmission, and themed enemy rosters; a generalized ability resolver
+and new delivery types remain future work.
 
 Owner: element registry (`element_catalog.gd`), the combat damage boundaries
 (`combat_runtime_controller.gd`, `slime_actor.gd`), presentation
@@ -14,7 +15,7 @@ Owner: element registry (`element_catalog.gd`), the combat damage boundaries
 authoring pipeline (`authoring-system-plan.md`).
 
 Current code: `ElementCatalogData.status_effects` in
-`resources/definitions/element_catalog.tres` references the four typed
+`resources/definitions/element_catalog.tres` references the five typed
 `StatusEffectDefinition` resources; `StatusComponent` owns actor-local status
 state; `CombatRuntimeController` applies eligible procs and consumes typed tick
 results; the frame and actor runtimes schedule those ticks. `HudController`
@@ -66,10 +67,11 @@ Carried forward from the ratified design contract, not re-opened here:
 
 - **No universal elemental-reaction simulator.** Prefer one clear rule that
   combines with existing rules (`combat-and-dungeon-design-principles.md:53`).
-- **Not every element carries a status.** Resolved set: **Fire Burn** and
-  **Shadow Poison** (DoT), plus **Electric stun** and **Ice slow** (control).
-  Water and Ground stay deliberately status-free (addendum A1–A3).
-- **The four current statuses may coexist.** Exclusivity and elemental reactions
+- **Not every element carries a status.** The current set is **Fire Burn** and
+  **Shadow Poison** (DoT), **Electric Shocked** (periodic stun), **Ice Chill**
+  (movement/attack slow), and **Water Wet** (Electric conductivity and Burn
+  removal). Ground remains status-free.
+- **The five current statuses may coexist.** Exclusivity and elemental reactions
   are not part of this bounded status pass.
 - **Environmental reactions (Water puts out Fire) are a separate system.** They
   belong to authored objects and interaction rules, not the combat damage path
@@ -135,17 +137,20 @@ while active:
 ```text
 id                 stable StringName
 element            Element id
-family             damage_over_time | movement_slow | periodic_stun
+family             damage_over_time | movement_slow | periodic_stun |
+                   damage_amplification | ambient_modifier
 proc_chance        flat chance per eligible hit
 tick_interval      seconds (damage-over-time only)
-magnitude_per_stack damage per tick or movement slow
+magnitude_per_stack damage per tick or movement/attack slow
 duration           seconds
 maximum_stacks     stack cap
 stun_interval      seconds (periodic stun only)
 stun_lock_duration seconds (periodic stun only)
 badge_glyph        pixel-text mark displayed in the status badge
-particle_style     ember | poison_mote | electric_spark | frost_crystal
+particle_style     ember | poison_mote | electric_spark | frost_crystal | bubble
 particle_interval  seconds between edge-particle emissions
+transmissible      whether actor contact can apply this status
+ambient fields     conducted element/damage/cadence and extinguished status ids
 ```
 
 The current resource does not define exclusivity groups or aura profiles.
@@ -161,6 +166,7 @@ the player applies to an enemy. One definition, one consumer contract.
 | Component | Responsibility | Attach to |
 |---|---|---|
 | `StatusComponent` | Owns active status records, advances duration/tick/cadence, and emits `status_changed` | player and combat actors |
+| `StatusTransmissionController` | Receives an immutable pre-separation contact snapshot, transfers eligible statuses both ways, and owns unordered pair cooldowns | scheduled by `SlimeRuntimeController` |
 | `ElementAuraComponent` | Uses configured actor/status/overlay-parent references; draws status outlines, schedules status particles, and owns imbue outline/flash overlays | player and combat actors |
 | `EffectsSpawner` | Emits cached edge particles using the style selected on the status definition | status presentation |
 | `ElementalAbilityResolver` (future) | Takes ability and caster/target refs, executes delivery, and calls the status path | player or enemy controller |
@@ -214,7 +220,7 @@ still need a before/after native-resolution check.
 | Family | Behavior | Examples |
 |---|---|---|
 | `dot` | Recurring `HealthComponent.apply_damage` on a tick interval | Burn, Poison, lifedrain |
-| `control` | Alters the actor's per-frame behavior | Slow (movement/tempo), Stun (skip action) |
+| `control` | Alters the actor's per-frame behavior | Chill (movement/attack tempo), Shocked (skip action) |
 | `reaction` | Reserved for the future environmental/object system | Water extinguishes Fire |
 
 A status record retains its definition, remaining duration, stacks, source
@@ -232,13 +238,13 @@ every tick (§5.4).
   not a stun (`GAMEPLAY_TUNING.md:57`); a real stun is a separate magnitude, and
   it must respect the existing boss stun-resistance flag
   (`slime_combat_component.gd:35`).
-- **Slow** scales the movement/tempo inputs already read by the brain
-  (`slime_brain.gd:173`, `movement_speed_multiplier` meta and scoot duration) and
-  by the player motor (`actor_motor.gd`). No new movement system.
+- **Chill** scales movement through the existing enemy brain and player motor,
+  and slows attack cadence/animation through the existing enemy and player
+  attack timers. No new movement or attack system.
 
 ### 5.3 Stacking and exclusivity
 
-- No exclusivity groups are authored in the current pass; the four statuses
+- No exclusivity groups are authored in the current pass; the five statuses
   can coexist. A future definition that introduces mutually exclusive effects
   must specify that rule and its reset behavior explicitly.
 - Stacking rules (owner-directed, addendum B4/B5): repeated procs **stack
@@ -399,7 +405,7 @@ Corrections applied to this document after a Thorn/Pip/Hexley pass:
   extraction is reuse, not composition cleanup. Timer authority stays in
   `MagicRuntimeController`.
 - **Status particle direction set by owner.** Burn reuses imbue's upward ember
-  trail; Poison, Electric Stun, and Ice Slow use authored mote, spark, and frost
+  trail; Poison, Electric Shocked, and Ice Chill use authored mote, spark, and frost
   styles. Each status resource owns its style and emission interval.
 - **One boundary → two.** Enemy→player damage bypasses `damage_actor`; the gate
   needs a second call site.
@@ -412,8 +418,8 @@ Corrections applied to this document after a Thorn/Pip/Hexley pass:
 - **Tick seam corrected.** Enemy DoT in `tick_components`; player beside
   `aspect_ability.tick`.
 - **Palette shader corrected** to `shaders/palette_swap.gdshader`.
-- **Scope set by owner.** Fire Burn, Shadow Poison, Electric stun, Ice slow;
-  Water/Ground none; drain caster and player special deferred (addendum).
+- **Scope set by owner.** Fire Burn, Shadow Poison, Electric Shocked, Ice Chill;
+  Water Wet; Ground none; drain caster and player special deferred (addendum).
 - **Readability probe added** as the gating prerequisite.
 
 Sequence and balance guardrails follow Pip's bounded plan; the M1 dependency and

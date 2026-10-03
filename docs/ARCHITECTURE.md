@@ -96,12 +96,23 @@ Encrypted-vault deployment and operational verification are documented in
   labels), `touch_controls_layer` (virtual stick and touch buttons), and
   `input_router` (the single merged input snapshot).
 - **Elemental statuses**: `ElementCatalogData` owns the current status
-  definitions; `StatusComponent` owns each actor's active records;
-  `CombatRuntimeController` applies eligible effects and handles typed tick
-  results. `GameplayFrameController` and `SlimeRuntimeController` schedule the
-  player and enemy ticks. `ActorMotor` / `SlimeBrain` consume slow multipliers,
-  `HudController` draws status marks, and `ElementAuraComponent` owns the
-  status outline plus reusable imbue overlays.
+  definitions; typed `StatusRecord`s distinguish temporary applications from
+  harmless innate enemy affinity. `StatusComponent` owns status state,
+  suppression, Wet conductivity/extinguishing, and typed tick results.
+  `CombatRuntimeController` applies eligible effects and handles ticks;
+  `GameplayFrameController` and `SlimeRuntimeController` schedule player and
+  enemy updates. `StatusTransmissionController` receives the collision system's
+  pre-separation contact snapshot and owns bidirectional status transfer and
+  pair cooldowns. `ActorMotor` / `SlimeBrain` consume Chill's movement
+  multiplier; player/enemy attack owners consume its action-speed multiplier.
+  `HudController` draws status marks and transmission tells, while
+  `ElementAuraComponent` owns status outlines, suppression bursts, stun shakes,
+  and reusable imbue overlays.
+- **Run enemy element themes**: `RunState` selects and serializes the allowed
+  non-Normal enemy elements. `EncounterDefinition` builds seeded synergistic
+  themes, filters healer variants, and migrates legacy room rosters;
+  `RoomController` applies the saved set to rooms, bosses, supports, and respawns.
+  Every support variant delegates to `SlimeSupportComponent` for ally healing.
 - **Infra**: `gameplay` (coordinator), `gameplay_state` (state),
   `gameplay_bootstrap`, `gameplay_frame_controller`,
   `editor_collision_guide`, `editor_polygon_guide`, `ui_layout_guide`.
@@ -155,8 +166,9 @@ override cannot mutate the cached default used by another runtime.
 
 `resources/tuning/status_*.tres` are typed content definitions, not per-runtime
 tuning copies. `ElementCatalogData.status_effects` references them as the
-current status registry. Their proc, duration, stack, tick, slow, and stun
-values are indexed in `GAMEPLAY_TUNING.md`.
+current status registry. Burn, Poison, Chill, Shocked, and Wet proc, duration,
+stack, tick, slow, conduction, extinguish, and interruption values are indexed
+in `GAMEPLAY_TUNING.md`.
 
 Balance data lives in these resources, not in `gameplay.gd`. See
 `GAMEPLAY_TUNING.md` for the full export index and the remaining hardcoded

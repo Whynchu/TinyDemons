@@ -33,6 +33,7 @@ signal effect_requested(kind: StringName, position: Vector2)
 const CHARGE_AURA_TAG := &"charge_aura"
 const SUPPORT_HEAL_CHARGE_TAG := &"support_heal_charge"
 const SUPPORT_HEAL_BURST_TAG := &"support_heal_burst"
+const IMBUE_ELEMENT_TAG := &"imbue_element"
 const SWORD_BEAM_CHROMA_COST := 20
 var damage_number_texture_cache: Dictionary = {}
 var critical_outline_texture_cache: Dictionary = {}
@@ -53,6 +54,7 @@ var pixel_particles: Array[Dictionary] = []
 ## already-visible effects finish their life.
 const MAX_DAMAGE_NUMBERS := 20
 const MAX_PIXEL_PARTICLES := 90
+const MAX_RESERVED_TAGGED_PARTICLES := 12
 const MAX_PICKUP_FLIGHTS := 16
 const PICKUP_FLIGHT_DURATION := 0.28
 const PICKUP_FLIGHT_ARC_HEIGHT := 6.0
@@ -338,7 +340,7 @@ func update_charge_aura_from_root(root: Object, delta: float) -> void:
 	var attack := root.get("player_attack_component") as PlayerAttackComponent
 	var player := root.get("player") as Sprite2D
 	var chroma := root.get("player_chroma_component") as Node
-	var beam_available: bool = attack != null and attack.sword_beam_cooldown_remaining <= 0.0 and chroma != null and bool(chroma.call("can_spend_chroma", attack.sword_beam_chroma_cost))
+	var beam_available: bool = attack != null and attack.sword_beam_cooldown_remaining <= 0.0 and chroma != null and bool(chroma.call("can_spend_chroma", attack.sword_beam_cost_for(chroma)))
 	if attack == null or player == null or not is_instance_valid(player) or not attack.is_charging() or not beam_available:
 		if charge_aura_active:
 			clear_effect_particles(CHARGE_AURA_TAG)
@@ -1131,12 +1133,15 @@ func _discard_damage_number(damage_number: Dictionary) -> void:
 			node.queue_free()
 
 
-func spawn_actor_status_particle(actor: Sprite2D, effect_parent: Node2D, definition: StatusEffectDefinition, random_source: RandomNumberGenerator, pixel_texture: Callable) -> void:
+func spawn_actor_status_particle(actor: Sprite2D, effect_parent: Node2D, definition: StatusEffectDefinition, random_source: RandomNumberGenerator, pixel_texture: Callable, effect_tag_override: StringName = &"") -> void:
 	if actor == null or not is_instance_valid(actor) or actor.texture == null or not actor.visible or not actor.is_visible_in_tree():
 		return
 	if effect_parent == null or not is_instance_valid(effect_parent) or definition == null or not pixel_texture.is_valid():
 		return
-	if pixel_particles.size() >= MAX_PIXEL_PARTICLES:
+	if effect_tag_override == IMBUE_ELEMENT_TAG:
+		if pixel_particles.size() >= MAX_PIXEL_PARTICLES + MAX_RESERVED_TAGGED_PARTICLES or _count_tagged_particles(IMBUE_ELEMENT_TAG) >= MAX_RESERVED_TAGGED_PARTICLES:
+			return
+	elif pixel_particles.size() >= MAX_PIXEL_PARTICLES:
 		return
 	var edge_positions := _status_edge_positions(actor)
 	if edge_positions.is_empty():
@@ -1176,7 +1181,7 @@ func spawn_actor_status_particle(actor: Sprite2D, effect_parent: Node2D, definit
 		"timer": 0.5,
 		"lifetime": 0.5,
 		"gravity": 0.0,
-		"effect_tag": StringName("status_%s" % String(definition.id)),
+		"effect_tag": effect_tag_override if not effect_tag_override.is_empty() else StringName("status_%s" % String(definition.id)),
 		"logical_position": origin,
 	}
 	match definition.particle_style:
@@ -1198,6 +1203,9 @@ func spawn_actor_status_particle(actor: Sprite2D, effect_parent: Node2D, definit
 		&"frost_crystal":
 			lifetime = source.randf_range(0.70, 1.10)
 			velocity = Vector2(source.randf_range(-1.5, 1.5), source.randf_range(2.0, 5.0))
+		&"bubble":
+			lifetime = source.randf_range(1.2, 1.8)
+			velocity = Vector2(source.randf_range(-1.5, 1.5), source.randf_range(-5.0, -3.0))
 	particle_data["timer"] = lifetime
 	particle_data["lifetime"] = lifetime
 	particle_data["velocity"] = velocity
@@ -1205,9 +1213,16 @@ func spawn_actor_status_particle(actor: Sprite2D, effect_parent: Node2D, definit
 	pixel_particles.append(particle_data)
 
 
+func spawn_actor_status_edge_burst(actor: Sprite2D, effect_parent: Node2D, definition: StatusEffectDefinition, random_source: RandomNumberGenerator, pixel_texture: Callable, particle_count: int = 3) -> void:
+	for _index in range(maxi(particle_count, 0)):
+		spawn_actor_status_particle(actor, effect_parent, definition, random_source, pixel_texture)
+
+
 func _status_particle_texture(particle_style: StringName, color: Color, pixel_texture: Callable) -> Texture2D:
 	if particle_style == &"ember":
 		return pixel_texture.call(color) as Texture2D
+	if particle_style == &"bubble":
+		return BubbleVisuals.texture(status_particle_texture_cache, "status_bubble", color.lerp(Color.WHITE, 0.28), color, 7)
 	var key := "%s:%s" % [String(particle_style), color.to_html(false)]
 	if status_particle_texture_cache.has(key):
 		return status_particle_texture_cache[key] as Texture2D
@@ -1216,7 +1231,7 @@ func _status_particle_texture(particle_style: StringName, color: Color, pixel_te
 		&"poison_mote": pattern = [".p.", "pPp", ".p."]
 		&"electric_spark": pattern = ["..s.", ".SSs", "SS..", ".s.."]
 		&"frost_crystal": pattern = ["..i..", ".iIi.", "iIiIi", ".iIi.", "..i.."]
-		_: pattern = ["p"]
+		_: return null
 	var width := pattern[0].length()
 	var image := Image.create(width, pattern.size(), false, Image.FORMAT_RGBA8)
 	image.fill(Color.TRANSPARENT)
@@ -1259,7 +1274,7 @@ func _status_sprite_cache_key(sprite: Sprite2D) -> String:
 	var region_key := ""
 	if sprite.region_enabled:
 		region_key = ":%s:%s" % [sprite.region_rect.position, sprite.region_rect.size]
-	return "%s:%s:%s:%s:%s%s" % [sprite.texture.get_rid(), sprite.hframes, sprite.vframes, sprite.frame, sprite.region_enabled, region_key]
+	return "%s:%s:%s:%s:%s:%s%s" % [sprite.texture.get_rid(), int(sprite.get_meta("occlusion_texture_revision", 0)), sprite.hframes, sprite.vframes, sprite.frame, sprite.region_enabled, region_key]
 
 
 func _status_source_image(sprite: Sprite2D) -> Image:
@@ -1331,11 +1346,26 @@ func clear_effect_particles(effect_tag: StringName) -> void:
 		charge_aura_timer = 0.0
 
 
+func _count_tagged_particles(effect_tag: StringName) -> int:
+	var count := 0
+	for particle_data: Dictionary in pixel_particles:
+		if particle_data.get("effect_tag", &"") == effect_tag:
+			count += 1
+	return count
+
+
 func update_pixel_particles(delta: float, snap_position: Callable, default_lifetime: float) -> void:
 	# Hard cap: drop the oldest particles first so a crowd trading hits cannot
 	# grow the per-frame particle update (and node) count without bound.
 	while pixel_particles.size() > MAX_PIXEL_PARTICLES:
-		var oldest := pixel_particles.pop_front() as Dictionary
+		var oldest_index := -1
+		for index in pixel_particles.size():
+			if pixel_particles[index].get("effect_tag", &"") != IMBUE_ELEMENT_TAG:
+				oldest_index = index
+				break
+		if oldest_index < 0:
+			break
+		var oldest := pixel_particles.pop_at(oldest_index) as Dictionary
 		var oldest_sprite_value: Variant = oldest.get("sprite")
 		if is_instance_valid(oldest_sprite_value) and oldest_sprite_value is Node:
 			var oldest_sprite := oldest_sprite_value as Node
@@ -1375,9 +1405,11 @@ func update_pixel_particles(delta: float, snap_position: Callable, default_lifet
 		if animation_frames is Array and not animation_frames.is_empty():
 			var frame_time := maxf(float(particle_data.get("animation_frame_time", 0.1)), 0.01)
 			var elapsed := maxf(lifetime - timer, 0.0)
-			var frame_index := posmod(
-				floori(elapsed / frame_time),
-				animation_frames.size()
+			var elapsed_frames := floori(elapsed / frame_time)
+			var frame_index := (
+				posmod(elapsed_frames, animation_frames.size())
+				if bool(particle_data.get("animation_loop", true))
+				else mini(elapsed_frames, animation_frames.size() - 1)
 			)
 			var frame_texture: Variant = animation_frames[frame_index]
 			if frame_texture is Texture2D:

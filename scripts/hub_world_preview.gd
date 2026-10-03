@@ -26,6 +26,7 @@ const PLAYER_IDLE_FRAME_TIME := 0.18
 
 const SpriteFrameLibraryScript = preload("res://scripts/sprite_frame_library.gd")
 const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
+const AspectCatalogScript = preload("res://scripts/aspect_catalog.gd")
 const ActorPaletteMaterialScript = preload("res://scripts/actor_palette_material.gd")
 const PaletteLibraryScript = preload("res://scripts/palette_library.gd")
 const PLAYER_DEFAULT_ELEMENT := ElementCatalogScript.Element.WATER
@@ -157,7 +158,8 @@ func _configure_guides(main: Node) -> void:
 func _build_animation_frames() -> void:
 	var library := SpriteFrameLibraryScript.new()
 	_fire_base_frames = _slice_horizontal(library, FIRE_PATH, FIRE_FRAME_COUNT)
-	_fire_frames = library.recolor_fire_frames(_fire_base_frames, ElementCatalogScript.palette_key(player_element))
+	var palette_name := _player_palette_name()
+	_fire_frames = library.recolor_fire_frames(_fire_base_frames, palette_name)
 	_cloaked_idle_frames = _slice_horizontal(library, CLOAKED_IDLE_PATH, CLOAKED_IDLE_FRAME_COUNT)
 	_player_idle_frames = library.slice_full_row_visible(PLAYER_FULLSHEET_PATH, 0, PLAYER_FRAME_SIZE)
 
@@ -174,7 +176,7 @@ func _apply_animation_frames() -> void:
 	var main := get_node_or_null(MAIN_SCENE_NODE) as Node2D
 	if main == null:
 		return
-	var palette_name := ElementCatalogScript.palette_key(player_element)
+	var palette_name := _player_palette_name()
 	var fire := main.get_node_or_null(^"Actors/Props/RestFire") as Sprite2D
 	if fire != null and not _fire_frames.is_empty():
 		fire.texture = _fire_frames[_frame_for(_animation_time, FIRE_FRAME_TIME, _fire_frames.size())]
@@ -203,6 +205,12 @@ func _apply_animation_frames() -> void:
 		if player_attack != null:
 			player_attack.material = ActorPaletteMaterialScript.for_palette(palette_name)
 		_sync_player_shadow(main, player)
+
+
+func _player_palette_name() -> String:
+	var element_id := ElementCatalogScript.id(player_element)
+	var palette := AspectCatalogScript.palette_for_flame(element_id)
+	return palette if not palette.is_empty() else ElementCatalogScript.palette_key(player_element)
 
 
 func _sync_player_shadow(main: Node2D, player: Sprite2D) -> void:

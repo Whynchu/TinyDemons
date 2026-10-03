@@ -10,7 +10,7 @@ class_name ActorPaletteMaterial
 ##   source shadow("blue")  -> target shadow(palette)
 ##   source normal("blue")  -> target normal(palette)
 ##   source white           -> white (unchanged)
-##   source eye highlight   -> target shadow(palette) for green/yellow, else normal
+##   source eye highlight   -> target shadow(palette) for green/yellow/ice, else normal
 ##
 ## Actor frames never use the shadow-as-base rule; only portraits do.
 
@@ -93,7 +93,7 @@ static func color_pairs(palette_name: String) -> Dictionary:
 	var palette := palette_name if PaletteLibrary.PALETTE_NAMES.has(palette_name) else SOURCE_PALETTE
 	var source_colors: Array[Color] = PaletteLibrary.triple(SOURCE_PALETTE)
 	var target_colors: Array[Color] = PaletteLibrary.triple(palette)
-	var eye_is_shadow := palette == "green" or palette == "yellow"
+	var eye_is_shadow := palette == "green" or palette == "yellow" or palette == "ice"
 	return {
 		"from": PackedColorArray([
 			source_colors[0],

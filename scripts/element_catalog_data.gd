@@ -33,9 +33,10 @@ func validate() -> Array[String]:
 		if seen_elements.has(definition.element):
 			problems.append("multiple passive status effects use element %d" % definition.element)
 		seen_elements[definition.element] = true
-	if status_effects.size() != StatusEffectDefinition.STATUS_IDS.size():
-		problems.append("status registry must contain all four registered definitions")
 	for required_id in StatusEffectDefinition.STATUS_IDS:
 		if not seen_ids.has(required_id):
 			problems.append("missing status definition '%s'" % String(required_id))
+	for registered_id: StringName in seen_ids.keys():
+		if not StatusEffectDefinition.STATUS_IDS.has(registered_id) and not StatusEffectDefinition.AUXILIARY_STATUS_IDS.has(registered_id):
+			problems.append("status registry contains unexpected id '%s'" % String(registered_id))
 	return problems

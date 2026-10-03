@@ -19,6 +19,7 @@ const SKELETON_WALK_SPEED := 16.0
 const SKELETON_NOTICE_STAGGER_MAX := 0.9
 const SKELETON_ATTACK_STAGGER_MAX := 0.75
 const ROOM_ENEMY_PROJECTILE_GROUP := &"room_enemy_projectile"
+const STATUS_TRANSMISSION_CONTROLLER_SCRIPT = preload("res://scripts/status_transmission_controller.gd")
 
 var _slime_movement_cursor := 0
 var _skeleton_bone_frames: Array[Texture2D] = []
@@ -30,6 +31,7 @@ var _skeleton_bone_outline_cache: Dictionary = {}
 ## slime on every frame. Call invalidate_contexts() if a source object is swapped.
 var _boss_jump_slam_context_cache: BossJumpSlamContext = null
 var _slime_support_context_cache: SlimeSupportContext = null
+var _status_transmission_controller: StatusTransmissionController = STATUS_TRANSMISSION_CONTROLLER_SCRIPT.new() as StatusTransmissionController
 
 
 func invalidate_contexts() -> void:
@@ -265,9 +267,19 @@ func move_slimes(root: Object, delta: float) -> void:
 	if last_movement_index >= 0:
 		_slime_movement_cursor = (last_movement_index + 1) % maxi(count, 1)
 	var separation_passes := 1 if slimes.size() >= 5 else 2
-	(root.get("actor_collision_system") as ActorCollisionSystem).resolve_slime_contacts(slimes, root, separation_passes)
-	if not bool(root.get("player_dead")):
-		var player := root.get("player") as Sprite2D
+	var collision_system := root.get("actor_collision_system") as ActorCollisionSystem
+	collision_system.build_slime_grid(slimes, Callable(root, "_actor_foot"), Callable(root, "_is_slime_spawn_locked"))
+	var player := root.get("player") as Sprite2D
+	var player_alive := gameplay == null or not gameplay.player_dead
+	var transmission_player := player if player_alive else null
+	var contact_snapshot := collision_system.capture_status_contact_pairs(
+		slimes, transmission_player, root, Callable(root, "_actor_foot"),
+		Callable(root, "_is_slime_spawn_locked"), Callable(root, "_is_slime_dead"))
+	if gameplay != null:
+		var room_engaged := gameplay.dungeon_map_controller != null and gameplay.dungeon_map_controller.is_room_engaged(gameplay.current_room_id)
+		_status_transmission_controller.process_contacts(contact_snapshot, delta, gameplay.current_room_id, room_engaged, gameplay.rng)
+	collision_system.resolve_slime_contacts(slimes, root, separation_passes)
+	if player_alive:
 		for slime in slimes:
 			if is_instance_valid(slime) and slime.visible and not bool(slime.get_meta("boss_airborne", false)) and not is_slime_spawn_locked(root, slime) and not bool(root.call("_is_slime_dead", slime)):
 				(root.get("actor_collision_system") as ActorCollisionSystem).resolve_contact_pair(slime, player, Vector2.ZERO, root)

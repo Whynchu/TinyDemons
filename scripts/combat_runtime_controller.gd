@@ -101,6 +101,7 @@ func damage_slime_with_number(root: Object, slime: Sprite2D, amount: float, was_
 		var status := slime.get_node_or_null("Status") as StatusComponent
 		if status != null:
 			amount *= status.damage_taken_multiplier()
+			amount *= status.incoming_damage_multiplier_for(attack_element)
 	# Combo is a damage-confirmed streak, not a swing/projectile-contact
 	# counter. Immune hits and zero-damage packets must not refresh it.
 	if not immune and amount > 0.0:
@@ -428,10 +429,12 @@ func kill_slime(root: Object, slime: Sprite2D) -> void:
 	var drop_origin: Vector2 = root.call("_actor_foot", slime) as Vector2
 	var drop_direction: Vector2 = root.call("_slime_knockback_direction", slime) as Vector2
 	var soul_drop_value := soul_drop_value_for_slime(root, slime)
+	var enemy_chroma := slime.get_node_or_null("EnemyChroma")
+	var has_elemental_chroma := enemy_chroma != null and bool(enemy_chroma.get("enabled"))
 	# Souls are the persistent exchange currency. Every defeated enemy drops one
 	# so the fire and equipment-fusion economy does not depend on a lucky roll;
 	# scaled bosses use the run-ranked value above.
-	if chroma_tuning != null and drop_rng.randf() < chroma_tuning.enemy_drop_chance:
+	if not has_elemental_chroma and chroma_tuning != null and drop_rng.randf() < chroma_tuning.enemy_drop_chance:
 		# Give the two currencies a small lateral fan so their first frames do not
 		# occupy the same pixel when an enemy drops both.
 		var drop_tangent := Vector2(-drop_direction.y, drop_direction.x)
@@ -626,6 +629,11 @@ func apply_boss_jump_slam(root: Object, boss: Sprite2D, anchor: Vector2) -> void
 		root.call("_spawn_player_damage_number", 0.0, damage_result.element if damage_result != null else ElementCatalogScript.Element.NEUTRAL, true)
 		return
 	var damage := damage_result.amount * 1.25
+	var player_actor := root.get("player") as Sprite2D
+	var player_status := player_actor.get_node_or_null("Status") as StatusComponent if player_actor != null else null
+	if player_status != null:
+		damage *= player_status.damage_taken_multiplier()
+		damage *= player_status.incoming_damage_multiplier_for(damage_result.element)
 	var blocked := false
 	var block_stun := 0.0
 	var counter_knockback_multiplier := 0.0
@@ -797,6 +805,7 @@ func _apply_status_damage_tick(root: GameplayState, actor: Sprite2D, result: Sta
 	var status := actor.get_node_or_null("Status") as StatusComponent
 	if status != null:
 		amount *= status.damage_taken_multiplier()
+		amount *= status.incoming_damage_multiplier_for(result.element)
 	if amount <= 0.0:
 		return
 	if not is_player and not _enemy_status_tick_may_kill(root, actor):

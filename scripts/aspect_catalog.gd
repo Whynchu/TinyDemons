@@ -10,7 +10,7 @@ const STARTER_PALETTES: Dictionary = {
 	&"grass": "green",
 	&"shadow": "purple",
 	&"ground": "orange",
-	&"ice": "aquamarine",
+	&"ice": "ice",
 }
 const DISPLAY_NAMES: Dictionary = {
 	&"fire": "FIRE",
@@ -52,6 +52,10 @@ static func flame_for_palette(palette: String) -> StringName:
 	var normalized_palette := palette.to_lower()
 	if normalized_palette == "gray":
 		normalized_palette = "grey"
+	# Keep profiles and palette selections created before the brighter Ice swatch
+	# was introduced compatible with the Ice flame identity.
+	if normalized_palette == "aquamarine":
+		return &"ice"
 	for flame: StringName in ELEMENTAL_FLAMES:
 		if palette_for_flame(flame) == normalized_palette:
 			return flame

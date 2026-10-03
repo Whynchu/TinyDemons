@@ -439,7 +439,11 @@ room always keeps at least one non-support enemy. The consumed room policy in
 non-support Slimes or Skeletons an independent 50% healer roll; a partial final
 group also gets a roll, so four regular enemies get two chances. Support
 `encounter_weight` values select which eligible support variant appears when a
-roll succeeds.
+roll succeeds. The saved run theme filters the support pool before selection.
+Add elemental healer variants as `support_caster` definitions that use the
+shared heal behavior; do not add a Grass healer to a Water/Electric theme. Heal
+target eligibility is based on ally health, so a support can heal Normal allies
+and allies of either other allowed element.
 Definition validation rejects polygons with infinite or NaN coordinates,
 zero area, or self-intersections, and rectangles with zero or negative sizes.
 
@@ -557,6 +561,11 @@ boundary. A new elemental rule must specify current element, bound element,
 Chroma amount, pickup behavior, zero-resource behavior, combat element, gate
 requirements, visual palette, and save compatibility.
 
+Player flame palettes are mapped in `aspect_catalog.gd` and their color ramps
+are authored in `resources/definitions/palette_library.tres`. Player Ice uses
+the bright `ice` ramp; Ice enemy variants keep the `aquamarine` combat palette
+from `element_catalog.tres`.
+
 Known traps: element identity currently lives in four parallel tables — the
 `ElementCatalog.Element` enum (`element_catalog.gd:11-20`), the numeric keys and
 `element_count` in `element_catalog.tres`, the `PlayerChromaComponent.Aspect`
@@ -579,14 +588,16 @@ The current status authoring path is a typed resource list, not the M1 generated
 definition manifest:
 
 1. Edit one of `resources/tuning/status_burn.tres`, `status_poison.tres`,
-   `status_slow.tres`, or `status_stun.tres`, using the
+   `status_chill.tres`, `status_shocked.tres`, or `status_wet.tres`, using the
    `StatusEffectDefinition` schema. Stable status ID, element, family, proc
    chance, duration, stack cap, family-specific values, particle style, and
-   particle interval live on the resource. Use the registered styles
-   `ember`, `poison_mote`, `electric_spark`, and `frost_crystal`.
+   particle interval live on the resource. Chill's slow magnitude controls
+   movement and attack speed. Wet owns Electric conductivity, Burn removal, and
+   its `bubble` particle style. Use the registered styles `ember`, `poison_mote`,
+   `electric_spark`, `frost_crystal`, and `bubble`.
 2. `resources/definitions/element_catalog.tres` references these through
    `ElementCatalogData.status_effects`. Its validator enforces unique IDs,
-   one current passive status per element, and the registered status set.
+   one current status definition per element, and the registered status set.
    A new status ID must also be added to
    `StatusEffectDefinition.STATUS_IDS`; adding a new behavior family requires
    the corresponding generic `StatusComponent` family implementation.

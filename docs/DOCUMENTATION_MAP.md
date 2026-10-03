@@ -75,6 +75,10 @@ For an external product/design review, use the curated [`review/00-astra-review-
     of composition maturity, code efficiency, practicality, folder flow, and
     player-facing delivery at `0.3.25`, with scores and a moving-forward
     standard.
+25. [`elemental-affinity-and-transmission-plan.md`](elemental-affinity-and-transmission-plan.md)
+    — active plan for the weapon imbue's per-element look, the `wet` status,
+    innate element affinity with presentation-only suppression, bidirectional
+    contact transmission, and synergy-constrained room generation.
 
 ## Authority by question
 
@@ -110,6 +114,7 @@ For an external product/design review, use the curated [`review/00-astra-review-
 | What is the ratified design contract? | [`design-interview-record-2026-09-18.md`](design-interview-record-2026-09-18.md) | feature-specific plans and tuning values |
 | How should elemental abilities, statuses, and auras be built? | [`elemental-ability-and-status-system.md`](elemental-ability-and-status-system.md) | component contract, design principles, and the authoring plan |
 | What is the player's Triangle spell (forms, binding, per-element behavior)? | [`elemental-spell-forms-plan.md`](elemental-spell-forms-plan.md) | [`elemental-ability-and-status-system.md`](elemental-ability-and-status-system.md) for the shared status pipeline |
+| How do innate element affinity, status suppression, contact transmission, and synergy room generation work? | [`elemental-affinity-and-transmission-plan.md`](elemental-affinity-and-transmission-plan.md) | [`elemental-status-implementation-plan.md`](elemental-status-implementation-plan.md) for the existing status pipeline |
 
 ## Document lifecycle
 

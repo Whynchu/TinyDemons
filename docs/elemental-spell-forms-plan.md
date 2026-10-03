@@ -145,11 +145,11 @@ values have not yet been accepted through runtime playtesting.
 | Neutral | Stub | `PROJECTILE` | 0 (needs ≥1) | 2.5 s | 1.10x | none | baseline |
 | Fire | Cinder Cone | `CONE` | 15 | 3.0 s | 1.35x | Burn | front crowd burst |
 | Water | Tide Burst | `PROJECTILE_SPLASH` | 10 | 2.0 s | 0.85x direct | none | traveling bubble-pop AoE; secondary hits deal 50% of direct spell damage |
-| Electric | Skyfall | `INSTANT_TARGET` | 10 | 1.2 s | 1.15x | Stun | priority target, tempo |
+| Electric | Skyfall | `INSTANT_TARGET` | 10 | 1.2 s | 1.15x | Shocked | priority target, tempo |
 | Grass | Leechvine | `BEAM` | 10 | 2.5 s | 0.40x per tick | none | sustain / drain |
 | Shadow | Hex | `PROJECTILE` | 12 | 2.5 s | 1.10x | Poison | hex-sigil curse projectile; debuff / amp |
 | Ground | Quake | `RADIAL_SELF` | 12 | 2.5 s | 0.75x | none | panic / crowd reset |
-| Ice | Frostbite Shard | `PROJECTILE` | 10 | 2.2 s | 1.00x | Slow | control / kiting |
+| Ice | Frostbite Shard | `PROJECTILE_SPLASH` | 10 | 2.2 s | 1.00x direct | Chill | contact AoE / kiting |
 
 ### 4.2 Stub — Neutral (`PROJECTILE`)
 
@@ -200,7 +200,7 @@ identity; it does not replace an elemental form when Chroma is low.
   only in the splash take 50% of that damage. `bubblesent.ogg` plays once when
   the Water Triangle bubble launches; `bubbleburst.ogg` plays once when it
   reaches a target and pops, not when the projectile expires without a hit.
-- **Payload:** Water → no status (ratified status-free).
+- **Payload:** Water → Wet (conductivity and Burn removal; provisional tuning).
 - **Feel:** the safe, efficient ranged AoE; repositions crowds.
 
 ### 4.5 Electric — Skyfall (`INSTANT_TARGET`)
@@ -251,14 +251,17 @@ identity; it does not replace an elemental form when Chroma is low.
 - **Payload:** Ground → no status.
 - **Feel:** the panic button; turns being surrounded into an advantage.
 
-### 4.9 Ice — Frostbite Shard (`PROJECTILE`)
+### 4.9 Ice — Frostbite Shard (`PROJECTILE_SPLASH`)
 
-- **Identity:** slow, freeze, preservation, momentum.
-- **Behavior:** a shard that applies **Slow**; repeated application stacks
-  toward longer control.
-- **Source defaults:** five-pixel diamond projectile at 90px/s, 1.00x damage,
-  10 Chroma, 2.2s cooldown.
-- **Payload:** Ice → Slow.
+- **Identity:** crisp impact, ground eruption, and chilled momentum.
+- **Behavior:** the shard bursts on contact in a 24px radius. Nearby targets
+  take 50% of direct spell damage. Thirteen faceted cyan ice crystals fill the
+  24px impact radius in a layered horizontal oval for the isometric floor view.
+  Ice applies stackable **Chill**, slowing movement, attack cadence, and
+  animation.
+- **Source defaults:** five-pixel shard projectile at 90px/s, 24px impact
+  radius, 50% secondary damage, 1.00x direct damage, 10 Chroma, 2.2s cooldown.
+- **Payload:** Ice → Chill.
 - **Deferred:** hard "freeze" (full action lock at max stacks) is an optional
   escalation, not part of the first pass.
 
@@ -268,7 +271,7 @@ identity; it does not replace an elemental form when Chroma is low.
   Fire **Burns**, not Wets. This is what makes the cross-product mean anything.
 - Status is resolved by `ElementCatalog.status_effect_for_element`
   (`element_catalog.gd:45`). Fire, Shadow, Electric, and Ice resolve a status;
-  Water and Ground are deliberately status-free in the ratified ability/status
+  Water now applies Wet through the shared status registry; Ground remains status-free.
   authority. Grass currently has no status definition in the catalog, though
   that authority does not explicitly classify Grass.
 - **Magic uses the shared status path.** `magic_hit_slime` resolves through
@@ -372,7 +375,8 @@ Sequenced so the balance change (status on magic) and the structural change
    per-form VFX. **Implemented in source**; actor polygons are checked against a
    fan sector at the cast frame.
 6. **P6 — Ground Quake + Ice Shard + Grass Leechvine + Shadow Hex.**
-   **Implemented in source** with radial, shard, tether, and curse-mark behavior.
+   **Implemented in source** with radial, contact-splash-and-spike, tether, and
+   curse-mark behavior.
 7. **P7 — Balance and readability pass.** First-pass costs, cooldowns, damage
    factors, and pixel effects are implemented and indexed. **Source pass
    complete;** 240×160 crowd readability and balance ratification still require
@@ -445,7 +449,7 @@ Godot runtime session is available.
   after playtesting; the listed values are provisional source defaults.
 - **O** Confirm Grass remains status-free or define an ailment for it. The
   current catalog has no Grass status; the status authority names Fire, Shadow,
-  Electric, and Ice as status-bearing, and Water/Ground as status-free.
+  Electric, Ice, and Water as status-bearing, with Ground remaining status-free.
 - **Resolved in source:** when a bound player has `current_aspect == NONE`, use
   the bound element for both the selected form and payload.
 - **Resolved in source:** each guaranteed successful spell hit adds one status
@@ -459,8 +463,8 @@ Godot runtime session is available.
   §5.2 (element identities), Pillars 1 and 4.
 - [`elemental-ability-and-status-system.md`](elemental-ability-and-status-system.md)
   — shared status pipeline, `ElementalAbilityDefinition`, no-per-element-branch
-  rule, status scope (Fire Burn / Shadow Poison / Electric stun / Ice slow;
-  Water and Ground status-free; Grass currently has no catalog status).
+  rule, status scope (Fire Burn / Shadow Poison / Electric Shocked / Ice Chill;
+  Water Wet and Ground status-free; Grass currently has no catalog status).
 - [`elemental-status-implementation-plan.md`](elemental-status-implementation-plan.md)
   — status runtime and presentation.
 - [`combat-and-dungeon-design-principles.md`](combat-and-dungeon-design-principles.md)

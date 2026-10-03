@@ -60,9 +60,13 @@ static func configure_actor(actor: SlimeActor, definition: EnemyDefinition) -> v
 	var status_component := actor.get_node_or_null("Status") as StatusComponent
 	if status_component != null:
 		status_component.status_immunities = definition.status_immunities.duplicate()
+		status_component.configure_innate(ElementCatalog.innate_status_id_for_element(definition.element))
 	if definition.type_id == TYPE_SKELETON:
 		actor.set_meta("attack_hit_frame_override", SkeletonActor.BONE_THROW_ATTACK_FRAME_INDEX)
 	actor.set_meta("visual_source", definition.visual_source)
+	var enemy_chroma := actor.get_node_or_null("EnemyChroma")
+	if enemy_chroma != null:
+		enemy_chroma.call("configure", definition.element != 0, String(definition.visual_source))
 	var stats := actor.get_node_or_null("Stats") as StatsComponent
 	if stats == null:
 		stats = StatsComponent.new()

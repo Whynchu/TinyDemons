@@ -29,6 +29,7 @@ var transition_locked := false
 var room_states: Dictionary = {}
 var progression_run_rank := 1
 var progression_run_number := 1
+var run_element_theme: Array[int] = []
 var player_level := 1
 var preferred_enemy_variant := "grey"
 var secondary_enemy_variant := "grey"
@@ -46,6 +47,9 @@ var last_spawn_result: RoomSpawnResult = null
 var enemy_spawn_services: RoomEnemySpawnServices = null
 var geometry_controller: RefCounted = null
 var current_room_type: StringName = &""
+
+
+func set_run_element_theme(theme: Array[int]) -> void: run_element_theme = EncounterDefinition.normalize_run_element_theme(theme)
 
 const ACTOR_FOOT_OFFSET := Vector2(8, 15)
 const BOSS_SLIME_AUTHORING_SCENE := "res://scenes/authoring/previews/boss_slime_authoring.tscn"
@@ -173,7 +177,7 @@ func ensure_layout(graph: DungeonGraph, room_id: StringName, room: DungeonGraph.
 			state["regular_room_treasure"] = room_type == DungeonGraph.ROOM_COMBAT and progression_run_rank >= 1 and (room.reward_tier == DungeonGraph.REWARD_RISK or treasure_rng.randf() < _room_definition().regular_room_treasure_chance)
 		if not state.has("enemy_spawn_seed"):
 			state["enemy_spawn_seed"] = room.generation_seed + 303
-		EncounterDefinition.migrate_saved_room_support_companions(state, room, room_type, _generated_enemy_base_level(room_depth), progression_run_rank, _enemy_level_cap(), _room_definition(), debug_enemy_variant.is_empty()); room_states[room_id] = state
+		EncounterDefinition.migrate_saved_room_support_companions(state, room, room_type, _generated_enemy_base_level(room_depth), progression_run_rank, _enemy_level_cap(), _room_definition(), debug_enemy_variant.is_empty(), run_element_theme); room_states[room_id] = state
 	elif room_type == DungeonGraph.ROOM_DOWNSTAIRS:
 		if not state.has("enemy_variants"):
 			var boss_encounter := _generate_boss_encounter(room.generation_seed, room_depth)
@@ -188,6 +192,7 @@ func ensure_layout(graph: DungeonGraph, room_id: StringName, room: DungeonGraph.
 		room_states[room_id] = state
 	elif room_type == DungeonGraph.ROOM_PUZZLE or room_type == DungeonGraph.ROOM_ORB:
 		room_states[room_id] = state
+	EncounterDefinition.constrain_cached_room_theme(room_states, room_id, state, run_element_theme, progression_run_rank, room.generation_seed, not debug_enemy_variant.is_empty())
 	return state
 
 
@@ -241,6 +246,7 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 		count = mini(count + 2, count_cap)
 	variant_pool.append_array(definition.late_pool_entries(progression_run_rank))
 	var skeleton_variant_pool: Array[Dictionary] = []
+	var force_debug_enemy := not debug_enemy_variant.is_empty() and EnemyFactory.is_variant(debug_enemy_variant)
 	if progression_run_number >= SKELETON_FIRST_RUN_NUMBER:
 		skeleton_variant_pool = ENEMY_FACTORY_SCRIPT.weighted_variants_for_type(&"skeleton")
 	if allow_shadow and progression_run_rank >= definition.shadow_min_rank and not definition.is_shadow_bound():
@@ -248,9 +254,7 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 		# rotation. A small weight keeps it available without making most later
 		# rooms contain one.
 		variant_pool.append({"variant": "purple", "weight": definition.shadow_weight})
-	if not skeleton_variant_pool.is_empty():
-		EncounterDefinition.balance_enemy_family_weights(variant_pool, skeleton_variant_pool)
-	var force_debug_enemy := not debug_enemy_variant.is_empty() and EnemyFactory.is_variant(debug_enemy_variant)
+	EncounterDefinition.prepare_variant_pools_for_theme(variant_pool, skeleton_variant_pool, run_element_theme, progression_run_rank, allow_shadow, force_debug_enemy)
 	if force_debug_enemy:
 		variant_pool.clear()
 		variant_pool.append({"variant": String(debug_enemy_variant), "weight": 1.0})
@@ -291,14 +295,14 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 		force_debug_enemy, variants, levels, popcorn_flags, popcorn_types,
 		ambush_flags, elite_flags, _popcorn_enemy_level(), ROOM_POPCORN,
 		ELITE_POPCORN, encounter_rng, _room_definition(), progression_run_rank,
-		base_level, level_spread, encounter_tier, _enemy_level_cap())
+		base_level, level_spread, encounter_tier, _enemy_level_cap(), run_element_theme, generation_seed)
 	return {"variants": variants, "levels": levels, "popcorn": popcorn_flags, "popcorn_types": popcorn_types, "ambush": ambush_flags, "elite": elite_flags}
 
 
 func _encounter_definition() -> EncounterDefinition:
 	if encounter_definition != null and encounter_definition.matchup_policy == matchup_policy:
 		return encounter_definition
-	var definition := EncounterDefinition.default_data()
+	var definition := EncounterDefinition.default_data().duplicate(true) as EncounterDefinition
 	definition.matchup_policy = matchup_policy
 	encounter_definition = definition
 	return definition
@@ -344,31 +348,21 @@ func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictiona
 	# than the ordinary slime variants.
 	var boss_rng := RandomNumberGenerator.new()
 	boss_rng.seed = generation_seed + 991
-	var boss_variant := boss_variant_selection
-	var selected_boss_definition := SLIME_VARIANT_CATALOG_SCRIPT.definition_resource(boss_variant)
-	var has_explicit_boss_variant := selected_boss_definition != null and selected_boss_definition.type_id == &"slime"
-	if not has_explicit_boss_variant:
-		var roster := EnemyFactory.variants_for_type(&"slime", &"support")
-		# Run 1 teaches the neutral encounter first. Later un-authored runs may
-		# sample the complete boss catalog; purple remains rare only in the minor
-		# conversion below. Support-role variants can join the minor group but are
-		# not eligible to become the primary boss.
-		if progression_run_rank <= 1:
-			roster.erase(&"purple")
-		boss_variant = roster[boss_rng.randi_range(0, roster.size() - 1)]
-	if progression_run_rank <= 1 and boss_variant == &"purple":
-		boss_variant = &"grey"
+	var boss_selection := EncounterDefinition.select_boss_variant(boss_variant_selection, run_element_theme, progression_run_rank, generation_seed, boss_rng)
+	var boss_variant := boss_selection.variant as StringName
+	var has_explicit_boss_variant := bool(boss_selection.has_explicit_variant)
+	if boss_variant.is_empty(): return {}
 	var variants: Array[String] = [String(boss_variant)]
 	var levels: Array[int] = [mini(boss_level + 1, _enemy_level_cap())]
 	var scales: Array[float] = [3.0]
 	var encounter_rng := RandomNumberGenerator.new()
 	encounter_rng.seed = generation_seed + 707
-	var support_variant_pool := EncounterDefinition.boss_support_variant_pool(progression_run_number >= SKELETON_FIRST_RUN_NUMBER)
+	var support_variant_pool := EncounterDefinition.boss_support_variant_pool(progression_run_number >= SKELETON_FIRST_RUN_NUMBER, run_element_theme, progression_run_rank)
 	var use_neutral_boss_support := progression_run_number < SKELETON_FIRST_RUN_NUMBER and progression_run_rank < _room_definition().boss_mixed_support_start_rank
 	for index in minor_count:
 		# Preserve authored boss identity; otherwise choose from the seeded roster.
 		var selected_variant: String = String(boss_variant) if has_explicit_boss_variant else "grey" if use_neutral_boss_support else EncounterDefinition.select_weighted_variant(support_variant_pool, encounter_rng)
-		if not has_explicit_boss_variant and progression_run_rank > 1 and encounter_rng.randf() < SHADOW_BOSS_CHANCE:
+		if not has_explicit_boss_variant and run_element_theme.has(ElementCatalog.Element.SHADOW) and progression_run_rank > 1 and encounter_rng.randf() < SHADOW_BOSS_CHANCE:
 			selected_variant = "purple"
 		variants.append(selected_variant)
 		levels.append(mini(boss_level, _enemy_level_cap()))
@@ -391,6 +385,7 @@ func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictiona
 		popcorn_flags.append(true)
 		popcorn_types.append(ELITE_POPCORN)
 		ambush_flags.append(support_variant == "purple" and encounter_rng.randf() < 0.40)
+	EncounterDefinition.constrain_generated_roster(variants, ambush_flags, run_element_theme, progression_run_rank, generation_seed, "Generated boss")
 	return {"variants": variants, "levels": levels, "scales": scales, "popcorn": popcorn_flags, "popcorn_types": popcorn_types, "ambush": ambush_flags}
 
 
@@ -1373,11 +1368,15 @@ func save_enemy_runtime_state_context(context: RoomEnemyRuntimeContext) -> RoomE
 			continue
 		var combat := context.combat_components[slot] if slot < context.combat_components.size() else null
 		var health := context.health_components[slot] if slot < context.health_components.size() else null
-		runtime[str(slot)] = {
+		var runtime_entry := {
 			"alive": slime.visible and combat != null and not combat.dead and (health == null or health.current_health > 0.0),
 			"position": slime.global_position,
 			"health": health.current_health if health != null else 0.0,
 		}
+		var enemy_chroma := slime.get_node_or_null("EnemyChroma")
+		if enemy_chroma != null and bool(enemy_chroma.get("enabled")):
+			runtime_entry["chroma"] = enemy_chroma.call("runtime_state")
+		runtime[str(slot)] = runtime_entry
 		result.saved_slots += 1
 	state["enemy_runtime"] = runtime
 	room_states[context.room_id] = state
@@ -1902,7 +1901,8 @@ func _prepare_enemy_slot_visuals_context(context: RoomEnemyContext, state: Dicti
 		if slot >= slimes.size():
 			break
 		var ambush_enabled := slot < active_ambush.size() and bool(active_ambush[slot])
-		services.configure_slime_variant(slimes[slot], String(active_variants[slot]))
+		var requested_variant := String(active_variants[slot])
+		if String(slimes[slot].get_meta("enemy_variant_id", "")) != requested_variant: services.configure_slime_variant(slimes[slot], requested_variant)
 		slimes[slot].set_meta("encounter_scale", float(active_scales[slot]) if slot < active_scales.size() else 1.0)
 		slimes[slot].set_meta("is_elite", _is_elite_enemy_slot(state, slot))
 		services.configure_slime_ambush(slimes[slot], String(active_variants[slot]) == "purple" and ambush_enabled)

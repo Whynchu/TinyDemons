@@ -4,7 +4,7 @@
 
 [resource]
 script = ExtResource("1")
-id = &"slow"
+id = &"chill"
 element = 7
 family = 1
 proc_chance = 0.2
@@ -12,6 +12,7 @@ duration = 2.0
 maximum_stacks = 3
 magnitude_per_stack = 0.15
 movement_multiplier_floor = 0.55
-badge_glyph = "S"
+badge_glyph = "C"
 particle_style = &"frost_crystal"
 particle_interval = 0.16
+transmissible = true

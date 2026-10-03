@@ -15,7 +15,6 @@ const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
 @export var occlusion_mask_refresh_time := 0.08
 @export var imbue_flash_time := 0.16
 @export var imbue_fade_time := 2.50
-@export var imbue_particle_interval := 0.08
 
 var layers: Dictionary = {}
 var shadows: Dictionary = {}
@@ -58,9 +57,6 @@ var imbue_element := ElementCatalogScript.Element.NEUTRAL
 var imbue_remaining := 0.0
 var last_imbue_visual_intensity := 1.0
 var imbue_flash_timer := 0.0
-var imbue_particle_timer := 0.0
-var imbue_bleed_positions_cache: Dictionary = {}
-var imbue_noise := FastNoiseLite.new()
 var frame_paths := {
 	"sword_back_idle": "res://assets/artwork/TinyDemon_sword(back)_idle.png",
 	"sword_back_walk": "res://assets/artwork/TinyDemon_sword(back)_walk.png",
@@ -114,9 +110,6 @@ func begin_imbue(new_context: PlayerEquipmentVisualContext, element: int, durati
 	imbue_element = ElementCatalogScript.normalize(element) as ElementCatalogScript.Element
 	imbue_remaining = maxf(duration, 0.0)
 	imbue_flash_timer = imbue_flash_time
-	imbue_particle_timer = 0.0
-	imbue_noise.seed = int(new_context.rng.randi()) if new_context.rng != null else Time.get_ticks_msec()
-	imbue_noise.frequency = 0.28
 	_clear_imbue_overlays()
 	_update_imbue_overlays(new_context)
 
@@ -126,12 +119,11 @@ func end_imbue(new_context: PlayerEquipmentVisualContext) -> void:
 	imbue_remaining = 0.0
 	last_imbue_visual_intensity = 1.0
 	imbue_flash_timer = 0.0
-	imbue_particle_timer = 0.0
 	imbue_element = ElementCatalogScript.Element.NEUTRAL
 	_clear_imbue_overlays()
 	var imbue_effects := new_context.effects_spawner
 	if imbue_effects != null:
-		imbue_effects.clear_effect_particles(&"imbue_weapon")
+		imbue_effects.clear_effect_particles(&"imbue_element")
 
 
 func set_mp_desaturation(saturation: float) -> void:
@@ -400,10 +392,6 @@ func tick(new_context: PlayerEquipmentVisualContext, delta: float) -> void:
 	if imbue_remaining > 0.0:
 		imbue_remaining = maxf(imbue_remaining - maxf(delta, 0.0), 0.0)
 		imbue_flash_timer = maxf(imbue_flash_timer - maxf(delta, 0.0), 0.0)
-		imbue_particle_timer -= maxf(delta, 0.0)
-		if imbue_particle_timer <= 0.0:
-			_spawn_imbue_bleed(new_context)
-			imbue_particle_timer = imbue_particle_interval / maxf(imbue_visual_intensity(new_context), 0.01)
 		if imbue_remaining <= 0.0:
 			end_imbue(new_context)
 	if (bool(new_context.player_is_rolling_get.call()) or bool(new_context.player_is_backflipping_get.call())) and active and fade_timer <= 0.0:
@@ -484,7 +472,7 @@ func tick(new_context: PlayerEquipmentVisualContext, delta: float) -> void:
 	if breakup_pending and not breakup_started and fade_timer <= 0.0:
 		_spawn_breakup(new_context)
 	_update_layers(new_context)
-	_update_imbue_overlays(new_context)
+	_update_imbue_overlays(new_context, delta)
 
 
 func begin_attack_visual(new_context: PlayerEquipmentVisualContext) -> void:
@@ -575,7 +563,7 @@ func reset_for_room(new_context: PlayerEquipmentVisualContext) -> void:
 	_clear_imbue_overlays()
 	var imbue_effects := new_context.effects_spawner
 	if imbue_effects != null:
-		imbue_effects.clear_effect_particles(&"imbue_weapon")
+		imbue_effects.clear_effect_particles(&"imbue_element")
 	active = false
 	shield_is_out = false
 	was_attacking = false
@@ -611,12 +599,10 @@ func reset_for_room(new_context: PlayerEquipmentVisualContext) -> void:
 		imbue_element = preserved_imbue_element
 		imbue_remaining = preserved_imbue_remaining
 		imbue_flash_timer = 0.0
-		imbue_particle_timer = 0.0
 	else:
 		imbue_element = ElementCatalogScript.Element.NEUTRAL
 		imbue_remaining = 0.0
 		imbue_flash_timer = 0.0
-		imbue_particle_timer = 0.0
 	if restore_equipment:
 		active = true
 		inactivity_timer = 0.0
@@ -939,9 +925,11 @@ func _clear_imbue_overlays() -> void:
 	var aura := _element_aura_component(context)
 	if aura != null:
 		aura.clear_imbue()
+	if context != null and context.effects_spawner != null:
+		context.effects_spawner.clear_effect_particles(&"imbue_element")
 
 
-func _update_imbue_overlays(new_context: PlayerEquipmentVisualContext) -> void:
+func _update_imbue_overlays(new_context: PlayerEquipmentVisualContext, delta: float = 0.0) -> void:
 	if imbue_remaining <= 0.0 or imbue_element == ElementCatalogScript.Element.NEUTRAL:
 		last_imbue_visual_intensity = 1.0
 		_clear_imbue_overlays()
@@ -949,6 +937,14 @@ func _update_imbue_overlays(new_context: PlayerEquipmentVisualContext) -> void:
 	var aura := _element_aura_component(new_context)
 	if aura == null:
 		return
+	var status_definition := ElementCatalogScript.status_effect_for_element(imbue_element)
+	if status_definition == null:
+		aura.clear_imbue_element_particles()
+	else:
+		for layer_name in [&"EquipmentSwordBack", &"EquipmentSwordFront"]:
+			var layer := layers.get(layer_name) as Sprite2D
+			if layer != null and layer.visible and layer.texture != null:
+				aura.update_imbue_element_particles(delta, layer, status_definition, new_context.effects_spawner, new_context.rng, new_context.pixel_particle_texture)
 	last_imbue_visual_intensity = imbue_visual_intensity(new_context)
 	var outline_color := ElementCatalogScript.damage_number_color(imbue_element)
 	var flash_color := PaletteLibrary.accent(ElementCatalogScript.palette_key(imbue_element)).lerp(Color.WHITE, 0.20)
@@ -976,67 +972,6 @@ func imbue_visual_intensity(new_context: PlayerEquipmentVisualContext) -> float:
 	if tuning == null or snapshot == null:
 		return 1.0
 	return tuning.imbue_visual_intensity_for_intelligence(snapshot.intelligence)
-
-
-func _imbue_bleed_positions(source: Texture2D) -> Array:
-	if source == null:
-		return []
-	var key := source.get_instance_id()
-	if imbue_bleed_positions_cache.has(key):
-		return imbue_bleed_positions_cache[key] as Array
-	var image := source.get_image()
-	var positions: Array[Vector2i] = []
-	for y in image.get_height():
-		for x in image.get_width():
-			if image.get_pixel(x, y).a <= 0.0:
-				continue
-			var edge := false
-			for offset in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
-				var neighbor: Vector2i = Vector2i(x, y) + offset
-				if neighbor.x < 0 or neighbor.y < 0 or neighbor.x >= image.get_width() or neighbor.y >= image.get_height() or image.get_pixelv(neighbor).a <= 0.0:
-					edge = true
-			if edge:
-				positions.append(Vector2i(x, y))
-	if positions.is_empty():
-		for y in image.get_height():
-			for x in image.get_width():
-				if image.get_pixel(x, y).a > 0.0:
-					positions.append(Vector2i(x, y))
-	imbue_bleed_positions_cache[key] = positions
-	return positions
-
-
-func _spawn_imbue_bleed(new_context: PlayerEquipmentVisualContext) -> void:
-	var effects := new_context.effects_spawner
-	if effects == null:
-		return
-	var random_source := new_context.rng
-	if random_source == null:
-		random_source = RandomNumberGenerator.new()
-	var bleed_color := ElementCatalogScript.damage_number_color(imbue_element)
-	for layer_name in [&"EquipmentSwordBack", &"EquipmentSwordFront"]:
-		var layer := layers.get(layer_name) as Sprite2D
-		if layer == null or not layer.visible or layer.texture == null:
-			continue
-		var positions := _imbue_bleed_positions(layer.texture)
-		if positions.is_empty():
-			continue
-		var source_pixel: Vector2i = positions[random_source.randi_range(0, positions.size() - 1)]
-		var pixel_x := layer.texture.get_width() - 1 - source_pixel.x if layer.flip_h else source_pixel.x
-		var particle := Sprite2D.new()
-		particle.name = "ImbueWeaponPixel"
-		particle.texture = new_context.pixel_particle_texture.call(bleed_color) as Texture2D
-		particle.centered = false
-		particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		particle.z_as_relative = false
-		# Keep bleed pixels on the same depth plane as the sword that spawned them.
-		particle.z_index = layer.z_index
-		var origin := layer.global_position + Vector2(pixel_x, source_pixel.y)
-		new_context.player.get_parent().add_child(particle)
-		particle.global_position = origin
-		var noise_value := imbue_noise.get_noise_2d(float(source_pixel.x), float(source_pixel.y) + float(Time.get_ticks_msec()) * 0.002)
-		var lifetime := random_source.randf_range(0.45, 0.90)
-		effects.pixel_particles.append({"sprite": particle, "velocity": Vector2(noise_value * 5.0, -(8.0 + (noise_value + 1.0) * 14.0)), "timer": lifetime, "lifetime": lifetime, "gravity": 0.0, "effect_tag": &"imbue_weapon", "logical_position": origin})
 
 
 func _set_layer(layer_name: String, source: Variant, frame_index: int, opacity: float, should_show := true, grey_key: String = "") -> void:

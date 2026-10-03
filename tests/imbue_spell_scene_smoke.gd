@@ -188,7 +188,8 @@ func _initialize() -> void:
 	if equipment != null:
 		equipment.tick(_equipment_visual_context(gameplay), 0.0)
 		_expect(int(equipment.get("imbue_element")) == Elements.Element.FIRE, "weapon visual stores the imbued element", failures)
-		_expect((equipment.get("imbue_outline_overlays") as Dictionary).size() > 0, "weapon visual creates an elemental outline overlay", failures)
+		var aura := (gameplay.get("player") as Sprite2D).get_node_or_null("ElementAura") as ElementAuraComponent
+		_expect(aura != null and (aura.get("_imbue_outlines") as Dictionary).size() > 0, "shared aura owner creates a sword imbue outline", failures)
 	for _frame in 5:
 		runtime.tick_magic_animation(_magic_context(gameplay), frame_time * 1.01)
 	_expect(not bool(gameplay.get("player_is_magic_casting")), "IMBUE returns to normal animation after the held final frame", failures)
@@ -200,7 +201,8 @@ func _initialize() -> void:
 		gameplay.set("player_anim_frame", 0)
 		equipment.tick(_equipment_visual_context(gameplay), 0.0)
 		var equipment_layers: Dictionary = equipment.get("layers") as Dictionary
-		var outline_overlays: Dictionary = equipment.get("imbue_outline_overlays") as Dictionary
+		var aura := (gameplay.get("player") as Sprite2D).get_node_or_null("ElementAura") as ElementAuraComponent
+		var outline_overlays: Dictionary = aura.get("_imbue_outlines") as Dictionary if aura != null else {}
 		var player := gameplay.get("player") as Sprite2D
 		var sword_back := equipment_layers.get("EquipmentSwordBack") as Sprite2D
 		var sword_front := equipment_layers.get("EquipmentSwordFront") as Sprite2D

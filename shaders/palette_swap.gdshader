@@ -10,6 +10,7 @@ shader_type canvas_item;
 uniform vec4 from_color[4] : source_color;
 uniform vec4 to_color[4] : source_color;
 uniform float tolerance : hint_range(0.0, 0.5) = 0.002;
+uniform float chroma_desaturation : hint_range(0.0, 1.0) = 0.0;
 
 // Fragment COLOR already includes the sampled texture in CanvasItem shaders.
 // Carry the vertex tint separately so the swapped texture is only sampled once.
@@ -27,5 +28,7 @@ void fragment() {
 			break;
 		}
 	}
+	float grey = dot(tex.rgb, vec3(0.299, 0.587, 0.114));
+	tex.rgb = mix(tex.rgb, vec3(grey), chroma_desaturation);
 	COLOR = tex * vertex_tint;
 }

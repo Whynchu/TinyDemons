@@ -600,6 +600,8 @@ func build_exact_occluded_actor_texture(actor: Sprite2D, active_occluders: Array
 	if is_target:
 		apply_pixel_outline(result_image, resolution_scale, Color8(150, 150, 150) if use_grey_highlight else Color.WHITE)
 	var texture := occluded_actor_textures[actor] as ImageTexture
+	var revision := int(actor.get_meta("occlusion_texture_revision", 0)) + 1
+	actor.set_meta("occlusion_texture_revision", revision)
 	texture.set_image(result_image)
 	texture.set_size_override(source_image.get_size())
 	return texture

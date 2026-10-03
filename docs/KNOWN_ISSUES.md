@@ -612,8 +612,9 @@ The first four elemental statuses and their shared actor-local state, combat
 application/tick paths, movement and stun effects, HUD marks, sibling outline,
 and four data-selected edge-particle styles are present in the working tree.
 Burn uses an ember trail matching the motion of the player's imbue trail;
-Poison uses rising motes, Stun uses electric sparks, and Slow uses frost
-crystals. `status_component_smoke` and
+Poison uses rising motes, Shocked uses electric sparks, and Chill uses frost
+crystals. Chill also slows affected actors' movement and attack timing.
+`status_component_smoke` and
 `status_combat_smoke` are registered in the manifest but have not been run.
 Catalog/definition validation, native-resolution readability, and web/browser
 playtesting remain open.
@@ -933,3 +934,27 @@ Use these labels consistently:
 
 Do not promote an item to `verified` because a test file exists or because a
 runner completed only part of its batch.
+
+### Element affinities, Wet, contact transmission, and run themes — implemented in source, runtime acceptance open (2026-10-03)
+
+Elemental enemy affinity and the owner-approved transmission/run-theme plan are
+wired in the working tree. Water now owns the registered `wet` status. Enemies
+carry their matching harmless innate status unless authored immune; applied
+ailments suppress its aura and stop that affinity from transmitting. Applied
+Wet amplifies Electric damage, advances Shocked cadence, and removes up to three
+applied Burn stacks. Contact transfer captures both actors' source statuses
+before applying a pair, uses standard proc/immunity rules, and shares a
+three-second cooldown across both directions.
+
+Runs persist one allowed set: Normal-only for rank 1, one element for rank 2,
+and usually two or sometimes three at rank 3+. Water/Electric is favored for
+its authored Wet/Shocked synergy. Every support variant uses the shared ally
+healing behavior. Legacy cached rosters are deterministically remapped to the
+saved theme while preserving enemy runtime state and pickups.
+
+The Wet values remain provisional. `status_component_smoke`,
+`status_transmission_smoke`, and `run_element_theme_smoke` are registered but
+unrun. Godot parse/definition checks, the 1,000-seed frequency report, legacy
+save-load probes, combat balance, crowd readability at 240x160, and browser
+acceptance remain open. No new Wet audio cue is authored; the existing bubble
+sounds remain specific to the Water spell.

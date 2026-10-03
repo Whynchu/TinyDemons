@@ -12,6 +12,12 @@
 [ext_resource type="Resource" uid="uid://kb1ynb8yu5d4" path="res://resources/definitions/skeleton_electric.tres" id="10_skeleton_electric"]
 [ext_resource type="Resource" uid="uid://e3c3o7r5gots" path="res://resources/definitions/healer_slime.tres" id="11_healer_slime"]
 [ext_resource type="Resource" path="res://resources/definitions/ember_guard.tres" id="12_ember_guard"]
+[ext_resource type="Resource" path="res://resources/definitions/healer_fire.tres" id="13_healer_fire"]
+[ext_resource type="Resource" path="res://resources/definitions/healer_water.tres" id="14_healer_water"]
+[ext_resource type="Resource" path="res://resources/definitions/healer_electric.tres" id="15_healer_electric"]
+[ext_resource type="Resource" path="res://resources/definitions/healer_shadow.tres" id="16_healer_shadow"]
+[ext_resource type="Resource" path="res://resources/definitions/healer_ground.tres" id="17_healer_ground"]
+[ext_resource type="Resource" path="res://resources/definitions/healer_ice.tres" id="18_healer_ice"]
 
 [sub_resource type="Resource" id="EnemyDefinition_grey"]
 script = ExtResource("2_enemy")
@@ -300,4 +306,4 @@ body_hitbox_polygon = PackedVector2Array(5, 3, 11, 3, 13, 5, 14, 8, 14, 11, 12, 
 
 [resource]
 script = ExtResource("1_catalog")
-definitions = Array[Resource]([SubResource("EnemyDefinition_grey"), SubResource("EnemyDefinition_red"), SubResource("EnemyDefinition_blue"), SubResource("EnemyDefinition_yellow"), SubResource("EnemyDefinition_green"), SubResource("EnemyDefinition_purple"), SubResource("EnemyDefinition_orange"), SubResource("EnemyDefinition_aquamarine"), SubResource("EnemyDefinition_crimson"), SubResource("EnemyDefinition_guard_slime"), ExtResource("12_ember_guard"), ExtResource("11_healer_slime"), ExtResource("3_skeleton"), ExtResource("4_skeleton_fire"), ExtResource("5_skeleton_grass"), ExtResource("6_skeleton_ground"), ExtResource("7_skeleton_ice"), ExtResource("8_skeleton_shadow"), ExtResource("9_skeleton_water"), ExtResource("10_skeleton_electric")])
+definitions = Array[Resource]([SubResource("EnemyDefinition_grey"), SubResource("EnemyDefinition_red"), SubResource("EnemyDefinition_blue"), SubResource("EnemyDefinition_yellow"), SubResource("EnemyDefinition_green"), SubResource("EnemyDefinition_purple"), SubResource("EnemyDefinition_orange"), SubResource("EnemyDefinition_aquamarine"), SubResource("EnemyDefinition_crimson"), SubResource("EnemyDefinition_guard_slime"), ExtResource("12_ember_guard"), ExtResource("11_healer_slime"), ExtResource("13_healer_fire"), ExtResource("14_healer_water"), ExtResource("15_healer_electric"), ExtResource("16_healer_shadow"), ExtResource("17_healer_ground"), ExtResource("18_healer_ice"), ExtResource("3_skeleton"), ExtResource("4_skeleton_fire"), ExtResource("5_skeleton_grass"), ExtResource("6_skeleton_ground"), ExtResource("7_skeleton_ice"), ExtResource("8_skeleton_shadow"), ExtResource("9_skeleton_water"), ExtResource("10_skeleton_electric")])

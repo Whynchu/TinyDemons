@@ -64,11 +64,11 @@ const CONTROLLER_TRIGGER_DEADZONE := 0.35
 const PLAYER_MAX_MP := 100.0
 const CHROMA_SATURATION_CURVE_EXPONENT := 0.65
 const GREY_MAGIC_COOLDOWN := 2.5
-const IMBUE_MP_COST := 40.0
+const IMBUE_MP_COST := 100.0
 const IMBUE_DURATION := 15.0
 const IMBUE_COOLDOWN := 20.0
 const IMBUE_HOLD_THRESHOLD := 0.35
-const CHROMA_PICKUP_VALUE := 20
+const CHROMA_PICKUP_VALUE := 1
 const SOUL_PICKUP_VALUE := 1
 const SOUL_PICKUP_COLLECTION_DISTANCE := 10.0
 const SOUL_PICKUP_AIR_TIME := 0.38
@@ -543,8 +543,8 @@ func _can_interact_with_world_item() -> bool:
 	return bool(pickup_runtime_controller.call("can_interact_with_world_item", self))
 func _collect_world_item_drop() -> bool:
 	return pickup_runtime_controller.collect_world_item_drop(self).succeeded()
-func _spawn_chroma_pickup(spawn_position: Vector2, value: int = CHROMA_PICKUP_VALUE, launch_seed: int = 0, launch_direction: Vector2 = Vector2.ZERO, avoid_position: Variant = null) -> Vector2:
-	return pickup_runtime_controller.call("spawn_chroma_pickup", self, spawn_position, value, launch_seed, launch_direction, avoid_position) as Vector2
+func _spawn_chroma_pickup(spawn_position: Vector2, value: int = CHROMA_PICKUP_VALUE, launch_seed: int = 0, launch_direction: Vector2 = Vector2.ZERO, avoid_position: Variant = null, with_light := true) -> Vector2:
+	return pickup_runtime_controller.call("spawn_chroma_pickup", self, spawn_position, value, launch_seed, launch_direction, avoid_position, with_light) as Vector2
 func _restore_chroma_pickups(saved_pickups: Array) -> void:
 	pickup_runtime_controller.call("restore_chroma_pickups", self, saved_pickups)
 func _update_chroma_pickups(delta: float) -> void:

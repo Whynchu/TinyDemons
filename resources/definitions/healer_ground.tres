@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/enemy_definition.gd" id="1_enemy"]
+
+[resource]
+script = ExtResource("1_enemy")
+id = &"healer_ground"
+display_name = "Ground Healer Slime"
+element = 6
+behavior_id = &"support_caster"
+base_stats = {
+"AGI": 2,
+"DEF": 2,
+"INT": 3,
+"MND": 4,
+"STR": 1,
+"VIT": 3
+}
+growth_weights = {
+"AGI": 0.14,
+"DEF": 0.14,
+"INT": 0.2,
+"MND": 0.24,
+"STR": 0.08,
+"VIT": 0.2
+}
+visual_source = "orange"
+encounter_role = &"support"
+encounter_weight = 0.25
+collision_polygon = PackedVector2Array(3, 7, 13, 7, 13, 10, 12, 10, 12, 11, 11, 11, 11, 12, 5, 12, 5, 11, 4, 11, 4, 10, 3, 10)
+body_hitbox_polygon = PackedVector2Array(5, 3, 11, 3, 13, 5, 14, 8, 14, 11, 12, 13, 10, 14, 6, 14, 4, 13, 2, 11, 2, 8, 3, 5)

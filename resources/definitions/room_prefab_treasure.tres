@@ -1,13 +1,11 @@
-[gd_resource type="Resource" script_class="RoomPrefabDefinition" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="RoomPrefabDefinition" format=3 uid="uid://lpbrxuwyjcbm"]
 
-[ext_resource type="Script" path="res://scripts/room_prefab_definition.gd" id="1"]
+[ext_resource type="Script" uid="uid://dar4m8w2kq7tx" path="res://scripts/room_prefab_definition.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/gameplay/rooms/treasure_room.tscn" id="2"]
 
 [resource]
 script = ExtResource("1")
 prefab_id = &"treasure"
 room_scene = ExtResource("2")
-map_root_path = NodePath("Map")
 capability_ids = Array[StringName]([&"room_shell", &"treasure_chest"])
 required_marker_ids = Array[StringName]([&"TREASURE_CHEST"])
-required_socket_ids = Array[StringName]([&"WALL_LEFT", &"WALL_RIGHT", &"BOTTOM_LEFT", &"BOTTOM_RIGHT"])

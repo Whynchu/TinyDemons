@@ -59,6 +59,11 @@ static func status_effect_for_id(status_id: StringName) -> StatusEffectDefinitio
 	return null
 
 
+static func innate_status_id_for_element(element: int) -> StringName:
+	var definition := status_effect_for_element(element)
+	return definition.id if definition != null else &""
+
+
 static func is_valid(element: int) -> bool:
 	return element >= Element.NEUTRAL and element < element_count()
 
@@ -137,7 +142,7 @@ static func element_for_palette(palette: String) -> int:
 			return Element.SHADOW
 		"orange":
 			return Element.GROUND
-		"aquamarine":
+		"aquamarine", "ice":
 			return Element.ICE
 		"grey", "gray":
 			return Element.NEUTRAL

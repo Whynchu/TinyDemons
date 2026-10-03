@@ -2,6 +2,7 @@ extends Node
 class_name RunFlowController
 
 const RunGradeEvaluator = preload("res://scripts/run_grade.gd")
+const EncounterDefinitionScript = preload("res://scripts/encounter_definition.gd")
 const ROUTE_PAR_CALIBRATION_FACTOR := 150.0 / 90.0
 const AspectCatalogScript = preload("res://scripts/aspect_catalog.gd")
 var reward_definition: RewardDefinition = null
@@ -308,7 +309,12 @@ func begin_new_run(root: GameplayState, preserve_current_dungeon := false) -> vo
 		root.call("_set_door_active", false)
 		root.call("_set_entrance_open", false)
 	if root.run_state != null:
-		root.run_state.begin(root.current_dungeon_seed, run_difficulty_bonus(root), float(root.call("_player_max_health")))
+		var active_run_rank := run_rank(root)
+		root.run_state.begin(root.current_dungeon_seed, run_difficulty_bonus(root), float(root.call("_player_max_health")), active_run_rank)
+		if root.room_controller != null:
+			root.room_controller.progression_run_rank = active_run_rank
+			root.room_controller.progression_run_number = maxi(root.player_profile.completed_runs + 1, 1) if root.player_profile != null else 1
+			root.room_controller.set_run_element_theme(root.run_state.enemy_element_theme)
 	root.set("pending_run_restore", false)
 
 
@@ -359,14 +365,33 @@ func restore_active_run(root: Object, snapshot: Dictionary) -> bool:
 		return false
 	if not bool(map_controller.call("restore_map_state", ActiveRunSnapshotScript.denormalize(snapshot.get("map_state", {})) as Dictionary)):
 		return false
+	var restored_rank := maxi(int(snapshot.get("run_rank", root.player_profile.difficulty_rank)), 1)
+	var restored_room_states := ActiveRunSnapshotScript.room_states_from_snapshot(snapshot.get("room_states", {}))
+	var restored_theme := restored_run.enemy_element_theme.duplicate()
+	if not restored_run.element_theme_initialized:
+		restored_theme = EncounterDefinitionScript.legacy_theme_for_rosters(restored_room_states, snapshot_seed, restored_rank)
+	var roster_migration := EncounterDefinitionScript.migrate_cached_rosters(restored_room_states, restored_theme, restored_rank, snapshot_seed)
+	var migration_errors: Array = roster_migration.get("errors", [])
+	if not migration_errors.is_empty():
+		for error in migration_errors:
+			push_error("Active run elemental roster migration failed: %s" % str(error))
+		return false
+	var migration_remaps: Array = roster_migration.get("remaps", [])
+	if not migration_remaps.is_empty():
+		push_warning("Active run elemental roster migration remapped %d slots to theme %s: %s" % [migration_remaps.size(), str(restored_theme), "; ".join(PackedStringArray(migration_remaps))])
+	restored_run.enemy_element_theme = restored_theme
+	restored_run.element_theme_initialized = true
+	restored_run.element_theme_run_rank = restored_rank
 	root.run_state = restored_run
 	root.current_dungeon_seed = snapshot_seed
 	root.puzzle_attempt_rotation_quarter_turns = rotation_turns
 	root.current_room_id = room_id
 	var recovery_arrival_socket := StringName(str(snapshot.get("arrival_socket_id", "")))
 	root.call("_sync_current_room_metadata", recovery_arrival_socket)
-	root.room_controller.room_states = ActiveRunSnapshotScript.room_states_from_snapshot(snapshot.get("room_states", {}))
-	root.room_controller.progression_run_rank = maxi(int(snapshot.get("run_rank", root.player_profile.difficulty_rank)), 1)
+	root.room_controller.room_states = roster_migration.get("room_states", restored_room_states) as Dictionary
+	root.room_controller.progression_run_rank = restored_rank
+	root.room_controller.progression_run_number = maxi(root.player_profile.completed_runs + 1, 1)
+	root.room_controller.set_run_element_theme(restored_theme)
 	if not root.room_controller.mount_room_prefab(root as GameplayState, room_id):
 		return false
 	root.room_controller.set_current_room(room_id, root.current_room_type)

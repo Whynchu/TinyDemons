@@ -21,7 +21,7 @@ enum ProjectileShape {
 @export var id: StringName = &""
 @export_range(0, 7, 1) var native_element := 0
 @export_enum("Projectile", "Projectile Splash", "Cone", "Instant Target", "Beam", "Radial Self") var delivery: int = Delivery.PROJECTILE
-@export var chroma_cost := 10
+@export var chroma_cost := 20
 @export var cooldown := 2.0
 @export var damage_multiplier := 1.15
 @export_enum("Orb", "Shard", "Droplet", "Hex Sigil", "Bubble") var projectile_shape: int = ProjectileShape.ORB

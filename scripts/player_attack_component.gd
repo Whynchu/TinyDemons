@@ -4,9 +4,9 @@ class_name PlayerAttackComponent
 const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
 const AspectCatalogScript = preload("res://scripts/aspect_catalog.gd")
 const CircularInputRecognizerScript = preload("res://scripts/circular_input_recognizer.gd")
+const ChromaCostsScript = preload("res://scripts/chroma_costs.gd")
 
 ## Editor-facing attack tuning.
-@export var sword_beam_chroma_cost := 30
 @export var sword_beam_cooldown := 8.0
 @export var spin_hitstun_duration := 0.18
 
@@ -115,6 +115,9 @@ func _start_attack(root: GameplayState, new_kind: int, new_variant: int, animati
 	var agi_value: Variant = root.player_agi
 	var effective_agi := float(agi_value) if agi_value != null else float(root.player_spd)
 	var attack_multiplier := tuning.attack_multiplier_for_agi(effective_agi)
+	var player_status := player.get_node_or_null("Status") as StatusComponent
+	if player_status != null:
+		attack_multiplier *= player_status.attack_speed_multiplier()
 	if new_kind == AttackKind.SPIN:
 		var input_direction: Vector2 = root._movement_input()
 		if input_direction.length_squared() <= 0.0001:
@@ -160,7 +163,7 @@ func _start_attack(root: GameplayState, new_kind: int, new_variant: int, animati
 		var chroma := root.player_chroma_component
 		var beam_palette := String(root.current_player_palette_name)
 		var beam_feedback_palette := AspectCatalogScript.palette_for_flame(StringName(chroma.call("aspect_name"))) if chroma != null else "grey"
-		if sword_beam_cooldown_remaining <= 0.0 and chroma != null and bool(chroma.call("spend_chroma", sword_beam_chroma_cost)):
+		if sword_beam_cooldown_remaining <= 0.0 and chroma != null and bool(chroma.call("spend_chroma", sword_beam_cost_for(chroma))):
 			root._sync_chroma_presentation()
 			if root.hud_controller != null:
 				root.hud_controller.acknowledge_chroma_use(PaletteLibrary.accent(beam_feedback_palette if not beam_feedback_palette.is_empty() else "grey"))
@@ -219,13 +222,18 @@ func should_enter_charge() -> bool:
 	return active and attack_kind == AttackKind.ATTACK1 and attack_button_held and not combo_buffered
 
 
+func sword_beam_cost_for(chroma: Node) -> int:
+	var maximum_chroma := int(chroma.get("max_chroma")) if chroma != null else 100
+	return ChromaCostsScript.amount_for_fraction(maximum_chroma, ChromaCostsScript.SWORD_BEAM_FRACTION)
+
+
 func begin_charge(root: GameplayState) -> bool:
 	if not should_enter_charge():
 		return false
 	attack_kind = AttackKind.CHARGING
 	charge_release_pending = false
 	var charge_chroma := root.player_chroma_component
-	if sword_beam_cooldown_remaining <= 0.0 and (charge_chroma == null or bool(charge_chroma.call("can_spend_chroma", sword_beam_chroma_cost))):
+	if sword_beam_cooldown_remaining <= 0.0 and (charge_chroma == null or bool(charge_chroma.call("can_spend_chroma", sword_beam_cost_for(charge_chroma)))):
 		root._play_sound("sword_beam_charge", 0.0, 1.0)
 	charge_elapsed = 0.0
 	combo_buffered = false
@@ -268,7 +276,7 @@ func tick_charge(root: GameplayState, delta: float) -> void:
 		return
 	var effects := root.effects_spawner
 	var chroma := root.player_chroma_component
-	var beam_available: bool = sword_beam_cooldown_remaining <= 0.0 and chroma != null and bool(chroma.call("can_spend_chroma", sword_beam_chroma_cost))
+	var beam_available: bool = sword_beam_cooldown_remaining <= 0.0 and chroma != null and bool(chroma.call("can_spend_chroma", sword_beam_cost_for(chroma)))
 	if beam_available and effects != null and not effects.charge_ready_flash_complete():
 		return
 	start_charged_attack(root)

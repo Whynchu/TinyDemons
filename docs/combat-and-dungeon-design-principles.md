@@ -148,7 +148,7 @@ These are directional identities, not final balance values:
 | Grass | Sustain, drain, regeneration, restraint | Grow, restore, bind |
 | Shadow | Deception, curse, phase, lifesteal | Conceal, possess, bypass |
 | Ground | Defense, armor, stagger, force | Break, brace, raise, lower |
-| Ice | Slow, freeze, preservation, momentum | Freeze, solidify, preserve |
+| Ice | Chill, freeze, preservation, momentum | Freeze, solidify, preserve |
 
 An element should first feel different in combat. Environmental interactions
 are a bonus expression of that identity, not the sole reason the element exists.

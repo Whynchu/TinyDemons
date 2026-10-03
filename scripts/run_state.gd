@@ -1,8 +1,13 @@
 extends RefCounted
 class_name RunState
 
+const EncounterDefinitionScript = preload("res://scripts/encounter_definition.gd")
+
 var run_id := ""
 var dungeon_seed := 0
+var enemy_element_theme: Array[int] = []
+var element_theme_initialized := false
+var element_theme_run_rank := 1
 var active := false
 var settled := false
 var result: StringName = &""
@@ -59,6 +64,9 @@ var gear_reward_telemetry: Array[Dictionary] = []
 func to_dictionary() -> Dictionary:
 	return {
 		"run_id": run_id, "dungeon_seed": dungeon_seed, "active": active,
+		"enemy_element_theme": enemy_element_theme.duplicate(),
+		"element_theme_initialized": element_theme_initialized,
+		"element_theme_run_rank": element_theme_run_rank,
 		"settled": settled, "result": String(result), "shop_stock": shop_stock.duplicate(true), "route_par_seconds": route_par_seconds,
 		"difficulty_bonus": difficulty_bonus, "timer_started": timer_started,
 		"elapsed_time": elapsed_time, "starting_health": starting_health,
@@ -86,6 +94,12 @@ func restore_from_dictionary(data: Dictionary) -> bool:
 		return false
 	run_id = str(data.get("run_id", ""))
 	dungeon_seed = int(data.get("dungeon_seed", 0))
+	enemy_element_theme = _integer_array(data.get("enemy_element_theme", []))
+	element_theme_initialized = bool(data.get("element_theme_initialized", data.has("enemy_element_theme")))
+	element_theme_run_rank = maxi(int(data.get("element_theme_run_rank", 1)), 1)
+	if enemy_element_theme.size() > 3:
+		element_theme_initialized = false
+		enemy_element_theme.clear()
 	active = true
 	settled = bool(data.get("settled", false))
 	result = StringName(str(data.get("result", "")))
@@ -150,6 +164,17 @@ static func _dictionary_array(value: Variant) -> Array[Dictionary]:
 	return converted
 
 
+static func _integer_array(value: Variant) -> Array[int]:
+	var converted: Array[int] = []
+	if value is Array:
+		for entry in value:
+			var element := int(entry)
+			if element <= ElementCatalog.Element.NEUTRAL or element >= ElementCatalog.element_count() or converted.has(element):
+				continue
+			converted.append(element)
+	return converted
+
+
 func _filter_retired_shop_items(entries: Array[Dictionary]) -> Array[Dictionary]:
 	var retained: Array[Dictionary] = []
 	for entry: Dictionary in entries:
@@ -169,8 +194,11 @@ func _filter_retired_shop_items(entries: Array[Dictionary]) -> Array[Dictionary]
 	return retained
 
 
-func begin(generation_seed: int, new_difficulty_bonus: int = 0, maximum_health: float = 1.0) -> void:
+func begin(generation_seed: int, new_difficulty_bonus: int = 0, maximum_health: float = 1.0, run_rank: int = 1) -> void:
 	dungeon_seed = generation_seed
+	element_theme_run_rank = maxi(run_rank, 1)
+	enemy_element_theme = EncounterDefinitionScript.select_run_element_theme(generation_seed, element_theme_run_rank)
+	element_theme_initialized = true
 	run_id = "%d-%d" % [Time.get_unix_time_from_system(), generation_seed]
 	active = true
 	settled = false

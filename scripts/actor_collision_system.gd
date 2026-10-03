@@ -90,6 +90,54 @@ func resolve_slime_contacts(slimes: Array[Sprite2D], root: Object, max_passes: i
 	return resolved_pairs
 
 
+func capture_status_contact_pairs(
+	slimes: Array[Sprite2D],
+	player: Sprite2D,
+	root: Object,
+	actor_foot: Callable,
+	is_spawn_locked: Callable,
+	is_dead: Callable
+) -> Array[StatusContactPair]:
+	var contacts: Array[StatusContactPair] = []
+	if not _slime_grid_valid:
+		build_slime_grid(slimes, actor_foot, is_spawn_locked)
+	var seen_pairs: Dictionary = {}
+	for actor_index in slimes.size():
+		var actor := slimes[actor_index]
+		if not _contact_capture_actor_is_eligible(actor, is_spawn_locked, is_dead):
+			continue
+		for other in slime_grid_candidates(actor_foot.call(actor) as Vector2, contact_distance):
+			if other == actor or slime_grid_position(other) <= actor_index or not _contact_capture_actor_is_eligible(other, is_spawn_locked, is_dead):
+				continue
+			if actor_contact_push_vector(root, actor, other) == Vector2.ZERO:
+				continue
+			var key := "%d:%d" % [mini(actor.get_instance_id(), other.get_instance_id()), maxi(actor.get_instance_id(), other.get_instance_id())]
+			if seen_pairs.has(key):
+				continue
+			seen_pairs[key] = true
+			var pair := StatusContactPair.new()
+			pair.configure(actor, other)
+			contacts.append(pair)
+	if player != null and is_instance_valid(player):
+		for slime in slime_grid_candidates(actor_foot.call(player) as Vector2, contact_distance):
+			if not _contact_capture_actor_is_eligible(slime, is_spawn_locked, is_dead) or actor_contact_push_vector(root, slime, player) == Vector2.ZERO:
+				continue
+			var pair := StatusContactPair.new()
+			pair.configure(slime, player)
+			contacts.append(pair)
+	return contacts
+
+
+func _contact_capture_actor_is_eligible(actor: Sprite2D, is_spawn_locked: Callable, is_dead: Callable) -> bool:
+	if actor == null or not is_instance_valid(actor) or not actor.visible or not actor.is_visible_in_tree() or bool(actor.get_meta("boss_airborne", false)):
+		return false
+	if is_spawn_locked.is_valid() and bool(is_spawn_locked.call(actor)):
+		return false
+	if is_dead.is_valid() and bool(is_dead.call(actor)):
+		return false
+	return true
+
+
 func build_slime_grid(slimes: Array[Sprite2D], actor_foot: Callable, is_spawn_locked: Callable = Callable()) -> void:
 	_slime_grid.clear()
 	_slime_grid_index.clear()

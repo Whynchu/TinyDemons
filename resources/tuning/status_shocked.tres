@@ -4,7 +4,7 @@
 
 [resource]
 script = ExtResource("1")
-id = &"stun"
+id = &"shocked"
 element = 3
 family = 2
 proc_chance = 0.1
@@ -14,7 +14,8 @@ magnitude_per_stack = 1.0
 stun_interval = 1.0
 stun_interval_reduction_per_extra_stack = 0.05
 stun_interval_floor = 0.5
-stun_lock_duration = 0.12
-badge_glyph = "T"
+stun_lock_duration = 0.2
+badge_glyph = "S"
 particle_style = &"electric_spark"
 particle_interval = 0.12
+transmissible = true

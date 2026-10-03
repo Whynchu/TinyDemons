@@ -2,10 +2,67 @@
 
 _Only codex writes this file._
 
-**Focus:** content-folder navigation cleanup
+**Focus:** Reconcile room clears when an enemy disappears without a death callback
 **Updated:** 2026-10-03
 
+## Completed this pass: room remains locked with no enemies alive
+
+Found that invalid-position recovery can hide an enemy and set its combat state
+dead without invoking the normal death callback, while room clear was checked
+only from that callback. CombatRuntimeController now treats missing runtime
+slots as unavailable and reconciles empty combat, treasure, special-enemy, and
+downstairs encounters during the scheduled gameplay tick. Existing special
+room color and respawn rules remain authoritative. Scoped `git diff --check`
+passes. No Godot process or tests were run while the editor is active.
+
+## Completed this pass: contact transmission and spell palette inheritance
+
+Contact transmission no longer rolls per-status proc chances; immunity,
+special-defense, eligibility, and per-pair cooldown checks remain, and direct-hit
+proc rates are unchanged. Elemental spells retain their bound form and use the
+active temporary flame's palette for visuals. Water bubbles already used the
+captured cast palette; Ice spike crystals now use it too, with palette included
+in the visual cache key. The updated transmission smoke source has a zero-proc
+case and cleans up the renamed actor. Static diff checks pass. No Godot process
+or tests were run while the editor is active.
+
+## Latest implementation — source complete
+
+Implemented the approved five-status affinity, Wet, transmission, weapon-imbue
+particles, saved run themes, and healing supports. Added focused source coverage
+for component lifecycle/cadence, contact cooldowns and provenance, run-theme
+frequency, healer filtering, cached-definition isolation, and legacy roster
+migration. Updated the plan, gameplay tuning, architecture, authoring guidance,
+design addendum, audit, known issues, and smoke manifest.
+
+Both `validate_composition.ps1` modes and `git diff --check` pass. The Godot
+smokes, script/definition/catalog diagnostics, seed sweep, screenshots, runtime
+combat checks, and browser acceptance remain unrun because no Godot MCP tools
+are exposed in this session and the repository's recorded restriction forbids
+starting another Godot process. Do not commit: the shared tree contains
+pre-existing edits from other work.
+
 ## Completed
+
+Amended the elemental plan per owner direction: runs usually select two
+non-Normal elements and sometimes three, with a three-element cap across both
+the run and each room. Added a provisional 20% three-element theme chance,
+marked for seed-sweep tuning. All elemental support variants retain shared ally
+healing. Documentation only; `git diff --check` passes.
+
+Recorded the owner's two non-Normal enemy elements per run and room, saved run
+theme with preferred synergy, and shared ally-healing behavior for every
+elemental support. S7 now includes healer variants, bosses/summons/respawns,
+snapshot persistence and run-union verification. Legacy snapshot treatment is
+an explicit release question. Documentation only; `git diff --check` passes.
+
+Reviewed and revised `docs/elemental-affinity-and-transmission-plan.md` at the
+owner's request, including innate lifecycle and spawn reset, transmission
+snapshot/cooldown rules, staged Wet activation, final-roster constraints,
+cached-resource isolation, and HP-linked Chroma clarification. Roster-wide
+compatibility was later superseded by the two-element run theme and synergy
+preference. Runtime files were not
+changed in this documentation task; static diff inspection only.
 
 Converted both Water Triangle WAVs to OGG with the repository converter's
 Vorbis quality 5 setting and updated the catalog and spell/tuning docs to use
@@ -316,3 +373,35 @@ Updated scene resource paths, code, tests, tools, and documentation. Added the
 scene tree to `docs/CONTENT_FOLDERS.md`. Static checks resolve all 38 unique
 scene-file references, find no old flat paths, and pass `git diff --check`. No
 Godot process or test suite was launched.
+
+## Latest task
+
+Fixed the targeted-enemy outline size by matching the generated outline's displayed frame size to the source sprite. Electric status is now named `shocked` in the registered ID and resource and uses a distinct badge mark. Existing status pulses interrupt enemy actions, cancel support casts, prevent AI movement, and shake the sprite; each lock window is now 0.2 seconds on the existing one-second cadence.
+
+Updated the status and spell documentation. Static stale-ID/resource scans and `git diff --check` pass. No tests or Godot process were launched under the repo's recorded session restriction. The pre-existing local project, room-prefab, and root scene files were preserved.
+
+## Latest task
+
+Ice's Frostbite Shard now uses Water's contact splash delivery: direct impact damage, reduced nearby splash damage, and six palette-colored pixel spikes that rise and hold briefly. Ice's registered status is now `chill`; its stacked slow multiplier affects movement and attack timing/animation for enemies and the player. Player Ice attunement now uses a bright cyan swatch with pale-cyan horn accents and the darker eye treatment shared by Electric and Grass, while Ice enemies retain aquamarine.
+
+Updated gameplay, authoring, spell, status, and design docs. Static resource/ID scans and `git diff --check` pass. No Godot process or tests were run under the repo's recorded session restriction.
+
+## Parser error follow-up
+
+Removed a duplicate `player_status` local declaration from `GameplayFrameController.tick()`; the attack-finish branch now reuses the status reference created earlier in the function. Static inspection confirms one declaration and `git diff --check` passes. Godot was not launched under the existing session restriction, so the editor parse is not runtime-verified.
+
+## Ice spike visual follow-up
+
+Reshaped the impact effect into seven overlapping spikes arranged as rear, center, and front arcs around a compact circular footprint. Added pale reflective facets and bright tip glints for a glossier ice finish. Updated gameplay and spell-form documentation. Static inspection and `git diff --check` pass; no Godot process or tests were run.
+
+## Ice AOE footprint and highlight follow-up
+
+Expanded the Ice spike bases into a 13-spike center/inner/outer layout centered on impact; the outer ring is computed from the spell's splash radius so its footprint reaches the AOE edge. Moved Ice's gloss stripe and tip glint to the right, and shifted the Water bubble's white glint to its upper-right. Updated spell docs. Static checks pass; no Godot process or tests were run.
+
+## Ice crystal appearance follow-up
+
+Changed the spike generator from smooth triangular spikes to angular, stepped crystal silhouettes with a dark left facet, bright right edge, and white right-side glint. The impact crystals use the brighter cyan Ice ramp to read as ice instead of aquamarine shards. Updated spell and gameplay descriptions. Static checks pass; no Godot process or tests were run.
+
+## Isometric Ice footprint follow-up
+
+Compressed the Ice cluster's vertical base offsets to 52% while preserving its horizontal radius, making the ground footprint read as a broad oval in the game's isometric view. Spike height and AOE damage/radius remain unchanged. Updated the spell documentation. Static checks pass; no Godot process or tests were run.

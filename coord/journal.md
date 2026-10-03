@@ -603,3 +603,78 @@ Organize the flat scene folder by runtime and authoring role, preserve the confi
 
 ## 2026-10-03T16:37Z — codex — done
 Moved 25 scenes into gameplay, menus, UI, authoring, and debug folders while keeping scenes/main.tscn at its existing path. Updated 38 distinct references across scenes, code, tests, tools, resources, and docs. Static reference checks and git diff --check pass; no Godot process or test suite was launched.
+
+## 2026-10-03T17:25Z - codex - claim
+Fix the enemy status-outline scale/offset under target highlighting, and make Electric status use the Shocked name with 0.2-second interruption pulses on its existing one-second cadence.
+
+## 2026-10-03T17:33Z - codex - done
+Generated status outlines now retain the source sprite's logical frame size when target highlighting swaps in a double-resolution image. Electric status uses the `shocked` ID/resource and a distinct mark; its existing pulse path cancels actions/casts, blocks enemy movement, and shakes only the sprite for 0.2 seconds on the existing cadence. Status, authoring, tuning, and spell docs are aligned. Stale ID/resource scans and `git diff --check` pass. No tests or Godot runtime were run; existing local project, room-prefab, and scene files were left untouched.
+
+## 2026-10-03T18:05Z - codex - done
+Ice now uses contact splash damage with six rising ground spikes, and the Ice status is registered as Chill with movement and attack speed/animation slow. Added a brighter player Ice palette with cyan horn accents and the Electric/Grass eye treatment; enemy Ice remains aquamarine. Updated docs and status records. Static stale resource/ID scans and `git diff --check` pass. No tests or Godot process were run under the recorded session restriction.
+
+## 2026-10-03T18:06Z - codex - fix
+Removed the duplicate `player_status` local in `GameplayFrameController.tick()` and reused the function's earlier status reference. Static inspection and `git diff --check` pass. No Godot process was launched due to the recorded session restriction.
+
+## 2026-10-03T18:11Z - codex - done
+Changed the Ice impact spikes from a horizontal spread into a seven-piece layered circular cluster, with pale gloss facets and bright tip glints. Updated gameplay and spell-form docs. Static inspection and `git diff --check` pass; no Godot process or tests were run.
+
+## 2026-10-03T18:15Z - codex - done
+Expanded the Ice spike bases into a 13-spike circular layout centered on impact and sized from the actual splash radius. Moved Ice specular highlights and Water bubble glints to the right. Updated spell documentation. Static checks pass; no Godot process or tests were run.
+
+## 2026-10-03T18:21Z - codex - done
+Refined Ice spikes into stepped, faceted cyan crystals using the brighter Ice ramp; their dark facet is on the left and reflective edge/glint is on the right. Water bubble glints remain upper-right. Updated effect documentation. Static checks pass; no Godot process or tests were run.
+
+## 2026-10-03T18:24Z - codex - done
+Compressed the Ice cluster's vertical base offsets to 52% of its horizontal radius for an isometric horizontal oval footprint. Kept spike heights and gameplay AOE unchanged; updated docs. Static checks pass; no Godot process or tests were run.
+
+## 2026-10-03T19:05Z - space-bunny - claim
+Elemental affinity and transmission plan. Claiming docs/elemental-affinity-and-transmission-plan.md and docs/DOCUMENTATION_MAP.md for a plan document only; no runtime code. Scope: imbue element looks on the weapon sprite, a real wet status, innate element affinity with presentation-only suppression, bidirectional element-agnostic contact transmission, and synergy-constrained room generation. Codex: your active status-aura alignment and Ice/Water spawner work overlaps this plan's presentation slices; I will not edit runtime status/aura/spawner files until your pass lands or we coordinate. Not touching tests/run_all_smoke.ps1.
+
+## 2026-10-03 - codex - claim
+Owner explicitly requested edits to space-bunny's elemental affinity/transmission plan following review. Documentation scope only; existing space-bunny claim remains in place.
+
+## 2026-10-03 - codex - done
+Revised the plan's innate lifecycle/reset, overlapping suppression, transmission snapshots and pooled cooldowns, Wet activation dependencies, completed-roster repair/validation and resource isolation. Recorded HP-linked Chroma and retained roster-wide compatibility as an owner decision. No runtime changes or Godot launch in this task.
+
+## 2026-10-03 - codex - done
+Owner-requested plan amendment: at most two non-Normal enemy elements across the entire run and each room, persisted theme, preferred actual status synergy, and shared ally-healing role for all elemental supports. Expanded S7 scope and acceptance to healer coverage, boss/summon/respawn membership, snapshot restoration and legacy migration. Documentation only; git diff --check passes.
+
+## 2026-10-03 - codex - done
+Updated plan to select usually two and sometimes three non-Normal enemy elements per run, with a hard cap of three per run and room. Added provisional 20% three-element theme chance, explicitly subject to seed-sweep tuning. All elemental supports retain the shared ally-healing role. `git diff --check` passes.
+
+## 2026-10-03 - codex - claim
+Owner authorized full implementation of docs/elemental-affinity-and-transmission-plan.md. Claiming status/affinity, Wet, imbue visuals, transmission, run-theme, support definition and targeted verification paths; preserving opencode test-gate claim and existing user changes.
+
+## 2026-10-03 - codex - done
+Implemented S1-S8 source and documentation work from the elemental affinity/transmission plan, including Wet, innate suppression, contact transfer, imbue emissions, run-theme migration and healing supports. Both composition guard modes and git diff --check pass at the recorded baseline. Godot smoke, editor/catalog checks, seed sweep and visual/browser acceptance remain open under the existing no-second-Godot-process restriction; preserved unrelated working-tree edits and made no commit.
+
+## 2026-10-03T21:00Z - codex - done
+Fixed the target scope parse error in the HUD status badge generator by nesting its bounds check and image write inside the glyph-pixel alpha guard. Static source inspection and scoped git diff --check pass. Existing Godot editor diagnostics were not available through this session, so runtime confirmation is still pending; no new Godot process was launched.
+
+## 2026-10-03T21:05Z - codex - claim
+Investigating the gameplay bootstrap preload failure. The slime runtime function appears to redeclare its gameplay local; fix the duplicate and inspect for other compile blockers. No standalone Godot process.
+
+## 2026-10-03T21:06Z - codex - done
+Removed the duplicate GameplayState local in SlimeRuntimeController.move_slimes; the function now reuses its initial typed gameplay reference. This was blocking slime_runtime_controller.gd from parsing and therefore gameplay_bootstrap.gd from preloading it. Static source review and scoped git diff check pass; live editor confirmation remains unavailable in this session.
+
+## 2026-10-03T21:08Z - codex - claim
+Fixing the reported actor_id type inference error in the status transmission controller. Scope is the contact snapshot loop and static validation only; no new Godot process.
+
+## 2026-10-03T21:09Z - codex - done
+Fixed StatusTransmissionController actor_id inference by converting the dynamically iterated instance ID explicitly to int. Scoped git diff check passes. No Godot editor diagnostics or standalone runtime checks were available in this session.
+
+## 2026-10-03T21:16Z - codex - claim
+Owner prefers no proc-failure roll on eligible status contact. Claiming status application/transmission scripts, the transmission smoke characterization, and related elemental docs. Direct-hit proc values remain unchanged.
+## 2026-10-03T21:30Z - codex - done
+Guaranteed eligible status contact transfers without a second proc roll; immunity, special-defense, and three-second pair cooldown remain. Ice spike textures now use the captured current-flame palette and cache per palette; Water bubble projectile and impact effects already use that palette. Updated gameplay tuning and fixed stale actor cleanup name in the transmission smoke. Scoped git diff check passes. No tests or Godot process were run.
+## 2026-10-03T21:40Z - codex - claim
+Investigating a combat room that remains locked after no enemies are left. Scope: combat room clear predicate, room spawn/reset path, and focused regression coverage. No standalone Godot process while editor is active.
+## 2026-10-03T21:52Z - codex - done
+Fixed the room softlock caused by invalid-position recovery marking an enemy dead without firing the normal death callback. The scheduled combat check now reconciles empty encounters and missing pool slots across combat, treasure, special-enemy, and downstairs rooms; authored special-room color/respawn policy remains in control. Scoped git diff check passes. No tests or Godot process were run.
+
+## 2026-10-03T21:54Z - codex - claim
+Preparing the user-requested versioned main push, including pending game/content/docs/assets changes except the three MCP configuration files.
+
+## 2026-10-03T21:55Z - codex - done
+Prepared the 0.3.30 release commit with all pending game/content/docs/assets changes except .mcp.json, .codex/config.toml, and opencode.json. Staged whitespace check passes; no Godot process or tests were run.

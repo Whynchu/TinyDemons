@@ -4,7 +4,7 @@
 
 [resource]
 script = ExtResource("1")
-palette_names = Array[String](["blue", "orange", "green", "red", "yellow", "grey", "purple", "aquamarine"])
+palette_names = Array[String](["blue", "orange", "green", "red", "yellow", "grey", "purple", "aquamarine", "ice"])
 selectable_palettes = Array[String](["blue", "orange", "green", "red", "yellow", "purple", "aquamarine"])
 rest_fire_palettes = Array[String](["blue", "orange", "green", "red", "yellow", "purple", "aquamarine"])
 shadow = {
@@ -16,6 +16,7 @@ shadow = {
 "grey": Color(0.231373, 0.247059, 0.321569, 1),
 "purple": Color(0.262745, 0.184314, 0.4, 1),
 "aquamarine": Color(0.152941, 0.329412, 0.454902, 1),
+"ice": Color(0.145098, 0.294118, 0.509804, 1),
 "grey_orb": Color(0.337255, 0.423529, 0.52549, 1)
 }
 normal = {
@@ -27,6 +28,7 @@ normal = {
 "grey": Color(0.337255, 0.423529, 0.52549, 1),
 "purple": Color(0.462745, 0.305882, 0.556863, 1),
 "aquamarine": Color(0.227451, 0.541176, 0.592157, 1),
+"ice": Color(0.278431, 0.647059, 0.866667, 1),
 "grey_orb": Color(0.580392, 0.690196, 0.760784, 1)
 }
 accent = {
@@ -38,6 +40,7 @@ accent = {
 "purple": Color(0.784314, 0.721569, 0.823529, 1),
 "grey": Color(0.580392, 0.690196, 0.760784, 1),
 "aquamarine": Color(0.52549, 0.796078, 1, 1),
+"ice": Color(0.741176, 0.941176, 1, 1),
 "grey_orb": Color(0.956863, 0.956863, 0.956863, 1)
 }
 archetype_highlights = Array[Color]([Color(0.254902, 0.65098, 0.964706, 1), Color(1, 0.803922, 0.458824, 1), Color(0.654902, 0.941176, 0.439216, 1), Color(0.937255, 0.490196, 0.341176, 1), Color(1, 0.941176, 0.588235, 1), Color(0.580392, 0.690196, 0.760784, 1), Color(0.462745, 0.305882, 0.556863, 1), Color(0.52549, 0.796078, 1, 1)])

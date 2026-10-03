@@ -4,6 +4,7 @@ class_name HudController
 const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
 const SoulVisualsScript = preload("res://scripts/soul_visuals.gd")
 const ChromaComponentScript = preload("res://scripts/player_chroma_component.gd")
+const ChromaCostsScript = preload("res://scripts/chroma_costs.gd")
 const ABILITY_COOLDOWN_SHADER: Shader = preload("res://shaders/ability_cooldown_icon.gdshader")
 const ELITE_OVERHEAD_SYMBOL_TEXTURE: Texture2D = preload("res://assets/artwork/eliteslimeoverheadsymbol.png")
 const TARGET_HEALTH_BAR_TEXTURE: Texture2D = preload("res://assets/artwork/EnemyHpRedBar.png")
@@ -41,6 +42,7 @@ var target_overhead_elite_symbols: Dictionary = {}
 var target_overhead_status_markers: Dictionary = {}
 var player_status_markers: Array[Sprite2D] = []
 var status_badge_texture_cache: Dictionary = {}
+var _status_transmission_flash_actors: Dictionary = {}
 var enemy_overhead_offset := Vector2(3, 0)
 var enemy_overhead_frame_template: Sprite2D = null
 var enemy_overhead_fill_template: Sprite2D = null
@@ -494,20 +496,23 @@ func update_player_status_marks(anchor: Sprite2D, status_component: StatusCompon
 		for marker in player_status_markers:
 			marker.visible = false
 		return
-	var definitions := status_component.active_definitions()
+	var actor := status_component.get_parent() as Sprite2D
+	_connect_status_transmission(actor, status_component)
+	var records := status_component.presentation_records()
 	var parent := anchor.get_node_or_null(^"../../..") as Node2D
 	if parent == null:
 		return
-	while player_status_markers.size() < definitions.size():
+	while player_status_markers.size() < records.size():
 		player_status_markers.append(_new_status_marker(parent, "PlayerStatusMark%d" % player_status_markers.size()))
 	for index in player_status_markers.size():
 		var marker := player_status_markers[index]
-		if index >= definitions.size():
+		if index >= records.size():
 			marker.visible = false
 			continue
-		var definition := definitions[index]
-		marker.texture = status_badge_texture(definition, pixel_text)
-		marker.position = Vector2(2.0 + float(index) * 8.0, 17.0)
+		var record := records[index]
+		marker.texture = status_badge_texture(record.definition, pixel_text, record.arrived_by_transmission)
+		marker.position = Vector2(1.0 + float(index) * 8.0, 16.0) if record.arrived_by_transmission else Vector2(2.0 + float(index) * 8.0, 17.0)
+		marker.scale = Vector2.ONE * (1.25 if _consume_status_transmission_flash(actor, record.definition.id) else 1.0)
 		marker.z_index = 5
 		marker.visible = true
 
@@ -523,11 +528,11 @@ func _new_status_marker(parent: Node, marker_name: String) -> Sprite2D:
 	return marker
 
 
-func status_badge_texture(definition: StatusEffectDefinition, pixel_text: Callable) -> Texture2D:
+func status_badge_texture(definition: StatusEffectDefinition, pixel_text: Callable, arrived_by_transmission: bool = false) -> Texture2D:
 	if definition == null or not pixel_text.is_valid():
 		return null
 	var element_color := ElementCatalogScript.damage_number_color(definition.element)
-	var cache_key := "%s:%s" % [String(definition.id), element_color.to_html(false)]
+	var cache_key := "%s:%s:%s" % [String(definition.id), element_color.to_html(false), arrived_by_transmission]
 	if status_badge_texture_cache.has(cache_key):
 		return status_badge_texture_cache[cache_key] as Texture2D
 	var image := Image.create(7, 7, false, Image.FORMAT_RGBA8)
@@ -547,9 +552,46 @@ func status_badge_texture(definition: StatusEffectDefinition, pixel_text: Callab
 					var target := glyph_origin + Vector2i(x, y)
 					if target.x >= 0 and target.y >= 0 and target.x < 7 and target.y < 7:
 						image.set_pixelv(target, Color.WHITE)
+	if arrived_by_transmission:
+		var ring := Image.create(9, 9, false, Image.FORMAT_RGBA8)
+		ring.fill(Color.TRANSPARENT)
+		for y in 9:
+			for x in 9:
+				var distance := Vector2(float(x) - 4.0, float(y) - 4.0).length_squared()
+				if distance >= 10.0 and distance <= 20.0:
+					ring.set_pixel(x, y, Color.WHITE)
+		for y in 7:
+			for x in 7:
+				var color := image.get_pixel(x, y)
+				if color.a > 0.0:
+					ring.set_pixel(x + 1, y + 1, color)
+		image = ring
 	var texture := ImageTexture.create_from_image(image)
 	status_badge_texture_cache[cache_key] = texture
 	return texture
+
+
+func _connect_status_transmission(actor: Sprite2D, status_component: StatusComponent) -> void:
+	if actor == null or status_component == null:
+		return
+	var callback := Callable(self, "_on_status_transmission_received").bind(actor)
+	if not status_component.transmission_received.is_connected(callback):
+		status_component.transmission_received.connect(callback)
+
+
+func _on_status_transmission_received(status_id: StringName, _source_actor: Node, actor: Sprite2D) -> void:
+	if actor != null and is_instance_valid(actor):
+		_status_transmission_flash_actors["%d:%s" % [actor.get_instance_id(), String(status_id)]] = true
+
+
+func _consume_status_transmission_flash(actor: Sprite2D, status_id: StringName) -> bool:
+	if actor == null or not is_instance_valid(actor):
+		return false
+	var key := "%d:%s" % [actor.get_instance_id(), String(status_id)]
+	if not _status_transmission_flash_actors.has(key):
+		return false
+	_status_transmission_flash_actors.erase(key)
+	return true
 
 
 func set_fill_ratio(fill: Sprite2D, fill_size: Vector2, ratio: float) -> void:
@@ -686,8 +728,10 @@ func _update_actor_status_markers(actor: Sprite2D, status_component: StatusCompo
 	if actor == null or not is_instance_valid(actor):
 		return
 	_prune_status_markers(markers)
-	var definitions := status_component.active_definitions() if status_component != null and is_instance_valid(status_component) else []
-	while markers.size() < definitions.size():
+	var records := status_component.presentation_records() if status_component != null and is_instance_valid(status_component) else []
+	if status_component != null and is_instance_valid(status_component):
+		_connect_status_transmission(actor, status_component)
+	while markers.size() < records.size():
 		var marker := _new_status_marker(actor, "StatusMark%d" % markers.size())
 		marker.top_level = true
 		markers.append(marker)
@@ -695,11 +739,13 @@ func _update_actor_status_markers(actor: Sprite2D, status_component: StatusCompo
 		var marker := _valid_sprite_reference(markers[index])
 		if marker == null:
 			continue
-		if index >= definitions.size():
+		if index >= records.size():
 			marker.visible = false
 			continue
-		marker.texture = status_badge_texture(definitions[index], pixel_text)
-		marker.global_position = origin + Vector2(float(index) * 8.0, 0.0)
+		var record := records[index]
+		marker.texture = status_badge_texture(record.definition, pixel_text, record.arrived_by_transmission)
+		marker.global_position = origin + Vector2(float(index) * 8.0 - (1.0 if record.arrived_by_transmission else 0.0), -1.0 if record.arrived_by_transmission else 0.0)
+		marker.scale = Vector2.ONE * (1.25 if _consume_status_transmission_flash(actor, record.definition.id) else 1.0)
 		marker.global_scale = Vector2.ONE
 		marker.z_as_relative = false
 		marker.z_index = z_index
@@ -823,7 +869,8 @@ func update_cooldown_hud(root: Object, delta: float = 0.0) -> void:
 	_update_cooldown_flash(&"sword_beam", beam_remaining, delta)
 	var magic_available := _magic_cooldown_available(chroma)
 	var imbue_available := _imbue_cooldown_available(root, chroma)
-	var beam_available := beam_remaining <= 0.0001 and chroma != null and bool(chroma.call("can_spend_chroma", attack.sword_beam_chroma_cost if attack != null else 30))
+	var beam_cost := attack.sword_beam_cost_for(chroma) if attack != null else ChromaCostsScript.amount_for_fraction(int(chroma.get("max_chroma")) if chroma != null else 100, ChromaCostsScript.SWORD_BEAM_FRACTION)
+	var beam_available := beam_remaining <= 0.0001 and chroma != null and bool(chroma.call("can_spend_chroma", beam_cost))
 	_update_cooldown_icon(root, &"magic", regular_remaining, regular_cooldown_ratio, magic_available)
 	_update_cooldown_icon(root, &"imbue", imbue_remaining, imbue_cooldown_ratio, imbue_available)
 	_update_cooldown_icon(root, &"sword_beam", beam_remaining, beam_cooldown_ratio, beam_available)
@@ -851,8 +898,7 @@ func _imbue_cooldown_available(root: Object, chroma: Node) -> bool:
 	if chroma == null or not is_instance_valid(chroma):
 		return false
 	var element := ElementCatalogScript.element_for_aspect(int(chroma.get("current_aspect")))
-	var configured_cost: Variant = root.get("IMBUE_MP_COST")
-	var cost := int(configured_cost) if configured_cost != null else 40
+	var cost := ChromaCostsScript.amount_for_fraction(int(chroma.get("max_chroma")), ChromaCostsScript.IMBUE_FRACTION)
 	return element != ElementCatalogScript.Element.NEUTRAL and bool(chroma.call("can_spend_chroma", cost))
 
 

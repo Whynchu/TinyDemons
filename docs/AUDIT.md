@@ -641,7 +641,8 @@ requesting frame and removed the re-parse; see section 19.
 
 The working tree now contains the first four catalog-backed elemental statuses,
 actor-local status components, player/enemy application and tick integration,
-movement slow, periodic stun, status HUD marks, and the shared aura owner.
+Chill movement/attack slow, Shocked periodic interruption, status HUD marks,
+and the shared aura owner.
 Death visibility also has a source fix: animation refresh/tick callbacks check
 the player-dead state before exposing sprites, and death entry restores opaque
 modulation before hiding the player. The reported transient magenta actor/hitbox
@@ -718,3 +719,32 @@ gate failures are unrelated to this pass and are recorded in
 `KNOWN_ISSUES.md`. **No rendered playtest, device profile, or A/B comparison
 has been captured**; the 2026-09-15/16 table in section 11 is a "before" row and
 this pass does not claim to have moved section 11.2.
+
+## 20. Element affinity, Wet, contact transmission, and run themes (2026-10-03)
+
+The full elemental-affinity implementation is now present in the working tree.
+`StatusRecord` separates permanent innate affinity from temporary applied
+ailments; the catalog now registers Wet. Innate enemy statuses are harmless,
+blocked by authored immunity, suppressed by applied statuses, and excluded from
+mechanical modifiers while innate. Wet amplifies Electric damage, shortens
+Shocked cadence, removes applied Burn stacks, and shares the Water bubble
+texture. Contact transfer is bidirectional, captures source payloads before any
+pair applies, guarantees eligible contact transfer subject to immunity and
+special-defense gates, and uses one unordered
+three-second pair cooldown with room and spawn-generation isolation.
+
+`RunState` serializes a deterministic enemy-element theme. Rank 1 remains
+Normal-only, rank 2 teaches one element, and rank 3+ usually uses two with a
+configured 20% chance for three. `EncounterDefinition` favors the authored
+Water/Electric synergy and migrates cached legacy rosters deterministically;
+`RoomController` constrains generated and cached room/boss rosters. Elemental
+healer variants use the shared ally-healing behavior. Active-run migration keeps
+health, Chroma, death flags, levels, and pickup state in the existing slot
+records while changing only off-theme variants and dependent ambush flags.
+
+Focused smoke source now covers Wet/innate state, transfer cooldown/suppression,
+same-frame propagation prevention, run-theme serialization, healer filtering,
+and legacy roster migration. The smoke checks are registered but not executed.
+This is **implemented in source**, not verified. Godot parsing, definition and
+catalog validation, native 240x160 readability, run-seed frequencies and
+migration, combat balance, and browser playtesting remain acceptance work.

@@ -3,6 +3,7 @@ extends Sprite2D
 class_name SlimeActor
 
 const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
+const EnemyChromaComponentScript = preload("res://scripts/enemy_chroma_component.gd")
 
 
 static func _guard_context(root: Object) -> PlayerGuardContext:
@@ -55,6 +56,7 @@ func _ready() -> void:
 
 func ensure_components() -> void:
 	_ensure_component("Health", HealthComponent)
+	_ensure_component("EnemyChroma", EnemyChromaComponentScript)
 	var status_component := _ensure_component("Status", StatusComponent) as StatusComponent
 	var aura := _ensure_component("ElementAura", ElementAuraComponent) as ElementAuraComponent
 	aura.configure(self, get_parent() as Node2D, status_component)
@@ -123,7 +125,8 @@ func tick_runtime(delta: float, is_dead: Callable, update_knockback: Callable, u
 	var combat := get_node_or_null("Combat") as SlimeCombatComponent
 	if combat == null or is_dead.call(self) or is_spawn_locked():
 		return
-	combat.cooldown = maxf(combat.cooldown - delta, 0.0)
+	var action_delta := _action_delta(delta)
+	combat.cooldown = maxf(combat.cooldown - action_delta, 0.0)
 	if combat.status_stun_timer > 0.0:
 		combat.status_stun_timer = maxf(combat.status_stun_timer - delta, 0.0)
 		combat.hitstun_timer = maxf(combat.hitstun_timer - delta, 0.0)
@@ -136,7 +139,7 @@ func tick_runtime(delta: float, is_dead: Callable, update_knockback: Callable, u
 	combat.hitstun_timer = maxf(combat.hitstun_timer - delta, 0.0)
 	if combat.hitstun_timer > 0.0:
 		return
-	if update_attack.call(self, delta):
+	if update_attack.call(self, action_delta):
 		return
 	# Movement is the expensive per-frame cost (walkability sampling). The frame
 	# controller rotates a movement budget across the crowd, so a slime can be
@@ -163,11 +166,12 @@ static func tick_legacy_runtime(actor: Sprite2D, delta: float, is_dead: Callable
 	var combat := actor.get_node_or_null("Combat") as SlimeCombatComponent
 	if combat == null:
 		return
-	combat.cooldown = maxf(combat.cooldown - delta, 0.0)
+	var action_delta := _action_delta_for(actor, delta)
+	combat.cooldown = maxf(combat.cooldown - action_delta, 0.0)
 	if bool(update_knockback.call(actor, delta)):
 		return
 	combat.hitstun_timer = maxf(combat.hitstun_timer - delta, 0.0)
-	if combat.hitstun_timer > 0.0 or bool(update_attack.call(actor, delta)):
+	if combat.hitstun_timer > 0.0 or bool(update_attack.call(actor, action_delta)):
 		return
 	if not allow_movement:
 		return
@@ -185,6 +189,16 @@ static func tick_legacy_runtime(actor: Sprite2D, delta: float, is_dead: Callable
 	update_scoot.call(actor, delta)
 
 
+func _action_delta(delta: float) -> float:
+	return _action_delta_for(self, delta)
+
+
+static func _action_delta_for(actor: Node, delta: float) -> float:
+	var status := actor.get_node_or_null("Status") as StatusComponent
+	var multiplier := status.attack_speed_multiplier() if status != null else 1.0
+	return maxf(delta, 0.0) * clampf(multiplier, 0.05, 1.0)
+
+
 static func damage_actor(root: Object, slime: Sprite2D, amount: float, was_critical: bool, attack_element: int = ElementCatalogScript.Element.NEUTRAL, immune: bool = false, show_damage_number := true) -> void:
 	if bool(root.call("_is_slime_dead", slime)) or (root.has_method("_is_slime_spawn_locked") and bool(root.call("_is_slime_spawn_locked", slime))): return
 	var phase_combat := slime.get_node_or_null("Combat") as SlimeCombatComponent
@@ -200,10 +214,18 @@ static func damage_actor(root: Object, slime: Sprite2D, amount: float, was_criti
 	var health := slime.get_node_or_null("Health") as HealthComponent
 	var maximum := float(root.call("_enemy_max_health", slime))
 	var previous_health := health.current_health if health != null else maximum
+	var health_before_damage := previous_health
 	var brain := slime.get_node_or_null("Brain") as SlimeBrain
 	if brain != null: brain.persistent_aggro = true
 	if health != null: health.apply_damage(amount)
 	else: previous_health = maxf(previous_health - amount, 0.0); (slime.get_node_or_null("HealthPresenter") as SlimeHealthPresenter).display_health = maxf((slime.get_node_or_null("HealthPresenter") as SlimeHealthPresenter).display_health, previous_health)
+	var health_after_damage := health.current_health if health != null else previous_health
+	var applied_damage := maxf(health_before_damage - health_after_damage, 0.0)
+	var enemy_chroma := slime.get_node_or_null("EnemyChroma")
+	if enemy_chroma != null and applied_damage > 0.0:
+		var health_maximum := health.maximum_health if health != null else maximum
+		var is_lethal := health.is_dead() if health != null else health_after_damage <= 0.0
+		enemy_chroma.call("on_health_damage", root, applied_damage, health_maximum, is_lethal)
 	var slime_config := root.get("slime_tuning") as SlimeTuning
 	if health != null: health.regen_delay_timer = slime_config.regen_delay; health.regen_accumulator = 0.0
 	var combat := slime.get_node_or_null("Combat") as SlimeCombatComponent
@@ -276,6 +298,10 @@ static func apply_attack_hit(root: Object, slime: Sprite2D, ranged_hit: bool = f
 		root.call("_spawn_player_damage_number", 0.0, damage_result.element, true)
 		return
 	var damage := damage_result.amount if damage_result != null else float(root.call("_slime_attack_damage", slime))
+	var player_status := player.get_node_or_null("Status") as StatusComponent
+	if player_status != null and damage_result != null:
+		damage *= player_status.damage_taken_multiplier()
+		damage *= player_status.incoming_damage_multiplier_for(damage_result.element)
 	var guard := root.get("player_guard_component") as PlayerGuardComponent
 	var blocked := false
 	var perfect_block := false
@@ -383,7 +409,11 @@ func reset_runtime_state(start_pos: Vector2, initial_target: Vector2, repath_del
 		combat.knockback_velocity = Vector2.ZERO
 	var statuses := get_node_or_null("Status") as StatusComponent
 	if statuses != null:
-		statuses.clear_all()
+		statuses.reset_for_spawn()
+	set_meta("status_spawn_generation", int(get_meta("status_spawn_generation", 0)) + 1)
+	var enemy_chroma := get_node_or_null("EnemyChroma")
+	if enemy_chroma != null:
+		enemy_chroma.call("reset_pool")
 	var aura := get_node_or_null("ElementAura") as ElementAuraComponent
 	if aura != null:
 		aura.clear_status_visuals()

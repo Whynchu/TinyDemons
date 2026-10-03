@@ -121,7 +121,7 @@ func _warm_grey_caches() -> void:
 ## Shader-source frames: the raw fullsheet rows with blank slots dropped, exactly
 ## like tools/bake_palettes.gd. The fullsheet carries the eye/horn highlight
 ## color the strip files omit, so the palette shader can darken eyes and horns
-## for the green and yellow palettes, and the blank filter removes empty spin
+## for the green, yellow, and Ice palettes, and the blank filter removes empty spin
 ## frames. Mirrors the offline baker's frame set so the GPU output matches the
 ## baked reference exactly.
 func _slice_shader_sources(sheet_path: String, defend_path: String, size: Vector2i) -> void:
@@ -457,6 +457,9 @@ func tick_coordinator_animation(new_context: PlayerAnimationContext, delta: floa
 		var agi_value: Variant = new_context.player_agi_get.call()
 		var effective_agi := float(agi_value) if agi_value != null else float(new_context.player_spd_get.call())
 		var attack_multiplier := attack_tuning.attack_multiplier_for_agi(effective_agi)
+		var player_status := new_context.player.get_node_or_null("Status") as StatusComponent
+		if player_status != null:
+			attack_multiplier *= player_status.attack_speed_multiplier()
 		var is_spin := attack_name == "spin_attack"
 		var is_attack2 := attack_name == "attack2" or attack_name == "attack2_charged"
 		var active_frames: Array[Texture2D] = spin_frames if is_spin else attack2_frames if is_attack2 else attack_frames

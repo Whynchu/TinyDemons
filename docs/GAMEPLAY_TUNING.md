@@ -108,14 +108,19 @@ and boss reward formulas (`combat_runtime_controller.gd:XP_REWARD_MULTIPLIER`).
 
 ### `scripts/chroma_tuning.gd` — Chroma pickups (6 exports, all `inspector`)
 
-`pickup_value` 20, `enemy_drop_chance` 0.35, `pickup_collection_distance` 10,
+`pickup_value` 1, `enemy_drop_chance` 0.35, `pickup_collection_distance` 10,
 `pickup_air_time` 0.38, `pickup_launch_speed` 18, and `pickup_launch_spread`
 10. Resource drops use a damped launch with a gentle wall bounce so Chroma and
 Souls settle inside the room without snapping or flying too far from the enemy.
+Neutral enemies have a 35% chance to drop one point on death. Elemental enemies
+carry a 20 point pool and release it proportionally as individual +1 pickups
+when damaged; their elemental palette desaturates as that pool drains. Basic
+spells, sword beams, and Imbue spend 20%, 60%, and 100% of the player's maximum
+Chroma, respectively.
 
 ## Elemental status definitions
 
-The four `StatusEffectDefinition` resources are referenced by
+The five `StatusEffectDefinition` resources are referenced by
 `ElementCatalogData.status_effects` in `resources/definitions/element_catalog.tres`.
 Edit those resources for status balance; this file is the tuning index, while
 the catalog resource is the runtime registry.
@@ -124,15 +129,29 @@ the catalog resource is the runtime registry.
 |---|---|---:|---:|---|---|
 | Burn | Fire | 20% per eligible hit | 2.5 s | 1 damage per stack every 1 s; cap 3 | Imbue-like rising ember trail / 0.08 s |
 | Poison | Shadow | 20% per eligible hit | 2.5 s | 1 damage per stack every 1 s; cap 3 | Rising poison motes / 0.16 s |
-| Slow | Ice | 20% per eligible hit | 2.0 s | 15% movement reduction per stack; cap 3; multiplier floor 0.55 | Drifting frost crystals / 0.16 s |
-| Stun | Electric | 10% per eligible hit | 2.5 s | Immediate 0.12 s action lock on proc, then repeat every 1 s; each extra stack reduces repeat cadence by 0.05 s to a 0.5 s floor; cap 3 | Short electric sparks and sprite-only jolt / 0.12 s |
+| Chill | Ice | 20% per eligible hit | 2.0 s | 15% movement and attack-speed reduction per stack; cap 3; multiplier floor 0.55 | Drifting frost crystals / 0.16 s |
+| Shocked | Electric | 10% per eligible hit | 2.5 s | Immediate 0.2 s action lock on proc, then repeat every 1 s; each extra stack reduces repeat cadence by 0.05 s to a 0.5 s floor; cap 3 | Electric sparks every 0.12 s; sprite-only jolt for 0.2 s per lock |
+| Wet | Water | 25% per eligible hit | 3.0 s | Cap 2; each applied stack adds 35% Electric damage taken; divides Shocked cadence by 1.5 per stack (0.5 s interval floor); removes up to 3 applied Burn stacks | Slow-rising bubbles / 0.22 s |
 
-Only successful, non-immune elemental hits with positive effectiveness can
-proc. `EnemyDefinition.status_immunities` can reject named status IDs. These
-values are initial playtest defaults; no status balance has been accepted from
-runtime playtest yet. The owner checks are registered but unrun. HUD marker
-lifetime and aura transforms now have source guards; particle and outline
-readability remain open for runtime acceptance.
+Ordinary status procs require a successful, non-immune elemental hit with
+positive effectiveness. Contact transmission applies a carried transmissible
+status without another proc roll; authored immunity and special combat defense
+checks still apply. The unordered actor pair then has a three-second cooldown.
+`EnemyDefinition.status_immunities` can reject named status IDs. An enemy's
+elemental status is innate: it is harmless, suppressed by applied ailments, and
+does not provide its own mechanical modifier. Wet's
+numbers are provisional; the status and contact smoke checks are registered but
+unrun, and particle/outline readability remains open for runtime acceptance.
+
+### Run enemy element themes
+
+`EncounterDefinition.three_element_theme_chance` is 0.20 at rank 3 and above:
+most runs use two non-Normal enemy elements, sometimes three. Rank 1 remains
+Normal-only and rank 2 teaches one element. Water/Electric is favored because
+Wet conducts Electric damage and tightens Shocked cadence. The selected set is
+saved in `RunState`; every room, boss, summon, respawn, and support roster must
+stay within it. Every support variant uses the shared ally-healing behavior.
+The two/three-element frequency and seed sweep still need runtime verification.
 
 ## Triangle spell form defaults
 
@@ -156,7 +175,7 @@ readability.
 | Grass Leechvine | Target tether | 10 / 2.5s | 0.40x per tick | 64px range; 1.8s; 0.45s tick; heals 40% of dealt damage |
 | Shadow Hex | Hex-sigil curse projectile | 12 / 2.5s | 1.10x | 5px glyph; mark increases damage taken by 25% for 3s |
 | Ground Quake | Self-centered ring | 12 / 2.5s | 0.75x | 24px radius; 0.70x magic knockback |
-| Ice Frostbite Shard | Shard projectile | 10 / 2.2s | 1.00x | 5px diamond; 90px/s |
+| Ice Frostbite Shard | Contact shard burst | 10 / 2.2s | 1.00x direct | 5px shard at 90px/s; 24px impact radius; nearby hits deal 50%; thirteen faceted crystals fill an isometric horizontal oval and inherit the active palette |
 
 Every form's elemental payload uses the current element. Any status configured
 for that element is guaranteed on each successful spell hit; Neutral, Water,
@@ -169,10 +188,14 @@ Ground chips fall, and Ice crystals burst outward. The selected form controls
 the cast silhouette: Fire maps animated Hub flame frames across one forward fan
 and sends rising ember streams through it; Water travels as a highlighted
 bubble with a launch sound and impact-only burst sound, then pops into smaller
-bubbles; Electric uses a short top-down pixel bolt and is the only
-instant-target strike; Grass tethers, Ground rings around
-the player, Ice throws a shard, and Shadow throws a curse projectile. Bubble
-tints follow the active payload element.
+bubbles; Ice bursts on contact and erupts thirteen faceted crystals across an
+isometric horizontal oval; Electric uses a short top-down pixel bolt and is the
+only instant-target strike; Grass tethers, Ground rings around the player, and
+Shadow throws a curse projectile. Water bubbles and Ice crystals follow the
+currently held flame palette even when a permanent binding selects a different
+spell form. The player's Ice attunement uses a brighter cyan palette, pale-cyan
+horn accents, and the darker eye treatment used by Electric and Grass; Ice
+enemies retain their existing aquamarine palette.
 
 ## Elemental slime definitions
 

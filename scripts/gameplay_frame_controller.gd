@@ -225,7 +225,8 @@ func magic_context(root: GameplayState) -> MagicRuntimeContext:
 	context.player_anim_timer_set = func(value: Variant) -> void: root.set("player_anim_timer", value)
 	context.player_magic_flip_h_set = func(value: Variant) -> void: root.set("player_magic_flip_h", value)
 	context.player_imbued_element_set = func(value: Variant) -> void: root.set("player_imbued_element", value)
-	context.imbue_mp_cost = int(root.get("IMBUE_MP_COST")) if root.get("IMBUE_MP_COST") != null else 40
+	var player_chroma := root.player_chroma_component as PlayerChromaComponent
+	context.imbue_mp_cost = player_chroma.max_chroma if player_chroma != null else int(root.get("IMBUE_MP_COST"))
 	context.imbue_duration = float(root.get("IMBUE_DURATION")) if root.get("IMBUE_DURATION") != null else 15.0
 	context.imbue_cooldown = float(root.get("IMBUE_COOLDOWN")) if root.get("IMBUE_COOLDOWN") != null else 20.0
 	context.imbue_hold_threshold = float(root.get("IMBUE_HOLD_THRESHOLD")) if root.get("IMBUE_HOLD_THRESHOLD") != null else 0.35
@@ -646,8 +647,10 @@ func tick(root: GameplayState, delta: float) -> void:
 	var aspect_ability := root.player_aspect_ability_component
 	if aspect_ability != null:
 		aspect_ability.call("tick", delta)
+	var player_status := root.player.get_node_or_null("Status") as StatusComponent if root.player != null else null
+	var player_attack_speed := player_status.attack_speed_multiplier() if player_status != null else 1.0
 	var attack := root.player_attack_component
-	if attack != null: attack.tick_combo(delta); attack.tick_attack2_cooldown(delta); attack.tick_spin_hits(delta)
+	if attack != null: attack.tick_combo(delta * player_attack_speed); attack.tick_attack2_cooldown(delta); attack.tick_spin_hits(delta)
 	# Entry Orb presentation remains alive during active gameplay and dialogue,
 	# but not underneath pause/Hub/map overlays where it cannot be seen.
 	root._update_entry_orb_animation(delta)
@@ -768,6 +771,8 @@ func tick(root: GameplayState, delta: float) -> void:
 			var agi_value: Variant = root.player_agi
 			var effective_agi := float(agi_value) if agi_value != null else float(root.player_spd)
 			var attack_multiplier := player_tuning.attack_multiplier_for_agi(effective_agi)
+			if player_status != null:
+				attack_multiplier *= player_status.attack_speed_multiplier()
 			if root.player_just_finished_attack2 and anim.after_attack2_texture != null:
 				anim.begin_transition(animation_context(root), "after", anim.after_attack2_texture, player_tuning.attack2_cooldown / attack_multiplier)
 			elif (player_attack == null or not player_attack.combo_buffered) and anim.between_attack_texture != null:

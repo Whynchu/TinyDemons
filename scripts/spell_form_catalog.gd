@@ -39,14 +39,14 @@ static func _ensure_forms() -> void:
 	_forms[ElementCatalogScript.Element.NEUTRAL] = stub
 
 	var fire := _make(&"fire", ElementCatalogScript.Element.FIRE, 3.0, 1.35, SpellFormDefinitionScript.Delivery.CONE)
-	fire.chroma_cost = 15
+	fire.chroma_cost = 20
 	fire.delivery_radius = 40.0
 	fire.delivery_angle_degrees = 90.0
 	fire.knockback_multiplier = 0.4
 	_forms[ElementCatalogScript.Element.FIRE] = fire
 
 	var water := _make(&"water", ElementCatalogScript.Element.WATER, 2.0, 0.85, SpellFormDefinitionScript.Delivery.PROJECTILE_SPLASH)
-	water.chroma_cost = 10
+	water.chroma_cost = 20
 	water.delivery_radius = 24.0
 	water.knockback_multiplier = 0.65
 	water.projectile_shape = SpellFormDefinitionScript.ProjectileShape.BUBBLE
@@ -58,11 +58,11 @@ static func _ensure_forms() -> void:
 	_forms[ElementCatalogScript.Element.WATER] = water
 
 	var electric := _make(&"electric", ElementCatalogScript.Element.ELECTRIC, 1.2, 1.15, SpellFormDefinitionScript.Delivery.INSTANT_TARGET)
-	electric.chroma_cost = 10
+	electric.chroma_cost = 20
 	_forms[ElementCatalogScript.Element.ELECTRIC] = electric
 
 	var grass := _make(&"grass", ElementCatalogScript.Element.GRASS, 2.5, 0.40, SpellFormDefinitionScript.Delivery.BEAM)
-	grass.chroma_cost = 10
+	grass.chroma_cost = 20
 	grass.delivery_range = 64.0
 	grass.delivery_duration = 1.8
 	grass.tick_interval = 0.45
@@ -71,7 +71,7 @@ static func _ensure_forms() -> void:
 	_forms[ElementCatalogScript.Element.GRASS] = grass
 
 	var shadow := _make(&"shadow", ElementCatalogScript.Element.SHADOW, 2.5, 1.10, SpellFormDefinitionScript.Delivery.PROJECTILE)
-	shadow.chroma_cost = 12
+	shadow.chroma_cost = 20
 	shadow.projectile_shape = SpellFormDefinitionScript.ProjectileShape.HEX
 	shadow.projectile_size = 5
 	shadow.mark_duration = 3.0
@@ -79,16 +79,19 @@ static func _ensure_forms() -> void:
 	_forms[ElementCatalogScript.Element.SHADOW] = shadow
 
 	var ground := _make(&"ground", ElementCatalogScript.Element.GROUND, 2.5, 0.75, SpellFormDefinitionScript.Delivery.RADIAL_SELF)
-	ground.chroma_cost = 12
+	ground.chroma_cost = 20
 	ground.delivery_radius = 24.0
 	ground.knockback_multiplier = 0.7
 	_forms[ElementCatalogScript.Element.GROUND] = ground
 
-	var ice := _make(&"ice", ElementCatalogScript.Element.ICE, 2.2, 1.0, SpellFormDefinitionScript.Delivery.PROJECTILE)
-	ice.chroma_cost = 10
+	var ice := _make(&"ice", ElementCatalogScript.Element.ICE, 2.2, 1.0, SpellFormDefinitionScript.Delivery.PROJECTILE_SPLASH)
+	ice.chroma_cost = 20
+	ice.delivery_radius = 24.0
 	ice.projectile_shape = SpellFormDefinitionScript.ProjectileShape.SHARD
 	ice.projectile_size = 5
 	ice.projectile_speed = 90.0
+	ice.projectile_minimum_travel_time = 0.16
+	ice.splash_secondary_damage_ratio = 0.5
 	_forms[ElementCatalogScript.Element.ICE] = ice
 
 

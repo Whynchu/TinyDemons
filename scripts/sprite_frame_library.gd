@@ -281,7 +281,7 @@ func recolor_cloaked_portrait_texture(source: Texture2D, palette_name: String) -
 			var color: Color = image.get_pixel(x, y)
 			var key := _rgb_int(color)
 			if key == _rgb_int(PLAYER_EYE_HIGHLIGHT_COLOR):
-				var eye := PaletteLibrary.normal(palette_name)
+				var eye := PaletteLibrary.shadow(palette_name) if palette_name == "green" or palette_name == "yellow" or palette_name == "ice" else PaletteLibrary.normal(palette_name)
 				image.set_pixel(x, y, Color(eye.r, eye.g, eye.b, color.a))
 				continue
 			for index in source_keys.size():
@@ -308,7 +308,7 @@ func _recolor_player_palette_texture(source: Texture2D, palette_name: String, ca
 			var color: Color = image.get_pixel(x, y)
 			var key := _rgb_int(color)
 			if key == _rgb_int(PLAYER_EYE_HIGHLIGHT_COLOR):
-				var eye_color := PaletteLibrary.shadow(palette_name) if palette_name == "green" or palette_name == "yellow" else PaletteLibrary.normal(palette_name)
+				var eye_color := PaletteLibrary.shadow(palette_name) if palette_name == "green" or palette_name == "yellow" or palette_name == "ice" else PaletteLibrary.normal(palette_name)
 				image.set_pixel(x, y, Color(eye_color.r, eye_color.g, eye_color.b, color.a))
 				continue
 			for color_index in source_colors.size():
@@ -358,7 +358,7 @@ func recolor_ability_icon(source: Texture2D, palette_name: String) -> Texture2D:
 
 
 func _uses_shadow_base_palette(palette_name: String) -> bool:
-	return palette_name == "green" or palette_name == "yellow"
+	return palette_name == "green" or palette_name == "yellow" or palette_name == "ice"
 
 
 ## Recolors the neutral closed Orb-door art into the semantic map-door color.

@@ -72,13 +72,20 @@ static func apply_palette_material(slime: Sprite2D) -> void:
 	if slime.get_meta("enemy_type_id", &"") == &"skeleton":
 		var skeleton_palette := String(slime.get_meta("visual_source", "grey"))
 		var skeleton_material: ShaderMaterial = ACTOR_PALETTE_MATERIAL_SCRIPT.for_skeleton_palette(skeleton_palette)
+		var skeleton_chroma := slime.get_node_or_null("EnemyChroma")
+		if skeleton_chroma != null and bool(skeleton_chroma.get("enabled")):
+			skeleton_material = skeleton_chroma.call("palette_material_for", skeleton_material) as ShaderMaterial
 		if slime.material != skeleton_material:
 			slime.material = skeleton_material
 		return
 	var palette := frame_palette_for(slime)
 	var material: ShaderMaterial = null
-	if palette != "green":
+	var enemy_chroma := slime.get_node_or_null("EnemyChroma")
+	var chroma_enabled := enemy_chroma != null and bool(enemy_chroma.get("enabled"))
+	if palette != "green" or chroma_enabled:
 		material = ACTOR_PALETTE_MATERIAL_SCRIPT.for_slime_palette(palette)
+		if chroma_enabled:
+			material = enemy_chroma.call("palette_material_for", material) as ShaderMaterial
 	if slime.material != material:
 		slime.material = material
 	var shadow := slime.get_node_or_null("SlimeFloorShadow") as Sprite2D

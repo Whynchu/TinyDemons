@@ -29,8 +29,8 @@ enum AbilityMode {
 }
 
 @export var max_chroma := 100
-@export var chroma_pickup_value := 20
-@export var elemental_ability_cost := 10
+@export var chroma_pickup_value := 1
+@export var elemental_ability_cost := 20
 
 var current_aspect: Aspect = Aspect.NONE
 var current_chroma := 0

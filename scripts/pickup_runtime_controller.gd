@@ -6,7 +6,7 @@ const GOLD_PICKUP_TEXTURE: Texture2D = preload("res://assets/artwork/GoldFresh2.
 
 const CHEST_INTERACT_DISTANCE := 16.0
 const DEPTH_Z_SCALE := 10.0
-const CHROMA_PICKUP_VALUE := 20
+const CHROMA_PICKUP_VALUE := 1
 const ITEM_DROP_GRAVITY := 92.0
 const ITEM_DROP_AIR_TIME := 0.38
 const ITEM_DROP_ARC_HEIGHT := 8.0
@@ -831,7 +831,7 @@ func collect_world_item_drop(root: Object) -> PickupAcquisitionResult:
 	return result
 
 
-func spawn_chroma_pickup(root: Object, position: Vector2, value: int = CHROMA_PICKUP_VALUE, launch_seed: int = 0, launch_direction: Vector2 = Vector2.ZERO, avoid_position: Variant = null) -> Vector2:
+func spawn_chroma_pickup(root: Object, position: Vector2, value: int = CHROMA_PICKUP_VALUE, launch_seed: int = 0, launch_direction: Vector2 = Vector2.ZERO, avoid_position: Variant = null, with_light := true) -> Vector2:
 	var launch_rng := RandomNumberGenerator.new()
 	var root_rng := root.get("rng") as RandomNumberGenerator
 	launch_rng.seed = launch_seed if launch_seed != 0 else root_rng.randi() if root_rng != null else Time.get_ticks_msec()
@@ -849,15 +849,16 @@ func spawn_chroma_pickup(root: Object, position: Vector2, value: int = CHROMA_PI
 	sprite.set_meta("chroma_base_position", spawn_position)
 	sprite.set_meta("chroma_last_valid_position", spawn_position)
 	sprite.set_meta("chroma_palette", _chroma_palette_name(root))
-	var light := PointLight2D.new()
-	light.name = "ChromaLight"
-	light.texture = _chroma_light_texture()
-	light.color = chroma_color
-	light.energy = CHROMA_LIGHT_ENERGY
-	light.texture_scale = CHROMA_LIGHT_TEXTURE_SCALE
-	light.shadow_enabled = false
-	light.z_index = -1
-	sprite.add_child(light)
+	if with_light:
+		var light := PointLight2D.new()
+		light.name = "ChromaLight"
+		light.texture = _chroma_light_texture()
+		light.color = chroma_color
+		light.energy = CHROMA_LIGHT_ENERGY
+		light.texture_scale = CHROMA_LIGHT_TEXTURE_SCALE
+		light.shadow_enabled = false
+		light.z_index = -1
+		sprite.add_child(light)
 	root.add_child(sprite)
 	var tuning: ChromaTuning = root.chroma_tuning
 	var velocity := Vector2(launch_rng.randf_range(-tuning.pickup_launch_spread, tuning.pickup_launch_spread), -tuning.pickup_launch_speed)
@@ -872,9 +873,13 @@ func restore_chroma_pickups(root: Object, saved_pickups: Array) -> void:
 		if not (saved_pickup_value is Dictionary):
 			continue
 		var saved_pickup := saved_pickup_value as Dictionary
-		spawn_chroma_pickup(root, saved_pickup.get("position", root.player_start_position) as Vector2, int(saved_pickup.get("value", CHROMA_PICKUP_VALUE)), 1)
-		var index: int = root.chroma_pickup_controller.sprites.size() - 1
-		root.chroma_pickup_controller.air_times[index] = 0.0
+		var saved_position := saved_pickup.get("position", root.player_start_position) as Vector2
+		var saved_value := maxi(int(saved_pickup.get("value", CHROMA_PICKUP_VALUE)), 1)
+		for unit_index in saved_value:
+			var scatter := Vector2.from_angle(TAU * float(unit_index) / float(saved_value)) * sqrt(float(unit_index)) * 0.7
+			spawn_chroma_pickup(root, saved_position + scatter, 1, unit_index + 1, Vector2.ZERO, null, unit_index == 0)
+			var index: int = root.chroma_pickup_controller.sprites.size() - 1
+			root.chroma_pickup_controller.air_times[index] = 0.0
 
 
 func update_chroma_pickups(root: Object, delta: float) -> void:

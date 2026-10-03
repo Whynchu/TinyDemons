@@ -3,6 +3,7 @@ class_name MagicRuntimeController
 
 const AspectCatalogScript = preload("res://scripts/aspect_catalog.gd")
 const ChromaComponentScript = preload("res://scripts/player_chroma_component.gd")
+const ChromaCostsScript = preload("res://scripts/chroma_costs.gd")
 const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
 const SpellFormCatalogScript = preload("res://scripts/spell_form_catalog.gd")
 const SpellFormDefinitionScript = preload("res://scripts/spell_form_definition.gd")
@@ -53,6 +54,7 @@ var fire_cone_source_frames: Array[Texture2D] = []
 var fire_cone_frames_by_palette: Dictionary = {}
 var fire_cone_animation_cache: Dictionary = {}
 var skyfall_bolt_animation_cache: Dictionary = {}
+var ice_spike_growth_cache: Dictionary = {}
 var fire_cone_source_loaded := false
 
 
@@ -69,7 +71,8 @@ func update_player_mp_ui(context: MagicRuntimeContext, delta := 0.0) -> void:
 	if fill_size == Vector2.ZERO:
 		fill_size = Vector2(82, 16)
 	context.player_mp_fill_size_set.call(fill_size)
-	var max_mp := float(context.imbue_mp_cost) if context.player_tuning == null else 100.0
+	var chroma_component := context.player_chroma_component
+	var max_mp := float(chroma_component.get("max_chroma")) if chroma_component != null else float(context.imbue_mp_cost)
 	var chroma := current_player_chroma(context)
 	if displayed_chroma < 0.0:
 		displayed_chroma = chroma
@@ -179,7 +182,9 @@ func try_cast_magic(context: MagicRuntimeContext, allow_candidate := false) -> b
 	var neutral_stub := SpellFormCatalogScript.form_for_element(ElementCatalogScript.Element.NEUTRAL)
 	var chroma_before := current_player_chroma(context)
 	var feedback_color := chroma_highlight_color(context)
-	var accepted := bool(ability.call("try_activate", chroma, context.execute_current_aspect_ability, false, int(selected_form.get("chroma_cost")), float(selected_form.get("cooldown")), float(neutral_stub.get("cooldown"))))
+	var maximum_chroma := int(chroma.get("max_chroma"))
+	var spell_cost := ChromaCostsScript.amount_for_fraction(maximum_chroma, ChromaCostsScript.BASIC_SPELL_FRACTION)
+	var accepted := bool(ability.call("try_activate", chroma, context.execute_current_aspect_ability, false, spell_cost, float(selected_form.get("cooldown")), float(neutral_stub.get("cooldown"))))
 	if accepted:
 		context.sync_chroma_presentation.call()
 		context.update_player_mp_ui.call()
@@ -324,6 +329,7 @@ func _capture_spell_selection(context: MagicRuntimeContext, mode: int) -> void:
 	pending_magic_form = SpellFormCatalogScript.cast_form_for(context.player_chroma_component, mode)
 	var payload := ElementCatalogScript.Element.NEUTRAL
 	if mode == ChromaComponentScript.AbilityMode.ELEMENTAL:
+		# A permanent bind chooses the spell form; the held flame still chooses its palette.
 		var chroma := context.player_chroma_component
 		if chroma != null and is_instance_valid(chroma):
 			var current_aspect := int(chroma.get("current_aspect"))
@@ -1109,6 +1115,113 @@ func is_water_triangle_form(form: Resource) -> bool:
 	return form != null and StringName(form.get("id")) == &"water"
 
 
+func is_ice_triangle_form(form: Resource) -> bool:
+	return form != null and StringName(form.get("id")) == &"ice"
+
+
+func spawn_ice_ground_spikes(context: MagicRuntimeContext, target: Sprite2D, impact_position: Vector2, radius: float, palette: String) -> void:
+	var effects := context.effects_spawner
+	if effects == null:
+		return
+	var spike_radius := maxf(radius - 3.5, 0.0)
+	var spike_specs: Array[Dictionary] = [
+		# Outer bases sit just inside the AOE edge; the inner ring fills the circle.
+		{"x": -1.0, "y": -1.0, "ring": 1.0, "width": 7, "height": 14, "layer": 0},
+		{"x": 0.0, "y": -1.0, "ring": 1.0, "width": 7, "height": 16, "layer": 0},
+		{"x": 1.0, "y": -1.0, "ring": 1.0, "width": 7, "height": 14, "layer": 0},
+		{"x": 1.0, "y": 0.0, "ring": 1.0, "width": 7, "height": 15, "layer": 1},
+		{"x": 1.0, "y": 1.0, "ring": 1.0, "width": 7, "height": 14, "layer": 2},
+		{"x": 0.0, "y": 1.0, "ring": 1.0, "width": 7, "height": 16, "layer": 2},
+		{"x": -1.0, "y": 1.0, "ring": 1.0, "width": 7, "height": 14, "layer": 2},
+		{"x": -1.0, "y": 0.0, "ring": 1.0, "width": 7, "height": 15, "layer": 1},
+		{"x": -1.0, "y": -1.0, "ring": 0.48, "width": 7, "height": 18, "layer": 0},
+		{"x": 1.0, "y": -1.0, "ring": 0.48, "width": 7, "height": 20, "layer": 0},
+		{"x": 1.0, "y": 1.0, "ring": 0.48, "width": 7, "height": 18, "layer": 2},
+		{"x": -1.0, "y": 1.0, "ring": 0.48, "width": 7, "height": 20, "layer": 2},
+		{"x": 0.0, "y": 0.0, "ring": 0.0, "width": 9, "height": 25, "layer": 1},
+	]
+	var depth_index := target.z_index if target != null and is_instance_valid(target) else context.player.z_index
+	for index in spike_specs.size():
+		var spec := spike_specs[index]
+		var width := int(spec["width"])
+		var height := int(spec["height"])
+		var direction := Vector2(float(spec["x"]), float(spec["y"]))
+		var offset := direction.normalized() * spike_radius * float(spec["ring"])
+		var floor_oval_offset := Vector2(offset.x, offset.y * 0.52)
+		var frames := _ice_spike_growth_frames(width, height, palette)
+		var spike := Sprite2D.new()
+		spike.name = "IceGroundSpike"
+		spike.texture = frames[0] if not frames.is_empty() else null
+		spike.centered = true
+		spike.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		spike.z_as_relative = false
+		spike.z_index = depth_index + int(spec["layer"])
+		spike.rotation = signf(direction.x) * 0.12
+		_add_child_to_runtime(context, spike, Vector2(impact_position.x + floor_oval_offset.x, impact_position.y + floor_oval_offset.y - float(height) * 0.5))
+		var lifetime := 0.48
+		var growth_frame_time := 0.025 + float(index % 3) * 0.012
+		effects.pixel_particles.append({
+			"sprite": spike,
+			"velocity": Vector2.ZERO,
+			"timer": lifetime,
+			"lifetime": lifetime,
+			"gravity": 0.0,
+			"alpha_scale": 0.94,
+			"animation_frames": frames,
+			"animation_frame_time": growth_frame_time,
+			"animation_loop": false,
+		})
+
+
+func _ice_spike_growth_frames(width: int, height: int, palette: String) -> Array[Texture2D]:
+	var cache_key := "ice_crystal:%s:%d:%d" % [palette, width, height]
+	if ice_spike_growth_cache.has(cache_key):
+		return ice_spike_growth_cache[cache_key] as Array[Texture2D]
+	var frames: Array[Texture2D] = []
+	var ratios := [0.30, 0.55, 0.80, 1.0]
+	var shadow := PaletteLibrary.shadow(palette)
+	var normal := PaletteLibrary.normal(palette)
+	var accent := PaletteLibrary.accent(palette)
+	var gloss := accent.lerp(Color.WHITE, 0.72)
+	var center := width >> 1
+	for ratio: float in ratios:
+		var image := Image.create(width, height, false, Image.FORMAT_RGBA8)
+		image.fill(Color.TRANSPARENT)
+		var visible_height := maxi(roundi(float(height) * ratio), 2)
+		var top_y := height - visible_height
+		for y in range(top_y, height):
+			var growth := float(y - top_y) / maxf(float(visible_height - 1), 1.0)
+			var half_width := maxf(float(width - 1) * 0.5 * growth, 0.5)
+			var left_edge := float(center) - half_width
+			var right_edge := float(center) + half_width
+			var y_progress := float(y) / maxf(float(height - 1), 1.0)
+			if y_progress >= 0.28 and y_progress < 0.38:
+				right_edge += 0.75
+			elif y_progress >= 0.48 and y_progress < 0.60:
+				left_edge += 0.75
+			elif y_progress >= 0.68 and y_progress < 0.80:
+				right_edge -= 0.75
+			for x in width:
+				if float(x) < left_edge - 0.45 or float(x) > right_edge + 0.45:
+					continue
+				var left_facet_distance := float(x) - left_edge
+				var right_facet_distance := right_edge - float(x)
+				var color := normal if x <= center else accent
+				if left_facet_distance < 0.95:
+					color = shadow
+				if right_facet_distance < 0.95:
+					color = gloss
+				var gloss_offset := roundi(growth * float(width) * 0.22)
+				if x == center + gloss_offset and x > center and growth < 0.82:
+					color = gloss
+				if y == top_y + 1 and x == center + 1:
+					color = Color.WHITE
+				image.set_pixel(x, y, color)
+		frames.append(ImageTexture.create_from_image(image))
+	ice_spike_growth_cache[cache_key] = frames
+	return frames
+
+
 func _add_child_to_runtime(context: MagicRuntimeContext, node: Node2D, world_position: Vector2) -> void:
 	var parent := context.player.get_parent() if context.player != null else null
 	if parent != null:
@@ -1183,32 +1296,7 @@ func magic_projectile_texture(context: MagicRuntimeContext, base_color: Color, a
 
 func _magic_bubble_texture(context: MagicRuntimeContext, base_color: Color, accent_color: Color, size: int) -> Texture2D:
 	var effects := context.effects_spawner
-	var key := "magic_bubble:%s:%s:%d" % [base_color.to_html(false), accent_color.to_html(false), size]
-	if effects.pixel_particle_texture_cache.has(key):
-		return effects.pixel_particle_texture_cache[key] as Texture2D
-	var image := Image.create(size, size, false, Image.FORMAT_RGBA8)
-	image.fill(Color.TRANSPARENT)
-	var center := size >> 1
-	var white := PaletteLibrary.white()
-	for y in size:
-		for x in size:
-			if not _magic_projectile_shape_contains(SpellFormDefinitionScript.ProjectileShape.BUBBLE, size, x, y):
-				continue
-			var on_rim := not (
-				_magic_projectile_shape_contains(SpellFormDefinitionScript.ProjectileShape.BUBBLE, size, x - 1, y)
-				and _magic_projectile_shape_contains(SpellFormDefinitionScript.ProjectileShape.BUBBLE, size, x + 1, y)
-				and _magic_projectile_shape_contains(SpellFormDefinitionScript.ProjectileShape.BUBBLE, size, x, y - 1)
-				and _magic_projectile_shape_contains(SpellFormDefinitionScript.ProjectileShape.BUBBLE, size, x, y + 1)
-			)
-			var color := Color(base_color.r, base_color.g, base_color.b, 0.48)
-			if on_rim:
-				color = Color(accent_color.r, accent_color.g, accent_color.b, 0.92)
-			elif absi(x - (center - 1)) + absi(y - (center - 1)) <= 1:
-				color = Color(white.r, white.g, white.b, 0.94)
-			image.set_pixel(x, y, color)
-	var texture := ImageTexture.create_from_image(image)
-	effects.pixel_particle_texture_cache[key] = texture
-	return texture
+	return BubbleVisuals.texture(effects.pixel_particle_texture_cache, "magic_bubble", base_color, accent_color, size)
 
 
 func _magic_projectile_shape_contains(shape: int, size: int, x: int, y: int) -> bool:
@@ -1320,7 +1408,10 @@ func resolve_magic_projectile_hit(context: MagicRuntimeContext, target: Sprite2D
 			magic_hit_slime(
 				context, victim, magic_target_point(context, victim), palette,
 				ability_mode, false, form, push_direction, secondary_damage_multiplier)
-		spawn_magic_bubble_pop(context, world_position, palette)
+		if is_ice_triangle_form(form):
+			spawn_ice_ground_spikes(context, target, world_position, splash_radius, palette)
+		else:
+			spawn_magic_bubble_pop(context, world_position, palette)
 		return
 	if _try_activate_puzzle_torch(context, target, world_position, palette):
 		return

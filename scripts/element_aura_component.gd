@@ -2,6 +2,7 @@ extends Node
 class_name ElementAuraComponent
 
 const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
+const IMBUE_EMISSION_TAG := &"imbue_element"
 
 @export var actor_sprite: Sprite2D
 # Player attacks temporarily render through a separate sprite; include it in the aura source set.
@@ -14,8 +15,10 @@ var _outline_texture_cache: Dictionary = {}
 var _tint_texture_cache: Dictionary = {}
 var _imbue_outlines: Dictionary = {}
 var _imbue_flashes: Dictionary = {}
+var _imbue_emission_timers: Dictionary = {}
 var _status_outline: Sprite2D = null
 var _status_particle_timers: Dictionary = {}
+var _pending_suppression_bursts: Array[Dictionary] = []
 var _stun_shake_remaining := 0.0
 var _stun_shake_duration := 0.0
 var _stun_shake_amplitude := 0.0
@@ -31,6 +34,8 @@ func configure(new_actor_sprite: Sprite2D, new_overlay_parent: Node2D, new_statu
 		health_component.died.disconnect(_on_actor_died)
 	if status_component != null and is_instance_valid(status_component) and status_component.status_changed.is_connected(refresh_status_aura):
 		status_component.status_changed.disconnect(refresh_status_aura)
+	if status_component != null and is_instance_valid(status_component) and status_component.suppression_changed.is_connected(_on_affinity_suppression_changed):
+		status_component.suppression_changed.disconnect(_on_affinity_suppression_changed)
 	if ownership_changed:
 		_queue_status_outline()
 	actor_sprite = new_actor_sprite
@@ -42,11 +47,14 @@ func configure(new_actor_sprite: Sprite2D, new_overlay_parent: Node2D, new_statu
 		health_component.died.connect(_on_actor_died)
 	if status_component != null and not status_component.status_changed.is_connected(refresh_status_aura):
 		status_component.status_changed.connect(refresh_status_aura)
+	if status_component != null and not status_component.suppression_changed.is_connected(_on_affinity_suppression_changed):
+		status_component.suppression_changed.connect(_on_affinity_suppression_changed)
 	refresh_status_aura()
 
 
 func clear_status_visuals() -> void:
 	_status_particle_timers.clear()
+	_pending_suppression_bursts.clear()
 	_stun_shake_remaining = 0.0
 	_stun_shake_duration = 0.0
 	_stun_shake_amplitude = 0.0
@@ -107,6 +115,22 @@ func clear_imbue() -> void:
 			overlay.queue_free()
 	_imbue_outlines.clear()
 	_imbue_flashes.clear()
+	clear_imbue_element_particles()
+
+
+func update_imbue_element_particles(delta: float, layer: Sprite2D, definition: StatusEffectDefinition, effects: EffectsSpawner, rng: RandomNumberGenerator, pixel_texture: Callable) -> void:
+	if layer == null or not is_instance_valid(layer) or not layer.visible or layer.texture == null or definition == null or effects == null or not is_instance_valid(effects) or not pixel_texture.is_valid():
+		return
+	var remaining := float(_imbue_emission_timers.get(layer, 0.0)) - maxf(delta, 0.0)
+	if remaining > 0.0:
+		_imbue_emission_timers[layer] = remaining
+		return
+	effects.spawn_actor_status_particle(layer, overlay_parent, definition, rng, pixel_texture, IMBUE_EMISSION_TAG)
+	_imbue_emission_timers[layer] = definition.particle_interval
+
+
+func clear_imbue_element_particles() -> void:
+	_imbue_emission_timers.clear()
 
 
 func refresh_status_aura() -> void:
@@ -173,7 +197,14 @@ func advance_status_visuals(delta: float, effects: EffectsSpawner, rng: RandomNu
 	var component := _valid_status_component(status_component)
 	if actor == null or component == null or effects == null or not is_instance_valid(effects) or not pixel_texture.is_valid():
 		_status_particle_timers.clear()
+		_pending_suppression_bursts.clear()
 		return
+	for burst: Dictionary in _pending_suppression_bursts:
+		var innate_definition := ElementCatalogScript.status_effect_for_id(StringName(str(burst.get("innate_id", ""))))
+		var suppressor_definition := ElementCatalogScript.status_effect_for_id(StringName(str(burst.get("suppressor_id", ""))))
+		effects.spawn_actor_status_edge_burst(actor, overlay_parent, innate_definition, rng, pixel_texture)
+		effects.spawn_actor_status_edge_burst(actor, overlay_parent, suppressor_definition, rng, pixel_texture)
+	_pending_suppression_bursts.clear()
 	var active_ids: Dictionary = {}
 	for definition in component.active_definitions():
 		if definition == null:
@@ -229,6 +260,10 @@ func _valid_status_component(value: Variant) -> StatusComponent:
 	return value as StatusComponent
 
 
+func _on_affinity_suppression_changed(innate_id: StringName, suppressor_id: StringName, _is_suppressed: bool) -> void:
+	_pending_suppression_bursts.append({"innate_id": innate_id, "suppressor_id": suppressor_id})
+
+
 func _queue_status_outline() -> void:
 	var outline := _valid_sprite(_status_outline)
 	if outline != null:
@@ -240,6 +275,10 @@ func _queue_status_outline() -> void:
 func _exit_tree() -> void:
 	if health_component != null and is_instance_valid(health_component) and health_component.died.is_connected(_on_actor_died):
 		health_component.died.disconnect(_on_actor_died)
+	if status_component != null and is_instance_valid(status_component) and status_component.status_changed.is_connected(refresh_status_aura):
+		status_component.status_changed.disconnect(refresh_status_aura)
+	if status_component != null and is_instance_valid(status_component) and status_component.suppression_changed.is_connected(_on_affinity_suppression_changed):
+		status_component.suppression_changed.disconnect(_on_affinity_suppression_changed)
 	clear_imbue()
 	_queue_status_outline()
 
@@ -273,7 +312,17 @@ func _outline_texture(source_sprite: Sprite2D, color: Color) -> Texture2D:
 	var image := _sprite_source_image(source_sprite)
 	if image == null or image.is_empty():
 		return null
-	var output := Image.create(image.get_width() + 2, image.get_height() + 2, false, Image.FORMAT_RGBA8)
+	var frame_display_size := _sprite_display_frame_size(source_sprite)
+	var border_pixels := Vector2i(
+		maxi(roundi(float(image.get_width()) / float(frame_display_size.x)), 1),
+		maxi(roundi(float(image.get_height()) / float(frame_display_size.y)), 1)
+	)
+	var output := Image.create(
+		image.get_width() + border_pixels.x * 2,
+		image.get_height() + border_pixels.y * 2,
+		false,
+		Image.FORMAT_RGBA8
+	)
 	output.fill(Color.TRANSPARENT)
 	for y in image.get_height():
 		for x in image.get_width():
@@ -282,8 +331,12 @@ func _outline_texture(source_sprite: Sprite2D, color: Color) -> Texture2D:
 			for offset in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
 				var neighbor: Vector2i = Vector2i(x, y) + offset
 				if neighbor.x < 0 or neighbor.y < 0 or neighbor.x >= image.get_width() or neighbor.y >= image.get_height() or image.get_pixelv(neighbor).a <= 0.0:
-					output.set_pixel(x + 1 + offset.x, y + 1 + offset.y, color)
+					output.set_pixel(x + border_pixels.x + offset.x, y + border_pixels.y + offset.y, color)
 	var texture := ImageTexture.create_from_image(output)
+	# Target highlighting uses a two-times source image with a logical size
+	# override. Keep the ailment outline in the sprite's displayed pixel size too;
+	# otherwise Sprite2D draws that high-resolution texture twice as large.
+	texture.set_size_override(frame_display_size + Vector2i(2, 2))
 	_outline_texture_cache[key] = texture
 	return texture
 
@@ -292,7 +345,15 @@ func _sprite_cache_key(sprite: Sprite2D) -> String:
 	var region_key := ""
 	if sprite.region_enabled:
 		region_key = ":%s:%s" % [sprite.region_rect.position, sprite.region_rect.size]
-	return "%s:%s:%s:%s:%s%s" % [sprite.texture.get_rid(), sprite.hframes, sprite.vframes, sprite.frame, sprite.region_enabled, region_key]
+	return "%s:%s:%s:%s:%s:%s%s" % [sprite.texture.get_rid(), int(sprite.get_meta("occlusion_texture_revision", 0)), sprite.hframes, sprite.vframes, sprite.frame, sprite.region_enabled, region_key]
+
+
+func _sprite_display_frame_size(sprite: Sprite2D) -> Vector2i:
+	var display_size := Vector2(sprite.texture.get_size())
+	if sprite.region_enabled:
+		display_size = sprite.region_rect.size
+	display_size /= Vector2(maxi(sprite.hframes, 1), maxi(sprite.vframes, 1))
+	return Vector2i(maxi(roundi(display_size.x), 1), maxi(roundi(display_size.y), 1))
 
 
 func _sprite_source_image(sprite: Sprite2D) -> Image:
@@ -318,7 +379,25 @@ func _sprite_source_image(sprite: Sprite2D) -> Image:
 	if image.is_compressed() and image.decompress() != OK:
 		return null
 	if sprite.region_enabled:
-		var region := Rect2i(sprite.region_rect.position, sprite.region_rect.size)
+		# Occlusion target textures can contain two source pixels per logical
+		# display pixel. Convert Sprite2D's logical region back into image pixels
+		# before cropping so the targeted outline uses the same frame content.
+		var display_size := Vector2(source.get_size())
+		if display_size.x <= 0.0 or display_size.y <= 0.0:
+			return null
+		var image_scale := Vector2(
+			float(image.get_width()) / display_size.x,
+			float(image.get_height()) / display_size.y
+		)
+		var region_position := Vector2i(
+			roundi(sprite.region_rect.position.x * image_scale.x),
+			roundi(sprite.region_rect.position.y * image_scale.y)
+		)
+		var region_size := Vector2i(
+			roundi(sprite.region_rect.size.x * image_scale.x),
+			roundi(sprite.region_rect.size.y * image_scale.y)
+		)
+		var region := Rect2i(region_position, region_size)
 		if region.size.x <= 0 or region.size.y <= 0 or region.position.x < 0 or region.position.y < 0 or region.end.x > image.get_width() or region.end.y > image.get_height():
 			return null
 		image = image.get_region(region)

@@ -276,6 +276,9 @@ func restore_enemy_health(slime: Sprite2D, runtime_entry: Dictionary) -> void:
 	var maximum := health.maximum_health
 	var current := clampf(float(runtime_entry.get("health", maximum)), 0.0, maximum)
 	health.reset(current)
+	var enemy_chroma := slime.get_node_or_null("EnemyChroma")
+	if enemy_chroma != null and bool(enemy_chroma.get("enabled")):
+		enemy_chroma.call("restore_runtime_state", runtime_entry.get("chroma", {}) as Dictionary, current, maximum)
 	var presenter := slime_health_presenter(slime)
 	if presenter != null:
 		presenter.display_health = current
