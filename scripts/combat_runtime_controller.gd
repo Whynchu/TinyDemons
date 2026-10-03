@@ -464,20 +464,59 @@ func is_slime_dead(root: Object, slime: Sprite2D) -> bool:
 
 func are_all_slimes_dead(root: GameplayState) -> bool:
 	var slimes := root.slimes
-	if root.current_room_type == DungeonGraph.ROOM_COMBAT:
+	if root.current_room_type == DungeonGraph.ROOM_COMBAT or root.current_room_type == DungeonGraph.ROOM_TREASURE or root.current_room_type == DungeonGraph.ROOM_SPECIAL_ENEMY:
 		var room_controller := root.room_controller
 		var state: Dictionary = {}
 		if room_controller != null:
 			state = room_controller.room_states.get(root.current_room_id, {}) as Dictionary
 		var active_slots := state.get("enemy_variants", []) as Array
 		for slot in active_slots.size():
-			if slot >= slimes.size() or not is_slime_dead(root, slimes[slot]):
+			# A roster entry without a pooled actor cannot still be fought. Treat
+			# missing slots as unavailable so they cannot keep the exit locked.
+			if slot >= slimes.size():
+				continue
+			var slime := slimes[slot]
+			if slime == null or not is_instance_valid(slime) or not slime.is_inside_tree():
+				continue
+			if not is_slime_dead(root, slime):
 				return false
 		return true
 	for slime in slimes:
+		if slime == null or not is_instance_valid(slime) or not slime.is_inside_tree():
+			continue
 		if not is_slime_dead(root, slime):
 			return false
 	return true
+
+
+func reconcile_empty_combat_room(root: GameplayState) -> void:
+	if root == null or root.room_transition_locked:
+		return
+	var room_type := root.current_room_type
+	if room_type != DungeonGraph.ROOM_COMBAT and room_type != DungeonGraph.ROOM_TREASURE and room_type != DungeonGraph.ROOM_SPECIAL_ENEMY and room_type != DungeonGraph.ROOM_DOWNSTAIRS:
+		return
+	var room_controller := root.room_controller
+	if room_controller == null:
+		return
+	var state: Dictionary = room_controller.room_states.get(root.current_room_id, {}) as Dictionary
+	if not state.has("enemy_variants"):
+		return
+	# Special enemy rooms can remain unfinished until their required map color is
+	# active. Once their clear has been earned, their normal policy owns the gate.
+	if room_type == DungeonGraph.ROOM_SPECIAL_ENEMY and bool(state.get("special_clear_earned", false)):
+		return
+	if room_controller.is_cleared(root.current_room_id):
+		if room_type == DungeonGraph.ROOM_DOWNSTAIRS:
+			if not root.final_exit_open:
+				root._open_final_exit()
+		elif not root.door_active:
+			root._set_door_active(true)
+			root._set_entrance_open(true)
+		return
+	if not are_all_slimes_dead(root):
+		return
+	root._unlock_chest()
+	root._on_room_enemies_cleared()
 
 
 func slime_element(slime: Sprite2D) -> int:

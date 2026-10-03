@@ -728,6 +728,9 @@ func tick(root: GameplayState, delta: float) -> void:
 		root._update_special_enemy_respawns(delta)
 		root._update_enemy_hit_flashes(delta)
 		root._update_enemy_health(delta)
+	var room_clear_runtime := root.combat_runtime_controller as CombatRuntimeController
+	if room_clear_runtime != null:
+		room_clear_runtime.reconcile_empty_combat_room(root)
 	root._update_target_ui()
 	root._update_player_health_ui(delta)
 	root._update_player_mp_ui(delta)
