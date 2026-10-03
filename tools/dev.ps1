@@ -231,7 +231,7 @@ switch ($Command) {
 		if ($Kind -eq "hub") {
 			Assert-GodotAvailable
 			if ($Editor) {
-				& $resolvedGodot "--editor" "--path" $resolvedRoot "res://scenes/hub_world_preview.tscn"
+				& $resolvedGodot "--editor" "--path" $resolvedRoot "res://scenes/authoring/previews/hub_world_preview.tscn"
 				exit $LASTEXITCODE
 			}
 			Invoke-HeadlessScript "res://tests/hub_world_preview_scene_smoke.gd"
@@ -241,7 +241,7 @@ switch ($Command) {
 			if ([string]::IsNullOrWhiteSpace($Id)) { throw "Usage: dev.ps1 preview item <id>" }
 			Assert-GodotAvailable
 			if ($Editor) {
-				& $resolvedGodot "--editor" "--path" $resolvedRoot "res://scenes/item_preview_workbench.tscn" "--" ("--item-id={0}" -f $Id)
+				& $resolvedGodot "--editor" "--path" $resolvedRoot "res://scenes/authoring/previews/item_preview_workbench.tscn" "--" ("--item-id={0}" -f $Id)
 				exit $LASTEXITCODE
 			}
 			Invoke-HeadlessScript "res://tools/preview_item.gd" @(('--item-id={0}' -f $Id))
@@ -250,7 +250,7 @@ switch ($Command) {
 		if ($Kind -ne "enemy" -or [string]::IsNullOrWhiteSpace($Id)) { throw "Usage: dev.ps1 preview enemy <id>" }
 		Assert-GodotAvailable
 		if ($Editor) {
-			& $resolvedGodot "--editor" "--path" $resolvedRoot "res://scenes/enemy_preview_workbench.tscn" "--" ("--enemy-id={0}" -f $Id)
+			& $resolvedGodot "--editor" "--path" $resolvedRoot "res://scenes/authoring/previews/enemy_preview_workbench.tscn" "--" ("--enemy-id={0}" -f $Id)
 			exit $LASTEXITCODE
 		}
 		Invoke-HeadlessScript "res://tools/preview_enemy.gd" @(("--enemy-id={0}" -f $Id))

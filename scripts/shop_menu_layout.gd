@@ -57,7 +57,7 @@ signal sell_amount_confirmed
 signal sell_amount_cancelled
 signal shop_back_pressed
 
-## Editor-only controls. Open scenes/shop_preview.tscn to inspect the full
+## Editor-only controls. Open scenes/authoring/previews/shop_preview.tscn to inspect the full
 ## hub shell with this scene in place; these properties switch the exact same
 ## runtime presenter between its authored reference states.
 @export_enum("Mode Select", "Item Browse", "Sell Amount") var editor_preview_state := ITEM_BROWSE

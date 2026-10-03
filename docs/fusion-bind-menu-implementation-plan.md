@@ -149,7 +149,7 @@ Both scenes are authored at `240x160` logical pixels.
 
 ## Fusion design
 
-Fusion should be a dedicated `scenes/fusion_menu.tscn` with
+Fusion should be a dedicated `scenes/menus/hub/fusion_menu.tscn` with
 `scripts/fusion_menu_layout.gd`.
 
 ### Authored structure
@@ -245,7 +245,7 @@ selected target. The layout does not query or mutate the profile.
 
 ## Bind design
 
-Bind should be a dedicated `scenes/bind_menu.tscn` with
+Bind should be a dedicated `scenes/menus/hub/bind_menu.tscn` with
 `scripts/bind_menu_layout.gd`.
 
 ### Authored structure

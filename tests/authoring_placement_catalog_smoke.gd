@@ -54,7 +54,7 @@ func _initialize() -> void:
 	_expect(empty_placement.get("placement_id") == &"test_placement", "empty placement receives its stable ID", failures)
 	_expect(String(empty_placement.get("authoring_layer")) == "Props", "empty placement receives its authoring layer", failures)
 	empty_placement.free()
-	var player_prefab := CATALOG_SCRIPT.instantiate_prefab("res://scenes/player_placement.tscn")
+	var player_prefab := CATALOG_SCRIPT.instantiate_prefab("res://scenes/authoring/templates/player_placement.tscn")
 	_expect(player_prefab != null, "catalog instantiates the PlayerPlacement prefab", failures)
 	_expect(CATALOG_SCRIPT.is_placement_root(player_prefab), "PlayerPlacement prefab exposes a placement root", failures)
 	if player_prefab != null:

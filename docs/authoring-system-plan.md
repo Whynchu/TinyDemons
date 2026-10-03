@@ -508,7 +508,7 @@ room authoring workflow in the overall production exit gates.
   their definition caches without restarting Godot.
 - [ ] Show preview revision and stale/error state; label unsaved previews and
   prove that build validation consumes saved content.
-- [x] Add the standalone `scenes/hub_world_preview.tscn` design preview. It
+- [x] Add the standalone `scenes/authoring/previews/hub_world_preview.tscn` design preview. It
   reuses the authored world from `main.tscn`, exposes the Hub map, actors, and
   stone accents, hides dungeon/HUD clutter by default, and steps existing fire,
   NPC, and player idle frames. The player defaults to the Water element and
@@ -909,7 +909,7 @@ Work items:
   a capacity pool through the factory, and normal room configuration applies
   selected definitions to those actors; scene-authored enemy slots are no
   longer the content roster.
-- [x] Add `scenes/enemy_preview_workbench.tscn` and a headless preview driver;
+- [x] Add `scenes/authoring/previews/enemy_preview_workbench.tscn` and a headless preview driver;
   it materializes any registry enemy through `EnemyFactory` and shows the
   runtime collision/attack geometry without booting a run.
 - [ ] Complete acceptance of the M1 design-preview adapter. The current

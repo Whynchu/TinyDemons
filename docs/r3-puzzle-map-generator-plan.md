@@ -49,7 +49,7 @@ maps.
 
 ## Viewing it
 
-Open `scenes/puzzle_map_preview.tscn` in Godot and run the current scene. It
+Open `scenes/authoring/previews/puzzle_map_preview.tscn` in Godot and run the current scene. It
 shows original R3 beside three generated gate-swatch variants at pixel-perfect
 nearest-neighbor scale. It is a design scene only and does not enter the game
 or change dungeon generation.

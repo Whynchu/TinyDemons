@@ -3,8 +3,8 @@ extends EditorPlugin
 
 const AuthoringDock := preload("res://addons/tiny_demons_authoring/authoring_dock.gd")
 const PreviewSessionLauncher := preload("res://addons/tiny_demons_authoring/preview_session_launcher.gd")
-const HUB_PREVIEW_SCENE := "res://scenes/hub_world_preview.tscn"
-const ENEMY_PREVIEW_SCENE := "res://scenes/enemy_preview_workbench.tscn"
+const HUB_PREVIEW_SCENE := "res://scenes/authoring/previews/hub_world_preview.tscn"
+const ENEMY_PREVIEW_SCENE := "res://scenes/authoring/previews/enemy_preview_workbench.tscn"
 
 var _dock: Control = null
 var _preview_launcher: RefCounted = null

@@ -28,7 +28,7 @@ first visual contract. The pause screen is authored in the game's canonical
   under `assets/artwork/`. They are full 240x160 transparent canvases with
   exact alpha bounds: left `x=0..175`, right `x=176..239,y=0..135`, and
   resource shelf `x=176..239,y=136..159`.
-- `scenes/menu_panel_8_piece.tscn` is the reusable panel source. The three
+- `scenes/ui/components/menu_panel_8_piece.tscn` is the reusable panel source. The three
   pause exports establish the exact 240x160 placement contract, while
   `assets/artwork/frame 16x16.png` supplies the complete frame/background tile.
   Each panel region uses that tile as a nearest-neighbour eight-piece
@@ -80,8 +80,8 @@ made the pause screen inherit unrelated menu geometry and left the cursor with
 several competing position writers. The pause data and callbacks themselves
 are still valid and remain owned by the controller.
 
-The target boundary is now partially established: `scenes/menu_panel_8_piece.tscn`
-owns the reusable frame geometry and `scenes/pause_menu.tscn` instances it for
+The target boundary is now partially established: `scenes/ui/components/menu_panel_8_piece.tscn`
+owns the reusable frame geometry and `scenes/menus/pause/pause_menu.tscn` instances it for
 the pause screen, alongside the portrait, rail, resource shelf, and page
 containers;
 `screen_state_controller.gd` owns dynamic text, palette binding, input routing,
@@ -115,7 +115,7 @@ navigation primitive.
 The Demon Hub should share the pause menu's visual grammar without becoming a
 copy of the pause layout:
 
-1. The stable hub shell now lives in `scenes/demon_hub_menu.tscn` so its frame,
+1. The stable hub shell now lives in `scenes/menus/hub/demon_hub_menu.tscn` so its frame,
    title card, four-command header, stat content frame, cursor layer, and
    footer/resource cells can be inspected independently in the editor.
 2. Use the same 16x16 eight-piece frame, upper-left title-card proportions,

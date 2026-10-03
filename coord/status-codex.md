@@ -304,3 +304,15 @@ to use `assets/artwork/`.
 Runtime asset/resource paths and the pre-existing `project.godot` edit remain
 untouched. Static filename and path checks pass; no Godot process or test suite
 was launched.
+
+## Latest task
+
+Organized the scene library into role-based folders. The 25 movable scenes now
+live under `gameplay/rooms` and `geometry`, `menus/hub` and `menus/pause`,
+`ui/hud` and `ui/components`, `authoring/previews`, `guides`, and `templates`,
+and `debug`. Kept `scenes/main.tscn` at the configured boot path.
+
+Updated scene resource paths, code, tests, tools, and documentation. Added the
+scene tree to `docs/CONTENT_FOLDERS.md`. Static checks resolve all 38 unique
+scene-file references, find no old flat paths, and pass `git diff --check`. No
+Godot process or test suite was launched.

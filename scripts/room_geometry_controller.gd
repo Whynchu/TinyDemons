@@ -8,7 +8,7 @@ class_name RoomGeometryController
 ## room transitions can apply and restore geometry without reflection through
 ## the coordinator.
 
-const BOSS_ROOM_AUTHORING_SCENE := "res://scenes/boss_room_debug.tscn"
+const BOSS_ROOM_AUTHORING_SCENE := "res://scenes/debug/boss_room_debug.tscn"
 const ACTOR_FOOT_OFFSET := Vector2(8, 15)
 
 var map_root: Node2D = null

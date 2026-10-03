@@ -332,7 +332,7 @@ boundary rather than adding route-specific cleanup branches.
 
 Add:
 
-- `scenes/equipment_menu.tscn` — stable five-panel geometry, named text/image
+- `scenes/menus/hub/equipment_menu.tscn` — stable five-panel geometry, named text/image
   anchors, Buttons, clips, and cursor layer.
 - `scripts/equipment_menu_layout.gd` — canonical 240x160 positions and
   responsive-width calculations.

@@ -3,9 +3,9 @@ extends SceneTree
 func _initialize() -> void:
 	var failures: Array[String] = []
 	var main_scene := load("res://scenes/main.tscn") as PackedScene
-	var basic_scene := load("res://scenes/basic_room.tscn") as PackedScene
+	var basic_scene := load("res://scenes/gameplay/rooms/basic_room.tscn") as PackedScene
 	_expect(main_scene != null, "main scene loads for the floor presentation check", failures)
-	var orb_scene := load("res://scenes/orb_room.tscn") as PackedScene
+	var orb_scene := load("res://scenes/gameplay/rooms/orb_room.tscn") as PackedScene
 	_expect(basic_scene != null, "basic room authoring prefab loads", failures)
 	_expect(orb_scene != null, "orb room authoring prefab loads", failures)
 	if main_scene != null:

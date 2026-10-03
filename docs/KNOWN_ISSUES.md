@@ -60,7 +60,7 @@ on the pre-fix source and passes after. Registered in `tests/manifest.csv`.
 **Cause.** `room_puzzle_controller.gd` carried a hard-coded
 `ORB_ROOM_VISUAL_OFFSET := Vector2(0, -7)` applied on top of the authored
 `ORB_CENTER` marker, so the runtime orb sat at y=73 while the editor preview
-sprite in `scenes/orb_room.tscn` was hand-mirrored to the same value. The
+sprite in `scenes/gameplay/rooms/orb_room.tscn` was hand-mirrored to the same value. The
 authored marker (y=80) matches the RestFire anchor in the same room; the extra
 `-7` lifted the 9x9 art to 68.5–77.5 against a floor surface at ~88.5, leaving
 roughly 11 px of air under it. The same `-7` also made the release-gate

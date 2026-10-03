@@ -71,7 +71,7 @@ Pattern C). One editor, two MCP clients, this board.
 `BOARD.md` row:
 
 ```
-| opencode | res://scenes/player.tscn, scripts/player_controller.gd | refactor input handling | 2026-09-27 |
+| opencode | res://scenes/main.tscn, scripts/player_controller.gd | refactor input handling | 2026-09-27 |
 ```
 
 `journal.md` entry (append at the end):

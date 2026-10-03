@@ -4,7 +4,7 @@ extends SceneTree
 ## The scene owns selection, catalog resolution, and the preview contract; this
 ## driver only selects an ID and reports its deterministic summary.
 
-const PREVIEW_SCENE: PackedScene = preload("res://scenes/item_preview_workbench.tscn")
+const PREVIEW_SCENE: PackedScene = preload("res://scenes/authoring/previews/item_preview_workbench.tscn")
 
 
 func _initialize() -> void:

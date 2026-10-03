@@ -3,7 +3,7 @@ extends SceneTree
 ## Headless contract for the editor-safe enemy design preview lifecycle.
 ## This does not replace editor-visible acceptance of the rendered preview.
 
-const PREVIEW_SCENE := preload("res://scenes/enemy_preview_workbench.tscn")
+const PREVIEW_SCENE := preload("res://scenes/authoring/previews/enemy_preview_workbench.tscn")
 
 var _finished := false
 

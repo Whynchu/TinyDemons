@@ -3,7 +3,7 @@ extends SceneTree
 
 func _initialize() -> void:
 	var failures: Array[String] = []
-	var packed := load("res://scenes/player_hud.tscn") as PackedScene
+	var packed := load("res://scenes/ui/hud/player_hud.tscn") as PackedScene
 	_expect(packed != null, "player HUD scene loads with the authored artwork", failures)
 	if packed == null:
 		_finish(failures)

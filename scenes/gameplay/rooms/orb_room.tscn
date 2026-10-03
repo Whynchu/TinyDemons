@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://bxt6set6lnd6"]
 
-[ext_resource type="PackedScene" uid="uid://dm1ohbthvop2c" path="res://scenes/basic_room.tscn" id="1_basic_room"]
+[ext_resource type="PackedScene" uid="uid://dm1ohbthvop2c" path="res://scenes/gameplay/rooms/basic_room.tscn" id="1_basic_room"]
 [ext_resource type="Texture2D" uid="uid://ccm6qag41wj6a" path="res://assets/artwork/entrance_orb.png" id="2_entry_orb"]
 
 [node name="OrbRoom" unique_id=167251533 instance=ExtResource("1_basic_room")]

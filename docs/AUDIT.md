@@ -675,7 +675,7 @@ point across both paths and fails on the pre-fix source.
 **Orb-room Orb height.** `room_puzzle_controller.gd` carried a hard-coded
 `ORB_ROOM_VISUAL_OFFSET := Vector2(0, -7)` on top of the authored `ORB_CENTER`
 marker, floating the 9x9 art ~11 px above the floor surface, and the editor
-preview sprite in `scenes/orb_room.tscn` had been hand-mirrored to the same
+preview sprite in `scenes/gameplay/rooms/orb_room.tscn` had been hand-mirrored to the same
 offset. The constant is removed; the authored marker is the single source for
 both the preview and the runtime orb. This also restores the release-gate
 assertion that the `-7` had been silently failing.

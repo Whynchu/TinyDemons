@@ -7,7 +7,7 @@ extends SceneTree
 
 const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
 const CatalogScript = preload("res://scripts/slime_variant_catalog.gd")
-const PREVIEW_SCENE := preload("res://scenes/enemy_preview_workbench.tscn")
+const PREVIEW_SCENE := preload("res://scenes/authoring/previews/enemy_preview_workbench.tscn")
 
 var _finished := false
 

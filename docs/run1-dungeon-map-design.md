@@ -302,4 +302,4 @@ The design is considered correctly implemented when:
 
 ## Authoring prefabs
 
-`scenes/basic_room.tscn` is the editable room shell. It includes the isometric floor faces, wall faces, both wall doors, both lower entrances, socket markers, and editor-only guide polygons. `scenes/orb_room.tscn` instances that shell and adds one centered six-frame `EntryOrb` with a grey initial-palette metadata contract. These scenes are authoring templates; runtime room assembly remains owned by the gameplay room controllers so art-position edits can be copied into the authored room flow deliberately.
+`scenes/gameplay/rooms/basic_room.tscn` is the editable room shell. It includes the isometric floor faces, wall faces, both wall doors, both lower entrances, socket markers, and editor-only guide polygons. `scenes/gameplay/rooms/orb_room.tscn` instances that shell and adds one centered six-frame `EntryOrb` with a grey initial-palette metadata contract. These scenes are authoring templates; runtime room assembly remains owned by the gameplay room controllers so art-position edits can be copied into the authored room flow deliberately.

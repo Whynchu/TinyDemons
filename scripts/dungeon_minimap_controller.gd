@@ -2,7 +2,7 @@ extends Node2D
 class_name DungeonMinimapController
 
 const REVIEW_EXPORTER_SCRIPT = preload("res://tools/export_dungeon_maps.gd")
-const MAP_FRAME_SCENE = preload("res://scenes/menu_panel_8_piece.tscn")
+const MAP_FRAME_SCENE = preload("res://scenes/ui/components/menu_panel_8_piece.tscn")
 const CURSOR_TEXTURE = preload("res://assets/artwork/cursor.png")
 const PAUSE_LAYOUT = preload("res://scripts/pause_menu_layout.gd")
 const HUB_FRAME_TEXTURE = preload("res://assets/artwork/frame 16x16.png")

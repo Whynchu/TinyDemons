@@ -15,11 +15,11 @@ acceptance gaps and the current issue status live in
 
 | Surface | Scene/presenter | Runtime owner | State owner |
 | --- | --- | --- | --- |
-| Equipment | `scenes/equipment_menu.tscn` / `equipment_menu_layout.gd` | `screen_state_controller.gd` | `hub_flow_controller.gd` + `PlayerProfile` |
-| Shop | `scenes/shop_menu.tscn` / `shop_menu_layout.gd` | `screen_state_controller.gd` | `hub_flow_controller.gd` + `RunState`/`PlayerProfile` |
+| Equipment | `scenes/menus/hub/equipment_menu.tscn` / `equipment_menu_layout.gd` | `screen_state_controller.gd` | `hub_flow_controller.gd` + `PlayerProfile` |
+| Shop | `scenes/menus/hub/shop_menu.tscn` / `shop_menu_layout.gd` | `screen_state_controller.gd` | `hub_flow_controller.gd` + `RunState`/`PlayerProfile` |
 | Stats | `demon_hub_menu.tscn` shell plus authored runtime nodes | `screen_state_controller.gd` | `hub_flow_controller.gd` + `StatsComponent` |
-| Fusion | `scenes/fusion_menu.tscn` / `fusion_menu_layout.gd` (Shop-derived) | `screen_state_controller.gd` | `hub_flow_controller.gd` + `PlayerProfile` |
-| Bind | `scenes/bind_menu.tscn` / `bind_menu_layout.gd` | `screen_state_controller.gd` | `hub_flow_controller.gd` + `PlayerChromaComponent`/`PlayerProfile` |
+| Fusion | `scenes/menus/hub/fusion_menu.tscn` / `fusion_menu_layout.gd` (Shop-derived) | `screen_state_controller.gd` | `hub_flow_controller.gd` + `PlayerProfile` |
+| Bind | `scenes/menus/hub/bind_menu.tscn` / `bind_menu_layout.gd` | `screen_state_controller.gd` | `hub_flow_controller.gd` + `PlayerChromaComponent`/`PlayerProfile` |
 
 The hub shell owns the common top command row, footer, resource display, and
 responsive frame. Equipment, Shop, Fusion, and Bind own their active internal
@@ -82,7 +82,7 @@ anchors.
 
 Shop is the reference for a data-heavy scrollable transaction menu.
 
-- `scenes/shop_menu.tscn` contains the complete authored mode tabs, list clip,
+- `scenes/menus/hub/shop_menu.tscn` contains the complete authored mode tabs, list clip,
   item icons, price columns, comparison stats, footer, quantity controls, hit
   regions, and four cursor layers.
 - `ShopMenuLayout` owns visual layout. `screen_state_controller.gd` supplies
@@ -234,7 +234,7 @@ label. The next implementation pass should be judged against Shop's actual
 
 ## 7. Bind gap analysis and migration record
 
-Bind now has a dedicated `scenes/bind_menu.tscn` and `BindMenuLayout` view. The
+Bind now has a dedicated `scenes/menus/hub/bind_menu.tscn` and `BindMenuLayout` view. The
 older dynamically created `hub_binding_panel`, text sprites, and action button
 remain as a compatibility fallback, but the active Hub path uses the authored
 view. The remaining review work is visual orientation and touch acceptance:
@@ -252,7 +252,7 @@ view. The remaining review work is visual orientation and touch acceptance:
 The following list is the original migration target and is retained as a design
 reference for future polish:
 
-Create `scenes/bind_menu.tscn` and `scripts/bind_menu_layout.gd` with an authored
+Create `scenes/menus/hub/bind_menu.tscn` and `scripts/bind_menu_layout.gd` with an authored
 panel matching the Shop and Stats frame language. It should contain:
 
 - CURRENT element row, including the current/bound state;

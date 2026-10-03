@@ -24,8 +24,8 @@ const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png"
 const HUB_STAT_ADD_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEaddition.png")
 const HUB_STAT_SUBTRACT_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEsubtract.png")
 const HUB_GOLD_TEXTURE: Texture2D = preload("res://assets/artwork/GoldFresh2.png")
-const PAUSE_MENU_SCENE: PackedScene = preload("res://scenes/pause_menu.tscn")
-const DEMON_HUB_MENU_SCENE: PackedScene = preload("res://scenes/demon_hub_menu.tscn")
+const PAUSE_MENU_SCENE: PackedScene = preload("res://scenes/menus/pause/pause_menu.tscn")
+const DEMON_HUB_MENU_SCENE: PackedScene = preload("res://scenes/menus/hub/demon_hub_menu.tscn")
 ## Shared left gutter for the hand cursor sprite. Menu buttons, slots, and
 ## prompts are targeted with their left edge this many pixels from the cursor's
 ## sprite origin, so the 16x16 hand's fingertip points at the item instead of

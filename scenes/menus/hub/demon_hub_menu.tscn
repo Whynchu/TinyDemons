@@ -1,15 +1,15 @@
 [gd_scene format=3 uid="uid://ukxfdr8udu7t"]
 
-[ext_resource type="PackedScene" path="res://scenes/menu_panel_8_piece.tscn" id="1_panel"]
+[ext_resource type="PackedScene" path="res://scenes/ui/components/menu_panel_8_piece.tscn" id="1_panel"]
 [ext_resource type="Texture2D" uid="uid://nlrds6fyw3cf" path="res://assets/artwork/frame 16x16.png" id="2_frame"]
 [ext_resource type="Script" uid="uid://bebr38dquidlx" path="res://scripts/demon_hub_menu_preview.gd" id="3_preview"]
-[ext_resource type="PackedScene" uid="uid://bu2wfk2v0dqwc" path="res://scenes/equipment_menu.tscn" id="4_equipment"]
+[ext_resource type="PackedScene" uid="uid://bu2wfk2v0dqwc" path="res://scenes/menus/hub/equipment_menu.tscn" id="4_equipment"]
 [ext_resource type="Texture2D" uid="uid://u70pxl57sbut" path="res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEaddition.png" id="5_add"]
 [ext_resource type="Texture2D" uid="uid://csu6pkyjhikq2" path="res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEsubtract.png" id="6_subtract"]
 [ext_resource type="Texture2D" uid="uid://dkfm3tdkb50xv" path="res://assets/artwork/cursor.png" id="7_cursor"]
-[ext_resource type="PackedScene" path="res://scenes/shop_menu.tscn" id="8_shop"]
-[ext_resource type="PackedScene" path="res://scenes/fusion_menu.tscn" id="9_fusion"]
-[ext_resource type="PackedScene" path="res://scenes/bind_menu.tscn" id="10_bind"]
+[ext_resource type="PackedScene" path="res://scenes/menus/hub/shop_menu.tscn" id="8_shop"]
+[ext_resource type="PackedScene" path="res://scenes/menus/hub/fusion_menu.tscn" id="9_fusion"]
+[ext_resource type="PackedScene" path="res://scenes/menus/hub/bind_menu.tscn" id="10_bind"]
 
 [sub_resource type="Image" id="Image_5de60"]
 data = {

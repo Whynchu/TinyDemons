@@ -1,7 +1,7 @@
 extends SceneTree
 
 const HEALER_DEFINITION := preload("res://resources/definitions/healer_slime.tres")
-const PREVIEW_SCENE := preload("res://scenes/enemy_preview_workbench.tscn")
+const PREVIEW_SCENE := preload("res://scenes/authoring/previews/enemy_preview_workbench.tscn")
 const FRAME_LIBRARY_SCRIPT := preload("res://scripts/sprite_frame_library.gd")
 const SLIME_TUNING := preload("res://resources/tuning/slime_default.tres")
 

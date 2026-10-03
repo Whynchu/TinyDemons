@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3]
 
-[ext_resource type="PackedScene" uid="uid://dm1ohbthvop2c" path="res://scenes/basic_room.tscn" id="1_basic_room"]
+[ext_resource type="PackedScene" uid="uid://dm1ohbthvop2c" path="res://scenes/gameplay/rooms/basic_room.tscn" id="1_basic_room"]
 
 [node name="BossRoom" instance=ExtResource("1_basic_room")]
 metadata/prefab_role = "boss_room_authoring_template"

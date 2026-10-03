@@ -76,7 +76,7 @@ Encrypted-vault deployment and operational verification are documented in
   `sprite_frame_library`, `display_controller`, `display_layout`,
   `hub_stone_accent_layer`.
 - **Editor preview**: `hub_world_preview.gd` owns the design-time Hub view in
-  `scenes/hub_world_preview.tscn`; it reuses the authored `main.tscn`
+  `scenes/authoring/previews/hub_world_preview.tscn`; it reuses the authored `main.tscn`
   composition without booting profile, run, input, or save services.
   `authoring_placement_catalog.gd` is the editor-neutral placement discovery
   and lifecycle contract, and `addons/tiny_demons_authoring/` owns the small

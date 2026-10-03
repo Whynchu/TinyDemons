@@ -21,7 +21,7 @@ Completed in the first integration slice:
 - `DungeonMinimapController` renders the 16×23 logical map with progressive room/connection reveal.
 - Puzzle Color A doors resolve to the selected starter flame palette; Puzzle Color B doors resolve to grey. The map environment follows the same mapping.
 - The hub uses `DoorRightFlameshut.png` until the starter flame is attuned on the tutorial run.
-- `scenes/basic_room.tscn` and `scenes/orb_room.tscn` provide editable room and single-orb authoring templates.
+- `scenes/gameplay/rooms/basic_room.tscn` and `scenes/gameplay/rooms/orb_room.tscn` provide editable room and single-orb authoring templates.
 - `run1_map_contract_smoke.gd`, `dungeon_map_event_smoke.gd`, and `run1_minimap_smoke.gd` cover the semantic contract, event-revealed entrance state, and pixel placement.
 - Authored and generated Treasure Rooms resolve to one shared back-right chest position, and graph/layout snapshots expose coordinates, connections, gates, and room content metadata.
 - Event-revealed connections are owned by `DungeonMapState`/`DungeonMapController` and are included in the active map-state serialization.

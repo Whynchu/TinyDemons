@@ -4,7 +4,7 @@ extends VBoxContainer
 const AuthoringPlacementCatalogScript := preload("res://scripts/authoring_placement_catalog.gd")
 const ContentDefinitionManifestServiceScript := preload("res://scripts/content_definition_manifest_service.gd")
 const ItemCatalogDataScript := preload("res://scripts/item_catalog_data.gd")
-const HUB_PREVIEW_SCENE := "res://scenes/hub_world_preview.tscn"
+const HUB_PREVIEW_SCENE := "res://scenes/authoring/previews/hub_world_preview.tscn"
 
 signal design_preview_requested(enemy_id: StringName)
 signal interactive_preview_requested(enemy_id: StringName, seed_value: int)
@@ -127,7 +127,7 @@ func _build_ui() -> void:
 	_prefab_picker.add_item("Empty Placement")
 	_prefab_picker.set_item_metadata(0, "")
 	_prefab_picker.add_item("Player Placement Prefab")
-	_prefab_picker.set_item_metadata(1, "res://scenes/player_placement.tscn")
+	_prefab_picker.set_item_metadata(1, "res://scenes/authoring/templates/player_placement.tscn")
 	prefab_row.add_child(_prefab_picker)
 	var create_button := Button.new()
 	create_button.text = "Create"

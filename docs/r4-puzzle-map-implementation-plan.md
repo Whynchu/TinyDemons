@@ -54,7 +54,7 @@ from the first alternate primary flame for the run, matching the R3 contract.
 
 ### 4. Validate in the preview scene
 
-Add R4 to `scenes/puzzle_map_preview.tscn` and render it beside the authored
+Add R4 to `scenes/authoring/previews/puzzle_map_preview.tscn` and render it beside the authored
 source image. Confirm:
 
 - inactive grid placeholders are darker than active rooms;

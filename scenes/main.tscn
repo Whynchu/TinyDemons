@@ -29,9 +29,9 @@
 [ext_resource type="Texture2D" uid="uid://dowvff0q335kb" path="res://assets/artwork/TinyDemonCloacked-Idle.png" id="34_cloaked_idle"]
 [ext_resource type="Texture2D" uid="uid://yhhrfc3rnada" path="res://assets/artwork/aggrodot(blue).png" id="38_aggro_dot"]
 [ext_resource type="Texture2D" uid="uid://bvwy8po4byina" path="res://assets/artwork/firepit.png" id="39_firepit"]
-[ext_resource type="PackedScene" uid="uid://dmwowy0hgwia4" path="res://scenes/player_hud.tscn" id="40_player_hud"]
+[ext_resource type="PackedScene" uid="uid://dmwowy0hgwia4" path="res://scenes/ui/hud/player_hud.tscn" id="40_player_hud"]
 [ext_resource type="Script" uid="uid://dqalh1uc2w2ev" path="res://scripts/hub_stone_accent_layer.gd" id="42_hub_stone_accent_layer"]
-[ext_resource type="PackedScene" path="res://scenes/player_placement.tscn" id="43_player_placement"]
+[ext_resource type="PackedScene" path="res://scenes/authoring/templates/player_placement.tscn" id="43_player_placement"]
 [ext_resource type="Script" path="res://scripts/placement_root_2d.gd" id="44_placement_root"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_2wyq8"]

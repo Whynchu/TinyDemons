@@ -8,7 +8,7 @@ Updated: 2026-09-11
 Baseline: authored R1–R5 remain preserved; R6 and later use generated layouts.
 
 `scripts/puzzle_route_generator.gd` is now the runtime and preview ownership
-boundary for generated R7 routes. `scenes/generated_puzzle_map_preview.tscn` is
+boundary for generated R7 routes. `scenes/authoring/previews/generated_puzzle_map_preview.tscn` is
 a designer-facing gallery for the R7 generated route. The runtime generator now
 builds one deterministic compact candidate per requested seed and validates its
 progression. The gallery builds six outer seed iterations and renders their room

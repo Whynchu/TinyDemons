@@ -6,7 +6,7 @@ var _finished := false
 func _initialize() -> void:
 	create_timer(15.0).timeout.connect(_watchdog)
 	var failures: Array[String] = []
-	var packed := load("res://scenes/shop_menu.tscn") as PackedScene
+	var packed := load("res://scenes/menus/hub/shop_menu.tscn") as PackedScene
 	_expect(packed != null, "authored shop scene loads for touch geometry coverage", failures)
 	if packed == null:
 		_finish(failures)

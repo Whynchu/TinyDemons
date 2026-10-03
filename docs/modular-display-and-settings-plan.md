@@ -74,7 +74,7 @@ The full audit evidence is in §10. The load-bearing facts:
      x=240 there is nothing — the engine default clear color.
   3. Engine letterbox bars from integer scaling (pure black).
 - **All UI is absolute 240×160 pixel coordinates** — no anchors or
-  containers anywhere: HUD (`scenes/player_hud.tscn`,
+  containers anywhere: HUD (`scenes/ui/hud/player_hud.tscn`,
   `scripts/hud_controller.gd:279-400`), minimap
   (`scripts/dungeon_minimap_controller.gd:9-11`), overlays and menus
   (`scripts/screen_state_controller.gd:501-1395`), title screen
@@ -499,7 +499,7 @@ and 0 Chroma. The focused scene test and complete smoke suite both pass.
 
 ### Symptom
 
-Moving the first visible layer in `scenes/player_hud.tscn` does not always
+Moving the first visible layer in `scenes/ui/hud/player_hud.tscn` does not always
 produce an obvious change in the live HUD. The editor preview backdrop can be
 the selected/visible layer instead of the authored HUD group, while the actual
 HUD is instanced under `main.tscn`. Runtime layout code can then reposition
@@ -527,7 +527,7 @@ setup from resetting layout positions, and make the preview backdrop visually
 helpful without intercepting selection of the real HUD nodes. Add an editor/
 runtime smoke check so a deliberate scene movement is reflected in the
 assembled HUD at native, 4:3, 16:9, and 16:10 layouts. The existing
-`scenes/player_hud.tscn` working-tree edit must be reviewed and preserved while
+`scenes/ui/hud/player_hud.tscn` working-tree edit must be reviewed and preserved while
 this follow-up is implemented.
 
 Currency visual note: use `#A73BA7` as the Souls base colour so the HUD and

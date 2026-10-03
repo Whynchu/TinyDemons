@@ -29,7 +29,7 @@ The mockup is the source of truth. The existing implementation is not a visual s
   - Owns pending allocation changes and apply/clear behavior.
 - `scripts/equipment_menu_layout.gd`
   - Reference implementation for cursor states, dimmed cursors, and interaction-layer behavior.
-- `scenes/demon_hub_menu.tscn`
+- `scenes/menus/hub/demon_hub_menu.tscn`
   - Provides the authored hub shell and footer frame.
 
 ### Current implementation problems

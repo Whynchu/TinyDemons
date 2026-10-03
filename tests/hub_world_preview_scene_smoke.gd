@@ -1,6 +1,6 @@
 extends SceneTree
 
-const PREVIEW_SCENE := "res://scenes/hub_world_preview.tscn"
+const PREVIEW_SCENE := "res://scenes/authoring/previews/hub_world_preview.tscn"
 const ACTOR_PALETTE_MATERIAL_SCRIPT = preload("res://scripts/actor_palette_material.gd")
 
 var failures: Array[String] = []

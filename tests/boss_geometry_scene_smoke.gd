@@ -3,7 +3,7 @@ extends SceneTree
 
 func _initialize() -> void:
 	var failures: Array[String] = []
-	var packed := load("res://scenes/boss_room_debug.tscn") as PackedScene
+	var packed := load("res://scenes/debug/boss_room_debug.tscn") as PackedScene
 	_expect(packed != null, "boss debug scene loads", failures)
 	if packed == null:
 		_finish(failures)
@@ -179,7 +179,7 @@ func _initialize() -> void:
 			door_player.global_position = boss_entry_socket.spawn_marker().global_position
 			gameplay.set("room_transition_locked", false)
 			_expect(not bool(gameplay.call("_try_enter_any_active_socket")), "sealed boss arrival entrance rejects reverse traversal", failures)
-		var workbench_scene := load("res://scenes/enemy_preview_workbench.tscn") as PackedScene
+		var workbench_scene := load("res://scenes/authoring/previews/enemy_preview_workbench.tscn") as PackedScene
 		var workbench := workbench_scene.instantiate() as Node2D if workbench_scene != null else null
 		_expect(workbench != null, "enemy workbench scene loads for boss-guide parity", failures)
 		if workbench != null:
@@ -188,7 +188,7 @@ func _initialize() -> void:
 			get_root().add_child(workbench)
 			await process_frame
 			var preview_actor := workbench.get("preview_actor") as SlimeActor
-			var authored_boss_scene := load("res://scenes/boss_slime_authoring.tscn") as PackedScene
+			var authored_boss_scene := load("res://scenes/authoring/previews/boss_slime_authoring.tscn") as PackedScene
 			var authored_boss := authored_boss_scene.instantiate() if authored_boss_scene != null else null
 			_expect(preview_actor != null and StringName(preview_actor.get_meta("enemy_type_id", "")) == &"slime", "boss-size slime workbench preview builds the selected slime", failures)
 			for geometry_name: StringName in [&"CollisionGuide", &"CollisionPolygon", &"BodyHitbox", &"AttackGuideL", &"AttackGuideR"]:

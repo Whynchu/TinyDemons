@@ -3,7 +3,7 @@ extends SceneTree
 
 func _initialize() -> void:
 	var failures: Array[String] = []
-	var packed := load("res://scenes/boss_room_debug.tscn") as PackedScene
+	var packed := load("res://scenes/debug/boss_room_debug.tscn") as PackedScene
 	_expect(packed != null, "boss debug scene loads for resource-drop motion coverage", failures)
 	if packed == null:
 		_finish(failures)

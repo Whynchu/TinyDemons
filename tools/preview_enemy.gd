@@ -5,7 +5,7 @@ extends SceneTree
 ## waits for the scene to materialize, and reports the same contract summary an
 ## agent needs for a fast check.
 
-const PREVIEW_SCENE := preload("res://scenes/enemy_preview_workbench.tscn")
+const PREVIEW_SCENE := preload("res://scenes/authoring/previews/enemy_preview_workbench.tscn")
 
 
 func _initialize() -> void:

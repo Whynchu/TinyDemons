@@ -35,7 +35,7 @@ grant or imply third-party licensing.
   same source/runtime split.
 - The pause menu exports under `Artwork/` define the authored placement
   reference; the matching runtime panel tile under `assets/artwork/` is used
-  by `scenes/menu_panel_8_piece.tscn` to compose the exact eight-piece frame.
+  by `scenes/ui/components/menu_panel_8_piece.tscn` to compose the exact eight-piece frame.
 - The player's Demon Cloak variant starts from
   `Artwork/TinyDemon_fullsheet_cloaked.png` plus the separate
   `Artwork/TinyDemon-Defend-Cloaked.png` defend strip; the imported runtime

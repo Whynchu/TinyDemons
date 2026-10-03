@@ -1,6 +1,6 @@
 [gd_scene load_steps=3 format=3]
 
-[ext_resource type="PackedScene" uid="uid://dm1ohbthvop2c" path="res://scenes/basic_room.tscn" id="1_basic_room"]
+[ext_resource type="PackedScene" uid="uid://dm1ohbthvop2c" path="res://scenes/gameplay/rooms/basic_room.tscn" id="1_basic_room"]
 [ext_resource type="Texture2D" path="res://assets/artwork/ChestGrey.png" id="2_chest_preview"]
 
 [node name="TreasureRoom" instance=ExtResource("1_basic_room")]

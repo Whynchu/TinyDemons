@@ -21,15 +21,15 @@ changes.
 ## What is implemented
 
 - Added persistent menu scene entry points:
-  - `scenes/fusion_menu.tscn`
-  - `scenes/bind_menu.tscn`
+  - `scenes/menus/hub/fusion_menu.tscn`
+  - `scenes/menus/hub/bind_menu.tscn`
 - Added view-model boundaries:
   - `scripts/fusion_menu_model.gd`
   - `scripts/bind_menu_model.gd`
 - Added `@tool` layout scripts:
   - `scripts/fusion_menu_layout.gd`
   - `scripts/bind_menu_layout.gd`
-- Added both scenes to `scenes/demon_hub_menu.tscn`.
+- Added both scenes to `scenes/menus/hub/demon_hub_menu.tscn`.
 - Added Fusion and Bind rendering/model assembly to
   `scripts/screen_state_controller.gd`.
 - Added explicit route state fields:
@@ -115,6 +115,6 @@ git status --short
 git diff --check
 ```
 
-Then use the Godot MCP peer to open `res://scenes/fusion_menu.tscn` and
-`res://scenes/bind_menu.tscn` directly, inspect their trees, and perform a
+Then use the Godot MCP peer to open `res://scenes/menus/hub/fusion_menu.tscn` and
+`res://scenes/menus/hub/bind_menu.tscn` directly, inspect their trees, and perform a
 focused playtest rather than starting from the main menu.

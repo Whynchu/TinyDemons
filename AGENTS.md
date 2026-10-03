@@ -43,9 +43,9 @@ messages, so use the file-based board in `coord/`:
 Protocol and formats: `coord/README.md`. Keep one Godot editor; never open this
 project directory in a second editor (`addons/godot_mcp_toolkit/docs/multi-instance.md`).
 
-For asset navigation, see `docs/CONTENT_FOLDERS.md`; it distinguishes the
-source-art archive from the Godot-imported runtime assets and authored
-resources.
+For scene and content navigation, see `docs/CONTENT_FOLDERS.md`; it describes
+the role-based scene folders and distinguishes the source-art archive from
+Godot-imported runtime assets and authored resources.
 
 ## Verification
 

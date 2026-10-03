@@ -12,7 +12,7 @@ var _back_presses := 0
 func _initialize() -> void:
 	call_deferred("_watchdog")
 	var failures: Array[String] = []
-	var scene := load("res://scenes/fusion_menu.tscn") as PackedScene
+	var scene := load("res://scenes/menus/hub/fusion_menu.tscn") as PackedScene
 	_expect(scene != null, "Fusion scene loads", failures)
 	if scene == null:
 		quit(1)

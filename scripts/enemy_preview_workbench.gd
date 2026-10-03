@@ -36,7 +36,7 @@ const PREVIEW_ERROR_COLOR := Color8(255, 143, 143)
 const GEOMETRY_SNAP := 0.5
 const GEOMETRY_HANDLE_HIT_RADIUS := 8.0
 const MAX_GEOMETRY_UNDO_STEPS := 64
-const BOSS_SLIME_AUTHORING_SCENE: PackedScene = preload("res://scenes/boss_slime_authoring.tscn")
+const BOSS_SLIME_AUTHORING_SCENE: PackedScene = preload("res://scenes/authoring/previews/boss_slime_authoring.tscn")
 const EFFECTS_TUNING: Resource = preload("res://resources/tuning/effects_default.tres")
 const PALETTE_DISPLAY_NAMES := {
 	"grey": "Gray",

@@ -48,7 +48,7 @@ var geometry_controller: RefCounted = null
 var current_room_type: StringName = &""
 
 const ACTOR_FOOT_OFFSET := Vector2(8, 15)
-const BOSS_SLIME_AUTHORING_SCENE := "res://scenes/boss_slime_authoring.tscn"
+const BOSS_SLIME_AUTHORING_SCENE := "res://scenes/authoring/previews/boss_slime_authoring.tscn"
 const ENEMY_MIN_PLAYER_DISTANCE := 20.0
 const ENEMY_MIN_SPAWN_DISTANCE := 18.0
 const ENEMY_MIN_SOCKET_DISTANCE := 16.0

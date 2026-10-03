@@ -197,7 +197,7 @@ is therefore not the normal authoring view: the root gameplay script is a
 runtime bootstrap, the title route hides the world, and the generated Hub stone
 accent layer waits for room-entry wiring.
 
-Open `scenes/hub_world_preview.tscn` for the design view instead. It reuses the
+Open `scenes/authoring/previews/hub_world_preview.tscn` for the design view instead. It reuses the
 same main-world composition without loading a profile or starting a run, shows
 the authored map, Hub actors, doors, fire, chest, and stone accents, and hides
 the pooled dungeon enemies, HUD, and collision/debug guides by default. The
@@ -313,7 +313,7 @@ The generic `ContentDefinition`/`ContentRegistry` layer remains future work;
 the current enemy path already removes the old parallel registries and central
 encounter branches.
 
-Open `scenes/enemy_preview_workbench.tscn` for the enemy design preview, or run
+Open `scenes/authoring/previews/enemy_preview_workbench.tscn` for the enemy design preview, or run
 `pwsh -File tools/dev.ps1 preview enemy <id> -Editor` to open a selected enemy.
 In the workbench Inspector, `Enemy` selects the actor family (`Slime` or
 `Skeleton`) and `Variant` selects an authored entry from that family.
@@ -517,7 +517,7 @@ restores starter equipment for slots they left empty. Standalone
 workbench covers typed editing and card/drop/instance/effect previews;
 per-item visual ownership and full catalog conversion remain unfinished.
 
-Open `scenes/item_preview_workbench.tscn` to browse the item design preview, or
+Open `scenes/authoring/previews/item_preview_workbench.tscn` to browse the item design preview, or
 run `pwsh -File tools/dev.ps1 preview item <id> -Editor` to open a selected item.
 The `Item` picker uses `ItemCatalog.playable_definition_ids()`: current
 baseline/set items, standalone live `ItemDefinition` resources, and special-

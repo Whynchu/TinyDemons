@@ -597,3 +597,9 @@ Exact-case scanning found map-reference fixtures and a HUD fallback still using 
 
 ## 2026-10-03T16:16Z — codex — done
 Updated all 13 source-art references to the new grouped paths; changed the HUD fallback prefix to assets/artwork/. Static checks confirm all references resolve, all 232 original names remain present, and git diff --check is clean. No test suite or Godot process was launched.
+
+## 2026-10-03T16:30Z — codex — claim
+Organize the flat scene folder by runtime and authoring role, preserve the configured main-scene path, and migrate every scene reference.
+
+## 2026-10-03T16:37Z — codex — done
+Moved 25 scenes into gameplay, menus, UI, authoring, and debug folders while keeping scenes/main.tscn at its existing path. Updated 38 distinct references across scenes, code, tests, tools, resources, and docs. Static reference checks and git diff --check pass; no Godot process or test suite was launched.

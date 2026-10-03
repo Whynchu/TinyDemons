@@ -1,7 +1,7 @@
 extends Node
 class_name WalkableArea
 
-const FLOOR_TILE_GEOMETRY = preload("res://scenes/floor_tile_geometry.tscn")
+const FLOOR_TILE_GEOMETRY = preload("res://scenes/gameplay/geometry/floor_tile_geometry.tscn")
 ## The authored tile polygon is read from its scene once and reused. The scene
 ## stays the single source of truth; instantiating and freeing it on every room
 ## entry was pure overhead for four static points.

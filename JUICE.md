@@ -6,7 +6,7 @@ camera, transitions, and audio hierarchy
 Owner: presentation owners named per system below; coordinated through
 `effects_spawner.gd`, `hud_controller.gd`, and `gameplay_frame_controller.gd`
 Current code: the feedback systems are code-built. `effects_spawner.gd` is the
-single VFX owner; the HUD is authored in `scenes/player_hud.tscn` and driven by
+single VFX owner; the HUD is authored in `scenes/ui/hud/player_hud.tscn` and driven by
 `hud_controller.gd`; the explicit frame schedule in `gameplay_frame_controller.gd`
 owns update order
 Verification: see [`docs/juice-roadmap.md`](docs/juice-roadmap.md); this document

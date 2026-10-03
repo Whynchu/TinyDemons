@@ -367,7 +367,7 @@ Also scene/world consts in `gameplay_state.gd` that belong in tuning
 
 - `gameplay_state.gd:debug_start_in_boss_room` (`@export`, inspector) — boot
   straight into the boss room.
-- `scenes/boss_room_debug.tscn` — the boss-room debug scene.
+- `scenes/debug/boss_room_debug.tscn` — the boss-room debug scene.
 
 ## How to add a new tuning knob
 
