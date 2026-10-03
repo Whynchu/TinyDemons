@@ -405,3 +405,7 @@ Changed the spike generator from smooth triangular spikes to angular, stepped cr
 ## Isometric Ice footprint follow-up
 
 Compressed the Ice cluster's vertical base offsets to 52% while preserving its horizontal radius, making the ground footprint read as a broad oval in the game's isometric view. Spike height and AOE damage/radius remain unchanged. Updated the spell documentation. Static checks pass; no Godot process or tests were run.
+
+## Web release check follow-up
+
+Restored `renderer/rendering_method.web="gl_compatibility"`, required by `tests/web_export_smoke.ps1`, and bumped the release version to 0.3.31 for the follow-up main push. Static diff and version checks only; no Godot process or tests were run.

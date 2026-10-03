@@ -678,3 +678,9 @@ Preparing the user-requested versioned main push, including pending game/content
 
 ## 2026-10-03T21:55Z - codex - done
 Prepared the 0.3.30 release commit with all pending game/content/docs/assets changes except .mcp.json, .codex/config.toml, and opencode.json. Staged whitespace check passes; no Godot process or tests were run.
+
+## 2026-10-03T22:09Z - codex - claim
+Restoring the web Compatibility renderer setting required by the Pages export smoke check and bumping the release version.
+
+## 2026-10-03T22:09Z - codex - done
+Restored renderer/rendering_method.web=gl_compatibility and prepared version 0.3.31. Static checks only; no Godot process or tests were run.
