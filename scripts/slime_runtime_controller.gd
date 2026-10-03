@@ -276,8 +276,7 @@ func move_slimes(root: Object, delta: float) -> void:
 		slimes, transmission_player, root, Callable(root, "_actor_foot"),
 		Callable(root, "_is_slime_spawn_locked"), Callable(root, "_is_slime_dead"))
 	if gameplay != null:
-		var room_engaged := gameplay.dungeon_map_controller != null and gameplay.dungeon_map_controller.is_room_engaged(gameplay.current_room_id)
-		_status_transmission_controller.process_contacts(contact_snapshot, delta, gameplay.current_room_id, room_engaged, gameplay.rng)
+		_status_transmission_controller.process_contacts(contact_snapshot, delta, gameplay.current_room_id, gameplay.rng)
 	collision_system.resolve_slime_contacts(slimes, root, separation_passes)
 	if player_alive:
 		for slime in slimes:

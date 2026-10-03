@@ -684,3 +684,9 @@ Restoring the web Compatibility renderer setting required by the Pages export sm
 
 ## 2026-10-03T22:09Z - codex - done
 Restored renderer/rendering_method.web=gl_compatibility and prepared version 0.3.31. Static checks only; no Godot process or tests were run.
+
+## 2026-10-03T22:22Z - codex - claim
+Removing room-engaged gating from contact status transmission so carried effects apply starting at room entry.
+
+## 2026-10-03T22:22Z - codex - done
+Removed the room-engaged gate from status transmission and bumped the release to 0.3.32. Scoped diff checks pass; no Godot process or tests were run.

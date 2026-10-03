@@ -409,3 +409,7 @@ Compressed the Ice cluster's vertical base offsets to 52% while preserving its h
 ## Web release check follow-up
 
 Restored `renderer/rendering_method.web="gl_compatibility"`, required by `tests/web_export_smoke.ps1`, and bumped the release version to 0.3.31 for the follow-up main push. Static diff and version checks only; no Godot process or tests were run.
+
+## Contact transmission timing
+
+Removed the room-engaged gate from status contact transmission so an existing transmissible status can transfer as soon as physical contact occurs after room entry. Updated the controller API callers and bumped the release to 0.3.32. Static diff check passes; no Godot process or tests were run.

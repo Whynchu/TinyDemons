@@ -19,12 +19,11 @@ func process_contacts(
 	contacts: Array[StatusContactPair],
 	delta: float,
 	room_key: StringName,
-	room_engaged: bool,
 	random_source: RandomNumberGenerator
 ) -> void:
 	reset_for_room(room_key)
 	_advance_cooldowns(delta)
-	if not room_engaged or random_source == null:
+	if random_source == null:
 		return
 
 	# Snapshot every source before applying any transfer. Contacts share this map,
