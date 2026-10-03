@@ -96,6 +96,7 @@ For an external product/design review, use the curated [`review/00-astra-review-
 | What is currently unresolved? | [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md) | the detailed issue tracker |
 | Should a test exist or block release? | [`verification-surface-audit.md`](verification-surface-audit.md) | target and runtime evidence |
 | How do I add content? | [`CONTENT_AUTHORING.md`](CONTENT_AUTHORING.md) | the trap register in [`authoring-system-plan.md`](authoring-system-plan.md) |
+| Where do source art, runtime assets, and authored resources live? | [`CONTENT_FOLDERS.md`](CONTENT_FOLDERS.md) | [`CONTENT_AUTHORING.md`](CONTENT_AUTHORING.md) for editing workflow |
 | How do I make content and feature work cheap? | [`authoring-system-plan.md`](authoring-system-plan.md) | source-backed audits in this map |
 | What makes a change difficult? | [`engineering-friction-audit.md`](engineering-friction-audit.md) | source files and detailed audits |
 | How is the composition refactor progressing? | [`composition-refactor-analysis.md`](composition-refactor-analysis.md) | historical completion record; the strict scorecard is 100% and the regression floor is re-baselined |

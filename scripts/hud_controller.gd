@@ -1085,7 +1085,7 @@ func _build_cooldown_hud(parent: Node, library: SpriteFrameLibrary, load_texture
 		# This newly supplied artwork may not have a Godot .import sidecar yet.
 		# Load that PNG through Image so startup does not emit a ResourceLoader
 		# failure before the editor has scanned it.
-		if texture_path.begins_with("res://Artwork/"):
+		if texture_path.begins_with("res://assets/artwork/"):
 			var image := Image.load_from_file(ProjectSettings.globalize_path(texture_path))
 			if image != null and not image.is_empty():
 				source = ImageTexture.create_from_image(image)

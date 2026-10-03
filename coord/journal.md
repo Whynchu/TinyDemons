@@ -585,3 +585,15 @@ Player polish pass landed. Fire Cinder Cone aim: the lateral-only rule only ran 
 
 ## 2026-10-02T09:43Z â€” opencode â€” release
 Release 0.3.28 for mobile web testing. Carries the Fire cone lateral-only aim fix, the orb-room height fix, and the transition/pickup hitch work, plus the two bubble OGG .import files that 0.3.27 committed the assets for but not the import metadata. GAME_VERSION, README (three references), and docs/VERSIONING.md bumped together per docs/VERSIONING.md. Rendered/mobile acceptance for all three fixes is still open; see docs/KNOWN_ISSUES.md 2026-10-02.
+
+## 2026-10-03T16:10Z — codex — claim
+Organize the source-only Artwork archive by content domain and add a repository folder map. Preserve active Godot paths and unrelated local changes.
+
+## 2026-10-03T16:13Z — codex — done
+Grouped all 210 loose source-art files and 21 stone accents under Artwork domain folders, preserved filenames and .gdignore, and added Artwork/README.md plus docs/CONTENT_FOLDERS.md. Linked the guide from AGENTS.md and DOCUMENTATION_MAP.md. Runtime assets/resources and the existing project.godot edit were left untouched. Static reference and file-inventory checks pass; no Godot process or test suite was launched.
+
+## 2026-10-03T16:14Z — codex — claim
+Exact-case scanning found map-reference fixtures and a HUD fallback still using the old Artwork root. Update those references before completing the folder move.
+
+## 2026-10-03T16:16Z — codex — done
+Updated all 13 source-art references to the new grouped paths; changed the HUD fallback prefix to assets/artwork/. Static checks confirm all references resolve, all 232 original names remain present, and git diff --check is clean. No test suite or Godot process was launched.

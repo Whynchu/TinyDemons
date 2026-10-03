@@ -6,8 +6,8 @@ const R5_SCRIPT = preload("res://scripts/puzzle_map_r5.gd")
 
 func _initialize() -> void:
 	var failures: Array[String] = []
-	var template := Image.load_from_file(ProjectSettings.globalize_path("res://Artwork/puzzle_map.png"))
-	var reference := Image.load_from_file(ProjectSettings.globalize_path("res://Artwork/R5puzzle_map.png"))
+	var template := Image.load_from_file(ProjectSettings.globalize_path("res://Artwork/environment/maps/puzzle_map.png"))
+	var reference := Image.load_from_file(ProjectSettings.globalize_path("res://Artwork/environment/maps/R5puzzle_map.png"))
 	_expect(template != null and template.get_size() == Vector2i(35, 35), "Puzzle-map template is 35 x 35.", failures)
 	_expect(reference != null and reference.get_size() == Vector2i(35, 35), "R4 reference is 35 x 35.", failures)
 	if template != null and reference != null:

@@ -6,8 +6,8 @@ const R3_SCRIPT = preload("res://scripts/puzzle_map_r3_new.gd")
 
 func _initialize() -> void:
 	var failures: Array[String] = []
-	var template := Image.load_from_file(ProjectSettings.globalize_path("res://Artwork/puzzle_map.png"))
-	var reference := Image.load_from_file(ProjectSettings.globalize_path("res://Artwork/R3puzzle_map.png"))
+	var template := Image.load_from_file(ProjectSettings.globalize_path("res://Artwork/environment/maps/puzzle_map.png"))
+	var reference := Image.load_from_file(ProjectSettings.globalize_path("res://Artwork/environment/maps/R3puzzle_map.png"))
 	_expect(template != null and template.get_size() == Vector2i(35, 35), "Puzzle-map template is 35 x 35.", failures)
 	_expect(reference != null and reference.get_size() == Vector2i(35, 35), "R3 preview reference is 35 x 35.", failures)
 	if template != null and reference != null:

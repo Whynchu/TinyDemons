@@ -1,9 +1,9 @@
-# codex — status
+# codex â€” status
 
 _Only codex writes this file._
 
-**Focus:** `0.3.27` Water OGG and elemental spell release
-**Updated:** 2026-10-01
+**Focus:** content-folder navigation cleanup
+**Updated:** 2026-10-03
 
 ## Completed
 
@@ -45,7 +45,7 @@ Static hookup audit is complete. All eight Triangle forms trace from Chroma acce
 
 Offline GDScript diagnostics and git diff --check pass. Runtime playtest and balance/readability acceptance remain open; no Godot process or suite was launched.
 
-The elemental spell-form track was handed off from opencode after P3. P4–P7
+The elemental spell-form track was handed off from opencode after P3. P4â€“P7
 source implementation is complete: each form has its delivery, first-pass
 cost/cooldown and damage values, and its planned status, knockback, tether,
 lifesteal, or mark behavior. Runtime balance/readability acceptance remains
@@ -180,10 +180,10 @@ Focused offline MCP script diagnostics pass. Visual alignment, readability,
 death/cloak behavior, and the uncaptured magenta artifact remain open for a
 color playtest. Do not launch a Godot process in this session.
 
-## 2026-09-30 — Elemental spell-form continuation
+## 2026-09-30 â€” Elemental spell-form continuation
 
 Opencode handed off the spell-form paths after implementing P3 Electric Skyfall.
-P1–P3 runtime acceptance remains open. Codex is implementing P4 Water Tide
+P1â€“P3 runtime acceptance remains open. Codex is implementing P4 Water Tide
 Burst, P5 Fire Cinder Cone, P6 Ground Quake / Ice Shard / Grass Leechvine /
 Shadow Hex, and P7 tuning/presentation updates. No Godot process or tests may
 run in this session; update the plan only to reflect source evidence and leave
@@ -230,7 +230,7 @@ in-game title, versioning guide, contributor guide, and roadmap are aligned.
 runtime or test suite was run; the configured off-floor actor case still needs
 playtest confirmation.
 
-## 2026-09-28 — Player status presentation
+## 2026-09-28 â€” Player status presentation
 
 The player's status outline and status particles now follow the separate attack
 sprite while it is visible, then return to the base sprite. Status badges render
@@ -262,7 +262,7 @@ walkability, socket, and room-state activation. The legacy shell stays as a
 fallback until a mount succeeds. No Godot process or test suite may be launched
 in this session; static review only.
 
-## 2026-09-29 — Generic room-prefab runtime slice
+## 2026-09-29 â€” Generic room-prefab runtime slice
 
 Mounted `basic` before room activation and on ordinary route entry. Run
 checkpoints retain resolved prefab assignments; older snapshots continue
@@ -276,7 +276,7 @@ classes, so it cannot provide a clean compile result without refreshing that
 cache. Runtime, traversal, recovery, and exported-build acceptance remain
 open; no Godot process or test suite was launched.
 
-## 2026-09-30 — Elemental spell forms P4–P7
+## 2026-09-30 â€” Elemental spell forms P4â€“P7
 
 Completed the typed delivery paths for Water splash, Fire cone, Electric
 Skyfall, Grass Leechvine, Shadow Hex, Ground Quake, and the Ice shard, with the
@@ -289,3 +289,18 @@ definitions plus runtime tuning/readability acceptance open. Offline diagnostics
 pass for 11 changed scripts; `gameplay_state.gd:391` retains the previously
 noted class-cache diagnostic. `git diff --check` passes. No Godot process or
 test suite was launched.
+
+## Latest task
+
+Grouped the source-only `Artwork/` archive by character family, environment,
+items, effects, UI, and references. Moved 210 loose files and 21 stone accents,
+preserving every original filename and the root `.gdignore`.
+
+Added `Artwork/README.md` and `docs/CONTENT_FOLDERS.md`, and linked the guide
+from `AGENTS.md` and `DOCUMENTATION_MAP.md`. Updated map-reference tools and
+smokes for the new source paths, and corrected the HUD's direct-image fallback
+to use `assets/artwork/`.
+
+Runtime asset/resource paths and the pre-existing `project.godot` edit remain
+untouched. Static filename and path checks pass; no Godot process or test suite
+was launched.

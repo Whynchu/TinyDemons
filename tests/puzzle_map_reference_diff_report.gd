@@ -6,13 +6,13 @@ const R5_SCRIPT = preload("res://scripts/puzzle_map_r5.gd")
 
 
 func _initialize() -> void:
-	_report("R4", R4_SCRIPT.build(), "res://Artwork/R4(new)puzzle_map.png")
-	_report("R5", R5_SCRIPT.build(), "res://Artwork/R5puzzle_map.png")
+	_report("R4", R4_SCRIPT.build(), "res://Artwork/environment/maps/R4(new)puzzle_map.png")
+	_report("R5", R5_SCRIPT.build(), "res://Artwork/environment/maps/R5puzzle_map.png")
 	quit(0)
 
 
 func _report(label: String, plan, reference_path: String) -> void:
-	var template := Image.load_from_file(ProjectSettings.globalize_path("res://Artwork/puzzle_map.png"))
+	var template := Image.load_from_file(ProjectSettings.globalize_path("res://Artwork/environment/maps/puzzle_map.png"))
 	var reference := Image.load_from_file(ProjectSettings.globalize_path(reference_path))
 	var rendered := GRID_SCRIPT.render_preview(plan, template)
 	var parsed = GRID_SCRIPT.parse(reference, template, StringName(label.to_lower()))

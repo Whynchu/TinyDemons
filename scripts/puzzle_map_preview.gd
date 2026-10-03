@@ -7,7 +7,7 @@ const GRID_SCRIPT = preload("res://scripts/puzzle_map_grid.gd")
 const R3_SCRIPT = preload("res://scripts/puzzle_map_r3_new.gd")
 const R4_SCRIPT = preload("res://scripts/puzzle_map_r4.gd")
 const R5_SCRIPT = preload("res://scripts/puzzle_map_r5.gd")
-const TEMPLATE_PATH := "res://Artwork/puzzle_map.png"
+const TEMPLATE_PATH := "res://Artwork/environment/maps/puzzle_map.png"
 const MAP_SCALE := 2.0
 const MAP_SIZE := Vector2(35.0, 35.0) * MAP_SCALE
 

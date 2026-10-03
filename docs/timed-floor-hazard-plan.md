@@ -31,11 +31,11 @@ Related: `docs/combat-and-dungeon-design-principles.md`,
 
 Observed: the two spike PNGs live in the **Godot-ignored** `Artwork/` folder
 (`Artwork/.gdignore` exists, 0 bytes) and have **no `.import` sidecars**, so
-`res://Artwork/...` cannot load as a `Texture2D`.
+`res://Artwork/environment/rooms/...` cannot load as a `Texture2D`.
 
-- `Artwork/Tile_spike_hazzard.png` — 16×16 (retracted/inactive). **Inferred**
+- `Artwork/environment/rooms/Tile_spike_hazzard.png` — 16×16 (retracted/inactive). **Inferred**
   state, to confirm.
-- `Artwork/Tile_spike_hazzard_active_frame1-5dmg.png` — 128×16 = **8 slots of
+- `Artwork/environment/rooms/Tile_spike_hazzard_active_frame1-5dmg.png` — 128×16 = **8 slots of
   16×16** by pixel scan, despite the filename's "frame1-5".
 
 Action: move both into `assets/artwork/` (the real runtime art folder; all other
