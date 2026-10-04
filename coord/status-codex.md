@@ -2,7 +2,7 @@
 
 _Only codex writes this file._
 
-**Focus:** Stage 3.1 next active Hub render/build boundary mapping
+**Focus:** Stage 3.1 legacy Hub item widget ownership audit
 **Updated:** 2026-10-04
 
 ## Completed: MCP startup-error repair and runtime verification
@@ -854,3 +854,18 @@ shared editor restriction is active.
 Next: map remaining active Hub render/build responsibilities against their
 typed view owners. Keep the legacy `_update_hub_item_page` and
 `_update_hub_gear_slots` fallback until its external readers have a replacement.
+
+## Completed: Stage 3.1 authored Hub signal binding
+
+Moved Equipment, Shop, Fusion, and Bind view signal wiring from build_hub
+into HubMenuSignalBinder. The binder accepts typed authored views,
+HubScreenActions, and the narrow callback that updates selected Equipment
+command state. ScreenStateController still constructs the views and owns menu
+state. The composition audit passes at 271 scripts, zero unclassified files,
+52 screen seams, 4,253 reach-throughs, and 509 untyped root parameters; dynamic
+string connect calls are now zero. UID validation and offline MCP script
+checks pass. No game or gameplay tests were run while the shared editor is
+active.
+
+Next: trace remaining legacy Hub Equipment/Shop widgets built by build_hub
+through rendering and input consumers before moving or deleting that cluster.

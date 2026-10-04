@@ -1050,10 +1050,24 @@ The script index has 270 entries; UID validation passes for 425 sidecars.
 Offline MCP script validation passes for all five changed scripts. No game or
 gameplay tests were run while the shared editor session is active.
 
-Next: map the remaining active Hub render/build responsibilities against their
-typed view owners, then take the next cohesive seam while retaining the legacy
-`_update_hub_item_page` and `_update_hub_gear_slots` fallback path until its
-external readers have a recorded replacement.
+Next: map the legacy Hub Equipment/Shop widget cluster built by `build_hub` to
+its remaining render and input readers before moving or deleting it. Preserve
+the fallback route and its data arrays until the typed authored views replace
+all three consumer groups.
+
+**Implementation record (2026-10-04):** Moved Equipment, Shop, Fusion, and Bind
+authored-view signal connections from `build_hub` into the typed
+`HubMenuSignalBinder`. It accepts the four authored layout types, the existing
+`HubScreenActions` callback record, and one callback for Equipment command
+selection. `ScreenStateController` still constructs the views and owns menu
+state; it only selects typed views and delegates binding. The old
+`has_signal`/string `connect` branch was replaced by signals declared on those
+view types. Strict composition audit passes at 271 scripts, zero unclassified
+files, 52 screen controller seams, 4,253 root reach-throughs, and 509 untyped
+root parameters; string `.connect` calls fell from seven to zero. The index
+contains 271 scripts, UID validation passes for 426 sidecars, and offline MCP
+script checks pass for the binder and screen controller. No game or gameplay
+tests were run while the shared editor session is active.
 
 ### 3.2 `gameplay_bootstrap.gd` — declarative assembly
 

@@ -7,7 +7,7 @@ tracked `scripts/*.gd` file to exactly one of the eight Stage 1 role folders, wi
 
 Owner: repository architecture and gameplay systems
 
-Current code: the 235-file Stage 1 inventory plus 35 post-migration modules (270 scripts total); all remain distributed across the declared role roots and runtime subfolders
+Current code: the 235-file Stage 1 inventory plus 36 post-migration modules (271 scripts total); all remain distributed across the declared role roots and runtime subfolders
 
 Verification: all 235 destinations and UID sidecars reconciled against the migration
 map; live resource references rewritten; generated index refreshed.
@@ -15,7 +15,7 @@ map; live resource references rewritten; generated index refreshed.
 Supersedes: nothing. Implements the Stage 1 layout table in
 [`composition-plan-2026.md`](composition-plan-2026.md)
 
-Updated: 2026-10-04 (Stage 3.1 Shop/Fusion presentation model recorded)
+Updated: 2026-10-04 (Stage 3.1 authored Hub signal binder recorded)
 
 Baseline: version `0.3.32`, commit `45db00b`
 
@@ -396,7 +396,7 @@ The map retains each original flat path alongside its current path for traceabil
 
 ## Post-migration additions
 
-These thirty-five modules were added after the 235-script Stage 1 inventory. They
+These thirty-six modules were added after the 235-script Stage 1 inventory. They
 use the same folder roles and are included in the generated script index.
 
 | Current path | Role | Reason |
@@ -436,6 +436,7 @@ use the same folder roles and are included in the generated script index.
 | `scripts/ui/hub_transaction_menu_context.gd` | `ui/` | Typed Shop and Fusion presentation inputs, including item rows, selection state, and economy details gathered by their existing owners. |
 | `scripts/ui/shop_menu_model.gd` | `ui/` | Typed row, stat-comparison, quantity, and scroll model consumed by the authored ShopMenuLayout. |
 | `scripts/ui/hub_transaction_menu_presenter.gd` | `ui/` | Builds Shop and Fusion render models and shared equipment-stat comparison data without owning transactions or mutable menu state. |
+| `scripts/ui/hub_menu_signal_binder.gd` | `ui/` | Connects typed Equipment, Shop, Fusion, and Bind view signals to HubScreenActions while keeping menu construction and state in ScreenStateController. |
 
 ## Migration result
 

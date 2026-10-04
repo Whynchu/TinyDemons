@@ -41,6 +41,7 @@ const HubEquipmentMenuPresenterScript = preload("res://scripts/ui/hub_equipment_
 const HubEquipmentMenuContextScript = preload("res://scripts/ui/hub_equipment_menu_context.gd")
 const HubTransactionMenuPresenterScript = preload("res://scripts/ui/hub_transaction_menu_presenter.gd")
 const HubTransactionMenuContextScript = preload("res://scripts/ui/hub_transaction_menu_context.gd")
+const HubMenuSignalBinderScript = preload("res://scripts/ui/hub_menu_signal_binder.gd")
 const PauseScreenPresenterScript = preload("res://scripts/ui/pause_screen_presenter.gd")
 const MENU_CIRCLE_TEXTURE: Texture2D = MenuPromptTextureFactoryScript.MENU_CIRCLE_TEXTURE
 const MENU_X_TEXTURE: Texture2D = MenuPromptTextureFactoryScript.MENU_X_TEXTURE
@@ -143,6 +144,7 @@ var _hub_equipment_menu_presenter: HubEquipmentMenuPresenter = HubEquipmentMenuP
 var _hub_equipment_menu_context: HubEquipmentMenuContext = HubEquipmentMenuContextScript.new() as HubEquipmentMenuContext
 var _hub_transaction_menu_presenter: HubTransactionMenuPresenterScript = HubTransactionMenuPresenterScript.new() as HubTransactionMenuPresenterScript
 var _hub_transaction_menu_context: HubTransactionMenuContextScript = HubTransactionMenuContextScript.new() as HubTransactionMenuContextScript
+var _hub_menu_signal_binder: HubMenuSignalBinderScript = HubMenuSignalBinderScript.new() as HubMenuSignalBinderScript
 var _menu_world_hidden := false
 var _menu_world_background_visible := true
 var _menu_world_map_visible := true
@@ -1394,8 +1396,8 @@ func build_hub(parent: Node, pixel_texture: Callable, actions: HubScreenActions)
 	var allocate_page := _hub_page_visibility_presenter.allocate_page
 	var items_page := _hub_page_visibility_presenter.items_page
 	var equipment_menu_node := items_page.get_node_or_null("EquipmentMenu") as EquipmentMenuLayout if items_page != null else null
-	var shop_menu := items_page.get_node_or_null("ShopMenu") as Control if items_page != null else null
-	var fusion_menu := items_page.get_node_or_null("FusionMenu") as Control if items_page != null else null
+	var shop_menu := items_page.get_node_or_null("ShopMenu") as ShopMenuLayout if items_page != null else null
+	var fusion_menu := items_page.get_node_or_null("FusionMenu") as FusionMenuLayout if items_page != null else null
 	hub_equipment_menu = equipment_menu_node
 	self.equipment_menu = equipment_menu_node
 	hub_shop_menu = shop_menu
@@ -1407,7 +1409,7 @@ func build_hub(parent: Node, pixel_texture: Callable, actions: HubScreenActions)
 		if equipment_menu_node.has_method("set_read_only"):
 			equipment_menu_node.call("set_read_only", false)
 	var bind_page := _hub_page_visibility_presenter.bind_page
-	var bind_menu := bind_page.get_node_or_null("BindMenu") as Control if bind_page != null else null
+	var bind_menu := bind_page.get_node_or_null("BindMenu") as BindMenuLayout if bind_page != null else null
 	hub_bind_menu = bind_menu
 	_hub_stats_presenter.build(
 		allocate_page,
@@ -1537,57 +1539,20 @@ func build_hub(parent: Node, pixel_texture: Callable, actions: HubScreenActions)
 	hub_shop_cursor = shop_cursor
 	var slot_cursor := create_sprite(items_page, "HubSlotCursor", MENU_CURSOR_TEXTURE, Vector2.ZERO, false); slot_cursor.visible = false
 	var choice_cursor := create_sprite(items_page, "HubChoiceCursor", MENU_CURSOR_TEXTURE, Vector2.ZERO, false); choice_cursor.visible = false
-	if equipment_menu != null:
-		# The authored scene has exactly one signal per interaction layer.  These
-		# callbacks feed the existing route controller, so keyboard, controller,
-		# and touch all share the same transaction semantics.
-		if equipment_menu.has_signal("command_pressed"):
-			equipment_menu.command_pressed.connect(func(index: int):
-				# A touch command tap is an explicit selection: move the command
-				# cursor to the tapped column so the highlighted action and the
-				# interacted button always agree.
-				hub_action_column = index
-				if index == 0 and actions.item_action.is_valid(): actions.item_action.call()
-				elif index == 1 and actions.equipment_remove.is_valid(): actions.equipment_remove.call()
-				elif index == 2 and actions.equipment_remove_all.is_valid(): actions.equipment_remove_all.call())
-		if equipment_menu.has_signal("slot_pressed") and actions.select_gear_slot.is_valid():
-			equipment_menu.slot_pressed.connect(func(index: int): actions.select_gear_slot.call(index))
-		if equipment_menu.has_signal("candidate_pressed") and actions.select_gear_candidate.is_valid():
-			equipment_menu.candidate_pressed.connect(func(index: int): actions.select_gear_candidate.call(index))
-		if equipment_menu.has_signal("remove_all_confirmed"):
-			equipment_menu.remove_all_confirmed.connect(func(accepted: bool):
-				if accepted and actions.equipment_remove_all.is_valid(): actions.equipment_remove_all.call()
-				elif not accepted and actions.equipment_remove_all_cancel.is_valid(): actions.equipment_remove_all_cancel.call())
-		if equipment_menu.has_signal("navigation_back_pressed"):
-			if actions.hub_back.is_valid(): equipment_menu.navigation_back_pressed.connect(actions.hub_back)
-			elif actions.pause_resume.is_valid(): equipment_menu.navigation_back_pressed.connect(actions.pause_resume)
 	if shop_menu != null:
-		if shop_menu.has_method("set_pixel_texture"):
-			shop_menu.call("set_pixel_texture", pixel_texture)
-		if actions.shop_mode.is_valid():
-			shop_menu.connect("mode_pressed", actions.shop_mode)
-		if actions.select_item_row.is_valid():
-			shop_menu.connect("item_pressed", actions.select_item_row)
-		if actions.item_action.is_valid():
-			shop_menu.connect("item_action_pressed", actions.item_action)
-		if actions.shop_amount.is_valid():
-			shop_menu.connect("sell_amount_changed", actions.shop_amount)
-		if actions.item_action.is_valid():
-			shop_menu.connect("sell_amount_confirmed", actions.item_action)
-		if actions.shop_amount_cancel.is_valid():
-			shop_menu.connect("sell_amount_cancelled", actions.shop_amount_cancel)
-		if actions.shop_back.is_valid():
-			shop_menu.connect("shop_back_pressed", actions.shop_back)
+		shop_menu.set_pixel_texture(pixel_texture)
 	if fusion_menu != null:
 		fusion_menu.set_pixel_texture(pixel_texture)
-		if actions.select_item_row.is_valid(): fusion_menu.item_pressed.connect(actions.select_item_row)
-		if actions.adjust_fusion_count.is_valid(): fusion_menu.sell_amount_changed.connect(actions.adjust_fusion_count)
-		if actions.item_action.is_valid(): fusion_menu.item_action_pressed.connect(actions.item_action)
-		if actions.hub_back.is_valid(): fusion_menu.shop_back_pressed.connect(actions.hub_back)
 	if bind_menu != null:
 		bind_menu.set_pixel_texture(pixel_texture)
-		if actions.bind_element.is_valid(): bind_menu.action_pressed.connect(actions.bind_element)
-		if actions.hub_back.is_valid(): bind_menu.back_pressed.connect(actions.hub_back)
+	_hub_menu_signal_binder.bind(
+		equipment_menu,
+		shop_menu,
+		fusion_menu,
+		bind_menu,
+		actions,
+		Callable(self, "_set_hub_action_column")
+	)
 	hub_item_list_panel = item_list_panel
 	hub_item_content_clip = item_content_clip
 	hub_gear_choice_panel = gear_choice_panel

@@ -891,3 +891,8 @@ Tracing confirms authored Shop/Fusion layout views are active, but ScreenStateCo
 
 2026-10-04T18:52:00Z - codex - done
 Extracted typed Shop/Fusion presentation-model construction and added ShopMenuModel. Strict composition audit passes at 270 scripts with zero unclassified, 52 ScreenStateController seams, 4,253 root reach-throughs, and 509 untyped root parameters. Script index, UID validation, and offline MCP script checks pass; no game or gameplay tests were run during the shared-editor restriction.
+2026-10-04T19:05:00Z - codex - claim
+Map identified a standalone authored-view wiring boundary in build_hub: Equipment, Shop, Fusion, and Bind signals connect to HubScreenActions, with one narrow selected-command callback. Extract that binding only; preserve construction and menu state ownership. No game or gameplay tests while shared editor restriction is active.
+
+2026-10-04T19:22:00Z - codex - done
+Extracted authored Equipment/Shop/Fusion/Bind signal binding from ScreenStateController.build_hub into a typed HubMenuSignalBinder. Strict composition audit passes at 271 scripts, zero unclassified, 52 screen seams, 4,253 reach-throughs, 509 untyped root parameters, and zero string .connect calls. UID and offline MCP script validation pass. No game or gameplay tests were run during the shared-editor restriction.
