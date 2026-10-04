@@ -48,20 +48,20 @@ func _initialize() -> void:
 			_expect(bottom_bar != null and bottom_bar.position == Vector2(0, 145) and bottom_bar.size == Vector2(expected.x, 15), "%s bottom bar keeps its exact height" % aspect, failures)
 			_expect(void_background != null and void_background.size.is_equal_approx(visible_size), "%s void background covers the full logical view" % aspect, failures)
 			_expect((gameplay.get_node("InterfaceCanvas") as CanvasLayer).offset.is_equal_approx(display.presentation_origin_value()), "%s interface canvas follows the centered presentation frame" % aspect, failures)
-			var title_overlay := (gameplay.get("screen_state_controller") as ScreenStateController).title_overlay
+			var title_overlay := (gameplay.get("screen_state_controller") as ScreenStateController).title_presenter.overlay
 			_expect(title_overlay != null and title_overlay.size == Vector2(expected), "%s title overlay covers the full view" % aspect, failures)
-			_expect(screens.settings_overlay != null and screens.settings_overlay.size == Vector2(expected), "%s settings overlay covers the full view" % aspect, failures)
-			var result_metrics := screens.run_complete_overlay.get_node_or_null("RunCompleteMetrics") as Panel if screens.run_complete_overlay != null else null
+			_expect(screens.settings_presenter.overlay != null and screens.settings_presenter.overlay.size == Vector2(expected), "%s settings overlay covers the full view" % aspect, failures)
+			var result_metrics := screens.run_complete_presenter.overlay.get_node_or_null("RunCompleteMetrics") as Panel if screens.run_complete_presenter.overlay != null else null
 			var result_width := minf(220.0, maxf(float(expected.x) - 20.0, 100.0))
 			var result_x := floorf(maxf((float(expected.x) - result_width) * 0.5, 10.0))
 			_expect(result_metrics != null and is_equal_approx(result_metrics.position.x, result_x), "%s result metrics stay centered in the active frame" % aspect, failures)
-			if not screens.run_complete_texts.is_empty():
-				_expect(is_equal_approx(screens.run_complete_texts[0].position.x, result_x + 9.0), "%s result text follows its centered card" % aspect, failures)
-			if screens.settings_title_text != null and screens.settings_title_text.texture != null:
-				_expect(is_equal_approx(screens.settings_title_text.position.x, 13.0), "%s settings title stays in its title tab" % aspect, failures)
-			if not screens.settings_value_buttons.is_empty():
-				_expect(screens.settings_value_buttons[0].position.x >= 90.0 and screens.settings_value_buttons[0].position.x < expected.x, "%s settings controls stay in their option column" % aspect, failures)
-			for option_row in screens.settings_option_buttons:
+			if not screens.run_complete_presenter.lines.is_empty():
+				_expect(is_equal_approx(screens.run_complete_presenter.lines[0].position.x, result_x + 9.0), "%s result text follows its centered card" % aspect, failures)
+			if screens.settings_presenter.title_text != null and screens.settings_presenter.title_text.texture != null:
+				_expect(is_equal_approx(screens.settings_presenter.title_text.position.x, 13.0), "%s settings title stays in its title tab" % aspect, failures)
+			if not screens.settings_presenter.value_buttons.is_empty():
+				_expect(screens.settings_presenter.value_buttons[0].position.x >= 90.0 and screens.settings_presenter.value_buttons[0].position.x < expected.x, "%s settings controls stay in their option column" % aspect, failures)
+			for option_row in screens.settings_presenter.option_buttons:
 				for option_value in option_row:
 					var option_button := option_value as Button
 					_expect(Rect2(option_button.position, option_button.size).end.x <= float(expected.x), "%s settings option fits inside the active frame" % aspect, failures)
@@ -138,7 +138,7 @@ func _initialize() -> void:
 		var portrait_expected := Vector2i(240, 160)
 		_expect(display.view_size_value() == portrait_expected, "portrait orientation clamps FULL to the native logical width", failures)
 		_expect(gameplay.get_window().content_scale_aspect == Window.CONTENT_SCALE_ASPECT_KEEP, "portrait orientation switches to crop-safe keep scaling", failures)
-		_expect(orientation_screens != null and (orientation_screens.settings_overlay as ColorRect).size == Vector2(portrait_expected), "portrait orientation resizes settings overlay", failures)
+		_expect(orientation_screens != null and (orientation_screens.settings_presenter.overlay as ColorRect).size == Vector2(portrait_expected), "portrait orientation resizes settings overlay", failures)
 		if orientation_screens != null:
 			_expect(orientation_screens.hub_overlay.visible and orientation_screens.hub_overlay.size == Vector2(portrait_expected), "portrait orientation keeps the active hub overlay sized to the native frame", failures)
 			_expect(orientation_screens.hub_page == saved_hub_page and orientation_screens.hub_stat_row == saved_hub_row and orientation_screens.hub_content_focus == saved_hub_focus, "portrait orientation preserves hub route and selection state", failures)
@@ -155,7 +155,7 @@ func _initialize() -> void:
 			await process_frame
 		var landscape_expected := Vector2i(284, 160)
 		_expect(display.view_size_value() == landscape_expected, "landscape orientation restores FULL logical width", failures)
-		_expect(orientation_screens != null and (orientation_screens.run_complete_overlay as ColorRect).size == Vector2(landscape_expected), "landscape orientation resizes result overlay", failures)
+		_expect(orientation_screens != null and (orientation_screens.run_complete_presenter.overlay as ColorRect).size == Vector2(landscape_expected), "landscape orientation resizes result overlay", failures)
 		if orientation_screens != null:
 			var landscape_value := orientation_screens.hub_stat_value_texts[0] as Sprite2D
 			var landscape_value_aligned := landscape_value != null and landscape_value.texture != null and is_equal_approx(landscape_value.position.x + landscape_value.texture.get_width(), PauseMenuLayoutScript.left_field_x(93.0, display.view_size_as_vector().x))

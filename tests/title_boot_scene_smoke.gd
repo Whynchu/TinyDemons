@@ -15,27 +15,27 @@ func _initialize() -> void:
 	var screens := gameplay.get("screen_state_controller") as ScreenStateController
 	_expect(screens != null, "screen state owner is composed during boot", failures)
 	if screens != null:
-		_expect(screens.title_overlay != null, "title overlay is built during boot", failures)
-		_expect(screens.title_overlay != null and screens.title_overlay.visible, "title overlay is visible after boot", failures)
-		_expect(screens.title_cloud_button != null, "title screen exposes the Cloud Save button", failures)
-		if screens.title_cloud_button != null:
-			screens.title_cloud_button.pressed.emit()
+		_expect(screens.title_presenter.overlay != null, "title overlay is built during boot", failures)
+		_expect(screens.title_presenter.overlay != null and screens.title_presenter.overlay.visible, "title overlay is visible after boot", failures)
+		_expect(screens.title_presenter.cloud_button != null, "title screen exposes the Cloud Save button", failures)
+		if screens.title_presenter.cloud_button != null:
+			screens.title_presenter.cloud_button.pressed.emit()
 			var cloud_panel := gameplay.get("cloud_save_panel") as CloudSavePanel
 			_expect(cloud_panel != null and cloud_panel.overlay != null and cloud_panel.overlay.visible, "Cloud Save button opens the management window", failures)
 			if cloud_panel != null: cloud_panel.close()
-		var version := screens.title_overlay.get_node_or_null("TitleVersion") as Sprite2D
+		var version := screens.title_presenter.overlay.get_node_or_null("TitleVersion") as Sprite2D
 		_expect(version != null and version.texture != null and version.position.is_equal_approx(Vector2(4, screens.display_view_size.y - 8.0)), "title screen shows the game version in the bottom-left", failures)
 		screens.refresh_title_menu_layout(false)
-		_expect(not screens.title_continue_button.visible, "fresh title hides Continue instead of leaving an empty row", failures)
-		_expect(is_equal_approx(screens.title_cloud_button.position.y, 109.0) and is_equal_approx(screens.title_settings_button.position.y, 125.0), "fresh title compacts visible menu cards", failures)
+		_expect(not screens.title_presenter.continue_button.visible, "fresh title hides Continue instead of leaving an empty row", failures)
+		_expect(is_equal_approx(screens.title_presenter.cloud_button.position.y, 109.0) and is_equal_approx(screens.title_presenter.settings_button.position.y, 125.0), "fresh title compacts visible menu cards", failures)
 		screens.refresh_title_menu_layout(true)
-		_expect(screens.title_continue_button.visible and not screens.title_continue_button.disabled, "restored profile reveals Continue immediately", failures)
-		_expect(is_equal_approx(screens.title_continue_button.position.y, 109.0) and is_equal_approx(screens.title_settings_button.position.y, 141.0), "profile title lays out all visible cards without gaps", failures)
+		_expect(screens.title_presenter.continue_button.visible and not screens.title_presenter.continue_button.disabled, "restored profile reveals Continue immediately", failures)
+		_expect(is_equal_approx(screens.title_presenter.continue_button.position.y, 109.0) and is_equal_approx(screens.title_presenter.settings_button.position.y, 141.0), "profile title lays out all visible cards without gaps", failures)
 		screens.menu_input_release_lock = false
 		gameplay.call("_continue_game")
 		await create_timer(1.5).timeout
-		_expect(not screens.title_transition_active, "Continue transition completes without blocking the title loop", failures)
-		_expect(screens.save_select_overlay != null and screens.save_select_overlay.visible, "Continue opens the save-slot screen after its transition", failures)
+		_expect(not screens.title_presenter.transition_active, "Continue transition completes without blocking the title loop", failures)
+		_expect(screens.save_select_presenter.overlay != null and screens.save_select_presenter.overlay.visible, "Continue opens the save-slot screen after its transition", failures)
 		_expect(screens.state == &"title", "screen state settles on title after boot", failures)
 	_expect(not bool(gameplay.get("boot_active")), "boot sequence completes", failures)
 	var loading := gameplay.get("loading_screen_overlay") as CanvasItem

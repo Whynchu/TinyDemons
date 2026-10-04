@@ -544,9 +544,9 @@ func tick(root: GameplayState, delta: float) -> void:
 		root._update_loading_screen(delta)
 		return
 	var ssc := root.screen_state_controller as ScreenStateController
-	if ssc.save_select_overlay != null and ssc.save_select_overlay.visible:
-		if ssc.save_select_footer_text != null:
-			ssc.save_select_footer_text.texture = ssc._pixel_prompt_texture(Callable(root, "_pixel_text_texture"), str(root._menu_back_prompt()), Color8(148, 220, 255)) as Texture2D
+	if ssc.save_select_presenter.overlay != null and ssc.save_select_presenter.overlay.visible:
+		if ssc.save_select_presenter.footer_text != null:
+			ssc.save_select_presenter.footer_text.texture = ssc._pixel_prompt_texture(Callable(root, "_pixel_text_texture"), str(root._menu_back_prompt()), Color8(148, 220, 255)) as Texture2D
 		if root._is_menu_back_just_pressed():
 			if ssc.save_overwrite_prompt_active: root._cancel_overwrite()
 			else: root._close_save_select()
@@ -561,8 +561,8 @@ func tick(root: GameplayState, delta: float) -> void:
 			if root._is_menu_direction_just_pressed(&"ui_left") or root._is_menu_direction_just_pressed(&"ui_right"):
 				ssc.save_overwrite_choice = 1 - choice; root._update_overwrite_cursor(); root._play_sound("ui_hover", -6.0, 1.0)
 			elif root._is_menu_confirm_just_pressed():
-				if choice == 0: (ssc.save_select_overlay.get_node("OverwriteYes") as Button).pressed.emit()
-				else: (ssc.save_select_overlay.get_node("OverwriteNo") as Button).pressed.emit()
+				if choice == 0: (ssc.save_select_presenter.overlay.get_node("OverwriteYes") as Button).pressed.emit()
+				else: (ssc.save_select_presenter.overlay.get_node("OverwriteNo") as Button).pressed.emit()
 			return
 		var slot := ssc.save_select_index
 		if root._is_menu_direction_just_pressed(&"ui_up"): slot -= 1
@@ -572,22 +572,22 @@ func tick(root: GameplayState, delta: float) -> void:
 			root._update_save_select_cursor()
 			root._play_sound("ui_hover", -6.0, 1.0)
 		elif root._is_menu_confirm_just_pressed():
-			for child in ssc.save_select_overlay.get_children():
+			for child in ssc.save_select_presenter.overlay.get_children():
 				if child is Button and child.has_meta("save_slot") and int(child.get_meta("save_slot")) == ssc.save_select_index:
 					(child as Button).pressed.emit()
 					break
 		return
-	if ssc.settings_overlay != null and ssc.settings_overlay.visible:
+	if ssc.settings_presenter.overlay != null and ssc.settings_presenter.overlay.visible:
 		root._update_settings_input()
 		return
-	if ssc.name_entry_overlay != null and ssc.name_entry_overlay.visible:
+	if ssc.name_entry_controller.widgets.overlay != null and ssc.name_entry_controller.widgets.overlay.visible:
 		ssc.update_name_entry_input(root)
 		return
-	var title_overlay := ssc.title_overlay; var archetype_overlay := ssc.archetype_overlay
-	if ssc.title_transition_active or (title_overlay != null and title_overlay.visible) or (archetype_overlay != null and archetype_overlay.visible):
+	var title_overlay := ssc.title_presenter.overlay; var archetype_overlay := ssc.archetype_presenter.overlay
+	if ssc.title_presenter.transition_active or (title_overlay != null and title_overlay.visible) or (archetype_overlay != null and archetype_overlay.visible):
 		root._update_title_screen(delta)
-		if ssc.title_transition_active and ssc.title_transition_timer < 0.72: return
-		if not ssc.title_transition_active: return
+		if ssc.title_presenter.transition_active and ssc.title_presenter.transition_timer < 0.72: return
+		if not ssc.title_presenter.transition_active: return
 	if root.loading_screen_active: root._update_loading_screen(delta); return
 	if root.walkable_outline.is_empty(): return
 	var minimap := root.dungeon_minimap_controller
@@ -624,7 +624,7 @@ func tick(root: GameplayState, delta: float) -> void:
 		# the coin animation and gold display do not freeze while shopping.
 		root._update_overworld_ui()
 		return
-	var run_complete_overlay := ssc.run_complete_overlay
+	var run_complete_overlay := ssc.run_complete_presenter.overlay
 	if run_complete_overlay != null and run_complete_overlay.visible:
 		if root.effects_spawner != null:
 			root.effects_spawner.resolve_item_acquisition_deliveries_if_blocked()

@@ -22,14 +22,14 @@ func _initialize() -> void:
 	if screens != null and profile != null:
 		screens.show_name_entry(gameplay, 0)
 		await process_frame
-		_expect(screens.name_entry_overlay != null and screens.name_entry_overlay.visible and screens.state == &"name_entry", "new file opens a dedicated name-entry screen", failures)
-		_expect(screens.name_entry_cell_buttons.size() == ScreenStateController.NAME_ENTRY_COLUMNS * ScreenStateController.NAME_ENTRY_ROWS, "name-entry owns a fixed controller grid", failures)
-		_expect(screens.name_entry_cell_buttons[0].visible and not screens.name_entry_cell_buttons[31].visible, "name-entry only exposes the active page cells", failures)
-		_expect(screens.name_entry_confirm_text.texture != null and screens.name_entry_back_text.texture != null, "name-entry shows one confirm and one back prompt", failures)
-		screens.name_entry_finish_callback = Callable(self, "_capture_name")
+		_expect(screens.name_entry_controller.widgets.overlay != null and screens.name_entry_controller.widgets.overlay.visible and screens.state == &"name_entry", "new file opens a dedicated name-entry screen", failures)
+		_expect(screens.name_entry_controller.widgets.cell_buttons.size() == ScreenStateController.NAME_ENTRY_COLUMNS * ScreenStateController.NAME_ENTRY_ROWS, "name-entry owns a fixed controller grid", failures)
+		_expect(screens.name_entry_controller.widgets.cell_buttons[0].visible and not screens.name_entry_controller.widgets.cell_buttons[31].visible, "name-entry only exposes the active page cells", failures)
+		_expect(screens.name_entry_controller.widgets.confirm_text.texture != null and screens.name_entry_controller.widgets.back_text.texture != null, "name-entry shows one confirm and one back prompt", failures)
+		screens.name_entry_controller.finish_callback = Callable(self, "_capture_name")
 		screens._activate_name_entry_cell(0)
 		screens._activate_name_entry_cell(1)
-		_expect(screens.name_entry_name == "AB", "name-entry controller selection appends letters", failures)
+		_expect(screens.name_entry_controller.name == "AB", "name-entry controller selection appends letters", failures)
 		screens._activate_name_entry_cell(28)
 		_expect(_accepted_name == "AB", "name-entry DONE returns the normalized player name", failures)
 		profile.player_name = _accepted_name
@@ -38,7 +38,7 @@ func _initialize() -> void:
 		_expect(restored.player_name == "AB", "player name survives profile serialization", failures)
 		screens.show_name_entry(gameplay, 0)
 		gameplay.call("_cancel_name_entry")
-		_expect(not screens.name_entry_overlay.visible and screens.state == &"title", "BACK exits name-entry without creating a file", failures)
+		_expect(not screens.name_entry_controller.widgets.overlay.visible and screens.state == &"title", "BACK exits name-entry without creating a file", failures)
 	gameplay.queue_free()
 	await process_frame
 	_finish(failures)

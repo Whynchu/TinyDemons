@@ -37,6 +37,7 @@ var hub_soul_text: Sprite2D = null
 var hub_gold_icon: Sprite2D = null
 var hub_soul_icon: Sprite2D = null
 var hub_list_cursor: Sprite2D = null
+var hub_shop_cursor: Sprite2D = null
 var hub_slot_cursor: Sprite2D = null
 var hub_choice_cursor: Sprite2D = null
 var hub_gear_choice_texts: Array[Sprite2D] = []

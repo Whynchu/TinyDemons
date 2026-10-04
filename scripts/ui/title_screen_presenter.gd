@@ -13,7 +13,11 @@ var start_text: Sprite2D = null
 var settings_text: Sprite2D = null
 var cursor_text: Sprite2D = null
 var menu_row := 0
+var frame_timer := 0.0
 var command_list: MenuCommandList = null
+var transition_active := false
+var transition_timer := 0.0
+var pending_destination := ""
 
 
 func build(parent: Node, view_size: Vector2, version: String, pixel_texture: Callable, new_game_callback: Callable, continue_callback: Callable, has_profile: bool, settings_callback: Callable, cloud_callback: Callable, widget_factory: MenuWidgetFactory) -> Dictionary:

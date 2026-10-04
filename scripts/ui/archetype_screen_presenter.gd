@@ -11,6 +11,19 @@ var right_buttons: Array[Button] = []
 var type_left_button: Button = null
 var type_right_button: Button = null
 var footer_text: Sprite2D = null
+var preview_frames: Array[Texture2D] = []
+var preview_palette := ""
+var frame_timer := 0.0
+var index := 0
+var color_index := 0
+var menu_row := 0
+var transition_active := false
+var transition_timer := 0.0
+var fade_out := false
+var arrow_anim_timer := 0.0
+var arrow_anim_direction := 0
+var selected_archetype := StatsComponent.AllocationProfile.BALANCED
+var starter_flame_index := 0
 
 
 func build(parent: Node, view_size: Vector2, shift_type: Callable, shift_color: Callable, start_callback: Callable, pixel_texture: Callable, widget_factory: MenuWidgetFactory) -> Dictionary:

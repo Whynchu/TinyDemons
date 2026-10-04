@@ -185,9 +185,9 @@ func _initialize() -> void:
 		if screens.pause_settings_button != null:
 			screens.pause_settings_button.pressed.emit()
 		await process_frame
-		_expect(screens.settings_overlay.visible and not screens.pause_overlay.visible and not screens.hub_overlay.visible, "pause Settings replaces pause without overlay overlap", failures)
+		_expect(screens.settings_presenter.overlay.visible and not screens.pause_overlay.visible and not screens.hub_overlay.visible, "pause Settings replaces pause without overlay overlap", failures)
 		gameplay.call("_close_settings")
-		_expect(screens.pause_overlay.visible and not screens.settings_overlay.visible and not screens.hub_overlay.visible and screens.state == &"pause", "closing pause Settings restores only pause", failures)
+		_expect(screens.pause_overlay.visible and not screens.settings_presenter.overlay.visible and not screens.hub_overlay.visible and screens.state == &"pause", "closing pause Settings restores only pause", failures)
 		if profile != null and not original_profile.is_empty():
 			# Shop assertions exercise the live transaction route, which saves the
 			# profile. Restore the developer's save so a smoke run is repeatable and

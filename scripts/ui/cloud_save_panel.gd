@@ -46,7 +46,7 @@ func build(parent: Node) -> void:
 		status_texts.append(root.screen_state_controller.create_sprite(overlay, "CloudSaveStatus%d" % line_index, null, Vector2(12, 62 + line_index * 7), false))
 	for child in overlay.get_children():
 		if child is Control: (child as Control).set_meta("cloud_base_x", (child as Control).position.x)
-	apply_layout(root.screen_state_controller.layout_view_size())
+	apply_layout(root.screen_state_controller.layout_controller.layout_view_size())
 
 func apply_layout(view_size: Vector2) -> void:
 	if overlay == null: return

@@ -186,14 +186,13 @@ func _initialize() -> void:
 
 
 func _hide_modal_screens(gameplay: Node) -> void:
-	var screens := gameplay.get("screen_state_controller") as Node
+	var screens := gameplay.get("screen_state_controller") as ScreenStateController
 	if screens == null:
 		return
-	for property_name in [&"title_overlay", &"archetype_overlay", &"hub_overlay", &"run_complete_overlay", &"save_select_overlay"]:
-		var overlay := screens.get(property_name) as CanvasItem
+	for overlay in [screens.title_presenter.overlay, screens.archetype_presenter.overlay, screens.hub_overlay, screens.run_complete_presenter.overlay, screens.save_select_presenter.overlay] as Array[CanvasItem]:
 		if overlay != null:
 			overlay.visible = false
-	screens.set("title_transition_active", false)
+	screens.title_presenter.transition_active = false
 	screens.set("hub_pause_mode", false)
 	screens.call("set_state", &"gameplay")
 

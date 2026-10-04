@@ -62,8 +62,8 @@ func show_hub(root: Object, from_npc: bool = false, pause_mode: bool = false) ->
 	root.screen_state_controller.hub_cancel_input_was_down = bool(root.call("_is_menu_cancel_input_pressed"))
 	root.screen_state_controller.hub_page_previous_input_was_down = bool(root.call("_is_hub_previous_page_input_pressed"))
 	root.screen_state_controller.hub_page_next_input_was_down = bool(root.call("_is_hub_next_page_input_pressed"))
-	if root.screen_state_controller.title_overlay != null: root.screen_state_controller.title_overlay.visible = false
-	if root.screen_state_controller.archetype_overlay != null: root.screen_state_controller.archetype_overlay.visible = false
+	if root.screen_state_controller.title_presenter.overlay != null: root.screen_state_controller.title_presenter.overlay.visible = false
+	if root.screen_state_controller.archetype_presenter.overlay != null: root.screen_state_controller.archetype_presenter.overlay.visible = false
 	if root.loading_screen_overlay != null: root.loading_screen_overlay.visible = false
 	if root.game_over_overlay != null: root.game_over_overlay.visible = false
 	root.screen_state_controller.hub_overlay.visible = true
@@ -99,8 +99,8 @@ func open_pause_menu(root: Object) -> void:
 	root.screen_state_controller.pause_interact_input_was_down = bool(root.call("_is_interact_input_pressed"))
 	root.screen_state_controller.pause_cancel_input_was_down = bool(root.call("_is_menu_cancel_input_pressed"))
 	root.screen_state_controller.hub_overlay.visible = false
-	if root.screen_state_controller.title_overlay != null: root.screen_state_controller.title_overlay.visible = false
-	if root.screen_state_controller.archetype_overlay != null: root.screen_state_controller.archetype_overlay.visible = false
+	if root.screen_state_controller.title_presenter.overlay != null: root.screen_state_controller.title_presenter.overlay.visible = false
+	if root.screen_state_controller.archetype_presenter.overlay != null: root.screen_state_controller.archetype_presenter.overlay.visible = false
 	root.screen_state_controller.pause_overlay.visible = true
 	root.screen_state_controller.set_menu_world_hidden(root, true)
 	root.screen_state_controller.set_state(&"pause")

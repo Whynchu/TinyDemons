@@ -1275,6 +1275,46 @@ run while the shared editor is active.
 Next: continue Stage 3.1 by extracting Hub construction and responsive layout
 ownership, then remeasure the remaining screen routing and cross-screen seams.
 
+**Implementation record (2026-10-04):** Moved construction of the legacy Hub
+inventory, Shop, equipment-fallback, Fusion, and Bind controls into the 165-line
+`HubLegacyWidgetBuilder`. It writes typed references into the existing
+`HubResponsiveLayoutPresenter`, which remains the owner consumed by responsive
+layout, fallback rendering, and input compatibility paths. Shop mode selection
+now enters through a named ScreenStateController state callback. Existing
+facade properties and widget behavior remain in place. ScreenStateController
+fell from 2,431 to 2,332 lines; the helper is below the 400-line ceiling. The
+generated script index now contains 282 scripts, and the new UI role is recorded
+in `script-role-map-2026.md`. Focused Godot script diagnostics pass for the
+builder, layout owner, and screen facade; `git diff --check` passes. The strict
+composition audit is currently blocked by GameplayState (1,714 vs 1,709-line
+baseline) and RoomController (2,180 vs 2,175-line baseline) regressions outside
+this slice. UID validation also stops on an unresolved resource UID in
+`element_catalog.tres`. No gameplay tests were run.
+
+**Implementation record (2026-10-04):** Continued Stage 3.1 to the requested
+1,500-line checkpoint. ScreenStateController is now 1,474 lines, down from the
+2,332-line checkpoint (858 fewer). Title/archetype/defeat flow, Pause and
+Settings routes, display and cursor layout, Hub setup, and Hub list scrolling
+now live in five focused UI owners. The facade keeps its existing method
+signatures for GameplayState, SaveFlowController, HubInputController, and menu
+probes. MCP script diagnostics pass for the facade and all five new owners;
+the script index and role map are refreshed. No gameplay or smoke tests were
+run. The approved 800-line forward target remains open; continue only where a
+clear ownership seam exists rather than splitting coherent residual logic by
+line count.
+
+**Implementation record (2026-10-04):** Continued Stage 3.1 to the agreed
+1,200-line checkpoint. ScreenStateController is 1,195 lines, down from the
+1,474-line checkpoint. Screen assembly now owns screen construction routes;
+title/archetype state and screen-specific widget references live on typed
+presenters, and display-layout ownership is exposed directly to callers. MCP
+script diagnostics pass for the touched UI owners and callers. The 800-line
+forward target remains open; Hub compatibility properties remain for dynamic
+consumers. No gameplay or smoke suite was run.
+
+Next: review authored-page discovery in `build_hub` and continue reducing Hub
+compatibility seams where callers can move to typed owners.
+
 ### 3.2 `gameplay_bootstrap.gd` — declarative assembly
 
 Replace the 44 hand-written `_add_runtime_node` calls with a registration table

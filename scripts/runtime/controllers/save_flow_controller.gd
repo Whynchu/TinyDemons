@@ -6,19 +6,19 @@ const ActiveRunSaveServiceScript = preload("res://scripts/runtime/services/activ
 
 
 func build_title_screen(root: Object) -> void:
-	root.screen_state_controller.build_title(root.ui, Callable(root, "_pixel_text_texture"), Callable(root, "_start_new_game"), Callable(root, "_continue_game"), root.has_persistent_profile, Callable(root, "_open_settings_from_title"), Callable(root, "_open_cloud_save"))
+	root.screen_state_controller.assembly_controller.build_title(root.ui, Callable(root, "_pixel_text_texture"), Callable(root, "_start_new_game"), Callable(root, "_continue_game"), root.has_persistent_profile, Callable(root, "_open_settings_from_title"), Callable(root, "_open_cloud_save"))
 	root.screen_state_controller.refresh_title_menu_layout(root.has_persistent_profile)
 	var enters_saved_route: bool = root.player_profile != null and root.player_profile.has_started and (root.player_profile.pending_route == "hub" or root.player_profile.pending_route == "run")
-	if enters_saved_route and root.screen_state_controller.title_overlay != null:
+	if enters_saved_route and root.screen_state_controller.title_presenter.overlay != null:
 		# Full-run boot still constructs the shared title assets, but the title must
 		# never become visible during the yielded loading phases before gameplay.
-		root.screen_state_controller.title_overlay.visible = false
+		root.screen_state_controller.title_presenter.overlay.visible = false
 	build_archetype_screen(root)
-	root.screen_state_controller.build_name_entry(root.ui, Callable(root, "_pixel_text_texture"), Callable(root, "_finish_name_entry"), Callable(root, "_cancel_name_entry"), Callable(root, "_save_preview_texture"))
+	root.screen_state_controller.assembly_controller.build_name_entry(root.ui, Callable(root, "_pixel_text_texture"), Callable(root, "_finish_name_entry"), Callable(root, "_cancel_name_entry"), Callable(root, "_save_preview_texture"))
 
 
 func build_archetype_screen(root: Object) -> void:
-	root.screen_state_controller.build_archetype(root.ui, Callable(root, "_shift_archetype"), Callable(root, "_shift_archetype_color"), Callable(root, "_start_selected_archetype"), Callable(root, "_pixel_text_texture"))
+	root.screen_state_controller.assembly_controller.build_archetype(root.ui, Callable(root, "_shift_archetype"), Callable(root, "_shift_archetype_color"), Callable(root, "_start_selected_archetype"), Callable(root, "_pixel_text_texture"))
 	root.screen_state_controller.update_archetype_screen(root)
 
 
@@ -35,25 +35,25 @@ func continue_game(root: Object) -> void:
 
 
 func open_save_select_after_title_transition(root: Object) -> void:
-	if root.screen_state_controller.save_select_overlay == null:
-		root.screen_state_controller.save_select_overlay = root.screen_state_controller.build_save_select(root.ui, Callable(root, "_pixel_text_texture"), Callable(root, "_select_save_slot"), Callable(root, "_confirm_overwrite"), Callable(root, "_save_overwrite_no"), Callable(root, "_save_portrait_texture"), Callable(root, "_close_save_select"))
+	if root.screen_state_controller.save_select_presenter.overlay == null:
+		root.screen_state_controller.save_select_presenter.overlay = root.screen_state_controller.assembly_controller.build_save_select(root.ui, Callable(root, "_pixel_text_texture"), Callable(root, "_select_save_slot"), Callable(root, "_confirm_overwrite"), Callable(root, "_save_overwrite_no"), Callable(root, "_save_portrait_texture"), Callable(root, "_close_save_select"))
 	root.screen_state_controller.save_select_index = 0
 	root.screen_state_controller.menu_input_release_lock = true
 	# Keep the opaque title cover behind the save menu so the gameplay scene is
 	# never exposed between the title transition and save selection.
-	if root.screen_state_controller.title_overlay != null:
-		root.screen_state_controller.title_overlay.visible = true
-		root.screen_state_controller.title_overlay.modulate.a = 1.0
-	root.screen_state_controller.save_select_overlay.visible = true
+	if root.screen_state_controller.title_presenter.overlay != null:
+		root.screen_state_controller.title_presenter.overlay.visible = true
+		root.screen_state_controller.title_presenter.overlay.modulate.a = 1.0
+	root.screen_state_controller.save_select_presenter.overlay.visible = true
 	update_save_select_cursor(root)
 
 
 func update_save_select_cursor(root: Object) -> void:
-	if root.screen_state_controller.save_select_overlay == null: return
-	for child in root.screen_state_controller.save_select_overlay.get_children():
+	if root.screen_state_controller.save_select_presenter.overlay == null: return
+	for child in root.screen_state_controller.save_select_presenter.overlay.get_children():
 		if child is Button and child.has_meta("save_slot") and int(child.get_meta("save_slot")) == root.screen_state_controller.save_select_index:
 			(child as Button).release_focus()
-	var cursor := root.screen_state_controller.save_select_overlay.get_node_or_null("SaveSelectCursor") as Sprite2D
+	var cursor := root.screen_state_controller.save_select_presenter.overlay.get_node_or_null("SaveSelectCursor") as Sprite2D
 	if cursor != null:
 		var display := root.get("display_controller") as DisplayController
 		var view_width := float(display.view_size_value().x) if display != null else 240.0
@@ -109,18 +109,18 @@ func set_overwrite_prompt(root: Object, active: bool) -> void:
 	root.screen_state_controller.save_overwrite_choice = 0
 	root.screen_state_controller.menu_input_release_lock = active
 	for node_name in ["OverwritePrompt", "OverwriteYes", "OverwriteNo"]:
-		var node: CanvasItem = root.screen_state_controller.save_select_overlay.get_node_or_null(node_name) as CanvasItem
+		var node: CanvasItem = root.screen_state_controller.save_select_presenter.overlay.get_node_or_null(node_name) as CanvasItem
 		if node != null: node.visible = active
 	for node_name in ["SaveNavBack"]:
-		var nav := root.screen_state_controller.save_select_overlay.get_node_or_null(node_name) as CanvasItem
+		var nav := root.screen_state_controller.save_select_presenter.overlay.get_node_or_null(node_name) as CanvasItem
 		if nav != null: nav.visible = not active
-	var cursor := root.screen_state_controller.save_select_overlay.get_node_or_null("OverwriteCursor") as Sprite2D
+	var cursor := root.screen_state_controller.save_select_presenter.overlay.get_node_or_null("OverwriteCursor") as Sprite2D
 	if cursor != null:
 		cursor.visible = active
 		var display := root.get("display_controller") as DisplayController
 		var view_width := float(display.view_size_value().x) if display != null else 240.0
 		root.screen_state_controller.move_menu_cursor(cursor, Vector2((view_width - 42.0) * 0.5 - root.screen_state_controller.CURSOR_LEFT_GAP, 140))
-	var prompt := root.screen_state_controller.save_select_overlay.get_node_or_null("OverwritePrompt") as Sprite2D
+	var prompt := root.screen_state_controller.save_select_presenter.overlay.get_node_or_null("OverwritePrompt") as Sprite2D
 	if prompt != null:
 		prompt.texture = root.call("_pixel_text_texture", "OVERWRITE?  YES / NO", Color.WHITE)
 
@@ -131,17 +131,17 @@ func set_recovery_prompt(root: Object, active: bool) -> void:
 	root.screen_state_controller.save_overwrite_choice = 0
 	root.screen_state_controller.menu_input_release_lock = active
 	for node_name in ["OverwritePrompt", "OverwriteYes", "OverwriteNo"]:
-		var node: CanvasItem = root.screen_state_controller.save_select_overlay.get_node_or_null(node_name) as CanvasItem
+		var node: CanvasItem = root.screen_state_controller.save_select_presenter.overlay.get_node_or_null(node_name) as CanvasItem
 		if node != null: node.visible = active
-	var nav := root.screen_state_controller.save_select_overlay.get_node_or_null("SaveNavBack") as CanvasItem
+	var nav := root.screen_state_controller.save_select_presenter.overlay.get_node_or_null("SaveNavBack") as CanvasItem
 	if nav != null: nav.visible = not active
-	var cursor := root.screen_state_controller.save_select_overlay.get_node_or_null("OverwriteCursor") as Sprite2D
+	var cursor := root.screen_state_controller.save_select_presenter.overlay.get_node_or_null("OverwriteCursor") as Sprite2D
 	if cursor != null:
 		cursor.visible = active
 		var display := root.get("display_controller") as DisplayController
 		var view_width := float(display.view_size_value().x) if display != null else 240.0
 		root.screen_state_controller.move_menu_cursor(cursor, Vector2((view_width - 42.0) * 0.5 - root.screen_state_controller.CURSOR_LEFT_GAP, 140))
-	var prompt := root.screen_state_controller.save_select_overlay.get_node_or_null("OverwritePrompt") as Sprite2D
+	var prompt := root.screen_state_controller.save_select_presenter.overlay.get_node_or_null("OverwritePrompt") as Sprite2D
 	if prompt != null:
 		prompt.texture = root.call("_pixel_text_texture", "RESUME RUN?  YES / NO", Color.WHITE)
 
@@ -172,7 +172,7 @@ func confirm_overwrite(root: Object) -> void:
 	root.call("_play_sound", "ui_confirm", 0.0, 1.0)
 	var selected_slot: int = int(root.screen_state_controller.save_overwrite_slot if ProfileSaveService.slot_has_profile(root.screen_state_controller.save_overwrite_slot) else root.screen_state_controller.save_select_index)
 	ProfileSaveService.select_slot(selected_slot)
-	if root.screen_state_controller.save_select_overlay != null: root.screen_state_controller.save_select_overlay.visible = false
+	if root.screen_state_controller.save_select_presenter.overlay != null: root.screen_state_controller.save_select_presenter.overlay.visible = false
 	# Keep the old profile on disk and in memory until the player confirms a
 	# name. This makes BACK from the name screen safe even when the selected slot
 	# is an overwrite of an existing file.
@@ -231,7 +231,7 @@ func reset_runtime_for_new_save(root: Object) -> void:
 
 
 func update_overwrite_cursor(root: Object) -> void:
-	var cursor := root.screen_state_controller.save_select_overlay.get_node_or_null("OverwriteCursor") as Sprite2D
+	var cursor := root.screen_state_controller.save_select_presenter.overlay.get_node_or_null("OverwriteCursor") as Sprite2D
 	if cursor != null:
 		var display := root.get("display_controller") as DisplayController
 		var view_width := float(display.view_size_value().x) if display != null else 240.0
@@ -241,43 +241,43 @@ func update_overwrite_cursor(root: Object) -> void:
 
 
 func close_save_select(root: Object) -> void:
-	if root.screen_state_controller.save_select_overlay != null: root.screen_state_controller.save_select_overlay.visible = false
+	if root.screen_state_controller.save_select_presenter.overlay != null: root.screen_state_controller.save_select_presenter.overlay.visible = false
 	root.screen_state_controller.menu_input_release_lock = false
-	if root.screen_state_controller.title_overlay != null:
-		root.screen_state_controller.title_overlay.visible = true
-		root.screen_state_controller.title_overlay.modulate.a = 1.0
-	if root.screen_state_controller.title_screen_text != null: root.screen_state_controller.title_screen_text.visible = true
-	var title_version: Sprite2D = root.screen_state_controller.title_overlay.get_node_or_null("TitleVersion") as Sprite2D if root.screen_state_controller.title_overlay != null else null
+	if root.screen_state_controller.title_presenter.overlay != null:
+		root.screen_state_controller.title_presenter.overlay.visible = true
+		root.screen_state_controller.title_presenter.overlay.modulate.a = 1.0
+	if root.screen_state_controller.title_presenter.title_text != null: root.screen_state_controller.title_presenter.title_text.visible = true
+	var title_version: Sprite2D = root.screen_state_controller.title_presenter.overlay.get_node_or_null("TitleVersion") as Sprite2D if root.screen_state_controller.title_presenter.overlay != null else null
 	if title_version != null: title_version.visible = true
-	if root.screen_state_controller.title_start_text != null: root.screen_state_controller.title_start_text.visible = true
-	if root.screen_state_controller.title_start_button != null: root.screen_state_controller.title_start_button.visible = true
-	if root.screen_state_controller.title_continue_button != null: root.screen_state_controller.title_continue_button.visible = not root.screen_state_controller.title_continue_button.disabled
-	if root.screen_state_controller.title_settings_button != null: root.screen_state_controller.title_settings_button.visible = true
-	if root.screen_state_controller.title_cloud_button != null: root.screen_state_controller.title_cloud_button.visible = true
-	if root.screen_state_controller.title_cursor_text != null: root.screen_state_controller.title_cursor_text.visible = true
-	root.screen_state_controller.title_transition_active = false
-	root.screen_state_controller.pending_title_destination = ""
+	if root.screen_state_controller.title_presenter.start_text != null: root.screen_state_controller.title_presenter.start_text.visible = true
+	if root.screen_state_controller.title_presenter.start_button != null: root.screen_state_controller.title_presenter.start_button.visible = true
+	if root.screen_state_controller.title_presenter.continue_button != null: root.screen_state_controller.title_presenter.continue_button.visible = not root.screen_state_controller.title_presenter.continue_button.disabled
+	if root.screen_state_controller.title_presenter.settings_button != null: root.screen_state_controller.title_presenter.settings_button.visible = true
+	if root.screen_state_controller.title_presenter.cloud_button != null: root.screen_state_controller.title_presenter.cloud_button.visible = true
+	if root.screen_state_controller.title_presenter.cursor_text != null: root.screen_state_controller.title_presenter.cursor_text.visible = true
+	root.screen_state_controller.title_presenter.transition_active = false
+	root.screen_state_controller.title_presenter.pending_destination = ""
 	root.screen_state_controller.set_state(&"title")
 	root.call("_play_sound", "ui_decline", 0.0, 1.0)
 
 
 func cancel_character_creation(root: Object) -> void:
 	root.call("_play_sound", "ui_decline", 0.0, 1.0)
-	if root.screen_state_controller.archetype_overlay != null: root.screen_state_controller.archetype_overlay.visible = false
-	if root.screen_state_controller.title_overlay != null:
-		root.screen_state_controller.title_overlay.visible = true
-		root.screen_state_controller.title_overlay.modulate.a = 1.0
-	if root.screen_state_controller.title_screen_text != null: root.screen_state_controller.title_screen_text.visible = true
-	var title_version: Sprite2D = root.screen_state_controller.title_overlay.get_node_or_null("TitleVersion") as Sprite2D if root.screen_state_controller.title_overlay != null else null
+	if root.screen_state_controller.archetype_presenter.overlay != null: root.screen_state_controller.archetype_presenter.overlay.visible = false
+	if root.screen_state_controller.title_presenter.overlay != null:
+		root.screen_state_controller.title_presenter.overlay.visible = true
+		root.screen_state_controller.title_presenter.overlay.modulate.a = 1.0
+	if root.screen_state_controller.title_presenter.title_text != null: root.screen_state_controller.title_presenter.title_text.visible = true
+	var title_version: Sprite2D = root.screen_state_controller.title_presenter.overlay.get_node_or_null("TitleVersion") as Sprite2D if root.screen_state_controller.title_presenter.overlay != null else null
 	if title_version != null: title_version.visible = true
-	if root.screen_state_controller.title_start_text != null: root.screen_state_controller.title_start_text.visible = true
-	if root.screen_state_controller.title_start_button != null: root.screen_state_controller.title_start_button.visible = true
-	if root.screen_state_controller.title_continue_button != null: root.screen_state_controller.title_continue_button.visible = not root.screen_state_controller.title_continue_button.disabled
-	if root.screen_state_controller.title_settings_button != null: root.screen_state_controller.title_settings_button.visible = true
-	if root.screen_state_controller.title_cloud_button != null: root.screen_state_controller.title_cloud_button.visible = true
-	if root.screen_state_controller.title_cursor_text != null: root.screen_state_controller.title_cursor_text.visible = true
-	root.screen_state_controller.title_transition_active = false
-	root.screen_state_controller.pending_title_destination = ""
+	if root.screen_state_controller.title_presenter.start_text != null: root.screen_state_controller.title_presenter.start_text.visible = true
+	if root.screen_state_controller.title_presenter.start_button != null: root.screen_state_controller.title_presenter.start_button.visible = true
+	if root.screen_state_controller.title_presenter.continue_button != null: root.screen_state_controller.title_presenter.continue_button.visible = not root.screen_state_controller.title_presenter.continue_button.disabled
+	if root.screen_state_controller.title_presenter.settings_button != null: root.screen_state_controller.title_presenter.settings_button.visible = true
+	if root.screen_state_controller.title_presenter.cloud_button != null: root.screen_state_controller.title_presenter.cloud_button.visible = true
+	if root.screen_state_controller.title_presenter.cursor_text != null: root.screen_state_controller.title_presenter.cursor_text.visible = true
+	root.screen_state_controller.title_presenter.transition_active = false
+	root.screen_state_controller.title_presenter.pending_destination = ""
 	root.screen_state_controller.set_state(&"title")
 
 
@@ -324,7 +324,7 @@ func _load_continue_slot(root: Object, slot: int, loaded_profile: PlayerProfile)
 	root.pending_run_restore = ActiveRunSaveServiceScript.has_valid_snapshot(slot)
 	ProfileSaveService.request_next_boot_route("run")
 	ProfileSaveService.save_profile(root.player_profile)
-	if root.screen_state_controller.save_select_overlay != null: root.screen_state_controller.save_select_overlay.visible = false
+	if root.screen_state_controller.save_select_presenter.overlay != null: root.screen_state_controller.save_select_presenter.overlay.visible = false
 	root.call("_play_sound", "ui_confirm", 0.0, 1.0)
 	root.call("_begin_scene_transition")
 
@@ -342,8 +342,8 @@ func enter_starting_room_from_menu(root: GameplayState) -> void:
 		root._begin_scene_transition()
 		return
 	root.actor_presentation_runtime_controller.set_title_world_visible(root, true)
-	if root.screen_state_controller.title_overlay != null: root.screen_state_controller.title_overlay.visible = false
-	if root.screen_state_controller.archetype_overlay != null: root.screen_state_controller.archetype_overlay.visible = false
+	if root.screen_state_controller.title_presenter.overlay != null: root.screen_state_controller.title_presenter.overlay.visible = false
+	if root.screen_state_controller.archetype_presenter.overlay != null: root.screen_state_controller.archetype_presenter.overlay.visible = false
 	if root.screen_state_controller.hub_overlay != null: root.screen_state_controller.hub_overlay.visible = false
 	root.player.visible = false
 	if root.player_shadow != null: root.player_shadow.visible = false
@@ -411,13 +411,13 @@ func place_player_at_hub_fire(root: Object) -> void:
 
 
 func build_loading_screen(root: Object) -> void:
-	var controls: Dictionary = root.screen_state_controller.build_loading(root.ui, Callable(root, "_pixel_text_texture"))
+	var controls: Dictionary = root.screen_state_controller.assembly_controller.build_loading(root.ui, Callable(root, "_pixel_text_texture"))
 	root.loading_screen_overlay = controls["overlay"] as ColorRect
 	root.loading_screen_text = controls["text"] as Sprite2D
 
 
 func update_loading_screen(root: Object, delta: float) -> void:
-	var result: Dictionary = root.screen_state_controller.update_loading(root.loading_screen_overlay, root.loading_screen_text, root.loading_screen_fading, root.loading_screen_timer, delta, Callable(root, "_pixel_text_texture"))
+	var result: Dictionary = root.screen_state_controller.assembly_controller.update_loading(root.loading_screen_overlay, root.loading_screen_text, root.loading_screen_fading, root.loading_screen_timer, delta, Callable(root, "_pixel_text_texture"))
 	root.loading_screen_fading = result["fading"]
 	root.loading_screen_timer = result["timer"]
 	if result["finished"]: root.loading_screen_active = false

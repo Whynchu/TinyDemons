@@ -26,12 +26,12 @@ func _initialize() -> void:
 		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://.godot_user"))
 		settings.file_path = TEST_PATH
 		settings.reset_to_defaults()
-		_expect(screens.title_settings_button != null, "title screen exposes a Settings button", failures)
-		if screens.title_settings_button != null:
-			screens.title_settings_button.pressed.emit()
+		_expect(screens.title_presenter.settings_button != null, "title screen exposes a Settings button", failures)
+		if screens.title_presenter.settings_button != null:
+			screens.title_presenter.settings_button.pressed.emit()
 		await process_frame
-		_expect(screens.settings_overlay != null and screens.settings_overlay.visible, "title Settings button opens the shared panel", failures)
-		_expect(screens.state == &"settings" and screens.settings_value_buttons.size() == 7, "settings panel enters its seven-row state", failures)
+		_expect(screens.settings_presenter.overlay != null and screens.settings_presenter.overlay.visible, "title Settings button opens the shared panel", failures)
+		_expect(screens.state == &"settings" and screens.settings_presenter.value_buttons.size() == 7, "settings panel enters its seven-row state", failures)
 		gameplay.call("_select_setting_option", 1, 2)
 		gameplay.call("_adjust_setting", 3, -1)
 		_expect(str(settings.get_setting(&"aspect")) == "16:10", "aspect row applies immediately", failures)
@@ -41,25 +41,25 @@ func _initialize() -> void:
 		_expect(sound.sfx_volume() == 40, "SFX volume applies to the live sound manager", failures)
 		_expect(settings.load_settings().get("aspect") == "16:10", "settings changes persist through ConfigFile", failures)
 		_expect(settings.load_settings().get("sfx_volume") == 40, "audio settings persist through ConfigFile", failures)
-		_expect(screens.settings_option_buttons.size() == 7 and screens.settings_option_buttons[1].size() == 4 and screens.settings_option_buttons[3].size() == 11 and screens.settings_option_buttons[6].size() == 2, "settings exposes direct horizontal option controls", failures)
+		_expect(screens.settings_presenter.option_buttons.size() == 7 and screens.settings_presenter.option_buttons[1].size() == 4 and screens.settings_presenter.option_buttons[3].size() == 11 and screens.settings_presenter.option_buttons[6].size() == 2, "settings exposes direct horizontal option controls", failures)
 		# Confirming the navigable BACK row must close Settings without allowing the
 		# same held input to fall through to the title screen's New Game button.
-		screens.settings_row = screens.settings_value_buttons.size()
+		screens.settings_presenter.row = screens.settings_presenter.value_buttons.size()
 		screens.call("update_settings_ui", gameplay, Callable(gameplay, "_pixel_text_texture"))
 		screens.call("_focus_settings_selection")
-		_expect(screens.settings_back_button.focus_mode == Control.FOCUS_NONE and screens.settings_cursor_text.visible, "title Settings exposes BACK as a rendered selection", failures)
+		_expect(screens.settings_presenter.back_button.focus_mode == Control.FOCUS_NONE and screens.settings_presenter.cursor_text.visible, "title Settings exposes BACK as a rendered selection", failures)
 		input_router.set("_previous", {&"menu_confirm": false, &"menu_back": false})
 		input_router.set("_current", {&"menu_confirm": true, &"menu_back": false})
 		gameplay.call("_update_settings_input")
 		await process_frame
-		_expect(not screens.settings_overlay.visible and screens.title_overlay.visible, "confirming Settings BACK restores the title", failures)
+		_expect(not screens.settings_presenter.overlay.visible and screens.title_presenter.overlay.visible, "confirming Settings BACK restores the title", failures)
 		_expect(screens.state == &"title", "confirming Settings BACK restores title state", failures)
-		_expect(not screens.title_transition_active, "Settings BACK confirm does not fall through to New Game", failures)
+		_expect(not screens.title_presenter.transition_active, "Settings BACK confirm does not fall through to New Game", failures)
 		input_router.set("_previous", {&"menu_confirm": true, &"menu_back": false})
 		input_router.set("_current", {&"menu_confirm": false, &"menu_back": false})
 		await process_frame
 		var focus_owner := gameplay.get_viewport().gui_get_focus_owner()
-		_expect(focus_owner == null and screens.title_menu_row == 2, "closing settings restores title selection", failures)
+		_expect(focus_owner == null and screens.title_presenter.menu_row == 2, "closing settings restores title selection", failures)
 		gameplay.call("_build_hub_ui")
 		if screens.hub_overlay != null:
 			screens.hub_overlay.visible = false
@@ -69,24 +69,24 @@ func _initialize() -> void:
 		if screens.pause_settings_button != null:
 			screens.pause_settings_button.pressed.emit()
 		await process_frame
-		_expect(screens.settings_overlay.visible and screens.settings_origin == &"pause", "pause Settings opens the same panel", failures)
+		_expect(screens.settings_presenter.overlay.visible and screens.settings_presenter.origin == &"pause", "pause Settings opens the same panel", failures)
 		_expect(screens.hub_overlay == null or not screens.hub_overlay.visible, "pause panel is hidden while settings is open", failures)
 		# The sixth virtual selection is the visible BACK button, so a controller
 		# can leave the panel without relying on a separate keyboard-only action.
-		screens.settings_row = screens.settings_value_buttons.size()
+		screens.settings_presenter.row = screens.settings_presenter.value_buttons.size()
 		screens.call("update_settings_ui", gameplay, Callable(gameplay, "_pixel_text_texture"))
 		screens.call("_focus_settings_selection")
-		_expect(screens.settings_back_button.focus_mode == Control.FOCUS_NONE and screens.settings_cursor_text.visible, "settings exposes BACK as a rendered selection", failures)
+		_expect(screens.settings_presenter.back_button.focus_mode == Control.FOCUS_NONE and screens.settings_presenter.cursor_text.visible, "settings exposes BACK as a rendered selection", failures)
 		input_router.set("_previous", {&"menu_confirm": false, &"menu_back": false})
 		input_router.set("_current", {&"menu_confirm": false, &"menu_back": true})
 		gameplay.call("_update_settings_input")
 		await process_frame
-		_expect(not screens.settings_overlay.visible and screens.hub_pause_mode, "mapped cancel closes pause settings", failures)
+		_expect(not screens.settings_presenter.overlay.visible and screens.hub_pause_mode, "mapped cancel closes pause settings", failures)
 		_expect(screens.pause_overlay != null and screens.pause_overlay.visible and (screens.hub_overlay == null or not screens.hub_overlay.visible) and screens.pause_page == 0, "closing settings restores the dedicated pause command panel", failures)
 		# Test the two-state debug preference last so input used here cannot affect
 		# the pause/settings navigation assertions above.
 		screens.call("open_settings", gameplay, &"pause")
-		screens.settings_row = 6
+		screens.settings_presenter.row = 6
 		screens.call("update_settings_ui", gameplay, Callable(gameplay, "_pixel_text_texture"))
 		input_router.set("_previous", {&"menu_confirm": false, &"menu_back": false})
 		input_router.set("_current", {&"menu_confirm": true, &"menu_back": false})

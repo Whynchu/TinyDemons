@@ -336,7 +336,7 @@ func initialize(root: GameplayState, preview_session: RefCounted = null) -> void
 	root.call("_build_title_screen")
 	if profile.has_started and (requested_route == "hub" or requested_route == "run"):
 		var route_screens := root.get("screen_state_controller") as ScreenStateController
-		if route_screens.title_overlay != null: route_screens.title_overlay.visible = false
+		if route_screens.title_presenter.overlay != null: route_screens.title_presenter.overlay.visible = false
 	await root.get_tree().process_frame
 	_phase(&"build_ui_cloud_panel")
 	root.cloud_save_panel.build(root.ui)
@@ -357,8 +357,8 @@ func initialize(root: GameplayState, preview_session: RefCounted = null) -> void
 	if enters_saved_route:
 		# Full run boot may still construct the title scene for shared UI assets, but
 		# an active save route must never expose that overlay between loading and play.
-		if screens.title_overlay != null: screens.title_overlay.visible = false
-		if screens.archetype_overlay != null: screens.archetype_overlay.visible = false
+		if screens.title_presenter.overlay != null: screens.title_presenter.overlay.visible = false
+		if screens.archetype_presenter.overlay != null: screens.archetype_presenter.overlay.visible = false
 		screens.set_state(&"loading")
 	else:
 		screens.set_state(&"title")
@@ -461,28 +461,28 @@ func _show_title_after_boot(root: GameplayState, boot_loading: CanvasItem) -> vo
 	if boot_loading != null:
 		boot_loading.visible = false
 	var screens := root.screen_state_controller as ScreenStateController
-	if screens == null or screens.title_overlay == null:
+	if screens == null or screens.title_presenter.overlay == null:
 		push_error("Title screen was not constructed before bootstrap completed.")
 		return
 	root.ui.visible = true
-	screens.title_overlay.visible = true
-	screens.title_overlay.modulate.a = 1.0
-	if screens.title_screen_text != null: screens.title_screen_text.visible = true
-	if screens.title_start_text != null: screens.title_start_text.visible = true
-	if screens.title_start_button != null: screens.title_start_button.visible = true
-	if screens.title_continue_button != null: screens.title_continue_button.visible = not screens.title_continue_button.disabled
-	if screens.title_settings_button != null: screens.title_settings_button.visible = true
-	if screens.title_cloud_button != null: screens.title_cloud_button.visible = true
-	if screens.title_cursor_text != null: screens.title_cursor_text.visible = true
-	screens.title_transition_active = false
-	screens.pending_title_destination = ""
+	screens.title_presenter.overlay.visible = true
+	screens.title_presenter.overlay.modulate.a = 1.0
+	if screens.title_presenter.title_text != null: screens.title_presenter.title_text.visible = true
+	if screens.title_presenter.start_text != null: screens.title_presenter.start_text.visible = true
+	if screens.title_presenter.start_button != null: screens.title_presenter.start_button.visible = true
+	if screens.title_presenter.continue_button != null: screens.title_presenter.continue_button.visible = not screens.title_presenter.continue_button.disabled
+	if screens.title_presenter.settings_button != null: screens.title_presenter.settings_button.visible = true
+	if screens.title_presenter.cloud_button != null: screens.title_presenter.cloud_button.visible = true
+	if screens.title_presenter.cursor_text != null: screens.title_presenter.cursor_text.visible = true
+	screens.title_presenter.transition_active = false
+	screens.title_presenter.pending_destination = ""
 	screens.set_state(&"title")
 
 
 func _enter_debug_gameplay(root: Object) -> void:
 	var ssc := root.get("screen_state_controller") as ScreenStateController
-	var title_overlay := ssc.title_overlay as CanvasItem
-	var archetype_overlay := ssc.archetype_overlay as CanvasItem
+	var title_overlay := ssc.title_presenter.overlay as CanvasItem
+	var archetype_overlay := ssc.archetype_presenter.overlay as CanvasItem
 	var loading_overlay := root.get("loading_screen_overlay") as CanvasItem
 	if title_overlay != null: title_overlay.visible = false
 	if archetype_overlay != null: archetype_overlay.visible = false

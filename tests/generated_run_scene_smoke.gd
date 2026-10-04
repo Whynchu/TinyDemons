@@ -98,15 +98,15 @@ func _initialize() -> void:
 			_expect(String((gameplay.get("screen_state_controller") as Node).get("player_palette_name")) == "red", "alternate Fire Room swaps the player palette", failures)
 			var chroma := gameplay.get("player_chroma_component") as Node
 			_expect(String(chroma.call("aspect_name")) == "fire", "alternate Fire Room attunes the matching player aspect", failures)
-	var screen_state := gameplay.get("screen_state_controller") as Node
+	var screen_state := gameplay.get("screen_state_controller") as ScreenStateController
 	var run_flow := gameplay.get("run_flow_controller") as Node
 	var display := gameplay.get("display_controller") as DisplayController
 	if screen_state != null and run_flow != null:
 		run_flow.call("show_run_complete", gameplay, Color.WHITE)
-		var completion_overlay := screen_state.get("run_complete_overlay") as ColorRect
+		var completion_overlay := screen_state.run_complete_presenter.overlay
 		_expect(completion_overlay != null and completion_overlay.visible, "run completion overlay opens after the boss flow", failures)
 		_expect(display != null and completion_overlay != null and completion_overlay.size == Vector2(display.view_size_value()), "run completion uses the active full logical view", failures)
-		_expect(screen_state.get("run_complete_texts") != null and (screen_state.get("run_complete_texts") as Array[Sprite2D]).size() == 9, "run completion keeps its compact result metrics", failures)
+		_expect(screen_state.run_complete_presenter.lines != null and (screen_state.get("run_complete_texts") as Array[Sprite2D]).size() == 9, "run completion keeps its compact result metrics", failures)
 		_expect(completion_overlay != null and completion_overlay.get_node_or_null("RunCompleteMetrics") != null and completion_overlay.get_node_or_null("RunCompleteRewards") != null, "run completion separates metrics and rewards cards", failures)
 		_expect(bool(screen_state.get("menu_input_release_lock")), "run completion waits for the exit input to be released", failures)
 		gameplay.call("_update_run_complete_input")

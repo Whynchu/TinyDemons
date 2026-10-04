@@ -261,7 +261,7 @@ var player_death_texture: Texture2D = null
 var game_over_overlay: ColorRect:
 	get:
 		var controller := screen_state_controller as ScreenStateController
-		return controller.game_over_overlay if controller != null else null
+		return controller.game_over_presenter.overlay if controller != null else null
 var player_agi := 0.0
 ## Temporary compatibility property for pre-AGI runtime callers and saved
 ## characterization tests. New gameplay code should read player_agi.
@@ -593,9 +593,9 @@ func _start_player_death() -> void:
 	if player_equipment_visual_component != null: player_equipment_visual_component.begin_death(gameplay_frame_controller.equipment_visual_context(self))
 func _update_player_death(delta: float) -> void: screen_state_controller.update_player_death(self, delta, 0.8)
 func _spawn_player_death_pixels() -> void: effects_spawner.spawn_player_death_particles(self, player_death_texture, player_death_origin, player_death_offset, player_death_scale, int(round(_depth_key(player) * DEPTH_Z_SCALE)) + 2, player_tuning.death_particle_lifetime, rng.randi(), Callable(self, "_pixel_particle_texture"))
-func _build_game_over_ui() -> void: screen_state_controller.build_game_over(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_return_to_hub"), Callable(self, "_return_to_title"))
+func _build_game_over_ui() -> void: screen_state_controller.assembly_controller.build_game_over(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_return_to_hub"), Callable(self, "_return_to_title"))
 func _build_run_complete_ui() -> void:
-	screen_state_controller.build_run_complete(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_return_from_run_complete"))
+	screen_state_controller.assembly_controller.build_run_complete(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_return_from_run_complete"))
 func _build_settings_ui() -> void:
 	screen_state_controller.build_settings(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_adjust_setting"), Callable(self, "_close_settings"), Callable(self, "_select_setting_option"))
 func _open_settings_from_title() -> void:
@@ -623,7 +623,7 @@ func _on_display_view_size_changed(_view_size: Vector2i = DisplayLayout.NATIVE_S
 	if hud_controller != null and hud_controller.has_method("apply_display_layout"):
 		hud_controller.apply_display_layout(self)
 	if screen_state_controller != null and screen_state_controller.has_method("apply_display_layout"):
-		screen_state_controller.apply_display_layout(self)
+		screen_state_controller.layout_controller.apply_display_layout(self)
 	var view_size := Vector2(_view_size)
 	if scene_transition_overlay != null:
 		scene_transition_overlay.size = view_size
@@ -667,15 +667,15 @@ func _input_context() -> int:
 		return InputRouter.Context.MENU
 	if game_over_overlay != null and game_over_overlay.visible:
 		return InputRouter.Context.MENU
-	if ssc.run_complete_overlay != null and ssc.run_complete_overlay.visible:
+	if ssc.run_complete_presenter.overlay != null and ssc.run_complete_presenter.overlay.visible:
 		return InputRouter.Context.MENU
 	if dungeon_minimap_controller != null and bool(dungeon_minimap_controller.call("is_map_open")):
 		return InputRouter.Context.MENU
-	if ssc.save_select_overlay != null and ssc.save_select_overlay.visible: return InputRouter.Context.MENU
-	if ssc.settings_overlay != null and ssc.settings_overlay.visible: return InputRouter.Context.MENU
-	if ssc.name_entry_overlay != null and ssc.name_entry_overlay.visible: return InputRouter.Context.MENU
-	if ssc.title_overlay != null and ssc.title_overlay.visible: return InputRouter.Context.MENU
-	if ssc.archetype_overlay != null and ssc.archetype_overlay.visible: return InputRouter.Context.MENU
+	if ssc.save_select_presenter.overlay != null and ssc.save_select_presenter.overlay.visible: return InputRouter.Context.MENU
+	if ssc.settings_presenter.overlay != null and ssc.settings_presenter.overlay.visible: return InputRouter.Context.MENU
+	if ssc.name_entry_controller.widgets.overlay != null and ssc.name_entry_controller.widgets.overlay.visible: return InputRouter.Context.MENU
+	if ssc.title_presenter.overlay != null and ssc.title_presenter.overlay.visible: return InputRouter.Context.MENU
+	if ssc.archetype_presenter.overlay != null and ssc.archetype_presenter.overlay.visible: return InputRouter.Context.MENU
 	if ssc.pause_overlay != null and ssc.pause_overlay.visible: return InputRouter.Context.PAUSE
 	if ssc.hub_overlay != null and ssc.hub_overlay.visible: return InputRouter.Context.HUB
 	if npc_controller != null and npc_controller.dialogue_box != null and npc_controller.dialogue_box.visible: return InputRouter.Context.DIALOGUE
@@ -840,21 +840,21 @@ func _complete_run() -> void:
 func _run_metric_color(quality: float) -> Color:
 	return run_flow_controller.call("metric_color", quality) as Color
 func _update_run_complete_input() -> void:
-	if screen_state_controller.run_complete_button == null:
+	if screen_state_controller.run_complete_presenter.return_button == null:
 		return
-	if screen_state_controller.run_complete_footer_text != null:
-		screen_state_controller.run_complete_footer_text.texture = screen_state_controller._pixel_prompt_texture(Callable(self, "_pixel_text_texture"), _menu_back_prompt(), Color.WHITE)
+	if screen_state_controller.run_complete_presenter.footer_text != null:
+		screen_state_controller.run_complete_presenter.footer_text.texture = screen_state_controller._pixel_prompt_texture(Callable(self, "_pixel_text_texture"), _menu_back_prompt(), Color.WHITE)
 	if screen_state_controller.menu_input_release_lock:
 		var released := not _is_menu_confirm_pressed() and not _is_menu_back_pressed()
 		if released:
 			screen_state_controller.menu_input_release_lock = false
 		return
 	if _is_menu_confirm_just_pressed() or _is_menu_back_just_pressed():
-		screen_state_controller.run_complete_button.pressed.emit()
+		screen_state_controller.run_complete_presenter.return_button.pressed.emit()
 func _return_from_run_complete() -> void:
 	run_flow_controller.call("return_from_run_complete", self)
 func _show_game_over() -> void:
-	if screen_state_controller.game_over_overlay == null or screen_state_controller.game_over_overlay.visible: return
+	if screen_state_controller.game_over_presenter.overlay == null or screen_state_controller.game_over_presenter.overlay.visible: return
 	_apply_run_rank_grade("F")
 	# Each failed attempt presents the authored puzzle from the next quarter-turn
 	# so the route cannot be memorized from the previous attempt.
@@ -862,14 +862,14 @@ func _show_game_over() -> void:
 	if player_profile != null:
 		player_profile.puzzle_attempt_rotation_quarter_turns = puzzle_attempt_rotation_quarter_turns
 	_settle_current_run(&"defeat")
-	screen_state_controller.game_over_overlay.visible = true
+	screen_state_controller.game_over_presenter.overlay.visible = true
 	screen_state_controller.set_state(&"game_over")
-	screen_state_controller.game_over_fade_timer = 0.0
-	screen_state_controller.game_over_overlay.modulate.a = 0.0
-	screen_state_controller.game_over_row = 0
+	screen_state_controller.game_over_presenter.fade_timer = 0.0
+	screen_state_controller.game_over_presenter.overlay.modulate.a = 0.0
+	screen_state_controller.game_over_presenter.row = 0
 	screen_state_controller.menu_input_release_lock = true
-	if screen_state_controller.game_over_button != null: screen_state_controller.game_over_button.release_focus()
-	if screen_state_controller.game_over_title_button != null: screen_state_controller.game_over_title_button.release_focus()
+	if screen_state_controller.game_over_presenter.restart_button != null: screen_state_controller.game_over_presenter.restart_button.release_focus()
+	if screen_state_controller.game_over_presenter.title_button != null: screen_state_controller.game_over_presenter.title_button.release_focus()
 func _build_title_screen() -> void: save_flow_controller.call("build_title_screen", self)
 func _open_cloud_save() -> void: cloud_save_panel.open()
 func _build_archetype_screen() -> void: save_flow_controller.call("build_archetype_screen", self)
@@ -961,17 +961,17 @@ func _spawn_title_pixel_breakup(source_sprite: Sprite2D) -> void:
 	screen_state_controller.spawn_pixel_breakup(source_sprite, screen_state_controller.title_particle_layer, Callable(self, "_pixel_particle_texture"), rng.randi())
 func _spawn_title_ui_breakup() -> void:
 	screen_state_controller.clear_title_particles()
-	_spawn_title_pixel_breakup(screen_state_controller.title_screen_text)
-	var version: Sprite2D = screen_state_controller.title_overlay.get_node_or_null("TitleVersion") as Sprite2D if screen_state_controller.title_overlay != null else null
+	_spawn_title_pixel_breakup(screen_state_controller.title_presenter.title_text)
+	var version: Sprite2D = screen_state_controller.title_presenter.overlay.get_node_or_null("TitleVersion") as Sprite2D if screen_state_controller.title_presenter.overlay != null else null
 	_spawn_title_pixel_breakup(version)
-	var buttons: Array[Button] = [screen_state_controller.title_start_button, screen_state_controller.title_continue_button, screen_state_controller.title_cloud_button, screen_state_controller.title_settings_button]
+	var buttons: Array[Button] = [screen_state_controller.title_presenter.start_button, screen_state_controller.title_presenter.continue_button, screen_state_controller.title_presenter.cloud_button, screen_state_controller.title_presenter.settings_button]
 	for button in buttons:
 		if button == null or button.disabled or not button.visible: continue
 		var label: Sprite2D = button.get_child(0) as Sprite2D if button.get_child_count() > 0 else null
 		_spawn_title_pixel_breakup(label)
 		screen_state_controller.spawn_button_frame_breakup(button, screen_state_controller.title_particle_layer, Callable(self, "_pixel_particle_texture"), rng.randi())
-	if screen_state_controller.title_cursor_text != null and screen_state_controller.title_cursor_text.visible:
-		_spawn_title_pixel_breakup(screen_state_controller.title_cursor_text)
+	if screen_state_controller.title_presenter.cursor_text != null and screen_state_controller.title_presenter.cursor_text.visible:
+		_spawn_title_pixel_breakup(screen_state_controller.title_presenter.cursor_text)
 func _build_scene_transition() -> void:
 	var view_size := Vector2(display_controller.view_size_value()) if display_controller != null else Vector2(DisplayLayout.NATIVE_SIZE)
 	scene_transition_overlay = screen_state_controller.create_overlay(ui, "SceneTransitionOverlay", view_size, Color.BLACK, 200); scene_transition_overlay.set_meta("display_full_view", true); scene_transition_overlay.modulate.a = 0.0

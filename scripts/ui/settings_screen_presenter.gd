@@ -17,6 +17,8 @@ var description_text: Sprite2D = null
 var back_button: Button = null
 var cursor_text: Sprite2D = null
 var row := 0
+var origin := &"title"
+var interact_input_was_down := false
 
 var _settings_service: SettingsService = null
 var _view_size := Vector2.ZERO

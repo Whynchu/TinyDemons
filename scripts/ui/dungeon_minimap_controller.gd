@@ -171,10 +171,9 @@ func can_open_map(root: Object) -> bool:
 		return true
 	if bool(root.get("boot_active")) or bool(root.get("loading_screen_active")) or bool(root.get("scene_transition_active")) or bool(root.get("room_transition_locked")) or bool(root.get("player_dead")) or bool(root.get("player_death_pending")):
 		return false
-	var screen := root.get("screen_state_controller") as Node
+	var screen := root.get("screen_state_controller") as ScreenStateController
 	if screen != null:
-		for overlay_name in [&"title_overlay", &"save_select_overlay", &"settings_overlay", &"name_entry_overlay", &"archetype_overlay", &"pause_overlay", &"hub_overlay", &"run_complete_overlay"]:
-			var overlay := screen.get(overlay_name) as CanvasItem
+		for overlay in [screen.title_presenter.overlay, screen.save_select_presenter.overlay, screen.settings_presenter.overlay, screen.name_entry_controller.widgets.overlay, screen.archetype_presenter.overlay, screen.pause_overlay, screen.hub_overlay, screen.run_complete_presenter.overlay] as Array[CanvasItem]:
 			if overlay != null and overlay.visible:
 				return false
 	return true
@@ -517,7 +516,7 @@ func _refresh_map_overlay(root: Object, animate_cursor: bool = false) -> void:
 				map_overlay_list_pointer.call("reanchor_preserving_motion", arrow_target)
 		if index == selected_flame_index and map_overlay_cursor != null:
 			map_overlay_cursor.visible = true
-			var screen := root.get("screen_state_controller") as Node if root != null else null
+			var screen := root.get("screen_state_controller") as ScreenStateController if root != null else null
 			# The finger sits over the selected destination's own map pixel, so the
 			# map, list, and cursor all agree on the current target.
 			var marker_position := _map_overlay_position(room_id)

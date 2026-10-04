@@ -20,14 +20,14 @@ func _initialize() -> void:
 	var animation := gameplay.get("player_animation_component") as PlayerAnimationComponent
 	var screen := gameplay.get("screen_state_controller") as ScreenStateController
 	if animation != null and screen != null:
-		screen.starter_flame_index = 2
+		screen.archetype_presenter.starter_flame_index = 2
 		gameplay.call("_update_archetype_screen")
 		# The player GPU palette path keeps no per-palette frames; the preview is
 		# the base idle recolored on demand for this one palette.
 		var expected_frame: Texture2D = null
 		if not animation.idle_frames.is_empty():
 			expected_frame = animation.recolor_texture(animation.idle_frames[0], "yellow")
-		var preview_frame: Texture2D = screen.archetype_preview_frames[0] if not screen.archetype_preview_frames.is_empty() else null
+		var preview_frame: Texture2D = screen.archetype_presenter.preview_frames[0] if not screen.archetype_presenter.preview_frames.is_empty() else null
 		_expect(expected_frame != null and preview_frame == expected_frame, "electric character creation preview uses the selected yellow palette", failures)
 	if profile != null:
 		var original_profile := profile.to_dictionary()

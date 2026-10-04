@@ -91,11 +91,11 @@ func _start_run_music() -> void:
 		sound_manager.start_run_music()
 func _is_on_title_menu() -> bool:
 	var ssc := screen_state_controller
-	if ssc == null or ssc.state != &"title" or ssc.title_transition_active:
+	if ssc == null or ssc.state != &"title" or ssc.title_presenter.transition_active:
 		return false
-	if ssc.title_overlay == null or not ssc.title_overlay.visible:
+	if ssc.title_presenter.overlay == null or not ssc.title_presenter.overlay.visible:
 		return false
-	if ssc.save_select_overlay != null and ssc.save_select_overlay.visible:
+	if ssc.save_select_presenter.overlay != null and ssc.save_select_presenter.overlay.visible:
 		return false
 	return true
 func _update_music_state() -> void:

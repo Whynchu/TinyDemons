@@ -7,7 +7,7 @@ tracked `scripts/*.gd` file to exactly one of the eight Stage 1 role folders, wi
 
 Owner: repository architecture and gameplay systems
 
-Current code: the 235-file Stage 1 inventory plus 44 post-migration modules (279 scripts total); all remain distributed across the declared role roots and runtime subfolders
+Current code: the 235-file Stage 1 inventory plus 53 post-migration modules (288 scripts total); all remain distributed across the declared role roots and runtime subfolders
 
 Verification: all 235 destinations and UID sidecars reconciled against the migration
 map; live resource references rewritten; generated index refreshed.
@@ -15,7 +15,7 @@ map; live resource references rewritten; generated index refreshed.
 Supersedes: nothing. Implements the Stage 1 layout table in
 [`composition-plan-2026.md`](composition-plan-2026.md)
 
-Updated: 2026-10-04 (Stage 3.1 Hub render owners recorded)
+Updated: 2026-10-04 (Stage 3.1 screen composition checkpoint recorded)
 
 Baseline: version `0.3.32`, commit `45db00b`
 
@@ -32,15 +32,15 @@ index have been updated in the same migration slice.
 
 | Folder | Files | Share | Role |
 | - | ---: | ---: | - |
-| `scripts/runtime/` | 76 | 32.3% | Feature execution and composition, subdivided by responsibility. |
-| `scripts/components/` | 26 | 11.1% | Local behaviour and state attached to one entity. |
-| `scripts/content/` | 45 | 19.1% | Authored definitions, catalogs, tuning, and generated content data. |
-| `scripts/ui/` | 18 | 7.7% | Screen-space views, menus, HUD, and input surfaces. |
-| `scripts/actors/` | 10 | 4.3% | World-space actor entities and actor-specific presentation/behaviour. |
-| `scripts/algorithms/` | 28 | 11.9% | Pure computation and solving without node lifetime or side effects. |
-| `scripts/editor/` | 19 | 8.1% | Authoring, preview, debug, and editor-facing tooling. |
-| `scripts/services/` | 13 | 5.5% | Process-wide shared services instantiated by GameplayBootstrap; not Godot autoloads. |
-| **Total** | **235** | **100%** | |
+| `scripts/runtime/` | 82 | 28.5% | Feature execution and composition, subdivided by responsibility. |
+| `scripts/components/` | 26 | 9.0% | Local behaviour and state attached to one entity. |
+| `scripts/content/` | 46 | 16.0% | Authored definitions, catalogs, tuning, and generated content data. |
+| `scripts/ui/` | 64 | 22.2% | Screen-space views, menus, HUD, and input surfaces. |
+| `scripts/actors/` | 10 | 3.5% | World-space actor entities and actor-specific presentation/behaviour. |
+| `scripts/algorithms/` | 28 | 9.7% | Pure computation and solving without node lifetime or side effects. |
+| `scripts/editor/` | 19 | 6.6% | Authoring, preview, debug, and editor-facing tooling. |
+| `scripts/services/` | 13 | 4.5% | Process-wide shared services instantiated by GameplayBootstrap; not Godot autoloads. |
+| **Total** | **288** | **100%** | |
 
 Runtime subfolders: `runtime/contexts/` (32), `runtime/controllers/` (27), `runtime/services/` (8), `runtime/state/` (4), `runtime/world/` (5).
 
@@ -224,7 +224,7 @@ Authored and generated content definitions, data, catalogs, and compilers.
 | `scripts/status_tick_result.gd` | `scripts/content/status_tick_result.gd` | Status tick result value object. | - |
 | `scripts/touch_controls_layout_profile.gd` | `scripts/content/touch_controls_layout_profile.gd` | Authored touch control layout profile. | - |
 
-## `scripts/ui/` - 18 files
+## `scripts/ui/` - 18 original Stage 1 files
 
 Screen-space presentation and UI controls.
 
@@ -445,6 +445,13 @@ use the same folder roles and are included in the generated script index.
 | `scripts/ui/pause_menu_input_controller.gd` | `ui/` | Owns Pause command-row and Debug-page input; ScreenStateController retains page transitions and the shared Hub Equipment transaction. |
 | `scripts/ui/hub_screen_render_controller.gd` | `ui/` | Owns the Hub frame-to-view presentation pipeline behind ScreenStateController's stable update entry point. |
 | `scripts/ui/hub_legacy_inventory_presenter.gd` | `ui/` | Owns compatibility inventory, equipment, and gear-comparison rendering for legacy Hub widget paths. |
+| `scripts/ui/hub_legacy_widget_builder.gd` | `ui/` | Builds legacy inventory, Shop, equipment, Fusion, and Bind controls and stores their typed references in HubResponsiveLayoutPresenter. |
+| `scripts/ui/screen_state_flow_controller.gd` | `ui/` | Owns title, archetype, and defeat-flow timing/input behind ScreenStateController's stable entry points. |
+| `scripts/ui/screen_route_controller.gd` | `ui/` | Owns Pause and Settings route/input behavior behind ScreenStateController's stable entry points. |
+| `scripts/ui/screen_layout_controller.gd` | `ui/` | Owns display-driven screen reflow and Hub/Pause cursor geometry behind ScreenStateController. |
+| `scripts/ui/hub_screen_setup_controller.gd` | `ui/` | Owns Hub screen construction and its local assembly callbacks behind ScreenStateController. |
+| `scripts/ui/hub_list_scroll_controller.gd` | `ui/` | Owns fractional scrolling and cursor tween cleanup for legacy Hub lists behind ScreenStateController. |
+| `scripts/ui/screen_assembly_controller.gd` | `ui/` | Composes the title, save-select, name-entry, archetype, loading, game-over, and run-complete presenters. |
 
 ## Migration result
 

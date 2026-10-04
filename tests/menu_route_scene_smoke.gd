@@ -76,14 +76,14 @@ func _initialize() -> void:
 		_expect(screens.pause_page == 0 and screens.pause_root_page.is_visible_in_tree(), "pause BACK returns from read-only Status", failures)
 		screens.pause_settings_button.pressed.emit()
 		await process_frame
-		_expect(screens.settings_overlay.is_visible_in_tree() and not screens.pause_overlay.is_visible_in_tree() and not screens.hub_overlay.is_visible_in_tree(), "Settings replaces pause without an overlay stack", failures)
-		_expect(touch.call("_active_menu_root") == screens.settings_overlay, "touch hit-testing is scoped to the active Settings overlay", failures)
-		_expect(screens.settings_back_button.is_visible_in_tree() and screens.settings_option_buttons[1].size() == 4, "Settings exposes a rendered BACK and all aspect choices", failures)
+		_expect(screens.settings_presenter.overlay.is_visible_in_tree() and not screens.pause_overlay.is_visible_in_tree() and not screens.hub_overlay.is_visible_in_tree(), "Settings replaces pause without an overlay stack", failures)
+		_expect(touch.call("_active_menu_root") == screens.settings_presenter.overlay, "touch hit-testing is scoped to the active Settings overlay", failures)
+		_expect(screens.settings_presenter.back_button.is_visible_in_tree() and screens.settings_presenter.option_buttons[1].size() == 4, "Settings exposes a rendered BACK and all aspect choices", failures)
 		_set_menu_edge(router, false, true)
 		gameplay.call("_update_settings_input")
 		_clear_menu_edge(router)
 		await process_frame
-		_expect(screens.pause_overlay.is_visible_in_tree() and not screens.settings_overlay.is_visible_in_tree(), "Settings BACK restores only pause", failures)
+		_expect(screens.pause_overlay.is_visible_in_tree() and not screens.settings_presenter.overlay.is_visible_in_tree(), "Settings BACK restores only pause", failures)
 		_set_menu_edge(router, false, true)
 		gameplay.call("_update_pause_input")
 		_clear_menu_edge(router)
@@ -96,8 +96,8 @@ func _initialize() -> void:
 		await process_frame
 		var game_over := gameplay.get("game_over_overlay") as ColorRect
 		_expect(game_over != null and game_over.is_visible_in_tree() and screens.state == &"game_over", "game over is the active full-screen route", failures)
-		_expect(not screens.pause_overlay.is_visible_in_tree() and not screens.hub_overlay.is_visible_in_tree() and not screens.settings_overlay.is_visible_in_tree(), "game over hides every source overlay", failures)
-		_expect(screens.game_over_footer_text != null and screens.game_over_footer_text.visible, "game over exposes a back footer", failures)
+		_expect(not screens.pause_overlay.is_visible_in_tree() and not screens.hub_overlay.is_visible_in_tree() and not screens.settings_presenter.overlay.is_visible_in_tree(), "game over hides every source overlay", failures)
+		_expect(screens.game_over_presenter.footer_text != null and screens.game_over_presenter.footer_text.visible, "game over exposes a back footer", failures)
 		_expect(gameplay.get_viewport().gui_get_focus_owner() == null, "game over does not leave native focus on a hidden control", failures)
 		screens.menu_input_release_lock = false
 		router.set("_previous", {&"menu_confirm": false, &"menu_back": false})
@@ -108,7 +108,7 @@ func _initialize() -> void:
 		# current/previous edge state.
 		router.set("_menu_direction_events", {&"ui_down": true})
 		gameplay.call("_update_game_over_input")
-		_expect(screens.game_over_row == 1, "game over accepts directional controller navigation", failures)
+		_expect(screens.game_over_presenter.row == 1, "game over accepts directional controller navigation", failures)
 	gameplay.queue_free()
 	await process_frame
 	_finish(failures)
