@@ -2,7 +2,7 @@ extends SceneTree
 
 const TARGET_ROOM: StringName = &"room_-1_9"
 const BLUE_EXIT_ROOM: StringName = &"room_-2_10"
-const GRAPH_SCRIPT = preload("res://scripts/dungeon_graph.gd")
+const GRAPH_SCRIPT = preload("res://scripts/algorithms/dungeon_graph.gd")
 
 
 func _initialize() -> void:

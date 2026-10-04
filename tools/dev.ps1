@@ -123,7 +123,7 @@ function New-EnemyVariantDefinition {
 	$template = @"
 [gd_resource type="Resource" script_class="EnemyDefinition" load_steps=2 format=3]
 
-[ext_resource type="Script" path="res://scripts/enemy_definition.gd" id="1_enemy"]
+[ext_resource type="Script" path="res://scripts/content/enemy_definition.gd" id="1_enemy"]
 
 [resource]
 script = ExtResource("1_enemy")
@@ -166,7 +166,7 @@ function New-ItemDefinition {
 	$template = @"
 [gd_resource type="Resource" script_class="ItemDefinition" load_steps=2 format=3]
 
-[ext_resource type="Script" path="res://scripts/item_definition.gd" id="1_item"]
+[ext_resource type="Script" path="res://scripts/content/item_definition.gd" id="1_item"]
 
 [resource]
 script = ExtResource("1_item")

@@ -1,6 +1,6 @@
 extends SceneTree
 
-const HubFlowControllerScript = preload("res://scripts/hub_flow_controller.gd")
+const HubEconomyControllerScript = preload("res://scripts/runtime/controllers/hub_economy_controller.gd")
 
 var _finished := false
 
@@ -8,8 +8,7 @@ var _finished := false
 func _initialize() -> void:
 	call_deferred("_watchdog")
 	var failures: Array[String] = []
-	var controller := HubFlowControllerScript.new()
-	get_root().add_child(controller)
+	var controller := HubEconomyControllerScript.new()
 	var root := _MockRoot.new()
 	root.screen_state_controller = _MockScreenState.new()
 	root.player_profile = PlayerProfile.new()
@@ -56,7 +55,7 @@ func _initialize() -> void:
 	root.player_profile.grant_item(low_target)
 	root.player_profile.grant_item(low_material)
 
-	controller.set_hub_page(root, 3)
+	root.screen_state_controller.hub_page = 3
 	var candidates := controller.hub_fusion_candidates(root)
 	_expect(candidates.size() == 3 and candidates[0].instance_id == target.instance_id and candidates[1].instance_id == high_target.instance_id and candidates[2].instance_id == low_target.instance_id, "Fusion sorts equipped targets first, then descending total primary stats", failures)
 	_expect(catalog.stat_allocation_total(high_target) > catalog.stat_allocation_total(low_target), "Fusion sort fixture has distinct total primary stat allocations", failures)
@@ -156,8 +155,6 @@ func _initialize() -> void:
 	var capped_fuse_succeeded := capped_profile.fuse_duplicates(capped_target.instance_id, 3, catalog)
 	var capped_result := capped_profile.find_item(capped_target.instance_id)
 	_expect(capped_fuse_succeeded and capped_result != null and capped_result.enhancement_level == PlayerProfile.MAX_ITEM_ENHANCEMENT and capped_profile.inventory.size() == 3, "Fusion transaction clamps an oversized request to one boundary step", failures)
-
-	controller.queue_free()
 	_finished = true
 	if failures.is_empty():
 		print("FUSION_CANDIDATE_CACHE_SMOKE_OK")

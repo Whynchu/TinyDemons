@@ -1,11 +1,11 @@
 extends SceneTree
 
-const ACTIVE_RUN_SNAPSHOT_SCRIPT = preload("res://scripts/active_run_snapshot.gd")
-const ACTIVE_RUN_SNAPSHOT_CONTEXT_SCRIPT = preload("res://scripts/active_run_snapshot_context.gd")
-const ROOM_CHECKPOINT_CONTEXT_SCRIPT = preload("res://scripts/room_checkpoint_context.gd")
-const RUN_CHECKPOINT_CONTEXT_SCRIPT = preload("res://scripts/run_checkpoint_context.gd")
-const RUN_CHECKPOINT_RESULT_SCRIPT = preload("res://scripts/run_checkpoint_result.gd")
-const RUN_CHECKPOINT_SERVICE_SCRIPT = preload("res://scripts/run_checkpoint_service.gd")
+const ACTIVE_RUN_SNAPSHOT_SCRIPT = preload("res://scripts/content/active_run_snapshot.gd")
+const ACTIVE_RUN_SNAPSHOT_CONTEXT_SCRIPT = preload("res://scripts/content/active_run_snapshot_context.gd")
+const ROOM_CHECKPOINT_CONTEXT_SCRIPT = preload("res://scripts/runtime/contexts/room_checkpoint_context.gd")
+const RUN_CHECKPOINT_CONTEXT_SCRIPT = preload("res://scripts/runtime/contexts/run_checkpoint_context.gd")
+const RUN_CHECKPOINT_RESULT_SCRIPT = preload("res://scripts/runtime/contexts/run_checkpoint_result.gd")
+const RUN_CHECKPOINT_SERVICE_SCRIPT = preload("res://scripts/runtime/services/run_checkpoint_service.gd")
 
 
 func _initialize() -> void:
@@ -38,7 +38,7 @@ func _initialize() -> void:
 	var health := HealthComponent.new()
 	var chroma := PlayerChromaComponent.new()
 	var typed_context := ACTIVE_RUN_SNAPSHOT_CONTEXT_SCRIPT.new(profile, run, map_controller, room_controller, health, chroma, 424242, &"room_next", &"combat", 1, 0, true, true)
-	var typed_snapshot := ACTIVE_RUN_SNAPSHOT_SCRIPT.create_context(typed_context)
+	var typed_snapshot := ACTIVE_RUN_SNAPSHOT_SCRIPT.create(typed_context)
 	_expect(ACTIVE_RUN_SNAPSHOT_SCRIPT.validate(typed_snapshot, profile_slot), "typed checkpoint context produces a valid recovery snapshot", failures)
 	var no_drops: Array[Dictionary] = []
 	var room_context := ROOM_CHECKPOINT_CONTEXT_SCRIPT.new(&"room_next", &"combat", null, room_controller, false, false, false, false, no_drops, null, null)

@@ -1,6 +1,6 @@
 extends SceneTree
 
-const RUN_FLOW_SCRIPT = preload("res://scripts/run_flow_controller.gd")
+const RUN_FLOW_SCRIPT = preload("res://scripts/runtime/controllers/run_flow_controller.gd")
 
 class RewardRoomController extends RefCounted:
 	var room_states: Dictionary = {}

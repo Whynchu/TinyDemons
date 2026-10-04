@@ -7,8 +7,8 @@
 [ext_resource type="Texture2D" uid="uid://b7v1k8gok6lhs" path="res://assets/artwork/WallRight.png" id="5_wall_right"]
 [ext_resource type="Texture2D" uid="uid://c2k6nhy3riyvq" path="res://assets/artwork/DoorRight.png" id="6_door"]
 [ext_resource type="Texture2D" uid="uid://dn1k7etqwr57i" path="res://assets/artwork/Tile.png" id="7_tile"]
-[ext_resource type="Script" uid="uid://bucq7r3dl2q5n" path="res://scripts/isometric_room_layer.gd" id="8_iso_layer"]
-[ext_resource type="Script" uid="uid://b7cke64rytrh1" path="res://scripts/dungeon_socket.gd" id="9_socket"]
+[ext_resource type="Script" uid="uid://bucq7r3dl2q5n" path="res://scripts/runtime/world/isometric_room_layer.gd" id="8_iso_layer"]
+[ext_resource type="Script" uid="uid://b7cke64rytrh1" path="res://scripts/actors/dungeon_socket.gd" id="9_socket"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_floor"]
 texture = ExtResource("1_floor")

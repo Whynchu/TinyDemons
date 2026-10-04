@@ -8,7 +8,7 @@ extends SceneTree
 ##   source white           -> white
 ##   source eye highlight   -> target shadow(palette) for green/yellow, else normal
 
-const MATERIAL_SCRIPT := preload("res://scripts/actor_palette_material.gd")
+const MATERIAL_SCRIPT := preload("res://scripts/actors/actor_palette_material.gd")
 
 
 func _initialize() -> void:

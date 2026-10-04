@@ -7,7 +7,69 @@ concurrent opencode sessions do not clobber each other's notes.
 **Focus:** Full composition plan (audit → `docs/composition-plan-2026.md`)
 **Updated:** 2026-10-04
 
-## 2026-10-04 — composition plan authored
+## 2026-10-04 — Stage 1 role map authored
+
+Documentation only. Created `docs/script-role-map-2026.md` (535 lines) — the
+proposed `scripts/` reorganization, ready for review before any move.
+
+**All 235 tracked `scripts/*.gd` assigned to exactly one of eight folders:**
+
+| Folder | Files |
+|---|---:|
+| runtime | 63 |
+| content | 49 |
+| algorithms | 27 |
+| components | 26 |
+| ui | 21 |
+| editor | 19 |
+| autoload | 16 |
+| actors | 14 |
+
+Validated: 0 duplicate assignments, 0 unassigned files, 0 names not on disk.
+235 `.gd.uid` sidecars pair 1:1 with scripts, no orphans either direction.
+Every file has an individual written reason, not a per-folder template.
+
+**29 assignments are genuinely contestable** and grouped into six decision sets:
+screen-vs-world space (5 files), pure algorithm vs service (6), authored data vs
+mutable runtime state (6), editor tooling vs the layer it previews (8),
+component vs actor entity (2), cross-cutting render service (3).
+
+**Two findings that change the plan:**
+
+1. **There are no game autoloads.** `project.godot` declares exactly one, and it
+   belongs to the MCP toolkit addon. The 16 `autoload/` files are architectural
+   globals created by `GameplayBootstrap` and stored on `GameplayState`. The
+   folder should probably be `services/`. Raised as open question 1.
+2. **Stage 0 of the composition plan is already implemented, uncommitted, by
+   someone else.** `tools/validate_composition.ps1` and its baseline are
+   modified in the working tree. The validator now reports reach-through,
+   untyped-root-argument counts, context-twin counts, string call forms, a
+   per-file top-seams table, and a forward-target table with stage and
+   met/open status. It already recurses, so the migration will not blind it,
+   and it already carries an `unclassified_scripts` target of 0 at stage 1 —
+   exactly this task's acceptance bar. `-SelfTest` passes.
+
+**Correction to my earlier reporting.** I told the owner the scorecard was
+"saturated and blind". That was wrong: my first validator run was truncated to
+the last 40 lines and I missed the new metrics. The validator is materially
+more capable than I described, and most of Stage 0 is done. Logged to the
+journal. I did not edit `composition-plan-2026.md` — that reconciliation is
+outside this task's scope and the validator work is not mine.
+
+## Blockers
+
+The 29 unresolved assignments need owner decisions before the migration.
+Nothing was moved, so nothing is at risk; the map is a proposal.
+
+## Handoff / next
+
+Owner review of `docs/script-role-map-2026.md`, then the single coordinated
+migration. Separately, `composition-plan-2026.md` Stage 0 needs a
+reconciliation pass against the validator that now exists.
+
+## Current work
+
+Stage 1 preparation. Documentation only; no runtime files touched.
 
 Documentation only. No runtime, validator, or test file was touched.
 Wrote `docs/composition-plan-2026.md` (688 lines) from an independent measured

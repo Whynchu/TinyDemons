@@ -2,8 +2,164 @@
 
 _Only codex writes this file._
 
-**Focus:** Establish the Tiny Demons design wiki and visual reference workflow
+**Focus:** Paused after Stage 3.1 Hub input ownership; Equipment item-page extraction is next
 **Updated:** 2026-10-04
+
+## Completed: Stage 2.5 combat status and feedback helpers
+
+Moved the typed actor-status pipeline into `ActorStatusRuntimeController` and
+damage/healing number presentation into `CombatFeedbackPresenter`. The combat
+controller facade and existing GameplayState/actor/frame-schedule call sites
+remain stable. Corrected the plan's stale boundaries and call-site count. The
+composition audit passes at 241 scripts; Godot runtime verification remains
+pending because this session has no editor diagnostics access and must not start
+a second editor.
+
+## Completed: Stage 3.1 title particles
+
+Moved particle creation, cleanup, and frame updates into the 97-line
+`TitleParticleController`. ScreenStateController remains the facade for
+GameplayState. The composition regression audit passes with 242 scripts and
+zero unclassified files; UID pairing is 242:242.
+
+## Completed: Stage 3.1 menu widget factories
+
+Moved the root-free shared menu widget and retro style methods into the
+250-line `MenuWidgetFactory`. ScreenStateController retains its prior method
+names; direct callers in GameplayState and CloudSavePanel still resolve. The
+composition regression audit passes with 243 scripts and zero unclassified
+files.
+
+## Completed: Stage 3.1 cursor motion
+
+Moved cursor positioning, movement, bob, and tween cleanup into the 61-line
+`MenuCursorAnimator`. The ScreenStateController remains the tween owner, and
+its public methods/constants stay available to SaveFlowController and menu
+screens. Composition audit passes with 244 scripts and zero unclassified
+files.
+
+## Completed: Stage 3.1 positioning audit
+
+Corrected the low-risk estimate: hub positioning is coupled to 81 screen-owned
+fields (67 hub and 14 pause), so it needs a typed layout owner before moving.
+The loading fade also owns cross-screen completion effects; extract its visual
+work while keeping that transaction in ScreenStateController.
+
+## Completed: Stage 3.1 loading presenter
+
+Moved loading overlay construction, label animation, and fade visuals into the
+30-line `LoadingScreenPresenter`, using `MenuWidgetFactory`. The existing
+ScreenStateController build/update facade remains intact and owns the final
+cross-screen overlay and gameplay-state transition. The composition regression
+audit passes with 245 scripts, 13 directories, and zero unclassified files;
+UID sidecars pair 245:245 with no duplicates.
+
+## Completed: Stage 3.1 next screen boundary audit
+
+Mapped title/archetype and settings ownership. GameplayState writes ten settings
+control fields from the build result, and frame/input/reflow paths read the
+settings overlay directly, so moving the screen needs a typed state owner.
+Shared face-button prompt composition is a safer seam: it is used across seven
+screen groups and can move with an explicit pixel-text callback and no root or
+screen-state dependency.
+
+## Completed: Stage 3.1 shared menu prompt factory
+
+Moved shared face-button glyph lookup, texture composition/cache, and icon
+layout into the root-free 140-line `MenuPromptTextureFactory`. All existing
+ScreenStateController method names remain as delegates. The composition audit
+passes at 246 scripts with zero unclassified files.
+
+## Completed: Stage 3.1 navigation banners
+
+Added 25 one-line section banners across ScreenStateController without moving
+methods or changing behavior. Regenerated the index and refreshed the
+composition baseline; the screen controller now measures 5,086 lines.
+
+## Completed: Stage 3.1 next screen owner audit
+
+Confirmed the screen wiring boundaries. GameplayState copies ten settings UI
+references out of a dictionary; frame/input routing and display reflow observe
+the overlay. SaveFlowController copies eleven name-entry node references and
+later mutates the pending-slot/owner lifecycle fields, while frame/input routing
+only need the overlay. Recorded these corrections in the composition plan.
+
+## Current work: Stage 3.1 screen composition
+
+Completed the Name Entry owner in two slices. The 94-line `NameEntryWidgetPresenter`
+owns construction/layout; the 251-line `NameEntryScreenController` owns text,
+selection, input, visual refresh, callbacks, and pending-slot lifecycle.
+ScreenStateController keeps compatibility accessors and screen transitions;
+SaveFlowController now uses explicit pending-slot/completion operations.
+
+Moved Save Select tree construction and responsive footer placement into the
+75-line `SaveSelectScreenPresenter`. ScreenStateController retains its overlay
+and footer accessors. SaveFlowController continues to own slot/overwrite/recovery
+transactions, and GameplayFrameController continues to route input.
+
+The composition regression audit passes at 249 scripts, 13 subdirectories, zero
+unclassified files, and 249 unique script UID sidecars. ScreenStateController is
+4,914 lines; its Stage 3 forward targets remain open at 800 lines / 120 seams.
+The strict target audit is also open because GameplayState remains 1,726 lines,
+seven above its 1,719-line target. No Godot runtime or gameplay tests were run.
+
+Next: decompose the title/archetype screen group, keeping save/profile creation
+transactions in SaveFlowController and the screen facade stable for bootstrap
+and frame routing.
+
+## Completed: Stage 2.1 context twin collapse
+
+Collapsed all 20 measured twins: four in ScreenStateController, 14 in
+RoomController, and two additional pairs in ActiveRunSnapshot and RunSettlement
+that the original plan omitted. Updated callers to typed contexts and refreshed
+the script index and plan.
+
+The composition regression and strict target audits pass with zero live twins;
+the composition self-test, UID validator, test-manifest validator, literal
+script-path scan, and `git diff --check` pass. Godot-backed gameplay checks were
+not run because the shared editor session is active and no MCP controls are
+available in this session.
+
+## Stage 1 script role-folder migration
+
+Moved all 235 scripts with their UID sidecars into the approved role folders,
+updated live script paths, enabled recursive index generation, and regenerated
+the 235-entry script index. The composition regression gate, self-test, and
+manifest checks pass, and all script UIDs now resolve. A pre-existing stale UID
+in four room-prefab resources was corrected. No gameplay behavior changed.
+
+The Godot definition validator and curated gameplay gate remain pending because
+the active editor restriction prevents launching a second Godot process; no
+editor MCP controls are exposed in this session. See
+`coord/script-role-reference-audit.md` for the migration record.
+
+## Completed: Stage 0 composition guardrail
+
+Starting with `tools/validate_composition.ps1` and
+`tools/composition-baseline.json`: separate regression floors from forward
+targets, record per-file seam baselines, add the new architecture metrics and
+checks, and give each new check a rejecting self-test fixture. The smoke-runner
+preflight now checks definition-manifest freshness before inventory and smoke
+execution. This additive runner edit was made on the owner's instruction to
+finish Stage 0 while opencode's older claim remained listed.
+
+## Stage 0 progress
+
+Re-based the validator with separate regression ceilings and forward targets,
+per-file seam floors, stable architecture-rule snapshots, controller dependency
+cycle detection, and repo/per-file counts for root reach-through, untyped root
+parameters, context twins, string call forms, and script organization. Added
+rejecting `-SelfTest` fixtures for all eight new architecture checks. The
+GameplayState field ceiling is 287 (286 current) to provide one field of
+headroom, with the reason recorded in the baseline.
+
+The self-test, regression-floor mode, strict mode, and `git diff --check` pass.
+The plan's parameter audit reported 560 while the new typed signature scanner
+currently measures 556; the displayed difference is retained for review rather
+than rounded or hidden. The CI coverage decision is recorded on the runner
+claim in `coord/BOARD.md`: Pages CI stays focused on validation and web-export
+smoke; the full gameplay smoke matrix remains an explicit local verification
+task.
 
 ## Completed: browsable design wiki site
 
@@ -427,3 +583,218 @@ Removed the room-engaged gate from status contact transmission so an existing tr
 ## Elite-room softlock follow-up
 
 The current room clear predicate now only waits on configured actors that remain visible in the active tree, have positive health, and are not marked dead. This prevents hidden or depleted pooled actors from blocking the elite room exit. Bumped the release to 0.3.33. `git diff --check` passes; no Godot process or tests were run.
+
+## Completed: Stage 2.2 hub flow split
+
+Separated hub routing from economy/progression. The 340-line route controller owns
+the economy module as a RefCounted subcontroller; the 1,091-line economy script
+owns the moved workflows. Shared page/mode values and property transitions now
+live in HubMenuState. The seam metric counts both modules together at 109 against
+the 120 target. Updated the fusion presenter, focused fixture references, role
+map, baseline, plan, and generated script index. `git diff --check` passes; no
+Godot test or runtime verification was run.
+
+## Completed: Stage 2.3 pixel text texture factory
+
+Moved pixel text, name, keyboard prompt, and critical outline texture creation
+into PixelTextTextureFactory with its four caches and gear-plus asset. Effects
+Spawner keeps the public facade methods; particle lifecycle code stays in the
+spawner. The script index and per-file composition record now include the
+250-line factory. Call-site and moved-cache references were inspected. Godot
+runtime checks and tests were not run while the shared editor session is active.
+
+## Completed: Stage 2.4 typed slime geometry queries
+
+Extracted 22 collision and walkability query methods into the 206-line
+SlimeGeometryQueries helper. SlimeRuntimeController keeps the stable delegation
+surface, all 57 string callback sites remain visible across the pair, direct
+GameplayState access replaces dynamic get/call/set in the helper, and a shared
+Firepit lookup removes duplicate child resolution. The composition audit passes
+in regression-floor mode. Godot runtime checks were not run with the editor
+session active.
+
+## Completed: Stage 3.1 end-of-run screen presenters
+
+Moved Game Over construction, responsive reflow, row state, and fade visuals into the 72-line GameOverScreenPresenter. ScreenStateController retains the death timeline, shared input-release latch, and input routing; GameplayState retains defeat grading, puzzle rotation, and run settlement.
+
+Moved Run Complete construction and responsive layout into the 73-line RunCompleteScreenPresenter. ScreenStateController preserves the observation accessors used by frame routing and RunFlowController, while GameplayState no longer copies five UI references from a dictionary.
+
+The strict composition audit passes at 254 scripts, 13 subdirectories, zero unclassified files, and unique UID sidecars. GameplayState is 1,709 lines / 282 fields; ScreenStateController is 4,628 lines; root reach-through is 4,337. No Godot runtime or gameplay tests were run.
+
+
+## Completed: Stage 3.1 Hub/Pause construction boundaries
+
+Replaced the positional hub callback list with the 29-action HubScreenActions record. ScreenStateController.build_hub now returns void and owns the constructed refs directly; HubFlowController builds the typed actions and keeps the debug-session wiring. Pause widget construction and node refs moved to PauseScreenPresenter, with ScreenStateController preserving typed forwarding accessors for existing callers. The touch-controls fixture now reads controller fields directly.
+
+The strict composition audit passes at 256 scripts, 13 subdirectories, zero unclassified scripts, 2,092 root accesses, and unique UID sidecars. Reach-through is 4,258 (down from 4,337); GameplayState is 1,709 lines / 282 fields; ScreenStateController is 4,641 lines / 292 seams. HubFlowController remains under its target at 109 / 120 seams. No Godot runtime or gameplay tests were run.
+
+
+## Completed: Stage 3.1 typed Hub/Pause input boundary
+
+Typed update_pause_input, _update_pause_equipment_input, and update_hub_input against GameplayState. Replaced 222 string root.call dispatches with direct method calls after confirming every target method exists on GameplayState. No screen behavior was intentionally changed.
+
+Strict composition audit passes: dynamic root calls fell 2,092 -> 1,870; untyped root parameters fell 516 -> 513; ScreenStateController seams fell 292 -> 70, meeting the 120-seam target. Reach-through is still 4,258; ScreenStateController is 4,641 lines. No Godot runtime or gameplay tests were run.
+
+## Completed: Stage 3.1 hub allocation render seam
+
+Split allocation-page rendering from `update_hub_ui` into a typed
+`_update_hub_allocation_page` method. Converted its remaining-points, stats, and
+snapshot access to direct `GameplayState` calls. The strict audit passes at
+1,867 dynamic root calls, 513 untyped root args, and 67 ScreenStateController
+seams; reach-through is 4,257. ScreenStateController remains 4,642 lines, so
+this is an internal boundary rather than a completed presenter extraction.
+The script index is refreshed. No Godot runtime or gameplay tests were run.
+
+Mapping showed the stats nodes are observed by responsive layout and the
+equipment, six-stat, fusion, and touch-control callers. Preserve their current
+ScreenStateController property names as typed forwarding accessors when the
+stat presenter takes ownership.
+
+## Completed: Stage 3.1 Hub Stats presenter
+
+Moved allocation/status node construction, status and allocation rendering,
+marker/target positioning, and allocation preview calculation into the typed
+`HubStatsScreenPresenter`. ScreenStateController preserves the existing typed
+forwarding properties used by responsive layout and menu callers. Updated the
+fusion fixture for the typed builder/update API and supplied its HubFlow
+dependency. Regenerated the script index and tightened the composition
+baseline. Strict audit passes at 257 scripts, zero unclassified files, 1,856
+root call/get/set sites, 510 untyped root arguments, and 56 ScreenStateController
+seams; ScreenStateController is 4,437 lines. Total reach-through is 4,258,
+effectively unchanged from 4,257. No Godot runtime or gameplay tests were run.
+
+## Completed: Stage 3.1 Hub page visibility
+
+Moved Hub page-root lookup, title setup, legacy page-chrome hiding, and
+root/active-page visibility into the typed `HubPageVisibilityPresenter`.
+ScreenStateController keeps typed forwarding properties for the root page and
+page-root map, and normalizes the legacy STATUS route before the presenter
+applies visibility. The fusion fixture remains on the typed build/update API.
+Strict audit passes at 258 scripts, zero unclassified files, and 56
+ScreenStateController seams; the controller is 4,405 lines. Updated the script
+index, role map, and regression baseline. No gameplay or Godot runtime tests
+were run.
+
+## Completed: Stage 3.1 Hub command shell and cursor
+
+Moved command-button and Back-button construction, command-cursor target
+calculation, responsive reanchoring, and active/dimmed cursor presentation into
+the typed `HubCommandShellPresenter`. ScreenStateController preserves typed
+forwarding properties for the button and cursor references. The presenter uses
+`MenuCursorAnimator` for motion while the animator retains tween ownership. The
+strict composition audit passes at 259 scripts with zero unclassified files;
+ScreenStateController is 4,332 lines / 56 measured seams. The 800-line target
+remains open. Refreshed the index, role map, and baseline. No Godot runtime or
+gameplay tests were run.
+
+Next: map Hub responsive layout responsibilities and their node owners before
+extracting layout behavior.
+
+## Completed: Stage 3.1 responsive Hub layout
+
+Moved responsive Hub geometry for the command/resource rails, page roots,
+player card, allocation/status controls, item/gear/binding panels, and legacy
+cursors into `HubResponsiveLayoutPresenter`. Its typed context carries viewport
+and menu state plus the page, stats, command, cursor-animation, and tween-owner
+references. `HubStatsScreenPresenter` now positions its own stat cursor.
+ScreenStateController keeps typed forwarding properties and delegates its
+responsive layout call. The presenter separates frame/navigation, player and
+footer, stats, inventory, child-menu, and cursor positioning into named steps.
+The strict composition audit passes at 261 scripts
+with zero unclassified files; ScreenStateController is 4,218 lines / 56
+measured seams. The 800-line target remains open. Refreshed the script index and
+baseline. No Godot runtime or gameplay tests were run.
+
+Next: map the largest remaining ScreenStateController render and build methods
+to identify the next extraction boundary.
+
+## Completed: Stage 3.1 Hub stats interaction
+
+Moved stats/allocation visibility and focus targets plus stat-cursor display
+into `HubStatsInteractionPresenter`. It operates on the typed
+`HubStatsScreenPresenter`, which continues to own the nodes and text rendering.
+The composition guard rejected growing the stats presenter beyond 400 lines;
+visibility and cursor responsibilities now sit in a separate 82-line owner.
+The strict audit passes at 262 scripts, zero unclassified files, and 56
+ScreenStateController seams; the controller is 4,182 lines. Its 800-line
+target remains open. No Godot runtime or gameplay tests were run.
+
+Next: map `build_hub`'s widget construction against the existing typed
+presenters and separate ownership from assembly.
+
+## Completed: Stage 3.1 Hub shell construction
+
+Moved player-card, context/back prompt, footer, and gold/soul node creation into
+`HubResponsiveLayoutPresenter`, which already owns their responsive placement
+and typed references. `build_hub` now delegates shell chrome construction and
+keeps the legacy currency aliases. Its length fell from 303 to 262 lines; the
+presenter is 360 lines, below the 400-line declaration guard. The strict audit
+passes at 262 scripts, zero unclassified, and 56 ScreenStateController seams;
+the controller is 4,141 lines. No Godot runtime or gameplay tests were run.
+
+Next: map the remaining 269-line `update_hub_ui` by page and owner.
+
+## Completed: Stage 3.1 Hub footer presentation
+
+Moved footer and back-prompt texture/visibility updates into
+`HubResponsiveLayoutPresenter`. ScreenStateController retains prompt selection
+and device-aware texture generation. `update_hub_ui` dropped from 269 to 253
+lines; the responsive presenter is 392 lines, below the 400-line guard. Strict
+composition audit passes at 262 scripts with zero unclassified and 56
+ScreenStateController seams; the controller is 4,125 lines. No Godot runtime
+or gameplay tests were run.
+
+Next: map the remaining `update_hub_ui` routing and item-page visibility by
+owner.
+
+## Completed: Stage 3.1 authored Hub route visibility
+
+Moved nested Fusion/Equipment/Shop visibility, Equipment page chrome handling,
+and the transparent Back hit target into `HubPageVisibilityPresenter`. Fusion
+is still hidden before cursor reset; ScreenStateController retains page
+normalization, player-card refresh, and item rendering. The typed route method
+reduces `update_hub_ui` from 253 to 223 lines. Strict audit passes at 262
+scripts, zero unclassified, and 56 ScreenStateController seams; the controller
+is 4,095 lines. No Godot runtime or gameplay tests were run.
+
+## Completed: Stage 3.1 legacy Hub item visibility
+
+Moved legacy Equipment, Shop, and Fusion widget visibility, hit filtering,
+action-button state, and Shop cursor positioning into `HubItemVisibilityPresenter`.
+A typed context carries page, focus, selection, and profile state; the
+responsive presenter remains the owner of the controls it creates and positions.
+`update_hub_ui` dropped from 223 to 158 lines, and ScreenStateController from
+4,095 to 4,057 lines. The new presenter is 111 lines; its context is 13 lines.
+The strict composition audit passes at 264 scripts, zero unclassified files,
+and 56 ScreenStateController seams. No Godot runtime or gameplay tests were run.
+
+## Completed: Stage 3.1 Hub input ownership
+
+Moved the 240-line `update_hub_input` route into the typed `HubInputController`,
+then split it into named Back, command-rail, and per-page handlers. Mutable page,
+focus, and transaction substate now lives in `HubMenuState`; ScreenStateController
+keeps typed forwarding properties for existing flow/economy callers. The router
+uses typed GameplayState and presenter references plus narrow render/scroll
+callbacks. ScreenStateController is 3,898 lines; `update_hub_input` is a 7-line
+facade. The controller is 306 lines and HubMenuState is 93 lines. The strict
+composition audit passes at 265 scripts, zero unclassified files, and 56 screen
+controller seams. No Godot runtime or gameplay tests were run.
+
+Input mapping: GameplayFrameController still enters through
+GameplayState._update_hub_input, which now casts its existing Node reference and
+calls the typed screen method directly. The router handles touch scroll, Back,
+command-rail navigation, and status/bind/fusion/allocation/equipment/shop/item
+routes in a fixed order.
+
+Next: map `_update_hub_item_page` and `_update_hub_gear_slots` against the Hub
+economy controller and their current widget owners before moving item rendering.
+
+## Handoff: paused for owner check-in
+
+No item-page extraction is in flight. The latest strict composition audit passes
+with 265 scripts and zero unclassified files. Stage 3.1 remains open: the
+ScreenStateController is 3,898 lines against an 800-line target, and the audit
+counts 510 untyped root parameters repository-wide. The next code slice is a
+typed Equipment-page presenter for the slot list, candidate picker, and stat
+comparison, followed by the shared Shop/Fusion item renderer. Godot runtime
+verification remains pending; no Godot process was launched.

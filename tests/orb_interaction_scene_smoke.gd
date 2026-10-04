@@ -1,7 +1,7 @@
 extends SceneTree
 
-const GRAPH_SCRIPT = preload("res://scripts/dungeon_graph.gd")
-const Elements = preload("res://scripts/element_catalog.gd")
+const GRAPH_SCRIPT = preload("res://scripts/algorithms/dungeon_graph.gd")
+const Elements = preload("res://scripts/content/element_catalog.gd")
 
 
 func _initialize() -> void:

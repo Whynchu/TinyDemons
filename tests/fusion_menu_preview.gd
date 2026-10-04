@@ -1,6 +1,6 @@
 extends FusionMenuLayout
 
-const EffectsSpawnerScript = preload("res://scripts/effects_spawner.gd")
+const EffectsSpawnerScript = preload("res://scripts/runtime/services/effects_spawner.gd")
 
 func _ready() -> void:
 	super._ready()

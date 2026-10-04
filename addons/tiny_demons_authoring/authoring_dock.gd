@@ -1,9 +1,9 @@
 @tool
 extends VBoxContainer
 
-const AuthoringPlacementCatalogScript := preload("res://scripts/authoring_placement_catalog.gd")
-const ContentDefinitionManifestServiceScript := preload("res://scripts/content_definition_manifest_service.gd")
-const ItemCatalogDataScript := preload("res://scripts/item_catalog_data.gd")
+const AuthoringPlacementCatalogScript := preload("res://scripts/content/authoring_placement_catalog.gd")
+const ContentDefinitionManifestServiceScript := preload("res://scripts/content/content_definition_manifest_service.gd")
+const ItemCatalogDataScript := preload("res://scripts/content/item_catalog_data.gd")
 const HUB_PREVIEW_SCENE := "res://scenes/authoring/previews/hub_world_preview.tscn"
 
 signal design_preview_requested(enemy_id: StringName)

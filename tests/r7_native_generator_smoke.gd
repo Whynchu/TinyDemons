@@ -1,7 +1,7 @@
 extends SceneTree
 
-const ROUTE_GENERATOR = preload("res://scripts/puzzle_route_generator.gd")
-const GRAPH = preload("res://scripts/dungeon_graph.gd")
+const ROUTE_GENERATOR = preload("res://scripts/algorithms/puzzle_route_generator.gd")
+const GRAPH = preload("res://scripts/algorithms/dungeon_graph.gd")
 
 # Compatibility filename retained for the existing runner; this check exercises
 # the active R6+ generated route and its compact presentation bounds.

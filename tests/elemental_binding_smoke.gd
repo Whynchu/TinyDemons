@@ -1,12 +1,12 @@
 extends SceneTree
 
-const ASPECT_CATALOG_SCRIPT = preload("res://scripts/aspect_catalog.gd")
-const CHROMA_SCRIPT = preload("res://scripts/player_chroma_component.gd")
-const PROFILE_SCRIPT = preload("res://scripts/player_profile.gd")
-const ELEMENT_CATALOG_SCRIPT = preload("res://scripts/element_catalog.gd")
-const ROUTE_GENERATOR_SCRIPT = preload("res://scripts/puzzle_route_generator.gd")
-const GRAPH_SCRIPT = preload("res://scripts/dungeon_graph.gd")
-const MAP_CONTROLLER_SCRIPT = preload("res://scripts/dungeon_map_controller.gd")
+const ASPECT_CATALOG_SCRIPT = preload("res://scripts/content/aspect_catalog.gd")
+const CHROMA_SCRIPT = preload("res://scripts/components/player_chroma_component.gd")
+const PROFILE_SCRIPT = preload("res://scripts/runtime/state/player_profile.gd")
+const ELEMENT_CATALOG_SCRIPT = preload("res://scripts/content/element_catalog.gd")
+const ROUTE_GENERATOR_SCRIPT = preload("res://scripts/algorithms/puzzle_route_generator.gd")
+const GRAPH_SCRIPT = preload("res://scripts/algorithms/dungeon_graph.gd")
+const MAP_CONTROLLER_SCRIPT = preload("res://scripts/ui/dungeon_map_controller.gd")
 
 
 func _initialize() -> void:

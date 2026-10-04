@@ -1,9 +1,9 @@
 extends SceneTree
 
-const Chroma = preload("res://scripts/player_chroma_component.gd")
-const Ability = preload("res://scripts/player_aspect_ability_component.gd")
-const MagicRuntime = preload("res://scripts/magic_runtime_controller.gd")
-const Elements = preload("res://scripts/element_catalog.gd")
+const Chroma = preload("res://scripts/components/player_chroma_component.gd")
+const Ability = preload("res://scripts/components/player_aspect_ability_component.gd")
+const MagicRuntime = preload("res://scripts/runtime/controllers/magic_runtime_controller.gd")
+const Elements = preload("res://scripts/content/element_catalog.gd")
 
 var _finished := false
 

@@ -1,8 +1,8 @@
 extends SceneTree
 
-const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
-const StatusTransmissionControllerScript = preload("res://scripts/status_transmission_controller.gd")
-const StatusContactPairScript = preload("res://scripts/status_contact_pair.gd")
+const ElementCatalogScript = preload("res://scripts/content/element_catalog.gd")
+const StatusTransmissionControllerScript = preload("res://scripts/runtime/controllers/status_transmission_controller.gd")
+const StatusContactPairScript = preload("res://scripts/content/status_contact_pair.gd")
 
 var _finished := false
 

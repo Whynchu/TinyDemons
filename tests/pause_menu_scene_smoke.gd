@@ -1,6 +1,6 @@
 extends SceneTree
 
-const PauseMenuLayoutScript = preload("res://scripts/pause_menu_layout.gd")
+const PauseMenuLayoutScript = preload("res://scripts/ui/pause_menu_layout.gd")
 
 var _finished := false
 

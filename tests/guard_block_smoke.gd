@@ -7,9 +7,9 @@ extends SceneTree
 ## which dereferenced null and hung. The callable must also tolerate a null
 ## context without crashing.
 
-const GUARD_SCRIPT = preload("res://scripts/player_guard_component.gd")
-const CONTEXT_SCRIPT = preload("res://scripts/player_guard_context.gd")
-const VISUAL_SCRIPT = preload("res://scripts/player_equipment_visual_component.gd")
+const GUARD_SCRIPT = preload("res://scripts/components/player_guard_component.gd")
+const CONTEXT_SCRIPT = preload("res://scripts/runtime/contexts/player_guard_context.gd")
+const VISUAL_SCRIPT = preload("res://scripts/components/player_equipment_visual_component.gd")
 
 var _finished := false
 

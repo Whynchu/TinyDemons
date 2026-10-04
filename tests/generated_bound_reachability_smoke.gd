@@ -1,8 +1,8 @@
 extends SceneTree
 
-const GENERATOR_SCRIPT = preload("res://scripts/dungeon_layout_generator.gd")
-const GRAPH_SCRIPT = preload("res://scripts/dungeon_graph.gd")
-const MAP_CONTROLLER_SCRIPT = preload("res://scripts/dungeon_map_controller.gd")
+const GENERATOR_SCRIPT = preload("res://scripts/algorithms/dungeon_layout_generator.gd")
+const GRAPH_SCRIPT = preload("res://scripts/algorithms/dungeon_graph.gd")
+const MAP_CONTROLLER_SCRIPT = preload("res://scripts/ui/dungeon_map_controller.gd")
 
 var _finished := false
 

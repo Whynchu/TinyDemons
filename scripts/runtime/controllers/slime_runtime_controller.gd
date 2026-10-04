@@ -1,0 +1,1220 @@
+extends Node
+class_name SlimeRuntimeController
+
+## Per-frame movement budget for the slime crowd. Only this many slimes run their
+## expensive movement/steering pass per frame (rotating round-robin); combat,
+## knockback, and attack stay at full rate. Rooms with fewer slimes are
+## unaffected. This bounds the worst frame in packed boss rooms.
+const SLIME_AI_MOVEMENT_BUDGET := 10
+const SKELETON_BONE_PROJECTILE_SPEED := 48.0
+const SKELETON_BONE_FRAME_TIME := 0.09
+const SKELETON_BONE_FRAME_SIZE := Vector2i(5, 5)
+const SKELETON_BONE_DISPLAY_SCALE := 1.0
+const SKELETON_BONE_OVERSHOOT_DISTANCE := 7.0
+const SKELETON_BONE_ARC_HEIGHT := 10.0
+const SKELETON_BONE_MAX_RANGE := 192.0
+const SKELETON_PREFERRED_RANGE := 72.0
+const SKELETON_PREFERRED_RANGE_TOLERANCE := 12.0
+const SKELETON_WALK_SPEED := 16.0
+const SKELETON_NOTICE_STAGGER_MAX := 0.9
+const SKELETON_ATTACK_STAGGER_MAX := 0.75
+const ROOM_ENEMY_PROJECTILE_GROUP := &"room_enemy_projectile"
+const STATUS_TRANSMISSION_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/status_transmission_controller.gd")
+const SLIME_GEOMETRY_QUERIES_SCRIPT = preload("res://scripts/runtime/controllers/slime_geometry_queries.gd")
+
+var _slime_movement_cursor := 0
+var _skeleton_bone_frames: Array[Texture2D] = []
+var _skeleton_bone_frames_load_attempted := false
+var _skeleton_bone_outline_cache: Dictionary = {}
+
+## Run-scoped cache for the boss jump/slam context. It depends only on stable
+## root references and callables, but was previously rebuilt for every active
+## slime on every frame. Call invalidate_contexts() if a source object is swapped.
+var _boss_jump_slam_context_cache: BossJumpSlamContext = null
+var _slime_support_context_cache: SlimeSupportContext = null
+var _status_transmission_controller: StatusTransmissionController = STATUS_TRANSMISSION_CONTROLLER_SCRIPT.new() as StatusTransmissionController
+var _geometry_queries: SlimeGeometryQueries = SLIME_GEOMETRY_QUERIES_SCRIPT.new() as SlimeGeometryQueries
+
+
+func invalidate_contexts() -> void:
+	_boss_jump_slam_context_cache = null
+	_slime_support_context_cache = null
+
+
+## Owns the enemy runtime loop: aggro, attacks, scooting, knockback, and the
+## collision geometry queries used by those systems. GameplayState keeps only
+## the stable callback surface that the other runtime components depend on.
+
+func try_knockback_slime(root: Object, slime: Sprite2D, movement: Vector2) -> bool:
+	if is_slime_spawn_locked(root, slime):
+		return false
+	var original := slime.position
+	if slime_position_is_valid(root, slime):
+		(root.get("slime_last_valid_positions") as Dictionary)[slime] = original
+	var moved := try_move_actor_axes(root, slime, movement)
+	separate_slime_from_player(root, slime)
+	if not bool(root.call("_can_actor_stand_at_current_position", slime)) or bool(root.call("_collides_with_static", slime)):
+		slime.position = original
+		moved = false
+	var actual_movement := slime.position - original
+	var moved_distance := slime.position.distance_to(original)
+	var x_clipped := absf(movement.x) > 0.01 and absf(actual_movement.x) < absf(movement.x) * 0.92
+	var y_clipped := absf(movement.y) > 0.01 and absf(actual_movement.y) < absf(movement.y) * 0.92
+	var blocked := not moved or moved_distance < movement.length() * 0.92 or x_clipped or y_clipped
+	if blocked:
+		if slime is SkeletonActor:
+			recover_slime_position(root, slime)
+			var skeleton_combat := (root as GameplayState)._slime_combat(slime) as SlimeCombatComponent
+			skeleton_combat.knockback_timer = 0.0
+			skeleton_combat.knockback_velocity = Vector2.ZERO
+			repath_slime_after_block(root, slime)
+			return slime.position.distance_squared_to(original) > 0.0001
+		slime.position = original
+		if movement.length_squared() > 0.001:
+			(root.get("actor_collision_system") as ActorCollisionSystem).try_move_swept(slime, -movement.normalized() * 2.5, 0.5, Callable(root, "_can_actor_stand_at_current_position"), Callable(root, "_collides_with_static"))
+		recover_slime_position(root, slime)
+		var combat := root.call("_slime_combat", slime) as SlimeCombatComponent
+		combat.knockback_timer = 0.0
+		combat.knockback_velocity = Vector2.ZERO
+		repath_slime_after_block(root, slime)
+	return slime.position.distance_squared_to(original) > 0.0001 if blocked else moved
+
+
+func separate_slime_from_player(root: Object, slime: Sprite2D) -> void:
+	if is_slime_spawn_locked(root, slime):
+		return
+	if bool(slime.get_meta("boss_airborne", false)):
+		return
+	var player := root.get("player") as Sprite2D
+	var overlap_push := (root.get("actor_collision_system") as ActorCollisionSystem).overlap_push_vector(root, slime, player)
+	if overlap_push != Vector2.ZERO:
+		(root.get("actor_collision_system") as ActorCollisionSystem).try_move_swept(slime, overlap_push, 0.75, Callable(root, "_can_actor_stand_at_current_position"), Callable(root, "_collides_with_static"))
+
+
+func configure_slime_ambush(root: Object, slime: Sprite2D, enabled: bool) -> void:
+	var ambush := slime.get_node_or_null("Ambush") as SlimeAmbushComponent
+	var tuning := root.get("slime_tuning") as SlimeTuning
+	if enabled:
+		if ambush == null:
+			ambush = SlimeAmbushComponent.new()
+			ambush.name = "Ambush"
+			slime.add_child(ambush)
+		ambush.configure(true, tuning.ambush_reveal_window, tuning.ambush_block_stun, tuning.ambush_hit_extension)
+		ambush.apply_hidden(slime)
+	elif ambush != null:
+		ambush.configure(false, 0.0, 0.0, 0.0)
+		slime.self_modulate = Color.WHITE
+
+
+func slime_ambush(_root: Object, slime: Sprite2D) -> SlimeAmbushComponent:
+	return slime.get_node_or_null("Ambush") as SlimeAmbushComponent
+
+
+func is_slime_hidden(root: Object, slime: Sprite2D) -> bool:
+	var ambush := slime_ambush(root, slime)
+	return ambush != null and ambush.is_hidden()
+
+
+func slime_spawn(_root: Object, slime: Sprite2D) -> Node:
+	if slime == null or not is_instance_valid(slime):
+		return null
+	var actor := slime as SlimeActor
+	if actor != null:
+		return actor.get_node_or_null("Spawn") as Node
+	return SlimeActor.component(slime, "Spawn", load("res://scripts/components/slime_spawn_component.gd")) as Node
+
+
+func is_slime_spawn_locked(root: Object, slime: Sprite2D) -> bool:
+	var spawn := slime_spawn(root, slime)
+	return spawn != null and bool(spawn.call("is_active"))
+
+
+func spawn_frames_for(root: Object, slime: Sprite2D) -> Array[Texture2D]:
+	if slime is SkeletonActor:
+		var skeleton := slime as SkeletonActor
+		var combat := (root as GameplayState)._slime_combat(slime) as SlimeCombatComponent
+		return skeleton.spawn_left_frames.duplicate() if combat != null and combat.face_left else skeleton.spawn_frames.duplicate()
+	var visual := root.call("_slime_visual", slime) as SlimeVisualComponent
+	return [] if visual == null else visual.spawn_frames
+
+
+func begin_slime_spawn(root: Object, slime: Sprite2D) -> bool:
+	var frames := spawn_frames_for(root, slime)
+	if frames.is_empty():
+		return false
+	var tuning := root.get("slime_tuning") as SlimeTuning
+	var frame_time := tuning.spawn_frame_time if tuning != null else 0.08
+	var actor := slime as SlimeActor
+	if actor != null:
+		actor.begin_spawn(frames, frame_time)
+	else:
+		(slime_spawn(root, slime) as Node).call("begin", frames, frame_time)
+	set_slime_spawn_frame(root, slime, 0)
+	root.call("_set_actor_visual_scale", slime, Vector2.ONE)
+	return true
+
+
+func tick_slime_spawns(root: Object, delta: float) -> void:
+	for slime in root.get("slimes") as Array[Sprite2D]:
+		if slime == null or not is_instance_valid(slime) or not slime.visible:
+			continue
+		var spawn := slime_spawn(root, slime)
+		if spawn == null or not bool(spawn.call("is_active")):
+			continue
+		var set_frame := func(frame_index: int) -> void:
+			set_slime_spawn_frame(root, slime, frame_index)
+		var finish := func() -> void:
+			finish_slime_spawn(root, slime)
+		spawn.call("tick", delta, set_frame, finish)
+
+
+func set_slime_spawn_frame(root: Object, slime: Sprite2D, frame_index: int) -> void:
+	var frames := spawn_frames_for(root, slime)
+	if frames.is_empty():
+		return
+	slime.set_meta("runtime_animation", "spawn")
+	slime.set_meta("runtime_animation_frame", frame_index)
+	root.call("_set_actor_base_texture", slime, frames[clampi(frame_index, 0, frames.size() - 1)])
+	(root.get("actor_presentation_runtime_controller") as ActorPresentationRuntimeController).sync_slime_shadow(root, slime)
+
+
+func finish_slime_spawn(root: Object, slime: Sprite2D) -> void:
+	if slime == null or not is_instance_valid(slime):
+		return
+	# The normal tick path deactivates Spawn immediately before this callback.
+	# Keep the completion seam safe for room restoration and direct test callers
+	# by cancelling an active component here as well.
+	var slime_actor := slime as SlimeActor
+	if slime_actor != null:
+		slime_actor.cancel_spawn()
+	else:
+		var spawn := slime_spawn(root, slime)
+		if spawn != null:
+			spawn.call("cancel")
+	root.call("_restore_slime_idle_texture", slime)
+	root.call("_set_actor_visual_scale", slime, Vector2.ONE)
+	var collision := root.get("collision_sprites") as Array[Sprite2D]
+	if not collision.has(slime):
+		collision.append(slime)
+	var collision_system := root.get("actor_collision_system") as ActorCollisionSystem
+	if collision_system != null:
+		collision_system.invalidate_slime_grid()
+	if root.get("current_room_type") == DungeonGraph.ROOM_DOWNSTAIRS:
+		trigger_slime_notice(root, slime)
+
+
+func is_slime_targetable(root: Object, slime: Sprite2D) -> bool:
+	var puzzle_torches := root.get("puzzle_torches") as Array[Sprite2D]
+	if puzzle_torches.has(slime):
+		return is_instance_valid(slime) and slime.visible
+	return not bool(slime.get_meta("boss_airborne", false)) and not is_slime_spawn_locked(root, slime) and not bool(root.call("_is_slime_dead", slime)) and not is_slime_hidden(root, slime)
+
+
+func is_target_actor_dead(root: Object, target: Sprite2D) -> bool:
+	return false if (root.get("puzzle_torches") as Array[Sprite2D]).has(target) else is_slime_spawn_locked(root, target) or bool(root.call("_is_slime_dead", target))
+
+
+func move_slimes(root: Object, delta: float) -> void:
+	tick_slime_spawns(root, delta)
+	var slimes := root.get("slimes") as Array[Sprite2D]
+	# A stale/generated room snapshot can contain an enemy outside the current
+	# walkable geometry. Recover it before building combat state; otherwise it can
+	# attack from outside the visible room and keep the encounter uncleared.
+	_sanitize_active_slime_positions(root, slimes)
+	prepare_slime_frame_cache(root)
+	(root.get("combat_runtime_controller") as CombatRuntimeController).clear_enemy_max_health_frame_cache()
+	# Hoist the per-slime callbacks out of the loop: they are identical for every
+	# slime and were previously reconstructed for each one, every frame.
+	var is_dead := Callable(root, "_is_slime_dead")
+	var is_spawn_locked := Callable(root, "_is_slime_spawn_locked")
+	var update_knockback := Callable(root, "_update_slime_knockback")
+	var update_attack := Callable(root, "_update_slime_attack")
+	var is_aggroed := Callable(root, "_is_slime_aggroed")
+	var aggro_target := Callable(root, "_aggro_slime_target")
+	var update_scoot := Callable(root, "_update_slime_scoot")
+	# Spatial broad-phase for the crowd: built once per frame so slime-slime
+	# contact and AI steering only examine spatially local slimes.
+	(root.get("actor_collision_system") as ActorCollisionSystem).build_slime_grid(slimes, Callable(root, "_actor_foot"), is_spawn_locked)
+	# Per-frame movement budget: only a rotating subset of the crowd runs its
+	# expensive movement/steering pass each frame, so a packed room cannot spend
+	# the whole frame on enemy walkability. Combat, knockback, and attack stay at
+	# full rate.
+	var movement_left := SLIME_AI_MOVEMENT_BUDGET
+	var count := slimes.size()
+	var cursor := _slime_movement_cursor
+	var last_movement_index := -1
+	var gameplay := root as GameplayState
+	var combat_runtime := gameplay.combat_runtime_controller as CombatRuntimeController if gameplay != null else null
+	for offset in count:
+		var index := (cursor + offset) % count
+		var slime := slimes[index]
+		if not is_instance_valid(slime) or not slime.visible or not slime.is_visible_in_tree():
+			continue
+		if bool(root.call("_is_slime_dead", slime)) or is_slime_spawn_locked(root, slime):
+			continue
+		var allow_movement := movement_left > 0
+		if allow_movement:
+			last_movement_index = index
+			movement_left -= 1
+		var slime_actor := slime as SlimeActor
+		if slime_actor != null:
+			slime_actor.tick_components(delta)
+			if combat_runtime != null:
+				combat_runtime.tick_actor_statuses(gameplay, slime_actor, delta, false)
+			if slime_actor is SkeletonActor:
+				_tick_skeleton_notice_presentation(gameplay, slime_actor)
+			slime_actor.tick_runtime(delta, is_dead, update_knockback, update_attack, is_aggroed, aggro_target, update_scoot, allow_movement)
+			continue
+		SlimeActor.tick_legacy_runtime(slime, delta, is_dead, update_knockback, update_attack, is_aggroed, aggro_target, update_scoot, allow_movement)
+	if last_movement_index >= 0:
+		_slime_movement_cursor = (last_movement_index + 1) % maxi(count, 1)
+	var separation_passes := 1 if slimes.size() >= 5 else 2
+	var collision_system := root.get("actor_collision_system") as ActorCollisionSystem
+	collision_system.build_slime_grid(slimes, Callable(root, "_actor_foot"), Callable(root, "_is_slime_spawn_locked"))
+	var player := root.get("player") as Sprite2D
+	var player_alive := gameplay == null or not gameplay.player_dead
+	var transmission_player := player if player_alive else null
+	var contact_snapshot := collision_system.capture_status_contact_pairs(
+		slimes, transmission_player, root, Callable(root, "_actor_foot"),
+		Callable(root, "_is_slime_spawn_locked"), Callable(root, "_is_slime_dead"))
+	if gameplay != null:
+		_status_transmission_controller.process_contacts(contact_snapshot, delta, gameplay.current_room_id, gameplay.rng)
+	collision_system.resolve_slime_contacts(slimes, root, separation_passes)
+	if player_alive:
+		for slime in slimes:
+			if is_instance_valid(slime) and slime.visible and not bool(slime.get_meta("boss_airborne", false)) and not is_slime_spawn_locked(root, slime) and not bool(root.call("_is_slime_dead", slime)):
+				(root.get("actor_collision_system") as ActorCollisionSystem).resolve_contact_pair(slime, player, Vector2.ZERO, root)
+
+
+func _sanitize_active_slime_positions(root: Object, slimes: Array[Sprite2D]) -> void:
+	for slime in slimes:
+		if slime == null or not is_instance_valid(slime) or not slime.visible:
+			continue
+		if bool(root.call("_is_slime_dead", slime)) or is_slime_spawn_locked(root, slime):
+			continue
+		if not slime_position_is_valid(root, slime):
+			recover_slime_position(root, slime)
+
+
+func prepare_slime_frame_cache(root: Object) -> void:
+	var aggro_cache := root.get("slime_frame_aggro") as Dictionary
+	var slot_cache := root.get("slime_frame_slots") as Dictionary
+	aggro_cache.clear()
+	slot_cache.clear()
+	root.set("slime_frame_active_attackers", 0)
+	var player := root.get("player") as Sprite2D
+	var player_foot: Vector2 = root.call("_actor_foot", player)
+	var slimes := root.get("slimes") as Array[Sprite2D]
+	var player_dead := bool(root.get("player_dead"))
+	var tuning := root.get("slime_tuning") as SlimeTuning
+	for index in slimes.size():
+		var slime := slimes[index]
+		if not is_instance_valid(slime) or not slime.visible or not slime.is_visible_in_tree():
+			continue
+		if bool(root.call("_is_slime_dead", slime)) or is_slime_spawn_locked(root, slime):
+			continue
+		slot_cache[slime] = index
+		var brain := root.call("_slime_brain", slime) as SlimeBrain
+		var inherits_support_aggro := false
+		if not player_dead:
+			var support := slime.get_node_or_null("Support") as SlimeSupportComponent
+			if support != null:
+				inherits_support_aggro = support.has_nearby_alerted_ally(_slime_support_context(root), slime, tuning)
+		var is_aggroed := not player_dead and (brain.persistent_aggro or (root.call("_actor_foot", slime) as Vector2).distance_squared_to(player_foot) <= tuning.aggro_range * tuning.aggro_range or inherits_support_aggro)
+		if inherits_support_aggro:
+			brain.persistent_aggro = true
+		if is_aggroed and not brain.aggroed and not brain.notice_started and not is_slime_hidden(root, slime):
+			if slime is SkeletonActor:
+				if not brain.notice_stagger_pending:
+					var stagger_rng := (root as GameplayState).rng
+					brain.queue_notice_stagger(stagger_rng.randf_range(0.0, SKELETON_NOTICE_STAGGER_MAX))
+				if not brain.consume_notice_stagger():
+					aggro_cache[slime] = false
+					continue
+			trigger_slime_notice(root, slime)
+			aggro_cache[slime] = true
+		else:
+			aggro_cache[slime] = is_aggroed
+		var combat := root.call("_slime_combat", slime) as SlimeCombatComponent
+		if combat != null and combat.active:
+			root.set("slime_frame_active_attackers", int(root.get("slime_frame_active_attackers")) + 1)
+	root.set("slime_frame_cache_valid", true)
+
+
+func trigger_slime_notice(root: Object, slime: Sprite2D) -> void:
+	var brain := root.call("_slime_brain", slime) as SlimeBrain
+	if brain == null or brain.notice_started or is_slime_spawn_locked(root, slime) or bool(root.call("_is_slime_dead", slime)):
+		return
+	brain.persistent_aggro = true
+	if slime is SkeletonActor:
+		var gameplay := root as GameplayState
+		var combat := gameplay._slime_combat(slime) as SlimeCombatComponent
+		var attack_stagger_rng := gameplay.rng
+		if combat != null:
+			combat.cooldown = maxf(combat.cooldown, attack_stagger_rng.randf_range(0.2, SKELETON_ATTACK_STAGGER_MAX))
+	var shocked_frames := shocked_frames_for(root, slime)
+	var notice_duration := maxf(float(shocked_frames.size()) * float(root.get("SLIME_NOTICE_FRAME_TIME")), float(root.get("SLIME_NOTICE_FRAME_TIME")))
+	brain.begin_notice(notice_duration)
+	set_slime_notice_frame(root, slime, 0)
+	var run := root.get("run_state") as RunState
+	if run != null and run.active:
+		run.record_enemy_encounter()
+	(root.get("effects_spawner") as EffectsSpawner).spawn_slime_notice(root, slime, notice_duration)
+	var rng := root.get("rng") as RandomNumberGenerator
+	root.call("_play_sound", "enemy_alert", -8.0, 0.96 + rng.randf_range(-0.04, 0.04))
+
+
+func slime_position_is_valid(root: Object, slime: Sprite2D) -> bool:
+	return bool(root.call("_can_actor_stand_at_current_position", slime)) and not bool(root.call("_collides_with_static", slime))
+
+
+func recover_slime_position(root: Object, slime: Sprite2D) -> void:
+	var last_valid := root.get("slime_last_valid_positions") as Dictionary
+	if slime_position_is_valid(root, slime):
+		last_valid[slime] = slime.position
+		return
+	if last_valid.has(slime):
+		slime.position = last_valid[slime] as Vector2
+	if not slime_position_is_valid(root, slime):
+		var recovery_foot: Vector2 = root.call("_nearest_valid_slime_walkable_point", root.call("_actor_foot", slime), slime)
+		if recovery_foot.is_finite():
+			slime.position += recovery_foot - (root.call("_actor_foot", slime) as Vector2)
+	if slime_position_is_valid(root, slime):
+		last_valid[slime] = slime.position
+	else:
+		# An enemy that cannot occupy the current room is worse than a missing
+		# enemy: it can keep the encounter open while remaining impossible to hit.
+		# Disable it immediately and let the room runtime persist it as dead.
+		var gameplay := root as GameplayState
+		slime.visible = false
+		var combat := root.call("_slime_combat", slime) as SlimeCombatComponent
+		combat.dead = true
+		combat.active = false
+		combat.timer = 0.0
+		combat.hit_done = true
+		combat.knockback_timer = 0.0
+		combat.knockback_velocity = Vector2.ZERO
+		# Position recovery can run during this actor's own knockback tick. Cancel
+		# its attack immediately so it cannot emit a delayed bone while hidden.
+		combat.cooldown = maxf(combat.cooldown, gameplay.slime_tuning.attack_cooldown)
+		gameplay.collision_sprites.erase(slime)
+		gameplay.actor_sprites.erase(slime)
+		gameplay.depth_sprites.erase(slime)
+		gameplay.occluder_sprites.erase(slime)
+		var tactics := slime.get_node_or_null("Tactics") as EnemyTacticsComponent
+		if tactics != null:
+			tactics.reset()
+		gameplay.slime_frame_aggro.erase(slime)
+		gameplay.slime_frame_slots.erase(slime)
+	var combat := root.call("_slime_combat", slime) as SlimeCombatComponent
+	combat.knockback_timer = 0.0
+	combat.knockback_velocity = Vector2.ZERO
+
+
+func update_slime_attack(root: Object, slime: Sprite2D, delta: float) -> bool:
+	var combat := root.call("_slime_combat", slime) as SlimeCombatComponent
+	if slime.get_meta("behavior_id", &"") == &"support_caster":
+		var support := slime.get_node_or_null("Support") as SlimeSupportComponent
+		if support != null and support.tick(_slime_support_context(root), slime, delta):
+			return true
+	var boss_jump_slam: BossJumpSlamComponent = slime.get_node_or_null("BossJumpSlam") as BossJumpSlamComponent
+	if boss_jump_slam != null:
+		var boss_phase_running: bool = boss_jump_slam.tick(_boss_jump_slam_context(root), slime, delta)
+		if boss_phase_running:
+			return true
+	var was_active := combat.active
+	var result: bool = combat.tick_attack(delta, slime, root.get("slime_tuning") as SlimeTuning, attack_frames_for(root, slime), bool(root.get("player_dead")), Callable(root, "_set_slime_attack_frame"), Callable(root, "_set_actor_base_texture"), Callable(root, "_apply_slime_attack_lunge"), Callable(root, "_apply_slime_attack_hit"), Callable(root, "_restore_slime_idle_texture"), Callable(root, "_can_slime_attack_player"), Callable(root, "_start_slime_attack"), Callable(root, "_capture_slime_attack"))
+	if was_active and not combat.active:
+		var tactics := slime.get_node_or_null("Tactics") as EnemyTacticsComponent
+		if tactics != null:
+			tactics.release_attack_slot()
+	return result
+
+
+func set_slime_support_animation_frame(root: Object, slime: Sprite2D, phase: StringName, frame_index: int) -> void:
+	var gameplay := root as GameplayState
+	if gameplay == null:
+		return
+	var visual := SlimeActor.component(slime, "Visual", SlimeVisualComponent) as SlimeVisualComponent
+	if visual == null:
+		return
+	var animation_phase := &"spell" if phase == &"spell" else &"casting"
+	var frames := visual.support_spell_frames if animation_phase == &"spell" else visual.support_casting_frames
+	if frames.is_empty():
+		return
+	var index := clampi(frame_index, 0, frames.size() - 1)
+	slime.set_meta("runtime_animation", "cast")
+	slime.set_meta("support_animation_phase", animation_phase)
+	slime.set_meta("runtime_animation_frame", index)
+	gameplay._set_actor_base_texture(slime, frames[index])
+	var presentation := gameplay.actor_presentation_runtime_controller as ActorPresentationRuntimeController
+	if presentation != null:
+		presentation.sync_slime_shadow(gameplay, slime)
+
+
+func _slime_support_context(root: Object) -> SlimeSupportContext:
+	var gameplay := root as GameplayState
+	if gameplay == null:
+		return null
+	if _slime_support_context_cache == null or _slime_support_context_cache.slime_tuning != gameplay.slime_tuning:
+		var context := SlimeSupportContext.new()
+		context.world_root = gameplay
+		context.actor_foot = Callable(gameplay, "_actor_foot")
+		context.is_dead = Callable(gameplay, "_is_slime_dead")
+		context.is_aggroed = Callable(gameplay, "_is_slime_aggroed")
+		context.magic_target_point = Callable(gameplay, "_magic_target_point")
+		context.pixel_particle_texture = Callable(gameplay, "_pixel_particle_texture")
+		context.snap_half_pixel = Callable(gameplay, "_snap_half_pixel")
+		context.set_animation_frame = Callable(gameplay, "_set_slime_support_animation_frame")
+		context.play_healing_sound = Callable(gameplay, "_play_sound_with_perlin_pitch")
+		context.restore_idle_texture = Callable(gameplay, "_restore_slime_idle_texture")
+		_slime_support_context_cache = context
+	var cached := _slime_support_context_cache
+	cached.player = gameplay.player
+	cached.slimes = gameplay.slimes
+	cached.slime_tuning = gameplay.slime_tuning
+	cached.rng = gameplay.rng
+	cached.effects_spawner = gameplay.effects_spawner
+	cached.player_guard_component = gameplay.player_guard_component
+	cached.occlusion_renderer = gameplay.occlusion_renderer
+	cached.overworld_ui_z = gameplay.OVERWORLD_UI_Z
+	cached.depth_z_scale = gameplay.DEPTH_Z_SCALE
+	return cached
+
+
+func _boss_jump_slam_context(root: Object) -> BossJumpSlamContext:
+	if _boss_jump_slam_context_cache != null:
+		return _boss_jump_slam_context_cache
+	var context := BossJumpSlamContext.new()
+	context.player = root.get("player") as Sprite2D
+	context.rng = root.get("rng") as RandomNumberGenerator
+	context.slime_tuning = root.get("slime_tuning") as SlimeTuning
+	context.actor_collision_system = root.get("actor_collision_system") as ActorCollisionSystem
+	context.get_combat = Callable(root, "_slime_combat")
+	context.is_aggroed = Callable(root, "_is_slime_aggroed")
+	context.get_visual = Callable(root, "_slime_visual")
+	context.set_actor_base_texture = Callable(root, "_set_actor_base_texture")
+	context.restore_idle_texture = Callable(root, "_restore_slime_idle_texture")
+	context.play_sound = Callable(root, "_play_sound")
+	context.begin_boss_jump_phase_popcorn = Callable(root, "_begin_boss_jump_phase_popcorn")
+	context.boss_jump_phase_popcorn_alive = Callable(root, "_boss_jump_phase_popcorn_alive")
+	context.clear_boss_jump_phase_popcorn = Callable(root, "_clear_boss_jump_phase_popcorn")
+	context.apply_boss_jump_slam = Callable(root, "_apply_boss_jump_slam")
+	context.slime_shadow_anchor = Callable(root, "_slime_shadow_anchor")
+	context.actor_foot = Callable(root, "_actor_foot")
+	context.nearest_slime_walkable_point = Callable(root, "_nearest_slime_walkable_point")
+	_boss_jump_slam_context_cache = context
+	return context
+
+
+func set_slime_attack_frame(root: Object, slime: Sprite2D, frame_index: int) -> void:
+	(root.call("_slime_animation", slime) as SlimeAnimationComponent).set_attack_frame(frame_index)
+	slime.set_meta("runtime_animation", "attack")
+	slime.set_meta("runtime_animation_frame", frame_index)
+	if slime is SkeletonActor and frame_index == 1:
+		var combat := slime.get_node_or_null("Combat") as SlimeCombatComponent
+		if combat != null and not combat.attack_committed:
+			capture_slime_attack(root, slime)
+	(root.get("actor_presentation_runtime_controller") as ActorPresentationRuntimeController).sync_slime_shadow(root, slime)
+
+
+func start_slime_attack(root: Object, slime: Sprite2D) -> void:
+	var tactics := slime.get_node_or_null("Tactics") as EnemyTacticsComponent
+	if tactics != null:
+		tactics.attack_reserved = true
+	if slime is SkeletonActor:
+		var gameplay := root as GameplayState
+		var combat := gameplay._slime_combat(slime) as SlimeCombatComponent
+		var player := gameplay.player
+		combat.face_left = player != null and player.global_position.x < slime.global_position.x
+		combat.begin()
+		combat.frame = 0
+		combat.hit_done = false
+		slime.set_meta("attack_hit_frame_override", (slime as SkeletonActor).bone_throw_sequence_frame_index())
+		_ensure_skeleton_renderer_registration(gameplay, slime as SkeletonActor)
+		gameplay._restore_slime_idle_texture(slime)
+		return
+	SlimeActor.start_attack_actor(root, slime)
+
+
+func capture_slime_attack(root: Object, slime: Sprite2D) -> void:
+	var combat := slime.get_node_or_null("Combat") as SlimeCombatComponent
+	var player := root.get("player") as Sprite2D
+	if combat == null or player == null:
+		return
+	# Attack commitment targets the player's collision center, matching the
+	# target bounds used by reach/contact calculations. This removes the small
+	# actor-foot/guide offset that otherwise turns a vertical boss lunge into a
+	# diagonal one.
+	var target_point: Vector2 = root.call("_collision_rect", player).get_center()
+	combat.attack_target_point = target_point
+	if slime is SkeletonActor:
+		combat.attack_lunge_vector = Vector2.ZERO
+		combat.attack_committed = true
+		slime.set_meta("attack_target_point", target_point)
+		slime.set_meta("attack_lunge_vector", Vector2.ZERO)
+		return
+	combat.attack_lunge_vector = root.call("_slime_attack_commitment_vector", slime, target_point) as Vector2
+	combat.attack_committed = true
+	# Keep the snapshot inspectable for debug scenes and older presentation
+	# seams, but never read it again after this commitment callback returns.
+	slime.set_meta("attack_target_point", target_point)
+	slime.set_meta("attack_lunge_vector", combat.attack_lunge_vector)
+
+
+func attack_frames_for(root: Object, slime: Sprite2D) -> Array[Texture2D]:
+	var visual := root.call("_slime_visual", slime) as SlimeVisualComponent
+	var combat := root.call("_slime_combat", slime) as SlimeCombatComponent
+	if slime is SkeletonActor:
+		return (slime as SkeletonActor).attack_sequence_frames(combat.face_left)
+	return [] if visual == null else visual.attack_left_frames if combat.face_left else visual.attack_right_frames
+
+
+func shocked_frames_for(root: Object, slime: Sprite2D) -> Array[Texture2D]:
+	if slime is SkeletonActor:
+		var skeleton := slime as SkeletonActor
+		var combat := (root as GameplayState)._slime_combat(slime) as SlimeCombatComponent
+		return skeleton.shocked_left_frames.duplicate() if combat != null and combat.face_left else skeleton.shocked_frames.duplicate()
+	var visual := root.call("_slime_visual", slime) as SlimeVisualComponent
+	return [] if visual == null else visual.shocked_frames
+
+
+func set_slime_notice_frame(root: Object, slime: Sprite2D, frame_index: int) -> void:
+	if slime is SkeletonActor:
+		var gameplay := root as GameplayState
+		var player := gameplay.player
+		var combat := gameplay._slime_combat(slime) as SlimeCombatComponent
+		if player != null and combat != null:
+			combat.face_left = player.global_position.x < slime.global_position.x
+		var frames := shocked_frames_for(root, slime)
+		if not frames.is_empty():
+			var shocked_index := clampi(frame_index, 0, frames.size() - 1)
+			slime.set_meta("runtime_animation", "shocked")
+			slime.set_meta("runtime_animation_frame", shocked_index)
+			_ensure_skeleton_renderer_registration(gameplay, slime as SkeletonActor)
+			gameplay._set_actor_base_texture(slime, frames[shocked_index])
+			(gameplay.actor_presentation_runtime_controller as ActorPresentationRuntimeController).sync_slime_shadow(gameplay, slime)
+		return
+	slime.set_meta("runtime_animation", "shocked")
+	slime.set_meta("runtime_animation_frame", frame_index)
+	var frames := shocked_frames_for(root, slime)
+	var visual := root.call("_slime_visual", slime) as SlimeVisualComponent
+	if visual != null and float(slime.get_meta("encounter_scale", 1.0)) > 1.0 and not visual.boss_shocked_frames.is_empty():
+		frames = visual.boss_shocked_frames
+	if frames.is_empty():
+		return
+	root.call("_set_actor_base_texture", slime, frames[clampi(frame_index, 0, frames.size() - 1)])
+	(root.get("actor_presentation_runtime_controller") as ActorPresentationRuntimeController).sync_slime_shadow(root, slime)
+
+
+func restore_slime_idle_texture(root: Object, slime: Sprite2D) -> void:
+	var combat := root.call("_slime_combat", slime) as SlimeCombatComponent
+	slime.set_meta("runtime_animation", "idle")
+	slime.set_meta("runtime_animation_frame", 0)
+	if slime is SkeletonActor:
+		var gameplay := root as GameplayState
+		var skeleton := slime as SkeletonActor
+		var frames := skeleton.idle_left_frames if combat != null and combat.face_left else skeleton.idle_frames
+		if not frames.is_empty():
+			_ensure_skeleton_renderer_registration(gameplay, skeleton)
+			gameplay._set_actor_base_texture(slime, frames[0])
+			(gameplay.actor_presentation_runtime_controller as ActorPresentationRuntimeController).sync_slime_shadow(gameplay, slime)
+		return
+	root.call("_set_slime_facing", slime, -1.0 if combat.face_left else 1.0)
+
+
+func _ensure_skeleton_renderer_registration(gameplay: GameplayState, skeleton: SkeletonActor) -> void:
+	if gameplay == null or skeleton == null or not is_instance_valid(skeleton):
+		return
+	var renderer := gameplay.occlusion_renderer as OcclusionRenderer
+	if renderer != null:
+		renderer.ensure_actor_registered(skeleton)
+
+
+func can_slime_attack_player(root: Object, slime: Sprite2D) -> bool:
+	if not is_instance_valid(slime) or not slime.visible or not slime.is_visible_in_tree() or is_slime_spawn_locked(root, slime):
+		return false
+	if slime is SkeletonActor and slime_attack_offset(root, slime).length() > SKELETON_BONE_MAX_RANGE:
+		return false
+	var brain := root.call("_slime_brain", slime) as SlimeBrain
+	if brain != null and brain.is_noticing():
+		return false
+	var attack_distance := slime_attack_reach(root, slime)
+	if slime is SkeletonActor:
+		# Skeletons keep a longer ranged wind-up, but that range must not bypass
+		# the normal aggro radius. Wait until the frame cache marks this actor
+		# aggroed and its notice animation has completed before reserving an attack.
+		if not is_slime_aggroed(root, slime):
+			return false
+		attack_distance = maxf(attack_distance, SKELETON_PREFERRED_RANGE + SKELETON_PREFERRED_RANGE_TOLERANCE)
+	if bool(root.get("player_dead")) or slime_attack_offset(root, slime).length() > attack_distance:
+		return false
+	var tactics := slime.get_node_or_null("Tactics") as EnemyTacticsComponent
+	if tactics == null:
+		return true
+	var own_combat := root.call("_slime_combat", slime) as SlimeCombatComponent
+	if tactics.attack_reserved and (own_combat == null or not own_combat.active):
+		tactics.release_attack_slot()
+	var active_attackers := int(root.get("slime_frame_active_attackers"))
+	if not bool(root.get("slime_frame_cache_valid")):
+		active_attackers = 0
+		for other in root.get("slimes") as Array[Sprite2D]:
+			if bool(root.call("_is_slime_dead", other)):
+				continue
+			var combat := root.call("_slime_combat", other) as SlimeCombatComponent
+			if combat != null and combat.active:
+				active_attackers += 1
+	var maximum_attackers := int(root.get("MAX_ACTIVE_ENEMY_ATTACKERS"))
+	# The boss is the room's primary threat and should not stand idle because
+	# three regular slimes happened to reserve the shared attack budget.
+	if float(slime.get_meta("encounter_scale", 1.0)) > 1.0:
+		maximum_attackers += 1
+	var granted := tactics.request_attack_slot(active_attackers, maximum_attackers)
+	if granted and bool(root.get("slime_frame_cache_valid")):
+		root.set("slime_frame_active_attackers", int(root.get("slime_frame_active_attackers")) + 1)
+	return granted
+
+
+func is_slime_aggroed(root: Object, slime: Sprite2D) -> bool:
+	if not is_instance_valid(slime) or not slime.visible or not slime.is_visible_in_tree() or is_slime_spawn_locked(root, slime):
+		return false
+	var cache := root.get("slime_frame_aggro") as Dictionary
+	if bool(root.get("slime_frame_cache_valid")) and cache.has(slime):
+		return bool(cache[slime])
+	var brain := root.call("_slime_brain", slime) as SlimeBrain
+	return not bool(root.call("_is_slime_dead", slime)) and not bool(root.get("player_dead")) and (brain.persistent_aggro or (root.call("_actor_foot", slime) as Vector2).distance_to(root.call("_actor_foot", root.get("player")) as Vector2) <= float((root.get("slime_tuning") as SlimeTuning).aggro_range))
+
+
+func is_any_slime_aggroed(root: Object) -> bool:
+	for slime in root.get("slimes") as Array[Sprite2D]:
+		if is_slime_aggroed(root, slime):
+			return true
+	return false
+
+
+func slime_attack_reach(root: Object, slime: Sprite2D) -> float:
+	var to_player := slime_attack_offset(root, slime)
+	var direction := to_player.normalized() if to_player.length_squared() > 0.001 else Vector2.RIGHT
+	var encounter_scale := float(root.call("_slime_encounter_scale", slime))
+	var tuning := root.get("slime_tuning") as SlimeTuning
+	var lunge_distance: float = tuning.boss_attack_lunge_distance if encounter_scale > 1.0 else tuning.attack_lunge_distance
+	var overshoot: float = tuning.boss_attack_overshoot_distance if encounter_scale > 1.0 else tuning.attack_overshoot_distance
+	# Commit from the authored body contact gap plus a small preparation margin.
+	# Native 32px bosses can have a larger directional gap than the regular
+	# attack-hit range; include the deliberate overshoot so the fixed target is
+	# reachable from the edge of the attack permission.
+	return slime_attack_contact_gap(root, slime, direction) + lunge_distance + overshoot
+
+
+func slime_attack_contact_gap(root: Object, slime: Sprite2D, direction: Vector2) -> float:
+	var slime_body: PackedVector2Array = root.call("_slime_body_polygon", slime)
+	var slime_center := ActorGeometry.polygon_center(slime_body)
+	var player_rect: Rect2 = collision_rect(root, root.get("player") as Sprite2D)
+	var player_body := PackedVector2Array([player_rect.position, Vector2(player_rect.end.x, player_rect.position.y), player_rect.end, Vector2(player_rect.position.x, player_rect.end.y)])
+	var body_reach := ActorGeometry.directional_reach(slime_body, slime_center, direction)
+	var player_reach := ActorGeometry.directional_reach(player_body, player_rect.get_center(), -direction)
+	return maxf(body_reach + player_reach - 0.5, 0.0)
+
+
+func slime_attack_offset(root: Object, slime: Sprite2D) -> Vector2:
+	var slime_body: PackedVector2Array = root.call("_slime_body_polygon", slime)
+	var slime_center := ActorGeometry.polygon_center(slime_body) if slime_body.size() >= 3 else collision_rect(root, slime).get_center()
+	return collision_rect(root, root.get("player") as Sprite2D).get_center() - slime_center
+
+
+func aggro_slime_target(root: Object, slime: Sprite2D) -> Vector2:
+	var tactics := slime.get_node_or_null("Tactics") as EnemyTacticsComponent
+	if tactics != null:
+		var slimes := root.get("slimes") as Array[Sprite2D]
+		var slots := root.get("slime_frame_slots") as Dictionary
+		var slot_index := int(slots.get(slime, slimes.find(slime)))
+		tactics.set_formation_slot(-1 if slot_index % 3 == 1 else 1 if slot_index % 3 == 2 else 0)
+	return SlimeBrain.aggro_target(root, slime)
+
+
+func apply_slime_attack_hit(root: Object, slime: Sprite2D) -> void:
+	# Attack timers can outlive a visibility change during room/state cleanup.
+	# Never let a hidden actor emit a projectile or apply a delayed melee hit.
+	if not is_instance_valid(slime) or not slime.visible or not slime.is_visible_in_tree():
+		return
+	if slime is SkeletonActor:
+		_launch_skeleton_bone(root, slime)
+		return
+	var ambush := slime_ambush(root, slime)
+	if ambush != null:
+		var tuning := root.get("slime_tuning") as SlimeTuning
+		ambush.reveal(slime)
+		ambush.begin_rehide(slime, tuning.ambush_reveal_window)
+	SlimeActor.apply_attack_hit(root, slime)
+
+
+func _launch_skeleton_bone(root: Object, skeleton: Sprite2D) -> void:
+	var gameplay := root as GameplayState
+	var player := gameplay.player
+	if player == null or skeleton.get_parent() == null or not skeleton.visible or not skeleton.is_visible_in_tree():
+		return
+	var rightward_frames := _skeleton_bone_projectile_frames()
+	if rightward_frames.is_empty():
+		return
+	var combat := skeleton.get_node_or_null("Combat") as SlimeCombatComponent
+	var faces_left := combat != null and combat.face_left
+	var flight_frames: Array[Texture2D] = []
+	if faces_left:
+		for frame_index in range(rightward_frames.size() - 1, -1, -1):
+			flight_frames.append(rightward_frames[frame_index])
+	else:
+		flight_frames = rightward_frames.duplicate()
+	var player_rect: Rect2 = gameplay._collision_rect(player)
+	var target_global: Vector2 = combat.attack_target_point if combat != null and combat.attack_committed else player_rect.get_center()
+	var projectile := Sprite2D.new()
+	projectile.name = "BoneProjectile"
+	projectile.add_to_group(ROOM_ENEMY_PROJECTILE_GROUP)
+	projectile.centered = true
+	projectile.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	projectile.texture = flight_frames[0]
+	projectile.material = null
+	projectile.z_index = 20
+	projectile.scale = Vector2.ONE * SKELETON_BONE_DISPLAY_SCALE
+	var element_palette := String(skeleton.get_meta("visual_source", "grey"))
+	projectile.set_meta("element_palette", element_palette)
+	var outline := Sprite2D.new()
+	outline.name = "BoneProjectileOutline"
+	outline.texture = _bone_projectile_outline_texture(flight_frames[0], element_palette)
+	outline.centered = true
+	outline.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	outline.z_index = -1
+	projectile.add_child(outline)
+	skeleton.get_parent().add_child(projectile)
+	var launch_global := gameplay._actor_foot(skeleton) - Vector2(0.0, 2.0)
+	projectile.global_position = launch_global
+	var flight_vector := target_global - launch_global
+	var flight_distance := minf(flight_vector.length(), SKELETON_BONE_MAX_RANGE)
+	var flight_direction := flight_vector.normalized() if flight_vector.length_squared() > 0.001 else Vector2.RIGHT
+	var impact_global := launch_global + flight_direction * (flight_distance + SKELETON_BONE_OVERSHOOT_DISTANCE)
+	projectile.rotation = flight_direction.angle()
+	var flight_duration := maxf(launch_global.distance_to(impact_global) / SKELETON_BONE_PROJECTILE_SPEED, 0.1)
+	var flight_tween := projectile.create_tween()
+	flight_tween.tween_method(Callable(self, "_update_bone_projectile_flight").bind(projectile, launch_global, impact_global, SKELETON_BONE_ARC_HEIGHT, root, player, skeleton), 0.0, 1.0, flight_duration).set_trans(Tween.TRANS_LINEAR)
+	flight_tween.tween_callback(Callable(self, "_resolve_bone_projectile_impact").bind(root, projectile, player, skeleton, impact_global))
+	var animation_tween := projectile.create_tween().set_loops()
+	for frame_index in range(flight_frames.size()):
+		animation_tween.tween_interval(SKELETON_BONE_FRAME_TIME)
+		animation_tween.tween_callback(Callable(self, "_set_bone_projectile_frame").bind(projectile, flight_frames[frame_index]))
+
+
+func _update_bone_projectile_flight(progress: float, projectile: Sprite2D, start: Vector2, finish: Vector2, arc_height: float, root: Object, player: Sprite2D, skeleton: Sprite2D) -> void:
+	if not is_instance_valid(projectile) or not is_instance_valid(player) or not is_instance_valid(skeleton):
+		return
+	var previous_position := projectile.global_position
+	var normalized_progress := clampf(progress, 0.0, 1.0)
+	var arc_offset := sin(normalized_progress * PI) * arc_height
+	projectile.global_position = start.lerp(finish, normalized_progress) - Vector2(0.0, arc_offset)
+	var tangent := (finish - start) + Vector2(0.0, -arc_height * PI * cos(normalized_progress * PI))
+	projectile.rotation = tangent.angle()
+	var projectile_half_size := Vector2(SKELETON_BONE_FRAME_SIZE) * SKELETON_BONE_DISPLAY_SCALE * 0.5
+	var swept_hit_rect := Rect2(previous_position, projectile.global_position - previous_position).abs().grow(maxf(projectile_half_size.x, projectile_half_size.y))
+	var current_player_rect: Rect2 = (root as GameplayState)._collision_rect(player)
+	if swept_hit_rect.intersects(current_player_rect):
+		_resolve_bone_projectile_impact(root, projectile, player, skeleton, projectile.global_position, true)
+
+
+func _resolve_bone_projectile_impact(root: Object, projectile: Sprite2D, player: Sprite2D, skeleton: Sprite2D, impact_position: Vector2, swept_hit: bool = false) -> void:
+	if not is_instance_valid(projectile) or projectile.has_meta("impact_resolved"):
+		return
+	projectile.set_meta("impact_resolved", true)
+	if is_instance_valid(player) and is_instance_valid(skeleton):
+		var current_player_rect: Rect2 = (root as GameplayState)._collision_rect(player)
+		var hit_size := Vector2(SKELETON_BONE_FRAME_SIZE) * SKELETON_BONE_DISPLAY_SCALE
+		var hit_rect := Rect2(projectile.global_position - hit_size * 0.5, hit_size)
+		if swept_hit or hit_rect.intersects(current_player_rect):
+			SlimeActor.apply_attack_hit(root, skeleton, true)
+	var outline := projectile.get_node_or_null("BoneProjectileOutline") as Sprite2D
+	_spawn_skeleton_bone_impact(root, projectile.texture, impact_position)
+	if outline != null and outline.texture != null:
+		_spawn_skeleton_bone_impact(root, outline.texture, impact_position)
+	projectile.queue_free()
+
+
+func _spawn_skeleton_bone_impact(root: Object, texture: Texture2D, impact_position: Vector2) -> void:
+	var gameplay := root as GameplayState
+	var effects := gameplay.effects_spawner
+	var tuning := gameplay.effects_tuning
+	var rng := gameplay.rng
+	if effects == null or tuning == null or rng == null or texture == null:
+		return
+	var particle_origin := impact_position - Vector2(texture.get_size()) * 0.5
+	var particle_z := int(round(impact_position.y * float(gameplay.DEPTH_Z_SCALE))) + 1
+	effects.spawn_slime_death_particles(root, texture, particle_origin, particle_z, mini(tuning.slime_death_particle_count, 12), tuning.slime_death_particle_speed_min, tuning.slime_death_particle_speed_max, tuning.slime_death_particle_lifetime, rng, Callable(root, "_pixel_particle_texture"), "grey")
+
+
+func clear_room_projectiles() -> void:
+	var tree := get_tree()
+	if tree == null:
+		return
+	for projectile in tree.get_nodes_in_group(ROOM_ENEMY_PROJECTILE_GROUP):
+		if is_instance_valid(projectile):
+			projectile.queue_free()
+
+
+func _skeleton_bone_projectile_frames() -> Array[Texture2D]:
+	if _skeleton_bone_frames_load_attempted:
+		return _skeleton_bone_frames
+	_skeleton_bone_frames_load_attempted = true
+	var source_path := "res://assets/artwork/Bone-projectile_right.png"
+	# Use ResourceLoader so exported PCK/web builds resolve the imported texture.
+	# Image.load(path) reads loose files and can fail once the source PNG is packed.
+	var source_texture := ResourceLoader.load(source_path) as Texture2D
+	if source_texture == null:
+		push_error("Could not load Skeleton bone projectile sheet: %s" % source_path)
+		return _skeleton_bone_frames
+	var sheet := source_texture.get_image()
+	if sheet == null or sheet.is_empty():
+		push_error("Could not read Skeleton bone projectile sheet pixels: %s" % source_path)
+		return _skeleton_bone_frames
+	if sheet.get_width() < SKELETON_BONE_FRAME_SIZE.x or sheet.get_height() < SKELETON_BONE_FRAME_SIZE.y:
+		push_error("Skeleton bone projectile sheet is smaller than its 5x5 frame size.")
+		return _skeleton_bone_frames
+	var frame_count := int(float(sheet.get_width()) / float(SKELETON_BONE_FRAME_SIZE.x))
+	for frame_index in frame_count:
+		var frame_image := Image.create_empty(SKELETON_BONE_FRAME_SIZE.x, SKELETON_BONE_FRAME_SIZE.y, false, sheet.get_format())
+		frame_image.blit_rect(sheet, Rect2i(frame_index * SKELETON_BONE_FRAME_SIZE.x, 0, SKELETON_BONE_FRAME_SIZE.x, SKELETON_BONE_FRAME_SIZE.y), Vector2i.ZERO)
+		_skeleton_bone_frames.append(ImageTexture.create_from_image(frame_image))
+	return _skeleton_bone_frames
+
+
+func _set_bone_projectile_frame(projectile: Sprite2D, frame: Texture2D) -> void:
+	if is_instance_valid(projectile):
+		projectile.texture = frame
+		var outline := projectile.get_node_or_null("BoneProjectileOutline") as Sprite2D
+		if outline != null:
+			outline.texture = _bone_projectile_outline_texture(frame, String(projectile.get_meta("element_palette", "grey")))
+
+
+func _bone_projectile_outline_texture(source: Texture2D, palette_name: String) -> Texture2D:
+	if source == null or palette_name == "grey" or not PaletteLibrary.PALETTE_NAMES.has(palette_name):
+		return null
+	var cache_key := "%s:%s" % [source.get_rid(), palette_name]
+	if _skeleton_bone_outline_cache.has(cache_key):
+		return _skeleton_bone_outline_cache[cache_key] as Texture2D
+	var source_image := source.get_image()
+	if source_image == null or source_image.is_empty():
+		return null
+	var outline_color := PaletteLibrary.normal(palette_name)
+	var outline_image := Image.create_empty(source_image.get_width() + 2, source_image.get_height() + 2, false, Image.FORMAT_RGBA8)
+	var cardinal_offsets := [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]
+	for y in source_image.get_height():
+		for x in source_image.get_width():
+			if source_image.get_pixel(x, y).a <= 0.0:
+				continue
+			for offset: Vector2i in cardinal_offsets:
+				var neighbor := Vector2i(x, y) + offset
+				if neighbor.x < 0 or neighbor.y < 0 or neighbor.x >= source_image.get_width() or neighbor.y >= source_image.get_height() or source_image.get_pixelv(neighbor).a <= 0.0:
+					outline_image.set_pixel(x + 1 + offset.x, y + 1 + offset.y, outline_color)
+	var outline_texture := ImageTexture.create_from_image(outline_image)
+	_skeleton_bone_outline_cache[cache_key] = outline_texture
+	return outline_texture
+
+
+func update_slime_scoot(root: Object, slime: Sprite2D, delta: float) -> void:
+	# Top-level floor shadows need one update per movement tick so contact
+	# pushes and scoot interpolation cannot leave them one frame behind.
+	(root.get("actor_presentation_runtime_controller") as ActorPresentationRuntimeController).sync_slime_shadow(root, slime)
+	var brain := root.call("_slime_brain", slime) as SlimeBrain
+	brain.set_aggro(is_slime_aggroed(root, slime))
+	if slime is SkeletonActor and brain.is_noticing():
+		return
+	if brain.is_noticing():
+		var frames := shocked_frames_for(root, slime)
+		if frames.is_empty():
+			root.call("_set_actor_visual_scale", slime, brain.notice_wiggle_scale())
+		else:
+			var progress := 1.0 - clampf(brain.notice_timer / brain.notice_duration, 0.0, 1.0)
+			root.call("_set_actor_visual_scale", slime, Vector2.ONE)
+			set_slime_notice_frame(root, slime, int(floor(progress * float(frames.size()))))
+		return
+	if brain.notice_started and not brain.notice_animation_finished:
+		brain.notice_animation_finished = true
+		restore_slime_idle_texture(root, slime)
+		root.call("_set_actor_visual_scale", slime, Vector2.ONE)
+	var tactics := slime.get_node_or_null("Tactics") as EnemyTacticsComponent
+	if tactics != null:
+		var slimes := root.get("slimes") as Array[Sprite2D]
+		var slots := root.get("slime_frame_slots") as Dictionary
+		var slot_index := int(slots.get(slime, slimes.find(slime)))
+		tactics.set_formation_slot(-1 if slot_index % 3 == 1 else 1 if slot_index % 3 == 2 else 0)
+	if slime is SkeletonActor:
+		_update_skeleton_walk(root, slime, brain, delta)
+		return
+	var set_visual_scale := Callable(root, "_set_actor_visual_scale")
+	brain.tick_scoot(slime, delta, root.get("slime_tuning") as SlimeTuning, Callable(root, "_is_slime_aggroed"), Callable(root, "_try_move_actor"), set_visual_scale, Callable(root, "_repath_slime_after_block"), Callable(root, "_start_slime_hold"), Callable(root, "_start_slime_scoot"))
+
+
+func _tick_skeleton_notice_presentation(gameplay: GameplayState, skeleton: SkeletonActor) -> void:
+	var brain := skeleton.get_node_or_null("Brain") as SlimeBrain
+	if brain == null or not brain.notice_started:
+		return
+	gameplay._set_actor_visual_scale(skeleton, Vector2.ONE)
+	if brain.is_noticing():
+		var frames := shocked_frames_for(gameplay, skeleton)
+		if not frames.is_empty():
+			var progress := 1.0 - clampf(brain.notice_timer / brain.notice_duration, 0.0, 1.0)
+			set_slime_notice_frame(gameplay, skeleton, int(floor(progress * float(frames.size()))))
+	elif not brain.notice_animation_finished:
+		brain.notice_animation_finished = true
+		restore_slime_idle_texture(gameplay, skeleton)
+
+
+func _update_skeleton_walk(root: Object, skeleton: Sprite2D, brain: SlimeBrain, delta: float) -> void:
+	var gameplay := root as GameplayState
+	var foot: Vector2 = gameplay._actor_foot(skeleton)
+	var player := gameplay.player
+	var player_foot: Vector2 = gameplay._actor_foot(player) if player != null else foot
+	var aggroed := brain.aggroed
+	var target: Vector2 = gameplay._aggro_slime_target(skeleton) if aggroed else brain.target
+	if not aggroed:
+		if brain.hold_timer > 0.0:
+			_set_skeleton_facing(root, skeleton, target.x - foot.x)
+			_tick_skeleton_idle_walk(root, skeleton, delta, false)
+			return
+		var target_is_spawn_position := brain.target.distance_squared_to(brain.start_position) <= 0.01
+		if target_is_spawn_position or foot.distance_to(target) <= 2.0 or brain.repath_timer <= 0.0:
+			target = gameplay._random_slime_walkable_point_near(foot, 8, skeleton)
+			brain.target = target
+			var tuning := gameplay.slime_tuning
+			var rng := gameplay.rng
+			brain.repath_timer = rng.randf_range(tuning.repath_min, tuning.repath_max)
+	if aggroed:
+		brain.target = target
+		brain.hold_timer = 0.0
+	var facing_target := player_foot if aggroed else target
+	_set_skeleton_facing(root, skeleton, facing_target.x - foot.x)
+	var distance := foot.distance_to(target)
+	if distance <= 1.0:
+		if not aggroed:
+			var tuning := gameplay.slime_tuning
+			var rng := gameplay.rng
+			brain.hold_timer = rng.randf_range(tuning.hold_min, tuning.hold_max)
+		_tick_skeleton_idle_walk(root, skeleton, delta, false)
+		return
+	var movement_distance := minf(distance, SKELETON_WALK_SPEED * float(skeleton.get_meta("movement_speed_multiplier", 1.0)) * delta)
+	var displacement := gameplay._perspective_movement((target - foot).normalized() * movement_distance)
+	var moved := gameplay._try_move_actor(skeleton, displacement)
+	if not moved:
+		brain.repath_timer = 0.0
+	_tick_skeleton_idle_walk(root, skeleton, delta, moved)
+
+
+func _set_skeleton_facing(root: Object, skeleton: Sprite2D, direction_x: float) -> void:
+	if absf(direction_x) < 0.1:
+		return
+	var faces_left := direction_x < 0.0
+	var gameplay := root as GameplayState
+	var combat := gameplay._slime_combat(skeleton) as SlimeCombatComponent
+	var animation := skeleton.get_node_or_null("Animation") as SlimeAnimationComponent
+	var facing_changed := combat != null and combat.face_left != faces_left
+	if animation != null and animation.facing_left != faces_left:
+		facing_changed = true
+	if not facing_changed:
+		return
+	if combat != null:
+		combat.face_left = faces_left
+	if animation != null:
+		animation.set_facing(faces_left)
+	gameplay._set_slime_facing(skeleton, direction_x)
+
+
+func _tick_skeleton_idle_walk(root: Object, slime: Sprite2D, delta: float, walking: bool) -> void:
+	var animation := slime.get_node_or_null("Animation") as SlimeAnimationComponent
+	var next_frame := (slime as SkeletonActor).animation_frame_for_state(delta, walking, animation != null and animation.facing_left)
+	if next_frame != null:
+		var gameplay := root as GameplayState
+		gameplay._set_actor_base_texture(slime, next_frame)
+		var skeleton := slime as SkeletonActor
+		if walking and (skeleton.animation_frame == 1 or skeleton.animation_frame == 3):
+			var rng := gameplay.rng
+			gameplay._play_sound("foot_left" if skeleton.animation_frame == 1 else "foot_right", -9.0, 0.98 + rng.randf_range(-0.025, 0.025))
+
+
+func start_slime_scoot(root: Object, slime: Sprite2D) -> void:
+	if is_slime_spawn_locked(root, slime):
+		return
+	root.call("_set_actor_visual_scale", slime, Vector2.ONE)
+	var started := (root.call("_slime_brain", slime) as SlimeBrain).start_scoot(slime, root.get("slime_tuning") as SlimeTuning, root.get("rng") as RandomNumberGenerator, Callable(root, "_actor_foot"), Callable(root, "_aggro_slime_target"), Callable(root, "_random_slime_walkable_point_near"), Callable(root, "_perspective_movement"), Callable(root, "_set_slime_facing"))
+	if started and root.has_method("_play_sound") and not slime is SkeletonActor:
+		var rng := root.get("rng") as RandomNumberGenerator
+		root.call("_play_sound", "slime_move", -14.0, 0.96 + rng.randf_range(-0.05, 0.05))
+
+
+func repath_slime_after_block(root: Object, slime: Sprite2D) -> void:
+	if bool(root.call("_is_slime_dead", slime)) or is_slime_spawn_locked(root, slime):
+		return
+	var brain := root.call("_slime_brain", slime) as SlimeBrain
+	var rng := root.get("rng") as RandomNumberGenerator
+	brain.scoot_timer = 0.0
+	brain.scoot_start = slime.position
+	brain.scoot_target = slime.position
+	brain.repath_timer = 0.0
+	if brain.blocked_repath_cooldown > 0.0:
+		brain.hold_timer = maxf(brain.hold_timer, brain.blocked_repath_cooldown)
+		root.call("_set_actor_visual_scale", slime, Vector2.ONE)
+		return
+	brain.blocked_repath_cooldown = rng.randf_range(0.10, 0.18)
+	if is_slime_aggroed(root, slime):
+		brain.detour_target = slime_wall_detour_target(root, slime)
+		brain.detour_timer = 0.42
+		brain.target = brain.detour_target
+		brain.hold_timer = 0.0
+	else:
+		brain.target = root.call("_random_slime_walkable_point_near", root.call("_actor_foot", slime), 8, slime) as Vector2
+		brain.hold_timer = rng.randf_range(0.08, 0.18)
+	root.call("_set_actor_visual_scale", slime, Vector2.ONE)
+
+
+func slime_wall_detour_target(root: Object, slime: Sprite2D) -> Vector2:
+	var foot: Vector2 = root.call("_actor_foot", slime)
+	var player_foot: Vector2 = root.call("_actor_foot", root.get("player"))
+	var toward_player := player_foot - foot
+	if toward_player.length_squared() < 0.01:
+		return aggro_slime_target(root, slime)
+	var side := toward_player.normalized().rotated(PI * 0.5)
+	var best := Vector2.ZERO
+	var best_score := INF
+	var rng := root.get("rng") as RandomNumberGenerator
+	for radius_value in [12.0, 18.0, 24.0]:
+		for direction in [side, -side]:
+			var candidate: Vector2 = foot + (direction as Vector2) * radius_value
+			if not bool(root.call("_is_slime_collision_rect_walkable_at", slime, candidate)):
+				continue
+			var score := candidate.distance_to(player_foot) + rng.randf_range(0.0, 2.0)
+			if score < best_score:
+				best = candidate
+				best_score = score
+	return best if best_score < INF else aggro_slime_target(root, slime)
+
+
+func start_slime_hold(root: Object, slime: Sprite2D) -> void:
+	(root.call("_slime_brain", slime) as SlimeBrain).start_random_hold(root.get("slime_tuning") as SlimeTuning, root.get("rng") as RandomNumberGenerator)
+
+
+func try_move_actor(root: Object, actor: Sprite2D, movement: Vector2) -> bool:
+	return try_move_actor_axes(root, actor, movement)
+
+
+func try_move_actor_axes(root: Object, actor: Sprite2D, movement: Vector2) -> bool:
+	var original := actor.position
+	var distance := movement.length()
+	if distance <= 0.001:
+		return false
+	var steps := maxi(1, int(ceil(distance / 0.75)))
+	var step := movement / float(steps)
+	for _index in steps:
+		var before := actor.position
+		if _try_actor_displacement(root, actor, step):
+			if actor == root.get("player") and bool(root.call("_try_enter_any_active_socket")):
+				return true
+			continue
+		var area := root.get("walkable_area") as WalkableArea
+		var slid := false
+		if area != null:
+			var foot: Vector2 = root.call("_actor_foot", actor)
+			for slide in area.slide_candidates(foot, step):
+				actor.position = before
+				if _try_actor_displacement(root, actor, slide):
+					if actor == root.get("player") and bool(root.call("_try_enter_any_active_socket")):
+						return true
+					slid = true
+					break
+		if not slid:
+			actor.position = before
+			break
+	var moved := actor.position.distance_squared_to(original) > 0.0001
+	if moved and (root.get("slimes") as Array[Sprite2D]).has(actor):
+		(root.get("actor_presentation_runtime_controller") as ActorPresentationRuntimeController).sync_slime_shadow(root, actor)
+	return moved
+
+
+func _try_actor_displacement(root: Object, actor: Sprite2D, movement: Vector2) -> bool:
+	var before := actor.position
+	actor.position += movement
+	if not bool(root.call("_can_actor_stand_at_current_position", actor)) or bool(root.call("_collides_with_static", actor)):
+		actor.position = before
+		return false
+	resolve_actor_contacts(root, actor, movement)
+	return true
+
+
+func resolve_actor_contacts(root: Object, actor: Sprite2D, movement: Vector2) -> void:
+	var collision := root.get("actor_collision_system") as ActorCollisionSystem
+	if collision == null:
+		return
+	var valid_position := actor.position
+	collision.resolve_motion_contacts(actor, movement, root.get("collision_sprites") as Array[Sprite2D], root)
+	if not bool(root.call("_can_actor_stand_at_current_position", actor)) or bool(root.call("_collides_with_static", actor)):
+		actor.position = valid_position
+
+
+func collides_with_static(root: GameplayState, actor: Sprite2D) -> bool:
+	return _geometry_queries.collides_with_static(root, actor)
+
+func collision_polygon_intersects_actor(root: GameplayState, actor: Sprite2D, polygon_owner: Sprite2D) -> bool:
+	return _geometry_queries.collision_polygon_intersects_actor(root, actor, polygon_owner)
+
+func perspective_movement(_root: GameplayState, movement: Vector2) -> Vector2:
+	return _geometry_queries.perspective_movement(_root, movement)
+
+func collision_rect(root: GameplayState, actor: Sprite2D) -> Rect2:
+	return _geometry_queries.collision_rect(root, actor)
+
+func collision_guide_rect(_root: GameplayState, actor: Sprite2D) -> Rect2:
+	return _geometry_queries.collision_guide_rect(_root, actor)
+
+func collision_guide_rect_by_name(_root: GameplayState, actor: Sprite2D, guide_name: String) -> Rect2:
+	return _geometry_queries.collision_guide_rect_by_name(_root, actor, guide_name)
+
+func collect_walkable_tiles(root: GameplayState, node: Node) -> void:
+	_geometry_queries.collect_walkable_tiles(root, node)
+
+func build_walkable_outline(root: GameplayState) -> void:
+	_geometry_queries.build_walkable_outline(root)
+
+func build_entrance_block_polygons(root: GameplayState) -> void:
+	_geometry_queries.build_entrance_block_polygons(root)
+
+func is_walkable(root: GameplayState, point: Vector2) -> bool:
+	return _geometry_queries.is_walkable(root, point)
+
+func can_actor_stand_at_current_position(root: GameplayState, actor: Sprite2D) -> bool:
+	return _geometry_queries.can_actor_stand_at_current_position(root, actor)
+
+func is_slime_walkable_point(root: GameplayState, point: Vector2) -> bool:
+	return _geometry_queries.is_slime_walkable_point(root, point)
+
+func tile_top_polygon(_root: GameplayState, tile: Sprite2D) -> PackedVector2Array:
+	return _geometry_queries.tile_top_polygon(_root, tile)
+
+func nearest_slime_walkable_point(root: GameplayState, point: Vector2) -> Vector2:
+	return _geometry_queries.nearest_slime_walkable_point(root, point)
+
+func random_slime_walkable_point_near(root: GameplayState, point: Vector2, sample_count: int, ignored_slime: Sprite2D = null) -> Vector2:
+	return _geometry_queries.random_slime_walkable_point_near(root, point, sample_count, ignored_slime)
+
+func nearest_valid_slime_walkable_point(root: GameplayState, point: Vector2, slime: Sprite2D) -> Vector2:
+	return _geometry_queries.nearest_valid_slime_walkable_point(root, point, slime)
+
+func is_slime_collision_rect_walkable_at(root: GameplayState, slime: Sprite2D, foot: Vector2) -> bool:
+	return _geometry_queries.is_slime_collision_rect_walkable_at(root, slime, foot)
+
+func slime_collision_polygon(root: GameplayState, slime: Sprite2D, foot: Vector2 = Vector2.INF) -> PackedVector2Array:
+	return _geometry_queries.slime_collision_polygon(root, slime, foot)
+
+func slime_body_polygon(root: GameplayState, slime: Sprite2D) -> PackedVector2Array:
+	return _geometry_queries.slime_body_polygon(root, slime)
+
+func is_slime_collision_polygon_walkable(root: GameplayState, polygon: PackedVector2Array) -> bool:
+	return _geometry_queries.is_slime_collision_polygon_walkable(root, polygon)
+
+func is_point_near_other_slime(root: GameplayState, point: Vector2, ignored_slime: Sprite2D = null) -> bool:
+	return _geometry_queries.is_point_near_other_slime(root, point, ignored_slime)
+
+func actor_foot(root: GameplayState, actor: Sprite2D) -> Vector2:
+	return _geometry_queries.actor_foot(root, actor)

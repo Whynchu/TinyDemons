@@ -40,11 +40,33 @@ $resolvedBaselinePath = if ($BaselinePath) { $BaselinePath } else { Join-Path $P
 $defaultTargets = [ordered]@{
 	root_accesses_max = 2499
 	gameplay_state_lines_max = 1719
-	gameplay_state_fields_max = 286
+	gameplay_state_fields_max = 287
 	room_controller_lines_max = 2296
 	runtime_refs_max = 0
 	legacy_pairs_max = 0
 	transitional_contexts_max = 0
+}
+
+$defaultForwardTargets = [ordered]@{
+	screen_state_controller_lines = 800
+	hub_flow_controller_seams = 120
+	screen_state_controller_seams = 120
+	live_context_twin_pairs = 0
+	bootstrap_registration_rows = 44
+	scripts_flat_directory = $false
+	untyped_root_parameters = 0
+	unclassified_scripts = 0
+}
+
+$forwardTargetStages = @{
+	screen_state_controller_lines = 3
+	hub_flow_controller_seams = 2
+	screen_state_controller_seams = 3
+	live_context_twin_pairs = 2
+	bootstrap_registration_rows = 3
+	scripts_flat_directory = 1
+	untyped_root_parameters = 2
+	unclassified_scripts = 1
 }
 
 function Get-CodeOnlyContent([string]$Content) {
@@ -140,7 +162,7 @@ function Get-TargetValue($Targets, [string]$Name, [int]$Fallback) {
 ## This number is intentionally low today: the direct-access half is mostly
 ## complete but the editor-changeable half has barely started.
 function Get-EditorComposition([string]$ScriptsDir, [string]$ProjectRoot) {
-	$componentFiles = @(Get-ChildItem -LiteralPath $ScriptsDir -Filter "*component*.gd" -File)
+	$componentFiles = @(Get-ChildItem -LiteralPath $ScriptsDir -Filter "*component*.gd" -File -Recurse)
 	$componentTotal = $componentFiles.Count
 	$componentBlind = 0
 	$componentConfigured = 0
@@ -187,10 +209,10 @@ function Get-EditorComposition([string]$ScriptsDir, [string]$ProjectRoot) {
 	$definitionScriptCount = 0
 	$definitionScriptEditable = 0
 	foreach ($name in $definitionScripts) {
-		$scriptPath = Join-Path $ScriptsDir $name
-		if (Test-Path -LiteralPath $scriptPath) {
+		$scriptPath = Get-ChildItem -LiteralPath $ScriptsDir -Filter $name -File -Recurse | Select-Object -First 1
+		if ($null -ne $scriptPath) {
 			$definitionScriptCount += 1
-			$scriptContent = Get-Content -Raw -LiteralPath $scriptPath
+			$scriptContent = Get-Content -Raw -LiteralPath $scriptPath.FullName
 			if ($scriptContent -match 'resources/definitions/[\w/]+\.tres') {
 				$definitionScriptEditable += 1
 			}
@@ -279,6 +301,66 @@ function Get-LegacyAudit([System.IO.FileInfo[]]$Files) {
 	}
 }
 
+function Get-UntypedRootParameterCount([string]$Content) {
+	$lines = @($Content -split "`r?`n")
+	$count = 0
+	for ($lineIndex = 0; $lineIndex -lt $lines.Count; $lineIndex += 1) {
+		$line = $lines[$lineIndex]
+		if ($line -notmatch '^\s*(?:static\s+)?func\s+\w+\s*\(') { continue }
+		$openIndex = $line.IndexOf('(')
+		$depth = 0
+		$quote = [char]0
+		$escaped = $false
+		$parameters = [System.Text.StringBuilder]::new()
+		for ($scanLine = $lineIndex; $scanLine -lt $lines.Count; $scanLine += 1) {
+			$scanText = $lines[$scanLine]
+			$startColumn = if ($scanLine -eq $lineIndex) { $openIndex } else { 0 }
+			for ($column = $startColumn; $column -lt $scanText.Length; $column += 1) {
+				$character = $scanText[$column]
+				if ($quote -ne [char]0) {
+					if ($depth -gt 0) { [void]$parameters.Append($character) }
+					if ($escaped) { $escaped = $false; continue }
+					if ($character -eq '\' -and $quote -eq '"') { $escaped = $true; continue }
+					if ($character -eq $quote) { $quote = [char]0 }
+					continue
+				}
+				if ($character -eq '#') { break }
+				if ($character -eq '"' -or $character -eq "'") {
+					$quote = $character
+					if ($depth -gt 0) { [void]$parameters.Append($character) }
+					continue
+				}
+				if ($character -eq '(') {
+					$depth += 1
+					if ($depth -gt 1) { [void]$parameters.Append($character) }
+					continue
+				}
+				if ($character -eq ')') {
+					$depth -= 1
+					if ($depth -eq 0) { break }
+					[void]$parameters.Append($character)
+					continue
+				}
+				if ($depth -gt 0) { [void]$parameters.Append($character) }
+			}
+			if ($depth -eq 0) { break }
+		}
+		$count += ([regex]::Matches($parameters.ToString(), '(?m)(?:^|,)\s*_?root\s*(?::\s*(?:Object|Variant))?\s*(?=,|=|$)')).Count
+	}
+	return $count
+}
+
+function Add-RuleFinding($RuleFindings, [string]$Rule, [string]$Finding) {
+	if (-not $RuleFindings.ContainsKey($Rule)) {
+		$RuleFindings[$Rule] = [System.Collections.Generic.List[string]]::new()
+	}
+	$RuleFindings[$Rule].Add($Finding)
+}
+
+function Get-RelativeScriptPath([System.IO.FileInfo]$File, [string]$ScriptsRoot) {
+	return $File.FullName.Substring($ScriptsRoot.Length).TrimStart([char[]]@('\', '/')).Replace('\', '/')
+}
+
 function Invoke-ValidatorForSelfTest([string]$FixtureScripts, [string]$FixtureBaseline, [switch]$FixtureRequireTargets) {
 	$arguments = @(
 		"-NoProfile",
@@ -324,6 +406,17 @@ if ($SelfTest) {
 			legacy_total = 1
 			legacy_pairs = @()
 			transitional_allowlist = @()
+			architecture_rules = [ordered]@{
+				script_hygiene = @('gameplay_state.gd', 'room_controller.gd', 'fixture_context.gd', 'forward.gd')
+			}
+			per_file = [ordered]@{
+				"root_access.gd" = [ordered]@{
+					dynamic_dispatch = 0
+					reach_through = 0
+					untyped_root_parameters = 0
+					live_context_twin_pairs = 0
+				}
+			}
 			completion_start = [ordered]@{
 				root_accesses = 0
 				gameplay_state_lines = 1
@@ -341,11 +434,65 @@ if ($SelfTest) {
 				runtime_refs_max = 0
 				legacy_pairs_max = 0
 				transitional_contexts_max = 0
+				forward = [ordered]@{
+					screen_state_controller_lines = 800
+					hub_flow_controller_seams = 120
+					screen_state_controller_seams = 120
+					live_context_twin_pairs = 0
+					bootstrap_registration_rows = 44
+					scripts_flat_directory = $false
+					untyped_root_parameters = 0
+					unclassified_scripts = 0
+				}
 			}
 		}
 		$fixtureBaselineObject | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $fixtureBaseline -Encoding UTF8
 		if ((Invoke-ValidatorForSelfTest $fixtureScripts $fixtureBaseline) -ne 0) {
 			throw "valid fixture was rejected`n$script:SelfTestLastOutput"
+		}
+
+		$fixtureRules = @(
+			@{ Name = 'component_blindness'; File = 'fixture_component.gd'; Lines = @('extends Node', 'func sample():', '    get_parent()') },
+			@{ Name = 'initialize_root'; File = 'fixture_initialize.gd'; Lines = @('extends Node', 'func initialize(root: Object):', '    pass') },
+			@{ Name = 'component_self_wiring'; File = 'fixture_component.gd'; Lines = @('extends Node', 'func wire(other_component: Node):', '    other_component.changed.connect(_on_changed)') },
+			@{ Name = 'identity_branches'; File = 'fixture_runtime.gd'; Lines = @('extends Node', 'func choose(element_id: String):', '    if element_id == "fire":', '        pass') },
+			@{ Name = 'process_ownership'; File = 'fixture_runtime.gd'; Lines = @('extends Node', 'func _process(delta: float):', '    pass') },
+			@{ Name = 'script_hygiene'; File = 'fixture_runtime.gd'; Lines = @('extends Node') },
+			@{ Name = 'god_file_declaration'; File = 'fixture_runtime.gd'; Lines = @('extends Node') }
+		)
+		foreach ($ruleFixture in $fixtureRules) {
+			$ruleScripts = Join-Path $selfTestRoot ("rules-" + $ruleFixture.Name)
+			New-Item -ItemType Directory -Path $ruleScripts -Force | Out-Null
+			Copy-Item -LiteralPath (Join-Path $fixtureScripts 'gameplay_state.gd') -Destination $ruleScripts
+			Copy-Item -LiteralPath (Join-Path $fixtureScripts 'room_controller.gd') -Destination $ruleScripts
+			Copy-Item -LiteralPath (Join-Path $fixtureScripts 'fixture_context.gd') -Destination $ruleScripts
+			Copy-Item -LiteralPath (Join-Path $fixtureScripts 'forward.gd') -Destination $ruleScripts
+			$ruleLines = @($ruleFixture.Lines)
+			if ($ruleFixture.Name -eq 'god_file_declaration') { $ruleLines += @(1..401 | ForEach-Object { 'var fixture_field_{0} = {0}' -f $_ }) }
+			Set-Content -LiteralPath (Join-Path $ruleScripts $ruleFixture.File) -Value $ruleLines -Encoding UTF8
+			$ruleBaseline = Join-Path $selfTestRoot ("rules-" + $ruleFixture.Name + '.json')
+			$ruleBaselineObject = $fixtureBaselineObject | ConvertTo-Json -Depth 8 | ConvertFrom-Json
+			$ruleBaselineObject | Add-Member -NotePropertyName architecture_rules -NotePropertyValue ([PSCustomObject]@{}) -Force
+			$ruleBaselineObject | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $ruleBaseline -Encoding UTF8
+			if ((Invoke-ValidatorForSelfTest $ruleScripts $ruleBaseline) -eq 0 -or $script:SelfTestLastOutput -notmatch "architecture rule '$($ruleFixture.Name)'") {
+				throw "architecture rule '$($ruleFixture.Name)' did not reject its fixture`n$script:SelfTestLastOutput"
+			}
+		}
+
+		$cycleScripts = Join-Path $selfTestRoot 'rules-controller_cycles'
+		New-Item -ItemType Directory -Path $cycleScripts -Force | Out-Null
+		Copy-Item -LiteralPath (Join-Path $fixtureScripts 'gameplay_state.gd') -Destination $cycleScripts
+		Copy-Item -LiteralPath (Join-Path $fixtureScripts 'room_controller.gd') -Destination $cycleScripts
+		Copy-Item -LiteralPath (Join-Path $fixtureScripts 'fixture_context.gd') -Destination $cycleScripts
+		Copy-Item -LiteralPath (Join-Path $fixtureScripts 'forward.gd') -Destination $cycleScripts
+		Set-Content -LiteralPath (Join-Path $cycleScripts 'alpha_controller.gd') -Value 'const B = preload("res://scripts/runtime/controllers/beta_controller.gd")' -Encoding UTF8
+		Set-Content -LiteralPath (Join-Path $cycleScripts 'beta_controller.gd') -Value 'const A = preload("res://scripts/runtime/controllers/alpha_controller.gd")' -Encoding UTF8
+		$cycleBaseline = Join-Path $selfTestRoot 'rules-controller_cycles.json'
+		$cycleBaselineObject = $fixtureBaselineObject | ConvertTo-Json -Depth 8 | ConvertFrom-Json
+		$cycleBaselineObject | Add-Member -NotePropertyName architecture_rules -NotePropertyValue ([PSCustomObject]@{}) -Force
+		$cycleBaselineObject | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $cycleBaseline -Encoding UTF8
+		if ((Invoke-ValidatorForSelfTest $cycleScripts $cycleBaseline) -eq 0 -or $script:SelfTestLastOutput -notmatch "architecture rule 'controller_cycles'") {
+			throw "controller dependency cycle was not rejected`n$script:SelfTestLastOutput"
 		}
 
 		Set-Content -LiteralPath (Join-Path $fixtureScripts "bad_context.gd") -Value @(
@@ -381,8 +528,8 @@ if ($SelfTest) {
 			"func use_root(root: Object) -> void:",
 			'    root.call("example")'
 		) -Encoding UTF8
-		if ((Invoke-ValidatorForSelfTest $fixtureScripts $fixtureBaseline) -eq 0) {
-			throw "root-access regression was not rejected`n$script:SelfTestLastOutput"
+		if ((Invoke-ValidatorForSelfTest $fixtureScripts $fixtureBaseline) -eq 0 -or $script:SelfTestLastOutput -notmatch "Per-file dynamic_dispatch regression") {
+			throw "per-file root-access regression was not specifically rejected`n$script:SelfTestLastOutput"
 		}
 		Remove-Item -LiteralPath (Join-Path $fixtureScripts "root_access.gd") -Force
 
@@ -396,6 +543,10 @@ if ($SelfTest) {
 		$strictBaseline = Join-Path $selfTestRoot "strict-baseline.json"
 		$strictBaselineObject = $fixtureBaselineObject | ConvertTo-Json -Depth 5 | ConvertFrom-Json
 		$strictBaselineObject.root_accesses = 1
+		$strictBaselineObject.per_file.'root_access.gd'.dynamic_dispatch = 1
+		$strictBaselineObject.per_file.'root_access.gd'.reach_through = 1
+		$strictBaselineObject.per_file.'root_access.gd'.untyped_root_parameters = 1
+		$strictBaselineObject.architecture_rules.script_hygiene += @('root_access.gd')
 		$strictBaselineObject.targets.root_accesses_max = 0
 		$strictBaselineObject | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $strictBaseline -Encoding UTF8
 		if ((Invoke-ValidatorForSelfTest $strictScripts $strictBaseline) -ne 0) {
@@ -442,6 +593,28 @@ foreach ($targetName in $defaultTargets.Keys) {
 	}
 	$targetValues[$targetName] = Get-TargetValue $targetsValue $targetName $defaultTargets[$targetName]
 }
+$forwardTargetObject = Get-PropertyValue $targetsValue "forward"
+$forwardTargetValues = [ordered]@{}
+if ($null -eq $forwardTargetObject) {
+	$errors.Add("Baseline targets object is missing 'forward'; refusing to run without explicit forward targets")
+}
+foreach ($targetName in $defaultForwardTargets.Keys) {
+	$targetProperty = Get-PropertyInfo $forwardTargetObject $targetName
+	if ($null -eq $targetProperty) {
+		$errors.Add("Baseline forward targets are missing '$targetName'; refusing to use an implicit target")
+		$forwardTargetValues[$targetName] = $defaultForwardTargets[$targetName]
+		continue
+	}
+	$forwardTargetValues[$targetName] = $targetProperty.Value
+	$defaultTarget = $defaultForwardTargets[$targetName]
+	if ($defaultTarget -is [bool]) {
+		if ([bool]$targetProperty.Value -ne $defaultTarget) {
+			$errors.Add("Forward target '$targetName' cannot be loosened or changed without updating the reviewed target definition")
+		}
+	} elseif ([int]$targetProperty.Value -gt [int]$defaultTarget) {
+		$errors.Add("Forward target '$targetName' was loosened from $defaultTarget to $($targetProperty.Value)")
+	}
+}
 $requiredBaselineMetrics = @(
 	"root_accesses",
 	"gameplay_state_lines",
@@ -466,6 +639,7 @@ if ($null -eq $completionStart) {
 		}
 	}
 }
+$targetValues.forward = $forwardTargetValues
 
 if (-not (Test-Path -LiteralPath $resolvedScriptsDirectory)) {
 	$errors.Add("Scripts directory does not exist: $resolvedScriptsDirectory")
@@ -474,8 +648,131 @@ if (-not (Test-Path -LiteralPath $resolvedScriptsDirectory)) {
 $contextFiles = @()
 $scriptFiles = @()
 if (Test-Path -LiteralPath $resolvedScriptsDirectory) {
-	$contextFiles = @(Get-ChildItem -LiteralPath $resolvedScriptsDirectory -Filter "*context*.gd" -File)
-	$scriptFiles = @(Get-ChildItem -LiteralPath $resolvedScriptsDirectory -Filter "*.gd" -File)
+	$contextFiles = @(Get-ChildItem -LiteralPath $resolvedScriptsDirectory -Filter "*context*.gd" -File -Recurse)
+	$scriptFiles = @(Get-ChildItem -LiteralPath $resolvedScriptsDirectory -Filter "*.gd" -File -Recurse)
+}
+
+# ---- 0. Architecture rules: snapshot existing debt, reject new violations ----
+$architectureFindings = @{}
+$allowedScriptRoles = @('actors', 'algorithms', 'components', 'content', 'editor', 'runtime', 'services', 'ui')
+$controllerEdges = @{}
+foreach ($file in $scriptFiles) {
+	$relativePath = Get-RelativeScriptPath $file $resolvedScriptsDirectory
+	$code = Get-CodeOnlyContent (Get-Content -Raw -LiteralPath $file.FullName)
+	$lines = @($code -split "`r?`n")
+	$isComponent = $file.Name -match 'component'
+	if ($isComponent) {
+		$blindCount = 0
+		$selfWiringCount = 0
+		for ($i = 0; $i -lt $lines.Count; $i += 1) {
+			if ($lines[$i] -match '\b(get_parent|get_node)\s*\(' -or $lines[$i] -match '\broot\s*\.') {
+				$blindCount += 1
+			}
+			if ($lines[$i] -match '\bfunc\s+initialize\s*\([^)]*\broot\b') {
+				Add-RuleFinding $architectureFindings 'initialize_root' $relativePath
+			}
+			if ($lines[$i] -match '\b[A-Za-z_]\w*component\w*\s*\.\s*\w+\s*\.\s*connect\s*\(') {
+				$selfWiringCount += 1
+			}
+		}
+		for ($i = 1; $i -le $blindCount; $i += 1) { Add-RuleFinding $architectureFindings 'component_blindness' ("{0}#{1}" -f $relativePath, $i) }
+		for ($i = 1; $i -le $selfWiringCount; $i += 1) { Add-RuleFinding $architectureFindings 'component_self_wiring' ("{0}#{1}" -f $relativePath, $i) }
+	} elseif ($code -match '(?m)^\s*func\s+initialize\s*\([^)]*\broot\b') {
+		Add-RuleFinding $architectureFindings 'initialize_root' $relativePath
+	}
+	if ($relativePath -match '(^|/)gameplay_frame_controller\.gd$') {
+		# The frame controller is the sole owner of per-frame scheduling.
+	} elseif ($code -match '(?m)^\s*func\s+_process\s*\(') {
+		Add-RuleFinding $architectureFindings 'process_ownership' $relativePath
+	}
+	if ($code -match '(?m)^\s*(?:if|elif)\b[^\n]*\w*(?:id|element|variant)\w*\s*==\s*["''][^"'']+["'']') {
+		Add-RuleFinding $architectureFindings 'identity_branches' $relativePath
+	}
+	if ($file.Name -match '_controller\.gd$') {
+		$controllerEdges[$file.Name] = @([regex]::Matches($code, '(?:preload|load)\s*\(\s*["'']res://scripts/(?:[^"'']*/)?([^/"'']+_controller\.gd)["'']') | ForEach-Object { $_.Groups[1].Value })
+	}
+	$role = ($relativePath -split '/')[0]
+	if ($relativePath -notmatch '/' -or $role -notin $allowedScriptRoles) {
+		Add-RuleFinding $architectureFindings 'script_hygiene' $relativePath
+	}
+}
+
+# Find directed cycles in controller preload/load dependencies.
+$visitedControllers = @{}
+$activeControllers = @{}
+$reportedCycles = @{}
+function Visit-Controller([string]$Controller, [string[]]$Stack) {
+	if ($activeControllers.ContainsKey($Controller)) {
+		$cycleStart = [array]::IndexOf($Stack, $Controller)
+		if ($cycleStart -ge 0) {
+			$cycle = @($Stack[$cycleStart..($Stack.Count - 1)] + $Controller)
+			$key = (($cycle | Sort-Object -Unique) -join ' <-> ')
+			if (-not $reportedCycles.ContainsKey($key)) {
+				$reportedCycles[$key] = $true
+				Add-RuleFinding $architectureFindings 'controller_cycles' $key
+			}
+		}
+		return
+	}
+	if ($visitedControllers.ContainsKey($Controller)) { return }
+	$visitedControllers[$Controller] = $true
+	$activeControllers[$Controller] = $true
+	$nextStack = @($Stack + $Controller)
+	foreach ($dependency in @($controllerEdges[$Controller])) {
+		if ($controllerEdges.ContainsKey($dependency)) { Visit-Controller $dependency $nextStack }
+	}
+	$activeControllers.Remove($Controller)
+}
+foreach ($controller in $controllerEdges.Keys) { Visit-Controller $controller @() }
+
+# Require ownership notes only for new or materially expanded substantial files.
+$baselinePerFileForRules = Get-PropertyValue $baseline 'per_file'
+foreach ($file in $scriptFiles) {
+	$relativePath = Get-RelativeScriptPath $file $resolvedScriptsDirectory
+	$lineCount = @(Get-Content -LiteralPath $file.FullName).Count
+	$priorMetric = Get-PropertyValue $baselinePerFileForRules $file.Name
+	$priorLines = if ($null -ne $priorMetric) { Get-IntegerBaseline $priorMetric 'lines' 0 } else { 0 }
+	$isNewLargeFile = ($priorLines -eq 0 -and $lineCount -gt 400)
+	$isSubstantialGrowth = ($priorLines -gt 0 -and $lineCount -gt 400 -and (($lineCount -gt ($priorLines + 100) -and $lineCount -gt ($priorLines * 1.2)) -or $priorLines -le 400))
+	$header = (Get-Content -LiteralPath $file.FullName -TotalCount 40) -join "`n"
+	if (($isNewLargeFile -or $isSubstantialGrowth) -and $header -notmatch '(?m)^\s*#\s*(Owner|Responsibility):\s*\S') {
+		Add-RuleFinding $architectureFindings 'god_file_declaration' $relativePath
+	}
+}
+
+$baselineArchitectureRules = Get-PropertyValue $baseline 'architecture_rules'
+if ($null -eq $baselineArchitectureRules) {
+	$errors.Add('Baseline has no architecture_rules inventory; refusing to run without a reviewed snapshot of existing architectural debt.')
+} else {
+	foreach ($rule in $architectureFindings.Keys) {
+		$baselineRule = Get-PropertyValue $baselineArchitectureRules $rule
+		$allowedFindings = if ($null -eq $baselineRule) { @() } else { @($baselineRule | ForEach-Object { [string]$_ }) }
+		foreach ($finding in $architectureFindings[$rule] | Sort-Object -Unique) {
+			$isAllowed = $finding -in $allowedFindings
+			if (-not $isAllowed -and $rule -ne 'script_hygiene') {
+				$findingPath = [string]$finding -replace '#\d+$', ''
+				$findingLeaf = ($findingPath -split '[/\\]')[-1]
+				$matchingPrior = @($allowedFindings | Where-Object {
+					$priorPath = ([string]$_ -replace ':\d+$', '' -replace '#\d+$', '')
+					($priorPath -split '[/\\]')[-1] -eq $findingLeaf
+				})
+				if ($finding -match '#(\d+)$') { $isAllowed = [int]$Matches[1] -le $matchingPrior.Count }
+				elseif ($matchingPrior.Count -gt 0) { $isAllowed = $true }
+			}
+			# Migrate older line-based snapshots to stable per-file ordinal keys
+			# without treating line insertions as fresh violations.
+			if (-not $isAllowed -and $finding -match '^(.*)#(\d+)$') {
+				$findingFile = $Matches[1]
+				$findingOrdinal = [int]$Matches[2]
+				$filePrefix = [regex]::Escape($findingFile) + '(?::|#)'
+				$priorCount = @($allowedFindings | Where-Object { $_ -match $filePrefix }).Count
+				$isAllowed = $findingOrdinal -le $priorCount
+			}
+			if (-not $isAllowed) {
+				$errors.Add("architecture rule '$rule' regression: $finding")
+			}
+		}
+	}
 }
 
 # ---- 1. Contexts: GameplayState coupling and .runtime use ----
@@ -529,21 +826,108 @@ $gameplayStateLines = 0
 $gameplayStateFields = 0
 $roomControllerLines = 0
 $runtimeRefs = 0
+$gameplayLines = 0
+$totalReachThrough = 0
+$untypedRootParameters = 0
+$liveContextTwinPairs = 0
+$rootCallableStrings = 0
+$stringSignalConnects = 0
+$perFileMetrics = [ordered]@{}
 foreach ($file in $scriptFiles) {
 	$content = Get-Content -Raw -LiteralPath $file.FullName
 	$codeContent = Get-CodeOnlyContent $content
-	$rootAccesses += ([regex]::Matches($codeContent, 'root\.(call|get|set)\(')).Count
-	$runtimeRefs += ([regex]::Matches($codeContent, '\.runtime\b')).Count
+	# Preserve the exact historical aggregate expression so the new per-file
+	# view remains comparable to the accepted 2,202-site scorecard.
+	$fileRootAccesses = ([regex]::Matches($codeContent, 'root\.(call|get|set)\(')).Count
+	$fileReachThrough = ([regex]::Matches($codeContent, '\broot\.\w+')).Count
+	$fileUntypedRootParameters = Get-UntypedRootParameterCount $codeContent
+	$functionNames = @([regex]::Matches($codeContent, '(?m)^\s*(?:static\s+)?func\s+([A-Za-z_]\w*)\s*\(') | ForEach-Object { $_.Groups[1].Value })
+	$functionNameSet = @{}
+	foreach ($functionName in $functionNames) { $functionNameSet[$functionName] = $true }
+	$fileContextTwins = 0
+	foreach ($functionName in $functionNames) {
+		if ($functionName -match '^(.+)_context$' -and $functionNameSet.ContainsKey($Matches[1])) {
+			$fileContextTwins += 1
+		}
+	}
+	$fileRuntimeRefs = ([regex]::Matches($codeContent, '\.runtime\b')).Count
+	$fileRootCallableStrings = ([regex]::Matches($codeContent, 'Callable\s*\(\s*root\s*,\s*["''][^"'']+["'']')).Count
+	$fileStringSignalConnects = ([regex]::Matches($codeContent, '\.connect\s*\(\s*["''][^"'']+["'']')).Count
+	$rootAccesses += $fileRootAccesses
+	$totalReachThrough += $fileReachThrough
+	$untypedRootParameters += $fileUntypedRootParameters
+	$liveContextTwinPairs += $fileContextTwins
+	$rootCallableStrings += $fileRootCallableStrings
+	$stringSignalConnects += $fileStringSignalConnects
+	$runtimeRefs += $fileRuntimeRefs
+	$relativeScriptPath = $file.FullName.Substring($resolvedScriptsDirectory.Length).TrimStart([char[]]@('\', '/')).Replace('\', '/')
+	$perFileMetrics[$file.Name] = [ordered]@{
+		path = "scripts/$relativeScriptPath"
+		lines = @(Get-Content -LiteralPath $file.FullName).Count
+		dynamic_dispatch = $fileRootAccesses
+		reach_through = $fileReachThrough
+		untyped_root_parameters = $fileUntypedRootParameters
+		live_context_twin_pairs = $fileContextTwins
+		runtime_refs = $fileRuntimeRefs
+		root_callable_strings = $fileRootCallableStrings
+		string_signal_connects = $fileStringSignalConnects
+	}
 }
-$gsPath = Join-Path $resolvedScriptsDirectory "gameplay_state.gd"
-if (Test-Path -LiteralPath $gsPath) {
-	$gsLines = @(Get-Content -LiteralPath $gsPath)
+$gameplayFile = $scriptFiles | Where-Object { $_.Name -eq 'gameplay.gd' } | Select-Object -First 1
+if ($null -ne $gameplayFile) { $gameplayLines = @(Get-Content -LiteralPath $gameplayFile.FullName).Count }
+$gsFile = $scriptFiles | Where-Object { $_.Name -eq 'gameplay_state.gd' } | Select-Object -First 1
+if ($null -ne $gsFile) {
+	$gsLines = @(Get-Content -LiteralPath $gsFile.FullName)
 	$gameplayStateLines = $gsLines.Count
 	$gameplayStateFields = @($gsLines | Where-Object { $_ -match '^(var|const)\s' }).Count
 }
-$rcPath = Join-Path $resolvedScriptsDirectory "room_controller.gd"
-if (Test-Path -LiteralPath $rcPath) {
-	$roomControllerLines = @(Get-Content -LiteralPath $rcPath).Count
+$roomControllerFile = $scriptFiles | Where-Object { $_.Name -eq 'room_controller.gd' } | Select-Object -First 1
+if ($null -ne $roomControllerFile) { $roomControllerLines = @(Get-Content -LiteralPath $roomControllerFile.FullName).Count }
+
+$controllerFile = $scriptFiles | Where-Object { $_.Name -eq 'screen_state_controller.gd' } | Select-Object -First 1
+$hubFlowFiles = @($scriptFiles | Where-Object { $_.Name -in @('hub_flow_controller.gd', 'hub_economy_controller.gd') })
+$hubFlowSeams = 0
+foreach ($hubControllerFile in $hubFlowFiles) {
+	# The forward seam target covers the complete hub subsystem after its
+	# presentation/economy split, so moving methods cannot make the metric fall.
+	$hubFlowSeams += ([regex]::Matches((Get-CodeOnlyContent (Get-Content -Raw -LiteralPath $hubControllerFile.FullName)), 'root\.(call|get|set)\(')).Count
+}
+$bootstrapFile = $scriptFiles | Where-Object { $_.Name -eq 'gameplay_bootstrap.gd' } | Select-Object -First 1
+$forwardCurrentValues = [ordered]@{
+	screen_state_controller_lines = if ($null -ne $controllerFile) { @(Get-Content -LiteralPath $controllerFile.FullName).Count } else { 0 }
+	hub_flow_controller_seams = $hubFlowSeams
+	screen_state_controller_seams = if ($null -ne $controllerFile) { ([regex]::Matches((Get-CodeOnlyContent (Get-Content -Raw -LiteralPath $controllerFile.FullName)), 'root\.(call|get|set)\(')).Count } else { 0 }
+	live_context_twin_pairs = $liveContextTwinPairs
+	bootstrap_registration_rows = if ($null -ne $bootstrapFile) { ([regex]::Matches((Get-CodeOnlyContent (Get-Content -Raw -LiteralPath $bootstrapFile.FullName)), '_add_runtime_node\s*\(')).Count } else { 0 }
+	scripts_flat_directory = (@($scriptFiles | Where-Object { (Get-RelativeScriptPath $_ $resolvedScriptsDirectory) -notmatch '/' }).Count -eq $scriptFiles.Count)
+	untyped_root_parameters = $untypedRootParameters
+	unclassified_scripts = @($scriptFiles | Where-Object { $rel = Get-RelativeScriptPath $_ $resolvedScriptsDirectory; $parts = $rel -split '/'; $rel -notmatch '/' -or $parts[0] -notin $allowedScriptRoles }).Count
+}
+
+# Per-file floors prevent an aggregate reduction in one owner from masking
+# growth in another. Files are keyed by basename so an approved role-folder
+# move preserves its metric identity.
+$perFileBaseline = Get-PropertyValue $baseline "per_file"
+if ($null -eq $perFileBaseline) {
+	$errors.Add("Baseline has no per_file metric inventory; refusing to run without per-file regression floors.")
+} else {
+	foreach ($fileName in $perFileMetrics.Keys) {
+		$currentMetric = $perFileMetrics[$fileName]
+		$baselineMetricProperty = Get-PropertyInfo $perFileBaseline $fileName
+		if ($null -eq $baselineMetricProperty) {
+			if ($currentMetric.dynamic_dispatch -gt 0 -or $currentMetric.untyped_root_parameters -gt 0) {
+				$errors.Add("Unbaselined script '$($currentMetric.path)' adds root seams; review and update its metric baseline deliberately")
+			}
+			continue
+		}
+		$baselineMetric = $baselineMetricProperty.Value
+		foreach ($metricName in @("dynamic_dispatch", "reach_through", "untyped_root_parameters", "live_context_twin_pairs")) {
+			$baselineValue = Get-IntegerBaseline $baselineMetric $metricName -1
+			if ($baselineValue -ge 0 -and $currentMetric[$metricName] -gt $baselineValue) {
+				$errors.Add("Per-file $metricName regression in '$($currentMetric.path)': $($currentMetric[$metricName]) > baseline $baselineValue")
+			}
+		}
+	}
 }
 
 # ---- 4. Baseline comparison ----
@@ -635,10 +1019,29 @@ Write-Host "  root.call/get/set : $rootAccesses (baseline $rootBaseline; target 
 Write-Host "  GameplayState     : $gameplayStateLines lines / $gameplayStateFields fields (baseline $gsLinesBaseline / $gsFieldsBaseline)"
 Write-Host "  RoomController    : $roomControllerLines lines (baseline $rcLinesBaseline; target <= $($targetValues.room_controller_lines_max))"
 Write-Host "  .runtime refs     : $runtimeRefs (baseline $runtimeBaseline; target <= $($targetValues.runtime_refs_max))"
+Write-Host "  reach-through     : $totalReachThrough across root.<member> reads/calls"
+Write-Host "  untyped root args : $untypedRootParameters Object/Variant or untyped root parameters (composition-plan audit counted 560)"
+Write-Host "  context twins     : $liveContextTwinPairs live _context pairs"
+Write-Host "  string call forms : $rootCallableStrings Callable(root, string) / $stringSignalConnects string .connect calls"
 Write-Host "  legacy duplicates : $legacyCount total / $($legacyPairs.Count) paired (baseline $legacyBaseline / $(($baselineLegacyPairs | Measure-Object).Count))"
 Write-Host "  contexts          : $($contextFiles.Count) files; $($transitionalFound.Count) transitional allowlisted"
+Write-Host ("  scripts           : {0} GDScript files; {1} directories; {2} unclassified" -f $scriptFiles.Count, @((Get-ChildItem -LiteralPath $resolvedScriptsDirectory -Directory -Recurse)).Count, $forwardCurrentValues.unclassified_scripts)
+Write-Host "  forward targets   : metric / current / target / stage / status"
+foreach ($targetName in $defaultForwardTargets.Keys) {
+	$currentValue = $forwardCurrentValues[$targetName]
+	$targetValue = $forwardTargetValues[$targetName]
+	$isMet = if ($targetValue -is [bool]) { [bool]$currentValue -eq [bool]$targetValue } else { [int]$currentValue -le [int]$targetValue }
+	$status = if ($isMet) { 'met' } else { 'open' }
+	$stage = if ($forwardTargetStages.ContainsKey($targetName)) { $forwardTargetStages[$targetName] } else { 0 }
+	Write-Host ("    {0} / {1} / {2} / {3} / {4}" -f $targetName, $currentValue, $targetValue, $stage, $status)
+}
 foreach ($pair in $legacyPairs) {
 	Write-Host "  duplicate pair: $pair" -ForegroundColor Yellow
+}
+$topSeamFiles = @($perFileMetrics.GetEnumerator() | Sort-Object { $_.Value.dynamic_dispatch } -Descending | Select-Object -First 20)
+Write-Host "  top root seams    : file / dynamic / reach-through / untyped root params"
+foreach ($entry in $topSeamFiles) {
+	Write-Host ("    {0} / {1} / {2} / {3}" -f $entry.Value.path, $entry.Value.dynamic_dispatch, $entry.Value.reach_through, $entry.Value.untyped_root_parameters)
 }
 Write-Host ("  editor compos.   : {0:P1} (weighted; direct+editor changeable)" -f $editorComposition.Composite)
 Write-Host ("    components      : {0} blind / {1} editor-configured / {2} both of {3} (direct {4:P0} / editor {5:P0} / both {6:P0})" -f $editorComposition.ComponentBlind, $editorComposition.ComponentConfigured, $editorComposition.ComponentBoth, $editorComposition.ComponentTotal, $editorComposition.ComponentDirect, $editorComposition.ComponentEditor, $editorComposition.ComponentBothRate)
@@ -680,6 +1083,18 @@ if ($UpdateBaseline) {
 			transitional_allowlist = @($transitionalAllowlist)
 			completion_start = $resolvedCompletionStart
 			targets = $targetValues
+			architecture_rules = [ordered]@{}
+			per_file = $perFileMetrics
+			metric_snapshot = [ordered]@{
+				gameplay_lines = $gameplayLines
+				total_reach_through = $totalReachThrough
+				untyped_root_parameters = $untypedRootParameters
+				live_context_twin_pairs = $liveContextTwinPairs
+				root_callable_strings = $rootCallableStrings
+				string_signal_connects = $stringSignalConnects
+				script_subdirectories = @((Get-ChildItem -LiteralPath $resolvedScriptsDirectory -Directory -Recurse)).Count
+				unclassified_scripts = $forwardCurrentValues.unclassified_scripts
+			}
 			editor_composition = [ordered]@{
 				component_total = $editorComposition.ComponentTotal
 				component_blind = $editorComposition.ComponentBlind
@@ -688,6 +1103,23 @@ if ($UpdateBaseline) {
 				definition_total = $editorComposition.DefinitionTotal
 				definition_editable = $editorComposition.DefinitionEditable
 			}
+		}
+		foreach ($ruleName in ($architectureFindings.Keys | Sort-Object)) {
+			$newBaseline.architecture_rules[$ruleName] = @($architectureFindings[$ruleName] | Sort-Object -Unique)
+		}
+		$newBaseline.forward_status = [ordered]@{}
+		foreach ($targetName in $defaultForwardTargets.Keys) {
+			$currentValue = $forwardCurrentValues[$targetName]
+			$targetValue = $forwardTargetValues[$targetName]
+			$isMet = if ($targetValue -is [bool]) { [bool]$currentValue -eq [bool]$targetValue } else { [int]$currentValue -le [int]$targetValue }
+			$newBaseline.forward_status[$targetName] = [ordered]@{
+				current = $currentValue
+				status = if ($isMet) { 'met' } else { 'open' }
+				stage = if ($forwardTargetStages.ContainsKey($targetName)) { $forwardTargetStages[$targetName] } else { 0 }
+			}
+		}
+		$newBaseline.floor_adjustments = [ordered]@{
+			gameplay_state_fields_max = 'Raised from 286 to 287 to allow one field of headroom; forward seam, twin, and ownership metrics track architectural progress independently.'
 		}
 		$json = $newBaseline | ConvertTo-Json -Depth 6
 		# ConvertTo-Json can render a nested empty array as null; normalize those

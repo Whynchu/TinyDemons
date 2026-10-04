@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="SoundMixProfile" format=3 uid="uid://bshb40ywk6kv6"]
 
-[ext_resource type="Script" uid="uid://b0faew6gbo4ij" path="res://scripts/sound_mix_profile.gd" id="1_sound_mix_profile"]
+[ext_resource type="Script" uid="uid://b0faew6gbo4ij" path="res://scripts/content/sound_mix_profile.gd" id="1_sound_mix_profile"]
 
 [resource]
 script = ExtResource("1_sound_mix_profile")

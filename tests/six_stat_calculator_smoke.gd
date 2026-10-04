@@ -1,7 +1,7 @@
 extends SceneTree
 
-const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
-const CombatDamageRequestScript = preload("res://scripts/combat_damage_request.gd")
+const ElementCatalogScript = preload("res://scripts/content/element_catalog.gd")
+const CombatDamageRequestScript = preload("res://scripts/content/combat_damage_request.gd")
 
 var _finished := false
 

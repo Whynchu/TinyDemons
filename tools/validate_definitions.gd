@@ -5,8 +5,8 @@ extends SceneTree
 ## definition is malformed, so CI preflight catches broken content before
 ## runtime. Run via tools/validate_definitions.ps1.
 
-const ENEMY_FACTORY_SCRIPT = preload("res://scripts/enemy_factory.gd")
-const CONTENT_MANIFEST_SERVICE := preload("res://scripts/content_definition_manifest_service.gd")
+const ENEMY_FACTORY_SCRIPT = preload("res://scripts/content/enemy_factory.gd")
+const CONTENT_MANIFEST_SERVICE := preload("res://scripts/content/content_definition_manifest_service.gd")
 
 var _definition_resources: Array[Resource] = []
 var _manifest_problems: Array[String] = []

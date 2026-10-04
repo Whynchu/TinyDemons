@@ -1,9 +1,9 @@
 [gd_scene format=3]
 
-[ext_resource type="Script" path="res://scripts/shop_menu_layout.gd" id="1_layout"]
+[ext_resource type="Script" path="res://scripts/ui/shop_menu_layout.gd" id="1_layout"]
 [ext_resource type="Texture2D" path="res://assets/artwork/frame 16x16.png" id="2_frame"]
 [ext_resource type="Texture2D" path="res://assets/artwork/cursor.png" id="3_cursor"]
-[ext_resource type="Script" path="res://scripts/menu_cursor.gd" id="4_cursor_script"]
+[ext_resource type="Script" path="res://scripts/ui/menu_cursor.gd" id="4_cursor_script"]
 [ext_resource type="Texture2D" path="res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEaddition.png" id="5_add"]
 [ext_resource type="Texture2D" path="res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEsubtract.png" id="6_subtract"]
 [ext_resource type="Texture2D" path="res://assets/artwork/circle55.png" id="7_circle"]

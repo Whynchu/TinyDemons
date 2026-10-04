@@ -1,7 +1,7 @@
 [gd_resource type="Resource" script_class="SlimeVariantCatalogData" format=3 uid="uid://csvahxy3wpliv"]
 
-[ext_resource type="Script" uid="uid://8kfyonox4q1h" path="res://scripts/slime_variant_catalog_data.gd" id="1_catalog"]
-[ext_resource type="Script" uid="uid://bc7ncfaqqbeff" path="res://scripts/enemy_definition.gd" id="2_enemy"]
+[ext_resource type="Script" uid="uid://8kfyonox4q1h" path="res://scripts/content/slime_variant_catalog_data.gd" id="1_catalog"]
+[ext_resource type="Script" uid="uid://bc7ncfaqqbeff" path="res://scripts/content/enemy_definition.gd" id="2_enemy"]
 [ext_resource type="Resource" uid="uid://0keo86rtex3m" path="res://resources/definitions/skeleton.tres" id="3_skeleton"]
 [ext_resource type="Resource" uid="uid://cnnshg3kixbi8" path="res://resources/definitions/skeleton_fire.tres" id="4_skeleton_fire"]
 [ext_resource type="Resource" uid="uid://cn2uddwvcn2ir" path="res://resources/definitions/skeleton_grass.tres" id="5_skeleton_grass"]

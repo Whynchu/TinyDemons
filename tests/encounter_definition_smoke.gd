@@ -1,9 +1,9 @@
 extends SceneTree
 
-const CatalogScript = preload("res://scripts/slime_variant_catalog.gd")
-const EnemyFactoryScript = preload("res://scripts/enemy_factory.gd")
-const EnemySpawnServicesScript = preload("res://scripts/room_enemy_spawn_services.gd")
-const SlimeRuntimeControllerScript = preload("res://scripts/slime_runtime_controller.gd")
+const CatalogScript = preload("res://scripts/content/slime_variant_catalog.gd")
+const EnemyFactoryScript = preload("res://scripts/content/enemy_factory.gd")
+const EnemySpawnServicesScript = preload("res://scripts/runtime/services/room_enemy_spawn_services.gd")
+const SlimeRuntimeControllerScript = preload("res://scripts/runtime/controllers/slime_runtime_controller.gd")
 
 var rebound_enemy_damage_count := 0
 

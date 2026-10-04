@@ -1,7 +1,7 @@
 extends SceneTree
 
 const MAIN_SCENE := "res://scenes/main.tscn"
-const LAYER_SCRIPT := preload("res://scripts/hub_stone_accent_layer.gd")
+const LAYER_SCRIPT := preload("res://scripts/runtime/world/hub_stone_accent_layer.gd")
 const BASE_ALPHA: float = 128.0 / 255.0
 const SPECULAR_ALPHA: float = 38.0 / 255.0
 const NON_HUB_REMOVAL_MIN := 3

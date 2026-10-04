@@ -1,9 +1,9 @@
 extends SceneTree
 
-const LAYOUT_SCRIPT = preload("res://scripts/dungeon_layout_run2.gd")
-const GRAPH_SCRIPT = preload("res://scripts/dungeon_graph.gd")
-const MAP_CONTROLLER_SCRIPT = preload("res://scripts/dungeon_map_controller.gd")
-const MINIMAP_SCRIPT = preload("res://scripts/dungeon_minimap_controller.gd")
+const LAYOUT_SCRIPT = preload("res://scripts/algorithms/dungeon_layout_run2.gd")
+const GRAPH_SCRIPT = preload("res://scripts/algorithms/dungeon_graph.gd")
+const MAP_CONTROLLER_SCRIPT = preload("res://scripts/ui/dungeon_map_controller.gd")
+const MINIMAP_SCRIPT = preload("res://scripts/ui/dungeon_minimap_controller.gd")
 
 
 func _initialize() -> void:

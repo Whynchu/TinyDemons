@@ -5,13 +5,13 @@ extends SceneTree
 ## sizes, and the stable IDs/content each surface owns. Run via
 ## tools/report_catalogs.ps1.
 
-const ENCOUNTER_DEFINITION_SCRIPT = preload("res://scripts/encounter_definition.gd")
-const ENEMY_DEFINITION_SCRIPT = preload("res://scripts/enemy_definition.gd")
-const ROOM_DEFINITION_SCRIPT = preload("res://scripts/room_definition.gd")
-const GENERATION_POLICY_SCRIPT = preload("res://scripts/dungeon_generation_policy.gd")
-const REWARD_DEFINITION_SCRIPT = preload("res://scripts/reward_definition.gd")
-const ITEM_CATALOG_SCRIPT = preload("res://scripts/item_catalog.gd")
-const SLIME_VARIANT_CATALOG_SCRIPT = preload("res://scripts/slime_variant_catalog.gd")
+const ENCOUNTER_DEFINITION_SCRIPT = preload("res://scripts/content/encounter_definition.gd")
+const ENEMY_DEFINITION_SCRIPT = preload("res://scripts/content/enemy_definition.gd")
+const ROOM_DEFINITION_SCRIPT = preload("res://scripts/content/room_definition.gd")
+const GENERATION_POLICY_SCRIPT = preload("res://scripts/algorithms/dungeon_generation_policy.gd")
+const REWARD_DEFINITION_SCRIPT = preload("res://scripts/content/reward_definition.gd")
+const ITEM_CATALOG_SCRIPT = preload("res://scripts/content/item_catalog.gd")
+const SLIME_VARIANT_CATALOG_SCRIPT = preload("res://scripts/content/slime_variant_catalog.gd")
 
 var _failures: Array[String] = []
 

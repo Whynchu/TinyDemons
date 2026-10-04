@@ -13,7 +13,7 @@ if ([string]::IsNullOrWhiteSpace($OutputPath)) {
 }
 
 $scriptRoot = Join-Path $ProjectRoot "scripts"
-$files = Get-ChildItem -LiteralPath $scriptRoot -Filter "*.gd" -File | Sort-Object FullName
+$files = Get-ChildItem -LiteralPath $scriptRoot -Filter "*.gd" -File -Recurse | Sort-Object FullName
 $rows = [System.Collections.Generic.List[string]]::new()
 $rows.Add("# Tiny Demons Script Index")
 $rows.Add("")

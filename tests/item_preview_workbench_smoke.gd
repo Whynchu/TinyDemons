@@ -1,6 +1,6 @@
 extends SceneTree
 
-const ITEM_CATALOG_SCRIPT: Script = preload("res://scripts/item_catalog.gd")
+const ITEM_CATALOG_SCRIPT: Script = preload("res://scripts/content/item_catalog.gd")
 const PREVIEW_SCENE: PackedScene = preload("res://scenes/authoring/previews/item_preview_workbench.tscn")
 
 var _finished := false

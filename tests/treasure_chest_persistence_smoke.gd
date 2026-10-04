@@ -1,7 +1,7 @@
 extends SceneTree
 
-const ROOM_CONTROLLER_SCRIPT = preload("res://scripts/room_controller.gd")
-const ROOM_PUZZLE_CONTROLLER_SCRIPT = preload("res://scripts/room_puzzle_controller.gd")
+const ROOM_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/room_controller.gd")
+const ROOM_PUZZLE_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/room_puzzle_controller.gd")
 
 class FakeMap extends Node:
 	var palette := "red"

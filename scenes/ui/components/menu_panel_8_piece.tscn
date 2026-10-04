@@ -1,7 +1,7 @@
 [gd_scene format=3]
 
 [ext_resource type="Texture2D" path="res://assets/artwork/frame 16x16.png" id="1_frame"]
-[ext_resource type="Script" path="res://scripts/menu_panel_8_piece.gd" id="4_layout"]
+[ext_resource type="Script" path="res://scripts/ui/menu_panel_8_piece.gd" id="4_layout"]
 
 [node name="MenuPanel8Piece" type="Control"]
 offset_right = 240.0

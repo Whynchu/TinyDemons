@@ -1,6 +1,6 @@
 extends SceneTree
 
-const SoulVisualsScript = preload("res://scripts/soul_visuals.gd")
+const SoulVisualsScript = preload("res://scripts/runtime/services/soul_visuals.gd")
 
 var _finished := false
 

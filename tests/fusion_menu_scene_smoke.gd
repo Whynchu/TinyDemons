@@ -1,7 +1,7 @@
 extends SceneTree
 
-const FusionMenuLayoutScript = preload("res://scripts/fusion_menu_layout.gd")
-const FusionMenuModelScript = preload("res://scripts/fusion_menu_model.gd")
+const FusionMenuLayoutScript = preload("res://scripts/ui/fusion_menu_layout.gd")
+const FusionMenuModelScript = preload("res://scripts/ui/fusion_menu_model.gd")
 
 var _finished := false
 var _item_row := -1

@@ -1,6 +1,6 @@
 extends SceneTree
 
-const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
+const ElementCatalogScript = preload("res://scripts/content/element_catalog.gd")
 
 
 class StatusTickTestRoot:

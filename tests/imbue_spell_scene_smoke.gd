@@ -1,7 +1,7 @@
 extends SceneTree
 
-const Chroma = preload("res://scripts/player_chroma_component.gd")
-const Elements = preload("res://scripts/element_catalog.gd")
+const Chroma = preload("res://scripts/components/player_chroma_component.gd")
+const Elements = preload("res://scripts/content/element_catalog.gd")
 
 
 func _equipment_visual_context(gameplay: Node) -> PlayerEquipmentVisualContext:

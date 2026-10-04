@@ -1,6 +1,6 @@
 extends SceneTree
 
-const Recognizer = preload("res://scripts/circular_input_recognizer.gd")
+const Recognizer = preload("res://scripts/algorithms/circular_input_recognizer.gd")
 
 
 func _initialize() -> void:

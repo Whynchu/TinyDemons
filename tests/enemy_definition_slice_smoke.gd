@@ -5,8 +5,8 @@ extends SceneTree
 ## is added through one catalog row and a definition — no GameplayState edit —
 ## and its factory output is genuinely distinct from the migrated variant.
 
-const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
-const CatalogScript = preload("res://scripts/slime_variant_catalog.gd")
+const ElementCatalogScript = preload("res://scripts/content/element_catalog.gd")
+const CatalogScript = preload("res://scripts/content/slime_variant_catalog.gd")
 const PREVIEW_SCENE := preload("res://scenes/authoring/previews/enemy_preview_workbench.tscn")
 
 var _finished := false

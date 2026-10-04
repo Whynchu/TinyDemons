@@ -1,7 +1,7 @@
 extends SceneTree
 
-const GRID_SCRIPT = preload("res://scripts/puzzle_map_grid.gd")
-const R4_SCRIPT = preload("res://scripts/puzzle_map_r4.gd")
+const GRID_SCRIPT = preload("res://scripts/algorithms/puzzle_map_grid.gd")
+const R4_SCRIPT = preload("res://scripts/algorithms/puzzle_map_r4.gd")
 
 func _initialize() -> void:
 	var failures: Array[String] = []

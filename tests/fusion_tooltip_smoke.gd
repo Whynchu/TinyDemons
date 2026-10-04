@@ -1,8 +1,8 @@
 extends SceneTree
 
-const HubFlowControllerScript = preload("res://scripts/hub_flow_controller.gd")
-const EquipmentMenuLayoutScript = preload("res://scripts/equipment_menu_layout.gd")
-const ShopMenuLayoutScript = preload("res://scripts/shop_menu_layout.gd")
+const HubEconomyControllerScript = preload("res://scripts/runtime/controllers/hub_economy_controller.gd")
+const EquipmentMenuLayoutScript = preload("res://scripts/ui/equipment_menu_layout.gd")
+const ShopMenuLayoutScript = preload("res://scripts/ui/shop_menu_layout.gd")
 
 var _finished := false
 
@@ -10,34 +10,45 @@ var _finished := false
 func _initialize() -> void:
 	call_deferred("_watchdog")
 	var failures: Array[String] = []
-	var root := _MockRoot.new()
-	var controller_instance: Node = ScreenStateController.new()
+	var root := _MockRoot.new() as _MockRoot
+	var controller_instance := ScreenStateController.new() as ScreenStateController
+	var hub_flow_controller := HubFlowController.new() as HubFlowController
 	var host := Node.new()
 	host.add_child(controller_instance)
 	root.screen_state_controller = controller_instance
+	root.hub_flow_controller = hub_flow_controller
 	var pixel: Callable = Callable(root, "_pixel_text_texture")
-	var built: Dictionary = controller_instance.call("build_hub", host, pixel, Callable(root, "_adj"), Callable(root, "_apply"), Callable(root, "_cancel"), Callable(root, "_auto"), Callable(root, "_respec"), Callable(root, "_start"), Callable(root, "_title"), Callable(root, "_set_page"), Callable(root, "_item_action"), Callable(root, "_select_gear_slot"), Callable(), Callable(root, "_select_gear_candidate"))
-	var key_map := {
-		"overlay": "hub_overlay", "summary": "hub_summary_text", "points": "hub_points_text",
-		"stats": "hub_stat_texts", "stat_buttons": "hub_stat_buttons", "stat_rows": "hub_stat_row_buttons", "derived": "hub_derived_texts",
-		"apply": "hub_apply_button", "cancel": "hub_cancel_button", "auto": "hub_auto_button", "respec": "hub_respec_button",
-		"pages": "hub_page_buttons", "item_name": "hub_item_name_text", "item_list": "hub_item_list_texts", "item_rows": "hub_item_row_buttons",
-		"shop_prices": "hub_shop_price_texts", "gear_choices": "hub_gear_choice_texts", "gear_choice_buttons": "hub_gear_choice_buttons",
-		"gear_slot_buttons": "hub_gear_slot_buttons", "gear_stats": "hub_gear_stat_texts",
-		"gear_stat_panel": "hub_gear_stat_panel", "item_details": "hub_item_detail_texts",
-		"item_action": "hub_item_action_button", "fusion_decrease": "hub_fusion_decrease_button", "fusion_increase": "hub_fusion_increase_button", "binding_panel": "hub_binding_panel",
-		"binding_texts": "hub_binding_texts", "binding_action": "hub_binding_action_button", "cursor": "hub_cursor_text", "equipment_menu": "hub_equipment_menu", "shop_menu": "hub_shop_menu", "fusion_menu": "hub_fusion_menu",
-	}
-	for key: String in built:
-		controller_instance.set(str(key_map.get(key, key)), built[key])
-	var stat_buttons := built["stat_buttons"] as Array[Button]
-	var stat_texts := built["stats"] as Array[Sprite2D]
-	var equipment_view := built["equipment_menu"] as EquipmentMenuLayout
-	var shop_view := built["shop_menu"] as ShopMenuLayout
-	var fusion_view := built["fusion_menu"] as FusionMenuLayout
+	var actions := HubScreenActions.new() as HubScreenActions
+	actions.adjust_stat = Callable(root, "_adj")
+	actions.apply_stats = Callable(root, "_apply")
+	actions.cancel_stats = Callable(root, "_cancel")
+	actions.auto_allocate = Callable(root, "_auto")
+	actions.respec = Callable(root, "_respec")
+	actions.set_page = Callable(root, "_set_page")
+	actions.item_action = Callable(root, "_item_action")
+	actions.select_gear_slot = Callable(root, "_select_gear_slot")
+	actions.bind_element = Callable(root, "_bind_element")
+	actions.select_gear_candidate = Callable(root, "_select_gear_candidate")
+	actions.select_stat_row = Callable(root, "_select_stat_row")
+	actions.select_item_row = Callable(root, "_select_item_row")
+	actions.adjust_fusion_count = Callable(root, "_shift_fusion_count")
+	actions.equipment_remove = Callable(root, "_item_action")
+	actions.equipment_remove_all = Callable(root, "_item_action")
+	actions.equipment_remove_all_cancel = Callable(root, "_back")
+	actions.hub_back = Callable(root, "_back")
+	actions.shop_mode = Callable(root, "_shop_mode")
+	actions.shop_amount = Callable(root, "_shop_amount")
+	actions.shop_amount_cancel = Callable(root, "_back")
+	actions.shop_back = Callable(root, "_back")
+	controller_instance.build_hub(host, pixel, actions)
+	var stat_buttons := controller_instance.hub_stat_buttons
+	var stat_texts := controller_instance.hub_stat_texts
+	var equipment_view := controller_instance.hub_equipment_menu as EquipmentMenuLayout
+	var shop_view := controller_instance.hub_shop_menu as ShopMenuLayout
+	var fusion_view := controller_instance.hub_fusion_menu as FusionMenuLayout
 	_expect(stat_buttons.size() == 12 and stat_buttons.all(func(button: Button) -> bool: return button.size.x >= 18.0 and button.size.y >= 12.0), "hub stat arrows expose touch-sized hit targets for six stats", failures)
-	_expect((built["stat_rows"] as Array[Button]).size() == 6 and (built["item_rows"] as Array[Button]).size() == 6, "hub stats, shop, and fusion expose row touch targets", failures)
-	_expect((built["fusion_decrease"] as Button).size.x >= 20.0 and (built["fusion_increase"] as Button).size.x >= 20.0, "fusion exposes direct count controls", failures)
+	_expect(controller_instance.hub_stat_row_buttons.size() == 6 and controller_instance.hub_item_row_buttons.size() == 6, "hub stats, shop, and fusion expose row touch targets", failures)
+	_expect(controller_instance.hub_fusion_decrease_button.size.x >= 20.0 and controller_instance.hub_fusion_increase_button.size.x >= 20.0, "fusion exposes direct count controls", failures)
 	_expect(stat_texts.size() == 6 and controller_instance.hub_stat_value_texts.size() == 6 and stat_texts.all(func(text: Sprite2D) -> bool: return not text.centered) and controller_instance.hub_stat_value_texts.all(func(text: Sprite2D) -> bool: return not text.centered), "hub stats keep separate left labels and right-anchored value sprites", failures)
 	controller_instance.hub_overlay = ColorRect.new()
 	controller_instance.hub_page = 1
@@ -65,7 +76,7 @@ func _initialize() -> void:
 	root.progression_tuning = ProgressionTuning.new()
 	root.run_state = RunState.new()
 	controller_instance.hub_page = 0
-	controller_instance.call("update_hub_ui", root, pixel)
+	controller_instance.update_hub_ui(root, pixel)
 	_expect(controller_instance.hub_derived_texts.size() == 7 and controller_instance.hub_derived_texts.all(func(text: Sprite2D) -> bool: return text.visible), "stats preview exposes the seven authored derived-stat labels", failures)
 	var details := controller_instance.hub_item_detail_texts as Array[Sprite2D]
 	controller_instance.hub_page = 1
@@ -74,23 +85,22 @@ func _initialize() -> void:
 	controller_instance.hub_equipment_mode = EquipmentMenuLayoutScript.MODE_CANDIDATE
 	controller_instance.hub_gear_browsing = true
 	controller_instance.hub_item_index = 0
-	controller_instance.call("update_hub_ui", root, pixel)
+	controller_instance.update_hub_ui(root, pixel)
 	_expect(equipment_view != null and equipment_view.visible and (equipment_view.get_node("VitText") as Sprite2D).texture != null and (equipment_view.get_node("MndText") as Sprite2D).texture != null, "gear browse keeps one authored six-stat summary without a duplicate SPD row", failures)
 	_expect(equipment_view.candidate_buttons.size() == 8 and equipment_view.candidate_buttons.all(func(b: Button) -> bool: return b.mouse_filter != Control.MOUSE_FILTER_IGNORE), "gear browse exposes authored touch candidate rows", failures)
 	_expect(equipment_view.candidate_buttons[0].visible and equipment_view.candidate_buttons[1].visible, "gear browse shows touch targets for visible candidates", failures)
 	equipment_view.candidate_buttons[0].pressed.emit()
 	_expect(root.selected_gear_candidate_row == 0, "gear choice row forwards its selected candidate", failures)
-	var gear_flow := HubFlowControllerScript.new()
+	var gear_flow := HubEconomyControllerScript.new()
 	var gear_candidates := gear_flow.hub_gear_candidates(root, &"weapon")
 	root.selected_equipped_instance_id = ""
 	controller_instance.hub_gear_candidate_indices = {"weapon": 0}
 	gear_flow.select_hub_gear_candidate(root, 1)
 	_expect(gear_candidates.size() > 1 and root.selected_equipped_instance_id == gear_candidates[1].instance_id, "touching a gear row equips that visible candidate", failures)
 	_expect(not controller_instance.hub_gear_browsing, "touch gear selection closes the browse state", failures)
-	controller_instance.call("update_hub_ui", root, pixel)
+	controller_instance.update_hub_ui(root, pixel)
 	_expect(equipment_view.get_node("SummaryPanel").visible and equipment_view.get_node("DescriptionPanel").visible, "equipment keeps its authored summary and description panels after selection", failures)
 	_expect((equipment_view.get_node("DescriptionText0") as Sprite2D).texture != null or (equipment_view.get_node("BonusText0") as Sprite2D).texture != null, "equipment exposes the selected item through authored detail rows", failures)
-	gear_flow.free()
 	root._set_page(3)
 	controller_instance.hub_page = 3
 	controller_instance.hub_is_root = false
@@ -98,7 +108,7 @@ func _initialize() -> void:
 	controller_instance.hub_item_index = 0
 	controller_instance.hub_gear_browsing = false
 	profile.equipped_instance_ids["weapon"] = duplicate.instance_id
-	controller_instance.call("update_hub_ui", root, pixel)
+	controller_instance.update_hub_ui(root, pixel)
 	_expect(fusion_view != null and fusion_view.visible, "Fusion route uses its dedicated visible presenter", failures)
 	_expect(fusion_view.get_node("ShopListPanel").visible and fusion_view.get_node("ShopStatsPanel").visible, "Fusion keeps Shop's independent body panels", failures)
 	_expect((fusion_view.get_node("OwnedText") as Sprite2D).texture != null, "Fusion renders the owned footer", failures)
@@ -112,18 +122,19 @@ func _initialize() -> void:
 	controller_instance.hub_shop_state = ShopMenuLayoutScript.ITEM_BROWSE
 	controller_instance.hub_shop_command_focus = false
 	controller_instance.hub_item_index = 0
-	controller_instance.call("update_hub_ui", root, pixel)
+	controller_instance.update_hub_ui(root, pixel)
 	_expect(shop_view != null and shop_view.visible and (shop_view.get_node("ListClip/ItemText0") as Sprite2D).texture != null and (shop_view.get_node("StatLabel0") as Sprite2D).texture != null, "shop page renders its selected row and six-stat comparison in the authored presenter", failures)
 	_expect((shop_view.get_node("ShopListPanel") as Control).visible and (shop_view.get_node("ShopStatsPanel") as Control).visible and (shop_view.get_node("ItemActionButton") as Button).visible, "shop keeps independent body panels and an active item action", failures)
 	controller_instance.hub_item_index = 6
-	controller_instance.call("update_hub_ui", root, pixel)
+	controller_instance.update_hub_ui(root, pixel)
 	_expect((shop_view.get_node("ListClip/ItemText6") as Sprite2D).texture != null, "shop keeps a visible selected row at the end of the authored window", failures)
 	root._set_page(3)
 	controller_instance.hub_page = 3
 	controller_instance.hub_item_index = 0
-	controller_instance.call("update_hub_ui", root, pixel)
+	controller_instance.update_hub_ui(root, pixel)
 	_expect(fusion_view.visible and (fusion_view.get_node("StatLabel0") as Sprite2D).texture != null, "Fusion presenter remains authoritative after returning from Shop", failures)
 	controller_instance.hub_overlay.free()
+	hub_flow_controller.free()
 	host.free()
 	_finished = true
 	call_deferred("_finish", failures)
@@ -151,8 +162,7 @@ func _expect(condition: bool, label: String, failures: Array[String]) -> void:
 		failures.append("FAILED: %s" % label)
 
 
-class _MockRoot:
-	var screen_state_controller: ScreenStateController = null
+class _MockRoot extends GameplayState:
 	var hub_page := 0
 	var hub_pause_mode := false
 	var hub_menu_row := 0
@@ -166,11 +176,6 @@ class _MockRoot:
 	var hub_page_next_input_was_down := false
 	var hub_cancel_input_was_down := false
 	var hub_action_column := 0
-	var player_profile: PlayerProfile = null
-	var progression_tuning: ProgressionTuning = null
-	var run_state: RunState = null
-	var combat_tuning: CombatTuning = null
-	var player_palette_name := &""
 	var hub_summary_text: Sprite2D = null
 	var hub_points_text: Sprite2D = null
 	var hub_cursor_text: Sprite2D = null
@@ -241,6 +246,27 @@ class _MockRoot:
 	func _select_gear_candidate(choice_row: int) -> void:
 		selected_gear_candidate_row = choice_row
 
+	func _bind_element() -> void:
+		pass
+
+	func _select_stat_row(row: int) -> void:
+		screen_state_controller.hub_stat_row = row
+
+	func _select_item_row(row: int) -> void:
+		screen_state_controller.hub_item_index = row
+
+	func _shift_fusion_count(direction: int) -> void:
+		hub_fusion_count = maxi(hub_fusion_count + direction, 1)
+
+	func _back() -> void:
+		pass
+
+	func _shop_mode(_mode: int) -> void:
+		pass
+
+	func _shop_amount(_amount: int) -> void:
+		pass
+
 	func _equip_profile_item(instance_id: String) -> bool:
 		selected_equipped_instance_id = instance_id
 		player_profile.equipped_instance_ids["weapon"] = instance_id
@@ -249,7 +275,7 @@ class _MockRoot:
 	func _play_sound(_sound_name: String, _volume_db: float = 0.0, _pitch_scale: float = 1.0) -> void:
 		pass
 
-	func _health_feedback_color(_palette: StringName) -> Color:
+	func _health_feedback_color(_palette_name: String) -> Color:
 		return Color.WHITE
 
 	func _hub_gear_candidates(slot: StringName) -> Array[ItemInstance]:
@@ -278,7 +304,7 @@ class _MockRoot:
 				candidates.append(item)
 		return candidates
 
-	func _player_stat_snapshot() -> Object:
+	func _player_stat_snapshot() -> CombatStatSnapshot:
 		return null
 
 	func _hub_points_remaining() -> int:

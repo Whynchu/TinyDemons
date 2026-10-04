@@ -3,7 +3,7 @@ extends SceneTree
 ## Headless contract for the enemy actions and selector exposed by the dock.
 
 const AuthoringDockScript := preload("res://addons/tiny_demons_authoring/authoring_dock.gd")
-const SlimeVariantCatalogScript := preload("res://scripts/slime_variant_catalog.gd")
+const SlimeVariantCatalogScript := preload("res://scripts/content/slime_variant_catalog.gd")
 
 var _design_id: StringName = &""
 var _interactive_id: StringName = &""

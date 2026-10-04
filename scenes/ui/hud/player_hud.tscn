@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://dmwowy0hgwia4"]
 
-[ext_resource type="Script" uid="uid://bl50sqoraialx" path="res://scripts/player_hud.gd" id="1_script"]
+[ext_resource type="Script" uid="uid://bl50sqoraialx" path="res://scripts/actors/player_hud.gd" id="1_script"]
 [ext_resource type="Texture2D" uid="uid://d11oi65batt74" path="res://assets/artwork/BG.png" id="2_bg"]
 [ext_resource type="Texture2D" uid="uid://dk5sq30181jto" path="res://assets/artwork/BlackBars.png" id="3_bars"]
 [ext_resource type="Texture2D" uid="uid://bmhr71mqr5v2r" path="res://assets/artwork/HpBar.png" id="4_frame"]

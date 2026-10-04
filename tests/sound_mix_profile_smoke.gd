@@ -1,6 +1,6 @@
 extends SceneTree
 
-const SoundClipCatalogScript = preload("res://scripts/sound_clip_catalog.gd")
+const SoundClipCatalogScript = preload("res://scripts/content/sound_clip_catalog.gd")
 
 
 func _initialize() -> void:

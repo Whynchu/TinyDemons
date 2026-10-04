@@ -1,7 +1,7 @@
 extends SceneTree
 
 const TEST_PATH := "res://.godot_user/display_responsive_scene_smoke.cfg"
-const PauseMenuLayoutScript = preload("res://scripts/pause_menu_layout.gd")
+const PauseMenuLayoutScript = preload("res://scripts/ui/pause_menu_layout.gd")
 
 var _finished := false
 

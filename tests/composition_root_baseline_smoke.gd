@@ -7,7 +7,7 @@ const COMPOSITION_ROOT_TARGET_LINES := 2000
 
 func _initialize() -> void:
 	var failures: Array[String] = []
-	var gameplay_source := FileAccess.get_file_as_string("res://scripts/gameplay.gd")
+	var gameplay_source := FileAccess.get_file_as_string("res://scripts/runtime/controllers/gameplay.gd")
 	var gameplay_lines := gameplay_source.split("\n").size() - (1 if gameplay_source.ends_with("\n") else 0)
 	var gameplay_functions := 0
 	for line in gameplay_source.split("\n"):
@@ -16,8 +16,8 @@ func _initialize() -> void:
 	_expect(gameplay_lines <= BASELINE_GAMEPLAY_LINES, "gameplay.gd does not grow beyond the R0 baseline", failures)
 	_expect(gameplay_lines <= COMPOSITION_ROOT_TARGET_LINES, "gameplay.gd meets the 2,000-line composition milestone", failures)
 	_expect(gameplay_functions <= BASELINE_GAMEPLAY_FUNCTIONS, "gameplay.gd function count does not grow beyond the R0 baseline", failures)
-	_expect(load("res://scripts/gameplay_bootstrap.gd") != null, "bootstrap script remains loadable", failures)
-	_expect(load("res://scripts/gameplay_frame_controller.gd") != null, "frame controller remains loadable", failures)
+	_expect(load("res://scripts/runtime/controllers/gameplay_bootstrap.gd") != null, "bootstrap script remains loadable", failures)
+	_expect(load("res://scripts/runtime/controllers/gameplay_frame_controller.gd") != null, "frame controller remains loadable", failures)
 	var tuning_paths := [
 		"res://resources/tuning/player_default.tres",
 		"res://resources/tuning/slime_default.tres",

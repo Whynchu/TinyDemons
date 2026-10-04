@@ -1,6 +1,6 @@
 extends SceneTree
 
-const MATERIAL_SCRIPT = preload("res://scripts/actor_palette_material.gd")
+const MATERIAL_SCRIPT = preload("res://scripts/actors/actor_palette_material.gd")
 
 var _finished := false
 

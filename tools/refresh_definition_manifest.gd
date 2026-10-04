@@ -1,6 +1,6 @@
 extends SceneTree
 
-const MANIFEST_SERVICE := preload("res://scripts/content_definition_manifest_service.gd")
+const MANIFEST_SERVICE := preload("res://scripts/content/content_definition_manifest_service.gd")
 
 
 func _initialize() -> void:

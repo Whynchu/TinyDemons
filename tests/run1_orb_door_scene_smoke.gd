@@ -1,6 +1,6 @@
 extends SceneTree
 
-const LAYOUT_DEFINITION_SCRIPT = preload("res://scripts/dungeon_layout_definition.gd")
+const LAYOUT_DEFINITION_SCRIPT = preload("res://scripts/algorithms/dungeon_layout_definition.gd")
 const TARGET_ROOM: StringName = &"room_-1_1"
 
 

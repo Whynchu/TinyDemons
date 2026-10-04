@@ -1,8 +1,8 @@
 extends SceneTree
 
-const EncounterDefinitionScript = preload("res://scripts/encounter_definition.gd")
-const RunStateScript = preload("res://scripts/run_state.gd")
-const RoomControllerScript = preload("res://scripts/room_controller.gd")
+const EncounterDefinitionScript = preload("res://scripts/content/encounter_definition.gd")
+const RunStateScript = preload("res://scripts/runtime/state/run_state.gd")
+const RoomControllerScript = preload("res://scripts/runtime/controllers/room_controller.gd")
 
 
 func _initialize() -> void:

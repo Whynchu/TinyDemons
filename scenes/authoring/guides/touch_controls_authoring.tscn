@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://bpou4q4u1xajn"]
 
-[ext_resource type="Script" uid="uid://ciunxa1vx7dpj" path="res://scripts/touch_controls_authoring.gd" id="1_authoring"]
+[ext_resource type="Script" uid="uid://ciunxa1vx7dpj" path="res://scripts/editor/touch_controls_authoring.gd" id="1_authoring"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ytnco"]
 bg_color = Color(0.04, 0.05, 0.08, 0.86)

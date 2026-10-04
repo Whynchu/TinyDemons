@@ -1,8 +1,8 @@
 extends SceneTree
 
-const CatalogScript = preload("res://scripts/slime_variant_catalog.gd")
-const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
-const RoomControllerScript = preload("res://scripts/room_controller.gd")
+const CatalogScript = preload("res://scripts/content/slime_variant_catalog.gd")
+const ElementCatalogScript = preload("res://scripts/content/element_catalog.gd")
+const RoomControllerScript = preload("res://scripts/runtime/controllers/room_controller.gd")
 
 func _initialize() -> void:
 	var failures: Array[String] = []

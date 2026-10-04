@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://hxbk530snspl"]
 
-[ext_resource type="Script" uid="uid://b8t4ry683m6uw" path="res://scripts/enemy_preview_workbench.gd" id="1_preview"]
+[ext_resource type="Script" uid="uid://b8t4ry683m6uw" path="res://scripts/editor/enemy_preview_workbench.gd" id="1_preview"]
 
 [node name="EnemyPreviewWorkbench" type="Node2D" unique_id=2089970631]
 process_mode = 3

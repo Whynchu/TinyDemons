@@ -1,0 +1,702 @@
+extends Node
+class_name RunFlowController
+
+const RunGradeEvaluator = preload("res://scripts/algorithms/run_grade.gd")
+const EncounterDefinitionScript = preload("res://scripts/content/encounter_definition.gd")
+const ROUTE_PAR_CALIBRATION_FACTOR := 150.0 / 90.0
+const AspectCatalogScript = preload("res://scripts/content/aspect_catalog.gd")
+var reward_definition: RewardDefinition = null
+var debug_run_number := 0
+
+
+func _reward_definition() -> RewardDefinition:
+	if reward_definition == null:
+		reward_definition = RewardDefinition.default_data()
+	return reward_definition
+const ActiveRunSnapshotScript = preload("res://scripts/content/active_run_snapshot.gd")
+const ActiveRunSaveServiceScript = preload("res://scripts/runtime/services/active_run_save_service.gd")
+const ROOM_PREFAB_FACTORY_SCRIPT = preload("res://scripts/content/room_prefab_factory.gd")
+const ChestRewardResultScript = preload("res://scripts/runtime/contexts/chest_reward_result.gd")
+const RunSettlementContextScript = preload("res://scripts/runtime/contexts/run_settlement_context.gd")
+
+
+func loot_grade_bonus(root: Object, grade: String = "") -> float:
+	var profile := root.get("player_profile") as PlayerProfile
+	return loot_grade_bonus_for_profile(profile, grade)
+
+
+func loot_grade_bonus_for_profile(profile: PlayerProfile, grade: String = "") -> float:
+	var value: String = grade.to_upper() if not grade.is_empty() else (profile.last_run_grade if profile != null else "D")
+	return _reward_definition().loot_grade_bonus(value)
+
+
+func chest_item_drop_chance(root: Object) -> float:
+	var profile := root.get("player_profile") as PlayerProfile
+	var run := root.get("run_state") as RunState
+	return chest_item_drop_chance_for_values(profile, run, reward_tier(root))
+
+
+func chest_item_drop_chance_for_values(profile: PlayerProfile, run: RunState, tier: StringName) -> float:
+	var exploration_bonus: float = minf(float(run.chests_opened) * _reward_definition().exploration_bonus_per_chest, _reward_definition().exploration_bonus_cap) if run != null else 0.0
+	var run_rank := run_rank_for_profile(profile)
+	var grade := profile.last_run_grade if profile != null else "D"
+	var completed_runs := profile.completed_runs if profile != null else 0
+	var definition := _reward_definition()
+	if tier == DungeonGraph.REWARD_VAULT:
+		return 1.0
+	if tier == DungeonGraph.REWARD_RISK:
+		# The dangerous route's material reward is a modest improvement over an
+		# ordinary combat chest; the elite vault remains the guaranteed premium.
+		return definition.risk_item_drop_chance(exploration_bonus, run_rank, grade, completed_runs)
+	return definition.item_drop_chance(exploration_bonus, run_rank, grade, completed_runs)
+
+
+func chest_item_drop_count(root: Object, roll: float) -> int:
+	var profile := root.get("player_profile") as PlayerProfile
+	return chest_item_drop_count_for_values(profile, reward_tier(root), roll)
+
+
+func chest_item_drop_count_for_values(profile: PlayerProfile, tier: StringName, roll: float) -> int:
+	if tier == DungeonGraph.REWARD_VAULT:
+		return _reward_definition().vault_item_drop_count
+	var run_rank := run_rank_for_profile(profile)
+	var grade := profile.last_run_grade if profile != null else "D"
+	var completed_runs := profile.completed_runs if profile != null else 0
+	return _reward_definition().drop_count_for(roll, run_rank, grade, completed_runs)
+
+
+func _rarity_adjustments_for_completed_runs(base_multipliers: Array, completed_runs: int) -> Array:
+	var adjustments: Array = [1.0, 1.0, 1.0, 1.0]
+	for index in mini(base_multipliers.size(), 4):
+		adjustments[index] = base_multipliers[index]
+	adjustments.append_array(_reward_definition().completed_run_rarity_bonus(completed_runs))
+	return adjustments
+
+
+func roll_run_loot_rarity_for_values(profile: PlayerProfile, roll: float, score_quality: float = -1.0, rarity_multipliers: Array = [], completed_runs_override: int = -1) -> StringName:
+	var performance_bonus: float = score_quality * 3.0 if score_quality >= 0.0 else loot_grade_bonus_for_profile(profile)
+	var completed_runs := profile.completed_runs if profile != null else 0
+	if completed_runs_override >= 0:
+		completed_runs = completed_runs_override
+	var rarity_adjustments := _rarity_adjustments_for_completed_runs(rarity_multipliers, completed_runs)
+	return ItemCatalog.new().roll_run_rarity(roll, run_rank_for_profile(profile), performance_bonus, rarity_adjustments)
+
+
+func chest_gold_reward(root: Object, base_gold: int) -> int:
+	var reward_rng := RandomNumberGenerator.new()
+	reward_rng.seed = int(root.current_dungeon_seed) ^ String(root.current_room_id).hash() ^ 0x474F4C44
+	var rolled_gold: int = reward_rng.randi_range(roundi(base_gold * 0.75), roundi(base_gold * 1.30))
+	var multiplier: float = 1.0 + float(run_rank(root) - 1) * 0.06 + loot_grade_bonus(root) * 0.04
+	var reward := float(rolled_gold) * clampf(multiplier, 0.80, 1.90)
+	if !!root.get("regular_room_treasure"):
+		reward *= 0.50
+	return maxi(1, roundi(reward))
+
+
+func claim_chest_item_reward(context: ChestRewardContext) -> ChestRewardResult:
+	var result: ChestRewardResult = ChestRewardResultScript.new()
+	if context == null:
+		return result
+	result.room_id = context.room_id
+	result.reward_tier = context.reward_tier
+	if not context.is_valid():
+		return result
+	var profile := context.player_profile
+	var run := context.run_state
+	var reward_id := "drop-%s-%s" % [run.run_id, String(result.room_id)]
+	if profile.find_item(reward_id) != null or profile.find_item("%s-0" % reward_id) != null:
+		result.status = ChestRewardResult.Status.ALREADY_RESOLVED
+		return result
+	run.record_chest_open()
+	var generation_seed := context.dungeon_seed ^ String(result.room_id).hash() ^ String(context.vault_id).hash()
+	var reward_rng := RandomNumberGenerator.new()
+	reward_rng.seed = generation_seed ^ 0x4C4F4F54
+	result.drop_roll = reward_rng.randf()
+	if result.drop_roll >= chest_item_drop_chance_for_values(profile, run, result.reward_tier):
+		result.status = ChestRewardResult.Status.RESOLVED_NO_DROP
+		return result
+	result.presentation_required = true
+	var drop_count := chest_item_drop_count_for_values(profile, result.reward_tier, reward_rng.randf())
+	result.requested_item_count = drop_count
+	var item_drops: Array[ItemInstance] = []
+	var catalog := ItemCatalog.new()
+	var run_rank_value := run_rank_for_profile(profile)
+	var player_level := profile.level
+	for index in drop_count:
+		var item_seed := generation_seed ^ (0x13579BDF + index * 0x2468ACE)
+		var slot := catalog.select_slot_for_source(profile, item_seed, player_level, &"chest", run_rank_value)
+		var slot_was_empty := catalog.slot_needs_introduction(profile, slot)
+		var rarity_multipliers: Array = [0.5, 0.4, 0.25, 0.2] if context.regular_room_treasure and result.reward_tier == DungeonGraph.REWARD_STANDARD else []
+		var rarity := roll_run_loot_rarity_for_values(profile, reward_rng.randf(), -1.0, rarity_multipliers)
+		if result.reward_tier == DungeonGraph.REWARD_VAULT:
+			var enhanced_rarity := ItemCatalog.next_rarity(rarity)
+			if not enhanced_rarity.is_empty():
+				rarity = enhanced_rarity
+		var item := catalog.generate_item(slot, item_seed, player_level, rarity, false, &"chest", run_rank_value)
+		if item.definition_id.is_empty():
+			continue
+		item.instance_id = "%s-%d" % [reward_id, index]
+		item_drops.append(item)
+		run.record_gear_reward(&"chest", item, run_rank_value, player_level, -1, "", slot_was_empty, false, &"dropped")
+	result.items = item_drops
+	if not item_drops.is_empty():
+		result.status = ChestRewardResult.Status.ITEMS_GRANTED
+	else:
+		result.status = ChestRewardResult.Status.RESOLVED_NO_DROP
+	return result
+
+
+func reward_tier(root: Object) -> StringName:
+	var room_controller := root.get("room_controller") as Node
+	if room_controller == null:
+		return DungeonGraph.REWARD_STANDARD
+	var room_states: Dictionary = room_controller.get("room_states") as Dictionary
+	var room_id := StringName(str(root.get("current_room_id")))
+	var state: Dictionary = room_states.get(room_id, {}) as Dictionary
+	var tier := StringName(str(state.get("reward_tier", DungeonGraph.REWARD_STANDARD)))
+	return tier if tier in [DungeonGraph.REWARD_STANDARD, DungeonGraph.REWARD_RISK, DungeonGraph.REWARD_VAULT] else DungeonGraph.REWARD_STANDARD
+
+
+func sync_current_room_metadata(root: Object) -> void:
+	var room: DungeonGraph.RoomRecord = root.dungeon_graph.get_room(root.current_room_id)
+	if room != null:
+		root.current_room_depth = room.depth
+		root.current_room_type = room.room_type
+		root.current_room_route_role = room.route_role
+		root.current_room_encounter_tier = room.encounter_tier
+		root.current_room_reward_tier = room.reward_tier
+		root.current_room_vault_id = room.vault_id
+		if root.current_room_depth >= 1 and root.run_state != null and root.run_state.active:
+			root.run_state.start_timer()
+			# Map completion means physical discovery. Room objective completion is
+			# finalized independently from DungeonMapState at settlement time.
+			root.run_state.record_map_room_entry(root.current_room_id)
+
+
+func finalize_run_metrics(root: Object) -> void:
+	if root.run_state == null or root.dungeon_graph == null:
+		return
+	var map_controller := root.get("dungeon_map_controller") as Node
+	var total_rooms := 0
+	for room_id in root.dungeon_graph.get_room_ids():
+		var room: DungeonGraph.RoomRecord = root.dungeon_graph.get_room(room_id)
+		if room == null or room.depth < 1:
+			continue
+		total_rooms += 1
+		if map_controller != null and bool(map_controller.call("is_room_discovered", room.id)):
+			root.run_state.record_map_room_entry(room.id)
+		if map_controller != null and bool(map_controller.call("is_room_completed", room.id)):
+			root.run_state.record_room_completion(room.id)
+	root.run_state.set_map_room_count(total_rooms)
+	root.run_state.set_run_room_count(total_rooms)
+	root.run_state.route_par_seconds = _route_par_seconds(root)
+
+
+func _route_par_seconds(root: Object) -> float:
+	if root.dungeon_map_controller != null and bool(root.dungeon_map_controller.call("is_authored_run1")):
+		# R1 is the teaching route. Give players time to learn movement, room
+		# entry, and the first elemental interactions without making the par feel
+		# like a speedrun requirement.
+		return 150.0
+	var graph := root.dungeon_graph as DungeonGraph
+	var boss_depth := graph.final_npc_depth() + 1
+	var total := 8.0
+	for depth in range(1, boss_depth + 1):
+		var best := INF
+		for room_id in graph.get_room_ids():
+			var room := graph.get_room(room_id)
+			if room == null or room.depth != depth:
+				continue
+			var cost := 5.0
+			match room.room_type:
+				DungeonGraph.ROOM_DOWNSTAIRS: cost = 20.0
+				DungeonGraph.ROOM_ORB: cost = 6.0
+				DungeonGraph.ROOM_REST, DungeonGraph.ROOM_FIRE: cost = 4.0
+				DungeonGraph.ROOM_PUZZLE: cost = 12.0
+				_: cost = 4.0 + float(graph_room_enemy_count(root, room)) * 4.0
+			best = minf(best, cost)
+		if best < INF:
+			total += best + 1.5
+	# R1 calibration: the raw workload estimate was about 90 seconds, while
+	# play pacing supports a 150-second accepted par. Carry that same breathing
+	# room into every later route estimate.
+	return total * ROUTE_PAR_CALIBRATION_FACTOR
+
+
+func graph_room_enemy_count(root: Object, room: DungeonGraph.RoomRecord) -> int:
+	return root.room_controller.enemy_count_for_room(room) if root.room_controller != null else 0
+
+
+func record_style_action(root: Object, action: StringName) -> void:
+	if root.run_state != null and root.run_state.active:
+		root.run_state.record_style_action(action)
+
+
+func finalize_run_enemy_total(root: Object) -> void:
+	if root.run_state == null or root.dungeon_graph == null or root.room_controller == null: return
+	var total_enemies: int = 0
+	for room_id in root.dungeon_graph.get_room_ids():
+		var room: DungeonGraph.RoomRecord = root.dungeon_graph.get_room(room_id)
+		total_enemies += root.room_controller.enemy_count_for_room(room)
+	root.run_state.set_total_enemies(total_enemies)
+
+
+func run_difficulty_bonus(root: Object) -> int:
+	if root.player_profile == null:
+		return 0
+	# Difficulty rank also records performance-based progression. Only the part
+	# that is ahead of the completed-run baseline should affect enemy levels;
+	# otherwise a high Run 1 grade makes the opening of Run 2 jump too sharply.
+	var completed_run_baseline: int = root.player_profile.completed_runs + 1
+	return clampi(root.player_profile.difficulty_rank - completed_run_baseline, 0, 12)
+
+
+func run_rank(root: Object) -> int:
+	if debug_run_number > 0:
+		return debug_run_number
+	var profile := root.get("player_profile") as PlayerProfile
+	return run_rank_for_profile(profile)
+
+
+func run_rank_for_profile(profile: PlayerProfile) -> int:
+	return maxi(profile.difficulty_rank if profile != null else 1, 1)
+
+
+func apply_run_rank_grade(root: Object, grade: String) -> void:
+	ProgressionController.apply_run_grade(root.player_profile, grade)
+
+
+func begin_new_run(root: GameplayState, preserve_current_dungeon := false) -> void:
+	var player_status := root.player.get_node_or_null("Status") as StatusComponent if root.player != null else null
+	if player_status != null:
+		player_status.clear_all()
+	var debug_session := root.get_node_or_null("DebugSessionController") as Node
+	if debug_session == null or not bool(debug_session.get("active")):
+		debug_run_number = 0
+	# A new run must never inherit a previous interrupted run's checkpoint.
+	ActiveRunSaveServiceScript.clear_snapshot(ProfileSaveService.current_slot())
+	# Every run begins at the hub in Gray. The selected starter flame is present
+	# at the fire, but the hub exits stay a real gate until the player attunes to
+	# it, just like the first run's tutorial gate.
+	root.starter_flame_attuned_this_run = false
+	if not preserve_current_dungeon:
+		_reset_dungeon_for_new_run(root)
+	root.call("_reset_magic_runtime", true)
+	var momentum := root.call("_combat_momentum") as CombatMomentumComponent
+	if momentum != null:
+		momentum.reset_all()
+	if root.player_chroma_component != null:
+		root.player_chroma_component.call("begin_new_run")
+	root.call("_sync_current_element_state")
+	var starter_palette: String = "red"
+	if root.player_profile != null:
+		starter_palette = root.player_profile.hub_palette()
+	root.run_start_palette_name = starter_palette
+	# The initial room may have been laid out before new-file selection was
+	# confirmed. Reassign the hub flame here so its visual and interaction target
+	# always match the persisted starter flame for this run.
+	if root.current_room_type == DungeonGraph.ROOM_START and root.rest_fire != null:
+		root.call("_apply_rest_fire_palette", starter_palette)
+	# The selected flame is present in the hub, but every run opens Gray at zero.
+	root.screen_state_controller.player_palette_name = "grey"
+	root.current_player_palette_name = "grey"
+	root.call("_apply_player_palette_async", "grey")
+	root.call("_update_player_mp_ui")
+	# The first room is the starter-flame lesson on every run. The player must
+	# attune before the hub exit becomes usable, but this gate is opened
+	# permanently after touch.
+	if root.current_room_type == DungeonGraph.ROOM_START and not root.starter_flame_attuned_this_run:
+		root.call("_set_door_active", false)
+		root.call("_set_entrance_open", false)
+	if root.run_state != null:
+		var active_run_rank := run_rank(root)
+		root.run_state.begin(root.current_dungeon_seed, run_difficulty_bonus(root), float(root.call("_player_max_health")), active_run_rank)
+		if root.room_controller != null:
+			root.room_controller.progression_run_rank = active_run_rank
+			root.room_controller.progression_run_number = maxi(root.player_profile.completed_runs + 1, 1) if root.player_profile != null else 1
+			root.room_controller.set_run_element_theme(root.run_state.enemy_element_theme)
+	root.set("pending_run_restore", false)
+
+
+func restore_active_run(root: Object, snapshot: Dictionary) -> bool:
+	if root.player_profile == null or root.dungeon_graph == null or root.room_controller == null or root.dungeon_map_controller == null:
+		return false
+	var slot := ProfileSaveService.current_slot()
+	if not ActiveRunSnapshotScript.validate(snapshot, slot):
+		return false
+	var identity := snapshot.get("profile_identity", {}) as Dictionary
+	if str(identity.get("player_name", "")) != root.player_profile.player_name or not bool(identity.get("has_started", false)):
+		return false
+	var restored_run := RunState.new()
+	var run_data := snapshot.get("run_state", {}) as Dictionary
+	if not restored_run.restore_from_dictionary(run_data) or restored_run.dungeon_seed != int(snapshot.get("dungeon_seed", restored_run.dungeon_seed)):
+		return false
+	var map_controller := root.dungeon_map_controller as Node
+	var snapshot_seed := int(snapshot.get("dungeon_seed", restored_run.dungeon_seed))
+	var bound_flame: StringName = root.player_profile.persistent_flame() if root.player_profile.has_bound_element else &""
+	var layout_bound_flame := StringName(str(snapshot.get("layout_bound_flame", bound_flame)))
+	if not layout_bound_flame.is_empty() and not AspectCatalogScript.is_elemental_flame(layout_bound_flame):
+		layout_bound_flame = bound_flame
+	var rotation_turns := int(snapshot.get("puzzle_attempt_rotation_quarter_turns", root.player_profile.puzzle_attempt_rotation_quarter_turns))
+	map_controller.call("begin_run", root.dungeon_graph, snapshot_seed, root.player_profile.completed_runs, root.player_profile.starter_flame, layout_bound_flame, rotation_turns)
+	var active_layout: Variant = map_controller.get("layout")
+	var active_layout_id: String = String(active_layout.layout_id) if active_layout != null else ""
+	var snapshot_layout_id: String = str(snapshot.get("layout_id", ""))
+	if snapshot_layout_id.is_empty():
+		# Schema 1 snapshots created before the R6 route switch cannot identify
+		# whether completed_runs==5 refers to the old authored duplicate or the
+		# generated route. Refuse that ambiguous restore and leave the checkpoint
+		# available for an explicit Discard choice instead of loading the wrong map.
+		if root.player_profile.completed_runs == 5:
+			push_warning("Active run restore refused an unidentified legacy R6 layout; the checkpoint remains available to Discard.")
+			return false
+	elif snapshot_layout_id != active_layout_id:
+		push_warning("Active run restore refused layout %s because the active route is %s." % [snapshot_layout_id, active_layout_id])
+		return false
+	# The layout was generated from the saved origin, but the current persistent
+	# bind still controls the Hub and available flame presentation after restore.
+	map_controller.call("set_bound_flame", bound_flame)
+	var room_id := StringName(str(snapshot.get("current_room_id", "")))
+	var room: DungeonGraph.RoomRecord = root.dungeon_graph.get_room(room_id)
+	if room == null:
+		return false
+	var saved_prefab_ids: Variant = snapshot.get("room_prefab_ids", null)
+	if saved_prefab_ids != null and not ROOM_PREFAB_FACTORY_SCRIPT.apply_snapshot_assignments(root.dungeon_graph, saved_prefab_ids):
+		return false
+	if not bool(map_controller.call("restore_map_state", ActiveRunSnapshotScript.denormalize(snapshot.get("map_state", {})) as Dictionary)):
+		return false
+	var restored_rank := maxi(int(snapshot.get("run_rank", root.player_profile.difficulty_rank)), 1)
+	var restored_room_states := ActiveRunSnapshotScript.room_states_from_snapshot(snapshot.get("room_states", {}))
+	var restored_theme := restored_run.enemy_element_theme.duplicate()
+	if not restored_run.element_theme_initialized:
+		restored_theme = EncounterDefinitionScript.legacy_theme_for_rosters(restored_room_states, snapshot_seed, restored_rank)
+	var roster_migration := EncounterDefinitionScript.migrate_cached_rosters(restored_room_states, restored_theme, restored_rank, snapshot_seed)
+	var migration_errors: Array = roster_migration.get("errors", [])
+	if not migration_errors.is_empty():
+		for error in migration_errors:
+			push_error("Active run elemental roster migration failed: %s" % str(error))
+		return false
+	var migration_remaps: Array = roster_migration.get("remaps", [])
+	if not migration_remaps.is_empty():
+		push_warning("Active run elemental roster migration remapped %d slots to theme %s: %s" % [migration_remaps.size(), str(restored_theme), "; ".join(PackedStringArray(migration_remaps))])
+	restored_run.enemy_element_theme = restored_theme
+	restored_run.element_theme_initialized = true
+	restored_run.element_theme_run_rank = restored_rank
+	root.run_state = restored_run
+	root.current_dungeon_seed = snapshot_seed
+	root.puzzle_attempt_rotation_quarter_turns = rotation_turns
+	root.current_room_id = room_id
+	var recovery_arrival_socket := StringName(str(snapshot.get("arrival_socket_id", "")))
+	root.call("_sync_current_room_metadata", recovery_arrival_socket)
+	root.room_controller.room_states = roster_migration.get("room_states", restored_room_states) as Dictionary
+	root.room_controller.progression_run_rank = restored_rank
+	root.room_controller.progression_run_number = maxi(root.player_profile.completed_runs + 1, 1)
+	root.room_controller.set_run_element_theme(restored_theme)
+	if not root.room_controller.mount_room_prefab(root as GameplayState, room_id):
+		return false
+	root.room_controller.set_current_room(room_id, root.current_room_type)
+	root.call("_ensure_current_room_layout")
+	root.call("_apply_room_state")
+	root.set("starter_flame_attuned_this_run", bool(snapshot.get("starter_flame_attuned_this_run", false)))
+	if map_controller.has_method("set_starter_flame_attuned"):
+		map_controller.call("set_starter_flame_attuned", root.starter_flame_attuned_this_run)
+	var chroma := root.player_chroma_component as Node
+	var chroma_state := snapshot.get("player_chroma_state", {}) as Dictionary
+	if chroma != null and chroma.has_method("restore_runtime_state"):
+		chroma.call("restore_runtime_state", int(chroma_state.get("current_aspect", 0)), int(chroma_state.get("current_chroma", 0)), int(chroma_state.get("bound_aspect", 0)))
+	root.call("_sync_current_element_state")
+	var restored_player_status := root.player.get_node_or_null("Status") as StatusComponent if root.player != null else null
+	if restored_player_status != null:
+		restored_player_status.clear_all()
+	var active_palette: String = AspectCatalogScript.palette_for_flame(StringName(chroma.call("aspect_name"))) if chroma != null else root.player_profile.palette_name
+	if active_palette.is_empty():
+		active_palette = "grey"
+	root.set("current_player_palette_name", active_palette)
+	root.screen_state_controller.player_palette_name = active_palette
+	root.call("_apply_player_palette_async", active_palette)
+	var health := root.player_health_component as HealthComponent
+	if health != null:
+		health.maximum_health = float(root.call("_player_max_health"))
+		health.reset(clampf(float(snapshot.get("player_health", health.maximum_health)), 1.0, health.maximum_health))
+	root.set("player_display_health", health.current_health if health != null else root.get("player_display_health"))
+	var player := root.player as Sprite2D
+	root.set("last_player_facing_left", bool(snapshot.get("player_facing_left", false)))
+	player.flip_h = bool(snapshot.get("player_facing_left", false))
+	var room_controller := root.room_controller as RoomController
+	if room_controller != null:
+		room_controller.arrival_socket_id = recovery_arrival_socket
+	_place_player_at_recovery_arrival(root, player, recovery_arrival_socket)
+	root.set("player_is_attacking", false)
+	root.set("player_is_magic_casting", false)
+	root.set("player_is_rolling", false)
+	root.set("player_is_backflipping", false)
+	root.set("player_is_defending", false)
+	root.set("room_transition_locked", false)
+	root.call("_cancel_magic_animation")
+	root.call("_reset_magic_runtime")
+	root.call("_clear_roll_dust")
+	root.call("_set_current_target", null)
+	root.call("_set_target_ui_visible", false)
+	root.call("_update_player_health_ui")
+	root.call("_update_player_mp_ui")
+	root.call("_update_room_number_indicator")
+	root.call("_build_depth_lists")
+	# Restoration itself establishes a new safe boundary. This also refreshes the
+	# checkpoint timestamp so diagnostics can distinguish a successful resume
+	# from the older interrupted boundary that led to it.
+	root.call("_save_active_run_checkpoint")
+	root.set("pending_run_restore", false)
+	return true
+
+
+func _place_player_at_recovery_arrival(root: Object, player: Sprite2D, arrival_socket_id: StringName) -> void:
+	var room_controller := root.room_controller as RoomController
+	var socket := room_controller.active_entrance_sockets.get(arrival_socket_id) as DungeonSocket if not arrival_socket_id.is_empty() else null
+	var requested: Vector2 = root.player_start_position
+	if socket != null:
+		requested = room_controller.call("_arrival_player_position", root, socket)
+	player.global_position = requested
+	if not bool(root.call("_can_actor_stand_at_current_position", player)):
+		var requested_foot: Vector2 = root.call("_actor_foot", player)
+		var nearest: Vector2 = room_controller.nearest_player_walkable_point(root, requested_foot)
+		if nearest != Vector2.INF:
+			player.global_position += nearest - requested_foot
+
+
+func _reset_dungeon_for_new_run(root: Object) -> void:
+	var map_controller := root.get("dungeon_map_controller") as Node
+	var graph := root.get("dungeon_graph") as DungeonGraph
+	var room_controller := root.get("room_controller") as RoomController
+	if map_controller == null or graph == null or room_controller == null:
+		return
+	var new_seed: int = (root.get("rng") as RandomNumberGenerator).randi()
+	root.set("current_dungeon_seed", new_seed)
+	var start_starter_flame: StringName = root.player_profile.starter_flame if root.player_profile != null else &"fire"
+	var start_bound_flame: StringName = root.player_profile.bound_element if root.player_profile != null and root.player_profile.has_bound_element else &""
+	var rotation_turns := int(root.player_profile.puzzle_attempt_rotation_quarter_turns) if root.player_profile != null else int(root.get("puzzle_attempt_rotation_quarter_turns"))
+	var completed_runs_for_layout: int = root.player_profile.completed_runs if root.player_profile != null else 0
+	if debug_run_number > 0:
+		completed_runs_for_layout = debug_run_number - 1
+	var start_room_id: StringName = StringName(map_controller.call("begin_run", graph, new_seed, completed_runs_for_layout, start_starter_flame, start_bound_flame, rotation_turns))
+	room_controller.room_states.clear()
+	var next_room_id := start_room_id
+	if bool(root.get("debug_start_in_boss_room")):
+		for candidate_id in graph.get_room_ids():
+			var candidate := graph.get_room(candidate_id)
+			if candidate != null and candidate.room_type == DungeonGraph.ROOM_BOSS:
+				next_room_id = candidate.id
+				break
+		if next_room_id == start_room_id and not bool(map_controller.call("has_complete_layout")):
+			var boss_connection := graph.ensure_connection(start_room_id, DungeonGraph.WALL_RIGHT, DungeonGraph.ROOM_DOWNSTAIRS)
+			if boss_connection != null:
+				next_room_id = boss_connection.destination_room_id
+	root.set("current_room_id", next_room_id)
+	root.call("_sync_current_room_metadata")
+	room_controller.set_current_room(next_room_id, root.get("current_room_type"))
+	root.call("_ensure_current_room_layout")
+	root.call("_apply_room_state")
+	# New Game rebuilds this layout after title boot already hid the original
+	# editor guides. Hide the newly created floor/socket and actor guides before
+	# the room becomes visible, matching the full-scene Continue boot path.
+	root._hide_editor_only_guides()
+	var minimap := root.get("dungeon_minimap_controller") as Node
+	if minimap != null:
+		minimap.call("configure", map_controller)
+
+
+func return_to_hub(root: Object) -> void:
+	root.call("_settle_current_run", &"defeat" if root.player_dead else &"return_to_hub")
+	if root.player_profile != null:
+		root.player_profile.open_hub_on_load = false
+		root.player_profile.pending_route = "run"
+		root.call("_save_player_profile")
+	root.call("_begin_scene_transition")
+
+
+func settle_current_run(root: GameplayState, result: StringName) -> bool:
+	if not RunSettlement.can_settle(root.run_state, result):
+		return false
+	root.call("_sync_runtime_progression_to_profile")
+	var settlement_context := RunSettlementContextScript.new(root.player_profile, root.run_state, result)
+	var settlement := RunSettlement.settle(settlement_context)
+	if settlement.succeeded():
+		ActiveRunSaveServiceScript.clear_snapshot(ProfileSaveService.current_slot())
+		var debug_session := root.get_node_or_null("DebugSessionController") as Node
+		if debug_session == null or not bool(debug_session.get("active")):
+			debug_run_number = 0
+	return settlement.succeeded()
+
+
+func tick_run_telemetry(root: Object, delta: float) -> void:
+	if root.run_state == null or not root.run_state.active:
+		return
+	root.run_state.tick(delta)
+	if is_run_combat_active(root):
+		root.run_state.record_combat_time(delta, root.player_is_moving)
+	if root.player_is_moving:
+		root.run_state.record_movement(delta)
+
+
+func is_run_combat_active(root: Object) -> bool:
+	return root.run_state != null and root.run_state.active and bool(root.call("_is_any_slime_aggroed"))
+
+
+func on_player_successful_block(root: Object, _shield_damage: float, _health_damage: float) -> void:
+	if root.run_state != null and is_run_combat_active(root):
+		root.run_state.record_block()
+		record_style_action(root, &"block")
+	root.call("_play_sound", "block", -8.0, 0.95 + root.rng.randf_range(-0.08, 0.08))
+
+
+func record_run_action_input(root: Object, action: StringName, accepted: bool) -> void:
+	if root.run_state != null and root.run_state.active:
+		root.run_state.record_action_input(action, accepted)
+
+
+func clear_reward_rarity(root: Object, score: int, roll: float) -> StringName:
+	var profile := root.get("player_profile") as PlayerProfile
+	var completed_runs_after_clear: int = profile.completed_runs + 1 if profile != null else 0
+	return roll_run_loot_rarity(root, roll, clampf(float(score) / 100.0, 0.0, 1.0), [], completed_runs_after_clear)
+
+
+func roll_run_loot_rarity(root: Object, roll: float, score_quality: float = -1.0, rarity_multipliers: Array = [], completed_runs_override: int = -1) -> StringName:
+	var performance_bonus: float = score_quality * 3.0 if score_quality >= 0.0 else float(root.call("_loot_grade_bonus"))
+	var profile := root.get("player_profile") as PlayerProfile
+	var completed_runs := profile.completed_runs if profile != null else 0
+	if completed_runs_override >= 0:
+		completed_runs = completed_runs_override
+	var rarity_adjustments := _rarity_adjustments_for_completed_runs(rarity_multipliers, completed_runs)
+	return ItemCatalog.new().roll_run_rarity(roll, run_rank(root), performance_bonus, rarity_adjustments)
+
+
+func complete_run(root: Object) -> void:
+	if root.run_state == null or root.run_state.settled or root.screen_state_controller.run_complete_overlay == null or root.screen_state_controller.run_complete_overlay.visible:
+		return
+	root.call("_finalize_run_metrics")
+	root.call("_finalize_run_enemy_total")
+	var grade: Dictionary = RunGradeEvaluator.evaluate(root.run_state, root.run_state.starting_health)
+	var score: int = int(grade["score"])
+	apply_run_rank_grade(root, str(grade["grade"]))
+	var gold_reward: int = 45 + score * 3
+	var reward_rng := RandomNumberGenerator.new()
+	reward_rng.seed = root.current_dungeon_seed ^ root.run_state.run_id.hash() ^ score * 7919
+	var dropped_item: ItemInstance = null
+	var completed_runs_after_clear: int = root.player_profile.completed_runs + 1 if root.player_profile != null else 0
+	if reward_rng.randf() < _reward_definition().clear_item_drop_chance(score, completed_runs_after_clear):
+		var catalog := ItemCatalog.new()
+		var slot: StringName = catalog.select_slot_for_source(root.player_profile, reward_rng.randi(), root.player_profile.level, &"clear_reward", run_rank(root), root.player_profile.clear_reward_slot_history)
+		var slot_was_empty := catalog.slot_needs_introduction(root.player_profile, slot)
+		var rarity := clear_reward_rarity(root, score, reward_rng.randf())
+		dropped_item = catalog.generate_item(slot, reward_rng.randi(), root.player_profile.level, rarity, false, &"clear_reward", run_rank(root))
+		if dropped_item.definition_id.is_empty():
+			dropped_item = null
+		else:
+			dropped_item.instance_id = root.player_profile.create_item_id("clear")
+			root.player_profile.grant_item(dropped_item)
+			root.player_profile.record_clear_reward_slot(slot)
+			root.run_state.record_gear_reward(&"clear_reward", dropped_item, run_rank(root), root.player_profile.level, score, str(grade["grade"]), slot_was_empty, false, &"granted")
+	if root.player_profile != null:
+		root.player_profile.gold += gold_reward
+		root.player_profile.completed_runs += 1
+		root.player_profile.last_clear_score = score
+	root.call("_update_gold_indicator")
+	var drop_label: String = "NO GEAR DROP"
+	var drop_color := Color8(150, 156, 170)
+	if dropped_item != null:
+		var reward_catalog := ItemCatalog.new()
+		drop_label = reward_catalog.display_name(dropped_item)
+		drop_color = reward_catalog.rarity_color(dropped_item.rarity)
+	root.run_state.clear_summary = {
+		"score": score,
+		"grade": str(grade["grade"]),
+		"gold": gold_reward,
+		"drop": drop_label,
+		"difficulty": run_difficulty_bonus(root),
+		"run_rank": run_rank(root),
+		"time": root.run_state.elapsed_time,
+		"time_quality": float(grade["time_quality"]),
+		"time_target": float(grade["time_target"]),
+		"map_discovered_rooms": int(grade["map_discovered_rooms"]),
+		"map_room_count": int(grade["map_room_count"]),
+		"map_completion_ratio": float(grade["map_completion_ratio"]),
+		"completed_rooms": int(grade["completed_rooms"]),
+		"room_count": int(grade["room_count"]),
+		"room_completion_ratio": float(grade["room_completion_ratio"]),
+		"full_clear": bool(grade["full_clear"]),
+		"style": int(grade["style_score"]),
+		"style_max": int(grade["style_max"]),
+		"style_quality": float(grade["style_quality"]),
+		"style_actions": grade["style_actions"],
+		"max_combo": int(grade["max_combo"]),
+		"combo_hits": int(grade["combo_hits"]),
+		"gear_reward_telemetry": root.run_state.gear_reward_telemetry.duplicate(true),
+		# Raw telemetry remains available to backend reward/debug screens without
+		# competing with the compact player-facing result panel.
+		"damage": root.run_state.damage_taken,
+		"kills": root.run_state.enemies_killed,
+		"total_enemies": root.run_state.total_enemies,
+		"blocks": root.run_state.block_count,
+		"dodges": root.run_state.dodge_count,
+		"attacks": root.run_state.attack_count,
+		"attack_hits": root.run_state.attack_swing_hit_count,
+		"wasted_inputs": root.run_state.total_wasted_inputs(),
+	}
+	root.call("_sync_runtime_progression_to_profile")
+	settle_current_run(root, &"complete")
+	root.call("_play_sound", "run_clear", -6.0, 1.0)
+	root.call("_fade_out_music", 2.0)
+	show_run_complete(root, drop_color)
+
+
+func show_run_complete(root: Object, _drop_color: Color) -> void:
+	if root.screen_state_controller.run_complete_overlay == null or root.run_state == null:
+		return
+	# The player can reach the final exit while still holding the same input used
+	# to move through the room. Require a release before the completion action is
+	# allowed, otherwise the result screen is accepted and skipped next frame.
+	root.screen_state_controller.menu_input_release_lock = true
+	var summary: Dictionary = root.run_state.clear_summary
+	var elapsed: int = int(round(float(summary.get("time", 0.0))))
+	var route_par_seconds: int = int(round(float(summary.get("time_target", 0.0))))
+	var time_delta := route_par_seconds - elapsed
+	var time_comparison := "= PAR" if time_delta == 0 else ("+%ds" % time_delta if time_delta > 0 else "-%ds" % absi(time_delta))
+	var lines: Array[String] = [
+		"SCORE %03d" % int(summary.get("score", 0)),
+		"TIME %02d:%02d  %s" % [floori(float(elapsed) / 60.0), elapsed % 60, time_comparison],
+		"MAP %d/%d" % [int(summary.get("map_discovered_rooms", 0)), int(summary.get("map_room_count", 0))],
+		"ROOMS %d/%d" % [int(summary.get("completed_rooms", 0)), int(summary.get("room_count", 0))],
+		"STYLE %d/%d" % [int(summary.get("style", 0)), int(summary.get("style_max", 10))],
+		"MAX COMBO x%d" % int(summary.get("max_combo", 0)),
+		"REWARDS",
+		"+%d" % int(summary.get("gold", 0)),
+		str(summary.get("drop", "NO GEAR DROP")),
+	]
+	var line_colors: Array[Color] = []
+	line_colors.resize(lines.size())
+	line_colors.fill(Color.WHITE)
+	line_colors[7] = Color8(255, 205, 117)
+	if root.screen_state_controller.run_complete_grade_text != null:
+		root.screen_state_controller.run_complete_grade_text.texture = root.call("_pixel_text_texture", str(summary.get("grade", "D")), Color.WHITE)
+	for index in mini(root.screen_state_controller.run_complete_texts.size(), lines.size()):
+		root.screen_state_controller.run_complete_texts[index].texture = root.call("_pixel_text_texture", lines[index], line_colors[index])
+	root.screen_state_controller.run_complete_overlay.visible = true
+	root.screen_state_controller.set_state(&"run_complete")
+
+
+func metric_color(quality: float) -> Color:
+	var value := clampf(quality, 0.0, 1.0)
+	if value >= 0.95: return Color8(177, 62, 83)
+	if value >= 0.85: return Color8(255, 205, 117)
+	if value >= 0.70: return Color8(118, 66, 138)
+	if value >= 0.50: return Color8(65, 166, 246)
+	return Color.WHITE
+
+
+func return_from_run_complete(root: Object) -> void:
+	if root.screen_state_controller.run_complete_overlay != null:
+		root.screen_state_controller.run_complete_overlay.visible = false
+	if root.player_profile != null:
+		root.player_profile.open_hub_on_load = false
+		root.player_profile.pending_route = "run"
+		root.call("_save_player_profile")
+	root.call("_begin_scene_transition")

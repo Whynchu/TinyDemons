@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="RoomPrefabDefinition" format=3 uid="uid://bhj2tel8k5ndw"]
 
-[ext_resource type="Script" uid="uid://dar4m8w2kq7tx" path="res://scripts/room_prefab_definition.gd" id="1"]
+[ext_resource type="Script" uid="uid://c9r4m8w2kq7tx" path="res://scripts/content/room_prefab_definition.gd" id="1"]
 [ext_resource type="PackedScene" uid="uid://dm1ohbthvop2c" path="res://scenes/gameplay/rooms/basic_room.tscn" id="2"]
 
 [resource]

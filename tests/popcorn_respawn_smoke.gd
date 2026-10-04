@@ -50,7 +50,7 @@ func _initialize() -> void:
 		_expect(waiting.size() == supports.size(), "defeated popcorn slots wait for room clear before scheduling", failures)
 		_expect(not state.has("popcorn_respawn_slots"), "popcorn slots are not scheduled before room clear", failures)
 		_expect(not bool(gameplay.get("entrance_open")), "defeating popcorn does not open the boss arrival entrance", failures)
-		rooms.update_popcorn_respawns(gameplay, 5.0)
+		rooms.update_popcorn_respawns(rooms.enemy_respawn_context(), 5.0)
 		for support in supports:
 			_expect(not support.visible and bool(gameplay.call("_is_slime_dead", support)), "popcorn slots stay defeated before the room is cleared", failures)
 
@@ -74,10 +74,10 @@ func _initialize() -> void:
 			earliest_delay = minf(earliest_delay, delay)
 			latest_delay = maxf(latest_delay, delay)
 		_expect(earliest_delay >= 30.0 and latest_delay <= 45.0, "popcorn delays stay inside the 30-45 second contract", failures)
-		rooms.update_popcorn_respawns(gameplay, maxf(earliest_delay - 0.01, 0.0))
+		rooms.update_popcorn_respawns(rooms.enemy_respawn_context(), maxf(earliest_delay - 0.01, 0.0))
 		for support in supports:
 			_expect(not support.visible and bool(gameplay.call("_is_slime_dead", support)), "popcorn slots wait until their seeded delay expires", failures)
-		rooms.update_popcorn_respawns(gameplay, latest_delay + 0.1)
+		rooms.update_popcorn_respawns(rooms.enemy_respawn_context(), latest_delay + 0.1)
 		for support in supports:
 			_expect(support.visible and not bool(gameplay.call("_is_slime_dead", support)), "popcorn slots respawn after their seeded delays", failures)
 			var respawned_stats := gameplay.call("_slime_stats", support) as StatsComponent

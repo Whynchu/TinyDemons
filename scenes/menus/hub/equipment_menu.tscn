@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://bu2wfk2v0dqwc"]
 
-[ext_resource type="Script" uid="uid://b5ru3w1e58ed5" path="res://scripts/equipment_menu_layout.gd" id="1_layout"]
+[ext_resource type="Script" uid="uid://b5ru3w1e58ed5" path="res://scripts/ui/equipment_menu_layout.gd" id="1_layout"]
 [ext_resource type="Texture2D" uid="uid://nlrds6fyw3cf" path="res://assets/artwork/frame 16x16.png" id="2_frame"]
 [ext_resource type="Texture2D" uid="uid://w0q3q1th3lep" path="res://assets/artwork/player_UI_portrait.png" id="3_portrait"]
 [ext_resource type="Texture2D" uid="uid://drv786nww2aif" path="res://assets/artwork/WEAPON5x5.png" id="4_weapon"]
@@ -10,7 +10,7 @@
 [ext_resource type="Texture2D" uid="uid://b51nnsxwbwj35" path="res://assets/artwork/SHIELD5x5.png" id="8_shield"]
 [ext_resource type="Texture2D" uid="uid://cd0xev577qo0h" path="res://assets/artwork/ACCESSORY5x5.png" id="9_accessory"]
 [ext_resource type="Texture2D" uid="uid://dkfm3tdkb50xv" path="res://assets/artwork/cursor.png" id="10_cursor"]
-[ext_resource type="Script" uid="uid://ccsfnmgexd2fj" path="res://scripts/menu_cursor.gd" id="11_cursor_script"]
+[ext_resource type="Script" uid="uid://ccsfnmgexd2fj" path="res://scripts/ui/menu_cursor.gd" id="11_cursor_script"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_54wud"]
 bg_color = Color(1, 1, 1, 0)

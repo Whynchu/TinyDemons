@@ -1,6 +1,6 @@
 extends SceneTree
 
-const GameplayScript = preload("res://scripts/gameplay.gd")
+const GameplayScript = preload("res://scripts/runtime/controllers/gameplay.gd")
 
 
 func _initialize() -> void:

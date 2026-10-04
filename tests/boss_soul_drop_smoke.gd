@@ -1,6 +1,6 @@
 extends SceneTree
 
-const COMBAT_RUNTIME_SCRIPT = preload("res://scripts/combat_runtime_controller.gd")
+const COMBAT_RUNTIME_SCRIPT = preload("res://scripts/runtime/controllers/combat_runtime_controller.gd")
 
 
 class SoulRoot extends RefCounted:

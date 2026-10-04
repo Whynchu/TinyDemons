@@ -23,7 +23,7 @@ const SAMPLE_FRAMES := 180
 const SETTINGS_PATH := "res://.godot_user/performance_scenario_harness.cfg"
 const RUN_SEED := 24681357
 
-const FRAME_CONTROLLER := preload("res://scripts/gameplay_frame_controller.gd")
+const FRAME_CONTROLLER := preload("res://scripts/runtime/controllers/gameplay_frame_controller.gd")
 const CONTEXT_BUILDERS: Array[Dictionary] = [
 	{"name": &"animation_context", "method": &"animation_context"},
 	{"name": &"equipment_visual_context", "method": &"equipment_visual_context"},
@@ -79,7 +79,7 @@ func _initialize() -> void:
 		await process_frame
 
 	var screens := gameplay.get("screen_state_controller") as Node
-	var rooms := gameplay.get("room_controller") as Node
+	var rooms := gameplay.get("room_controller") as RoomController
 	var settings := gameplay.get("settings_service") as Node
 
 	if settings != null:
@@ -194,7 +194,7 @@ func _measure_boss_transition(gameplay: Node, rooms: Node) -> Dictionary:
 	var transition: Object = rooms.call("plan_connected_room_transition", graph, &"room_1_1", boss_id, &"", &"")
 	if transition == null:
 		return {"total_ms": -1.0, "layout_ms": -1.0, "activate_ms": -1.0, "mount_ms": -1.0}
-	var ok: bool = rooms.call("enter_connected_room", gameplay, transition)
+	var ok := rooms.enter_connected_room(rooms.make_room_entry_context(gameplay as GameplayState, transition)).succeeded()
 	var total_ms := float(Time.get_ticks_usec() - started_usec) / 1000.0
 	await process_frame
 	# enter_connected_room runs synchronously on the door-touch frame, so the

@@ -1,7 +1,7 @@
 extends SceneTree
 
-const GRID_SCRIPT = preload("res://scripts/puzzle_map_grid.gd")
-const R3_SCRIPT = preload("res://scripts/puzzle_map_r3_new.gd")
+const GRID_SCRIPT = preload("res://scripts/algorithms/puzzle_map_grid.gd")
+const R3_SCRIPT = preload("res://scripts/algorithms/puzzle_map_r3_new.gd")
 
 
 func _initialize() -> void:

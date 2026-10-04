@@ -1,7 +1,7 @@
 extends SceneTree
 
-const Chroma = preload("res://scripts/player_chroma_component.gd")
-const ChromaTuningScript = preload("res://scripts/chroma_tuning.gd")
+const Chroma = preload("res://scripts/components/player_chroma_component.gd")
+const ChromaTuningScript = preload("res://scripts/content/chroma_tuning.gd")
 
 var _finished := false
 

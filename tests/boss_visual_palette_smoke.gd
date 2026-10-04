@@ -2,7 +2,7 @@ extends SceneTree
 
 const PALETTES := ["grey", "red", "blue", "yellow", "green", "purple", "orange", "aquamarine"]
 const ARRAY_STATES := ["jump", "slam", "shocked", "shadow_jump", "shadow_slam", "shadow_attack_left", "shadow_attack_right", "shadow_spawn", "shadow_shocked"]
-const MATERIAL_SCRIPT := preload("res://scripts/actor_palette_material.gd")
+const MATERIAL_SCRIPT := preload("res://scripts/actors/actor_palette_material.gd")
 
 func _initialize() -> void:
 	var failures: Array[String] = []

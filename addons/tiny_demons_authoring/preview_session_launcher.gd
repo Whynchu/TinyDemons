@@ -1,7 +1,7 @@
 @tool
 extends RefCounted
 
-const PreviewSessionScript := preload("res://scripts/preview_session.gd")
+const PreviewSessionScript := preload("res://scripts/editor/preview_session.gd")
 const SESSION_ROOT_NAME := "TinyDemonsPreviewSessions"
 const HEARTBEAT_STALE_SECONDS := 60
 const STARTUP_GRACE_SECONDS := 20

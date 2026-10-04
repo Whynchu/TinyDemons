@@ -7,11 +7,11 @@ class_name DungeonMapReviewExporter
 ## renderer. Review exports show the whole authored/generated layout, including
 ## gated doors, route roles, and treasure-room markers.
 
-const RUN1_SCRIPT = preload("res://scripts/dungeon_layout_run1.gd")
-const RUN2_SCRIPT = preload("res://scripts/dungeon_layout_run2.gd")
-const RUN3_SCRIPT = preload("res://scripts/dungeon_layout_run3.gd")
-const GENERATOR_SCRIPT = preload("res://scripts/dungeon_layout_generator.gd")
-const GRAPH_SCRIPT = preload("res://scripts/dungeon_graph.gd")
+const RUN1_SCRIPT = preload("res://scripts/algorithms/dungeon_layout_run1.gd")
+const RUN2_SCRIPT = preload("res://scripts/algorithms/dungeon_layout_run2.gd")
+const RUN3_SCRIPT = preload("res://scripts/algorithms/dungeon_layout_run3.gd")
+const GENERATOR_SCRIPT = preload("res://scripts/algorithms/dungeon_layout_generator.gd")
+const GRAPH_SCRIPT = preload("res://scripts/algorithms/dungeon_graph.gd")
 
 const OUTPUT_DIRECTORY := "res://screenshots/dungeon_maps"
 const EXPORT_SEED := 24681357

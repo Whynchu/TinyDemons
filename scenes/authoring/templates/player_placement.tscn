@@ -1,15 +1,15 @@
 [gd_scene format=3]
 
-[ext_resource type="Script" path="res://scripts/placement_root_2d.gd" id="1_placement"]
+[ext_resource type="Script" path="res://scripts/editor/placement_root_2d.gd" id="1_placement"]
 [ext_resource type="Texture2D" uid="uid://dy7ra3eprvwy6" path="res://assets/artwork/TinyDemon.png" id="2_demon"]
 [ext_resource type="Texture2D" uid="uid://c2pko5socmgq1" path="res://assets/artwork/TinyDemon-attack1.png" id="3_attack1"]
 [ext_resource type="Texture2D" uid="uid://bihe7fbxbqepy" path="res://assets/artwork/TinyDemon-attack2.png" id="4_attack2"]
 [ext_resource type="Texture2D" uid="uid://lcd0kfkssh61" path="res://assets/artwork/TinyDemon-Spin_Attack.png" id="5_spin_attack"]
 [ext_resource type="Texture2D" uid="uid://cqc78kjjt5xk8" path="res://assets/artwork/TinyDemonShadow.png" id="6_demon_shadow"]
-[ext_resource type="Script" uid="uid://ca6jc0gfscvr5" path="res://scripts/stats_component.gd" id="7_stats_component"]
-[ext_resource type="Script" uid="uid://b345hoefgd54p" path="res://scripts/equipment_component.gd" id="8_equipment_component"]
-[ext_resource type="Script" uid="uid://dg0ousex63ojd" path="res://scripts/editor_collision_guide.gd" id="9_collision_guide"]
-[ext_resource type="Script" uid="uid://cp0oej4aup068" path="res://scripts/attack_hitbox_guide.gd" id="10_attack_hitbox_guide"]
+[ext_resource type="Script" uid="uid://ca6jc0gfscvr5" path="res://scripts/components/stats_component.gd" id="7_stats_component"]
+[ext_resource type="Script" uid="uid://b345hoefgd54p" path="res://scripts/components/equipment_component.gd" id="8_equipment_component"]
+[ext_resource type="Script" uid="uid://dg0ousex63ojd" path="res://scripts/editor/editor_collision_guide.gd" id="9_collision_guide"]
+[ext_resource type="Script" uid="uid://cp0oej4aup068" path="res://scripts/editor/attack_hitbox_guide.gd" id="10_attack_hitbox_guide"]
 
 [node name="PlayerPlacement" type="Node2D"]
 texture_filter = 1

@@ -1,10 +1,10 @@
 extends SceneTree
 
-const GRAPH_SCRIPT = preload("res://scripts/dungeon_graph.gd")
-const MAP_CONTROLLER_SCRIPT = preload("res://scripts/dungeon_map_controller.gd")
-const RUN3_LAYOUT_SCRIPT = preload("res://scripts/dungeon_layout_run3.gd")
-const RUN4_LAYOUT_SCRIPT = preload("res://scripts/dungeon_layout_run4.gd")
-const RUN5_LAYOUT_SCRIPT = preload("res://scripts/dungeon_layout_run5.gd")
+const GRAPH_SCRIPT = preload("res://scripts/algorithms/dungeon_graph.gd")
+const MAP_CONTROLLER_SCRIPT = preload("res://scripts/ui/dungeon_map_controller.gd")
+const RUN3_LAYOUT_SCRIPT = preload("res://scripts/algorithms/dungeon_layout_run3.gd")
+const RUN4_LAYOUT_SCRIPT = preload("res://scripts/algorithms/dungeon_layout_run4.gd")
+const RUN5_LAYOUT_SCRIPT = preload("res://scripts/algorithms/dungeon_layout_run5.gd")
 
 const CASES: Array[Dictionary] = [
 	{

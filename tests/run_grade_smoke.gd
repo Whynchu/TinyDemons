@@ -1,5 +1,5 @@
 extends SceneTree
-const RunGradeEvaluator = preload("res://scripts/run_grade.gd")
+const RunGradeEvaluator = preload("res://scripts/algorithms/run_grade.gd")
 
 var _finished := false
 

@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="ContentDefinitionManifestData" load_steps=4 format=3]
 
-[ext_resource type="Script" path="res://scripts/content_definition_manifest_data.gd" id="manifest_script"]
+[ext_resource type="Script" path="res://scripts/content/content_definition_manifest_data.gd" id="manifest_script"]
 [ext_resource type="Resource" path="res://resources/definitions/items/cinder_blade.tres" id="content_0000"]
 [ext_resource type="Resource" path="res://resources/definitions/items/demon_cloak.tres" id="content_0001"]
 

@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="ItemCatalogData" load_steps=3 format=3 uid="uid://c6u8l5k5iuq7w"]
 
-[ext_resource type="Script" uid="uid://bo1ky7owql3to" path="res://scripts/item_catalog_data.gd" id="1_54nx5"]
+[ext_resource type="Script" uid="uid://bo1ky7owql3to" path="res://scripts/content/item_catalog_data.gd" id="1_54nx5"]
 [ext_resource type="Resource" path="res://resources/definitions/items/demon_cloak.tres" id="2_demon_cloak"]
 
 [resource]

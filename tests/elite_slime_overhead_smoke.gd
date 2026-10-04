@@ -1,7 +1,7 @@
 extends SceneTree
 
-const HUD_CONTROLLER = preload("res://scripts/hud_controller.gd")
-const ACTOR_GEOMETRY = preload("res://scripts/actor_geometry.gd")
+const HUD_CONTROLLER = preload("res://scripts/ui/hud_controller.gd")
+const ACTOR_GEOMETRY = preload("res://scripts/algorithms/actor_geometry.gd")
 
 var current_health := 10.0
 

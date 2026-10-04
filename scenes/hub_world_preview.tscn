@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://m77qnjaf712h"]
 
 [ext_resource type="PackedScene" uid="uid://cqglsgesc12h7" path="res://scenes/main.tscn" id="1_main"]
-[ext_resource type="Script" uid="uid://dy8slh22ej0o1" path="res://scripts/hub_world_preview.gd" id="2_preview"]
+[ext_resource type="Script" uid="uid://dy8slh22ej0o1" path="res://scripts/editor/hub_world_preview.gd" id="2_preview"]
 
 [node name="HubWorldPreview" type="Node2D" unique_id=505404437]
 process_mode = 3

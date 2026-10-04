@@ -1,5 +1,7 @@
 extends SceneTree
 
+const HubScreenActionsScript = preload("res://scripts/ui/hub_screen_actions.gd")
+
 var stat_touch_count := 0
 var stat_touch_names: Array[StringName] = []
 var stat_row_touch_count := 0
@@ -144,43 +146,47 @@ func _initialize() -> void:
 	var hub_builder := ScreenStateController.new()
 	var noop := Callable(self, "_noop")
 	var noop_int := Callable(self, "_noop_int")
-	# Keep every optional callback valid so the fixture exercises native button
-	# activation without falling back to an unbound page setter.
-	var hub_controls := hub_builder.build_hub(
-		hub_host,
-		Callable(self, "_pixel_texture"),
-		Callable(self, "_record_stat_touch"), # adjust_stat
-		noop, # apply_stats
-		noop, # cancel_stats
-		noop, # auto_allocate
-		noop, # respec
-		noop, # start_run
-		noop, # return_title
-		noop_int, # set_page
-		noop, # item_action
-		noop_int, # select_gear_slot
-		noop, # bind_element
-		noop_int, # select_gear_candidate
-		Callable(self, "_record_hub_row"), # select_stat_row
-		Callable(self, "_record_item_row"), # select_item_row
-		Callable(self, "_record_fusion_count"), # adjust_fusion_count
-		noop, # pause_resume
-		noop, # pause_settings
-		noop, # pause_quit
-		noop, # pause_status
-		noop, # pause_equipment
-		noop) # pause_back_callback
-	var hub_overlay := hub_controls["overlay"] as ColorRect
+	var hub_actions := HubScreenActionsScript.new() as HubScreenActions
+	hub_actions.adjust_stat = Callable(self, "_record_stat_touch")
+	hub_actions.apply_stats = noop
+	hub_actions.cancel_stats = noop
+	hub_actions.auto_allocate = noop
+	hub_actions.respec = noop
+	hub_actions.set_page = noop_int
+	hub_actions.item_action = noop
+	hub_actions.select_gear_slot = noop_int
+	hub_actions.bind_element = noop
+	hub_actions.select_gear_candidate = noop_int
+	hub_actions.select_stat_row = Callable(self, "_record_hub_row")
+	hub_actions.select_item_row = Callable(self, "_record_item_row")
+	hub_actions.adjust_fusion_count = Callable(self, "_record_fusion_count")
+	hub_actions.pause_resume = noop
+	hub_actions.pause_settings = noop
+	hub_actions.pause_quit = noop
+	hub_actions.pause_status = noop
+	hub_actions.pause_equipment = noop
+	hub_actions.pause_back = noop
+	hub_actions.pause_equipment_back = noop
+	hub_actions.equipment_remove = noop
+	hub_actions.equipment_remove_all = noop
+	hub_actions.equipment_remove_all_cancel = noop
+	hub_actions.hub_back = noop
+	hub_actions.shop_mode = noop_int
+	hub_actions.shop_amount = noop_int
+	hub_actions.shop_amount_cancel = noop
+	hub_actions.shop_back = noop
+	# Named callbacks keep this fixture independent from builder argument order.
+	hub_builder.build_hub(hub_host, Callable(self, "_pixel_texture"), hub_actions)
+	var hub_overlay := hub_builder.hub_overlay
 	hub_overlay.visible = true
 	(hub_overlay.get_node("HubAllocatePage") as Control).visible = true
 	for child in hub_overlay.get_children():
 		if child is BaseButton:
 			(child as BaseButton).visible = false
-	for stat_button in hub_controls["stat_buttons"] as Array[Button]:
+	for stat_button in hub_builder.hub_stat_buttons:
 		stat_button.visible = false
-	for stat_row in hub_controls["stat_rows"] as Array[Button]:
+	for stat_row in hub_builder.hub_stat_row_buttons:
 		stat_row.visible = true
-	hub_builder.hub_stat_buttons = hub_controls["stat_buttons"] as Array[Button]
 	hub_builder.hub_stat_row = 0
 	hub_builder.hub_content_focus = true
 	hub_builder._set_hub_stat_adjustment_targets(0, true)
@@ -197,8 +203,8 @@ func _initialize() -> void:
 	var hub_blank_up := InputEventScreenTouch.new()
 	hub_blank_up.device = 0; hub_blank_up.index = 13; hub_blank_up.pressed = false; hub_blank_up.position = hub_blank_down.position
 	layer._input(hub_blank_up)
-	var stat_right := (hub_controls["stat_right"] as Array[Button])[0]
-	var stat_add_marker := hub_controls["stat_add_marker"] as Sprite2D
+	var stat_right := hub_builder.hub_stat_right_buttons[0]
+	var stat_add_marker := hub_builder.hub_stat_add_marker
 	_expect(stat_add_marker != null and is_equal_approx(stat_right.get_global_rect().get_center().x, stat_add_marker.position.x), "hub stat plus hitbox is centered on its visible glyph", failures)
 	var stat_down := InputEventScreenTouch.new()
 	stat_down.device = 0; stat_down.index = 14; stat_down.pressed = true; stat_down.position = stat_right.get_global_rect().get_center()
@@ -207,7 +213,7 @@ func _initialize() -> void:
 	stat_up.device = 0; stat_up.index = 14; stat_up.pressed = false; stat_up.position = stat_down.position
 	layer._input(stat_up)
 	_expect(stat_touch_count == 1 and stat_touch_names[0] == &"VIT", "touching the selected hub stat plus activates its hit target", failures)
-	var nonselected_stat_right := (hub_controls["stat_right"] as Array[Button])[2]
+	var nonselected_stat_right := hub_builder.hub_stat_right_buttons[2]
 	var nonselected_down := InputEventScreenTouch.new()
 	nonselected_down.device = 0; nonselected_down.index = 20; nonselected_down.pressed = true; nonselected_down.position = nonselected_stat_right.get_global_rect().get_center()
 	layer._input(nonselected_down)
@@ -215,7 +221,7 @@ func _initialize() -> void:
 	nonselected_up.device = 0; nonselected_up.index = 20; nonselected_up.pressed = false; nonselected_up.position = nonselected_down.position
 	layer._input(nonselected_up)
 	_expect(stat_touch_count == 1, "a non-selected hub stat cannot be adjusted by touch", failures)
-	var stat_rows := hub_controls["stat_rows"] as Array[Button]
+	var stat_rows := hub_builder.hub_stat_row_buttons
 	_expect(stat_rows.size() == 6 and stat_rows[0].size.x >= 60.0 and stat_rows[0].size.y >= 12.0, "hub stat rows expose direct touch targets for six stats", failures)
 	var stat_row_touch_count_before := stat_row_touch_count
 	var stat_row_down := InputEventScreenTouch.new()
@@ -236,7 +242,7 @@ func _initialize() -> void:
 	stat_up_again.device = 0; stat_up_again.index = 16; stat_up_again.pressed = false; stat_up_again.position = stat_down_again.position
 	layer._input(stat_up_again)
 	_expect(stat_touch_count == 1, "the old selected hub stat does not remain touch-active after row selection", failures)
-	var selected_stat_right := (hub_controls["stat_right"] as Array[Button])[2]
+	var selected_stat_right := hub_builder.hub_stat_right_buttons[2]
 	var selected_stat_down := InputEventScreenTouch.new()
 	selected_stat_down.device = 0; selected_stat_down.index = 21; selected_stat_down.pressed = true; selected_stat_down.position = selected_stat_right.get_global_rect().get_center()
 	layer._input(selected_stat_down)
@@ -249,18 +255,18 @@ func _initialize() -> void:
 			(child as BaseButton).visible = false
 	(hub_overlay.get_node("HubAllocatePage") as Control).visible = false
 	(hub_overlay.get_node("HubItemsPage") as Control).visible = true
-	for item_row in hub_controls["item_rows"] as Array[Button]:
+	for item_row in hub_builder.hub_item_row_buttons:
 		item_row.visible = true
-	for competing_button in (hub_controls["gear_slot_buttons"] as Array[Button]):
+	for competing_button in hub_builder.hub_gear_slot_buttons:
 		competing_button.visible = false
-	for competing_button in (hub_controls["gear_choice_buttons"] as Array[Button]):
+	for competing_button in hub_builder.hub_gear_choice_buttons:
 		competing_button.visible = false
-	for competing_button in (hub_controls["equipment_actions"] as Array[Button]):
+	for competing_button in hub_builder.hub_equipment_action_buttons:
 		competing_button.visible = false
-	(hub_controls["item_action"] as Button).visible = false
-	(hub_controls["fusion_decrease"] as Button).visible = true
-	(hub_controls["fusion_increase"] as Button).visible = true
-	var item_rows := hub_controls["item_rows"] as Array[Button]
+	hub_builder.hub_item_action_button.visible = false
+	hub_builder.hub_fusion_decrease_button.visible = true
+	hub_builder.hub_fusion_increase_button.visible = true
+	var item_rows := hub_builder.hub_item_row_buttons
 	_expect(item_rows.size() == 6 and item_rows[0].size.x >= 80.0, "shop and fusion rows expose direct touch targets for all six slots", failures)
 	var item_row_down := InputEventScreenTouch.new()
 	item_row_down.device = 0; item_row_down.index = 17; item_row_down.pressed = true; item_row_down.position = item_rows[0].get_global_rect().get_center()
@@ -270,7 +276,7 @@ func _initialize() -> void:
 	layer._input(item_row_up)
 	_expect(item_row_touch_count == 1, "touching a shop or fusion row selects it directly", failures)
 	var fusion_count_down := InputEventScreenTouch.new()
-	fusion_count_down.device = 0; fusion_count_down.index = 18; fusion_count_down.pressed = true; fusion_count_down.position = (hub_controls["fusion_increase"] as Button).get_global_rect().get_center()
+	fusion_count_down.device = 0; fusion_count_down.index = 18; fusion_count_down.pressed = true; fusion_count_down.position = hub_builder.hub_fusion_increase_button.get_global_rect().get_center()
 	layer._input(fusion_count_down)
 	var fusion_count_up := InputEventScreenTouch.new()
 	fusion_count_up.device = 0; fusion_count_up.index = 18; fusion_count_up.pressed = false; fusion_count_up.position = fusion_count_down.position
@@ -278,8 +284,8 @@ func _initialize() -> void:
 	_expect(fusion_count_touch_count == 1, "touching fusion count controls reaches their callbacks", failures)
 	# The pause shell is a separate full-screen overlay and uses its native
 	# button/footer path without a second floating cancel affordance.
-	var pause_overlay := hub_controls["pause_overlay"] as ColorRect
-	var pause_buttons := hub_controls["pause_buttons"] as Array[Button]
+	var pause_overlay := hub_builder.pause_overlay
+	var pause_buttons := hub_builder.pause_menu_buttons
 	hub_overlay.visible = false
 	pause_overlay.visible = true
 	pause_touch_count = 0

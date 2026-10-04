@@ -19,12 +19,12 @@ extends SceneTree
 ## rule is fire-cone-only and has not become a global "flatten all spell aim"
 ## change.
 
-const MagicRuntime = preload("res://scripts/magic_runtime_controller.gd")
-const SpellForms = preload("res://scripts/spell_form_catalog.gd")
-const SpellFormDefinition = preload("res://scripts/spell_form_definition.gd")
-const Elements = preload("res://scripts/element_catalog.gd")
-const Chroma = preload("res://scripts/player_chroma_component.gd")
-const ActorMotor = preload("res://scripts/actor_motor.gd")
+const MagicRuntime = preload("res://scripts/runtime/controllers/magic_runtime_controller.gd")
+const SpellForms = preload("res://scripts/content/spell_form_catalog.gd")
+const SpellFormDefinition = preload("res://scripts/content/spell_form_definition.gd")
+const Elements = preload("res://scripts/content/element_catalog.gd")
+const Chroma = preload("res://scripts/components/player_chroma_component.gd")
+const ActorMotor = preload("res://scripts/actors/actor_motor.gd")
 
 const PLAYER_POSITION := Vector2(120.0, 80.0)
 ## Target offsets from the player, covering every aim shape the room can produce.

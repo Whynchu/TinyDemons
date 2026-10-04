@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="ElementCatalogData" load_steps=7 format=3]
 
-[ext_resource type="Script" path="res://scripts/element_catalog_data.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/content/element_catalog_data.gd" id="1"]
 [ext_resource type="Resource" path="res://resources/tuning/status_burn.tres" id="2"]
 [ext_resource type="Resource" path="res://resources/tuning/status_poison.tres" id="3"]
 [ext_resource type="Resource" path="res://resources/tuning/status_chill.tres" id="4"]

@@ -1,6 +1,6 @@
 extends SceneTree
 
-const CATALOG_SCRIPT := preload("res://scripts/authoring_placement_catalog.gd")
+const CATALOG_SCRIPT := preload("res://scripts/content/authoring_placement_catalog.gd")
 const EXPECTED_IDS := [
 	&"hub_actor_layer",
 	&"hub_characters",

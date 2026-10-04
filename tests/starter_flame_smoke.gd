@@ -1,7 +1,7 @@
 extends SceneTree
 
-const AspectCatalogScript = preload("res://scripts/aspect_catalog.gd")
-const Profile = preload("res://scripts/player_profile.gd")
+const AspectCatalogScript = preload("res://scripts/content/aspect_catalog.gd")
+const Profile = preload("res://scripts/runtime/state/player_profile.gd")
 
 var _finished := false
 

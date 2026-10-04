@@ -1,6 +1,6 @@
 [gd_resource type="Resource" load_steps=2 format=3]
 
-[ext_resource type="Script" path="res://scripts/enemy_geometry_profile.gd" id="1_profile"]
+[ext_resource type="Script" path="res://scripts/content/enemy_geometry_profile.gd" id="1_profile"]
 
 [resource]
 script = ExtResource("1_profile")

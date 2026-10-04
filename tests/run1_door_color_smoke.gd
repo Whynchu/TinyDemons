@@ -1,6 +1,6 @@
 extends SceneTree
 
-const LIBRARY_SCRIPT = preload("res://scripts/sprite_frame_library.gd")
+const LIBRARY_SCRIPT = preload("res://scripts/services/sprite_frame_library.gd")
 
 
 func _initialize() -> void:

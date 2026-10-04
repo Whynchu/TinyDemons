@@ -1,7 +1,7 @@
 extends SceneTree
 
-const ITEM_CATALOG_SCRIPT = preload("res://scripts/item_catalog.gd")
-const ITEM_INSTANCE_SCRIPT = preload("res://scripts/item_instance.gd")
+const ITEM_CATALOG_SCRIPT = preload("res://scripts/content/item_catalog.gd")
+const ITEM_INSTANCE_SCRIPT = preload("res://scripts/content/item_instance.gd")
 
 var _finished := false
 

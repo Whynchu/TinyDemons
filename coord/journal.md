@@ -717,3 +717,158 @@ OVERLAP: codex claimed docs/DOCUMENTATION_MAP.md concurrently with this edit. My
 
 ## 2026-10-04T14:32Z - codex - done
 Created a responsive static wiki website in wiki-site/ with in-browser Markdown rendering, search, and mobile navigation. Added tools/build_design_wiki.ps1 to assemble wiki-site/ plus docs/wiki content into dist/wiki/. Local build output, JavaScript syntax, source links, and git diff whitespace checks pass. Live publication is not wired because .github/workflows/web-pages.yml is currently claimed by opencode.
+
+## 2026-10-04T15:00Z - codex - claim
+Beginning composition plan Stage 0 by re-basing tools/validate_composition.ps1 and tools/composition-baseline.json with per-file metrics and self-tested architecture rules. tests/run_all_smoke.ps1 and .github/workflows/web-pages.yml remain outside this slice under the active opencode claim.
+
+
+## 2026-10-04T16:10Z - codex - progress
+Stage 0 validator and baseline re-base implemented: separate forward targets and regression floors, per-file metrics, stable architectural rule snapshots, and eight rejection fixtures. Self-test and both validator modes pass. Runner preflight registration and CI coverage decision remain pending under opencode's active claim; Stage 0 is not yet closed. The analyzer currently measures 556 untyped root parameters versus the plan's 560, and the discrepancy is documented for follow-up.
+
+
+## 2026-10-04T10:28Z - codex - done
+Closed composition plan Stage 0. The smoke runner now executes tools/check_definition_manifest.gd after definition validation, before inventory or gameplay smokes. Recorded the CI coverage decision on the runner claim: Pages CI remains focused on validators and web-export smoke; the full gameplay smoke matrix stays explicit/local. Composition self-test, regression mode, strict mode, runner PowerShell parsing, and git diff --check pass. Did not launch Godot because the project session has an active editor restriction.
+
+
+## 2026-10-04T10:35Z - codex - claim
+Preparing Stage 1 role-folder migration without moving files. Codex owns coord/script-role-reference-audit.md; proposed Space Bunny task is an independent file-to-role map at docs/script-role-map-2026.md. Actual script moves remain one coordinated writer slice per the composition plan.
+
+
+## 2026-10-04T10:36Z - codex - done
+Completed the Stage 1 reference audit. The tracked baseline is 235 .gd scripts, 235 matching .gd.uid sidecars, and 572 explicit res://scripts/ references across 260 tracked files. Recorded the migration checklist and parallel-work boundary in coord/script-role-reference-audit.md. No script moves or path edits were made.
+
+## 2026-10-04T06:35:09Z - space-bunny - claim
+Stage 1 prep for docs/composition-plan-2026.md: inventory all tracked scripts/*.gd and assign each exactly once to one of eight role folders (runtime, components, content, ui, actors, algorithms, editor, autoload). Output is docs/script-role-map-2026.md only. No script moves, no resource/scene/test/tool/validator/baseline edits. Isolated from codex's reference audit.
+
+## 2026-10-04T06:45:39Z - space-bunny - done
+Created docs/script-role-map-2026.md (535 lines): all 235 tracked scripts/*.gd assigned to exactly one of eight role folders. Counts: runtime 63, content 49, algorithms 27, components 26, ui 21, editor 19, autoload 16, actors 14. Zero duplicates, zero unassigned, zero names-not-on-disk; 235 .gd.uid sidecars pair 1:1 with no orphans. 29 assignments carry a credible alternative folder and are grouped into six decision sets in the Unresolved section. Documentation only - no script moved, no path/scene/test/tool/validator/baseline edit. Validation caught two of my own errors before publishing (a duplicate assignment of menu_player_context.gd and 7 files initially unassigned).
+
+## 2026-10-04T06:45:39Z - space-bunny - blocker
+FINDING, affects composition-plan-2026.md Stage 0: tools/validate_composition.ps1 and tools/composition-baseline.json are MODIFIED AND UNCOMMITTED in the shared working tree. Someone implemented most of Stage 0 concurrently - the validator now reports reach-through (4433), untyped root args (556, annotated 'composition-plan audit counted 560'), context twins (20), string call forms (343), a per-file top-seams table, and a forward-target table with stage and met/open status. It recurses already, so the scripts/ migration will not blind it, and it already tracks unclassified_scripts target 0 at stage 1 - which is exactly the role-map acceptance bar. -SelfTest passes. This was not visible earlier because my first run truncated the output to the last 40 lines and I wrongly reported the scorecard as saturated and blind; it is materially more capable than that. My earlier conclusion to the owner was incorrect and is corrected here. The plan's Stage 0 section needs a reconciliation pass; I did not edit it, as that is outside this task's scope and the validator work is not claimed by me.
+
+## 2026-10-04T11:00Z - codex - claim
+Taking over Stage 1 map/plan reconciliation solo per owner direction. Updating docs/script-role-map-2026.md and Stage 1 in docs/composition-plan-2026.md for the agreed services/ role and runtime subfolders; adding services/ to the composition validator role allowlist. No script moves or path rewrites in this preparation slice.
+
+## 2026-10-04T11:20Z - codex - done
+Resolved all 29 prior role-map ambiguities. Map now assigns all 235 scripts to the eight top-level roles, with runtime divided into controllers, contexts, state, services, and world. Renamed autoload/ to services/ (13 files), moved mutable state and the temporary room spawn transfer bag into appropriate runtime subfolders, applied the coordinate-space UI/actors rule, and classified display_layout.gd as pure algorithm. Stage 1 plan and validator role allowlist now match. No script moves or resource-path edits.
+
+
+## 2026-10-04T12:00Z - codex - claim
+Executing the Stage 1 role-folder migration solo per owner direction. Scope: all mapped scripts and .gd.uid sidecars, live resource paths, filesystem scans, generated SCRIPT_INDEX, and migration verification. No behavior changes.
+
+## 2026-10-04T13:00Z - codex - done
+Moved all 235 scripts and UID sidecars to the approved role folders and rewrote 566 live literal script-path references across 256 files. The script index and composition baseline paths were refreshed, and recursive script discovery is enabled. Corrected four pre-existing room-prefab script UID fields to match the preserved room_prefab_definition.gd.uid. Composition regression mode, composition self-test, UID validation, test-manifest validation, map reconciliation, and git diff --check pass. The Godot definition validator and curated gameplay gate remain pending because the active-editor restriction forbids launching a second Godot process; no editor MCP tools are available here.
+
+## 2026-10-04T14:00Z - codex - claim
+Starting Stage 2.1's ScreenStateController slice: collapse the four menu-player context twin pairs into their typed implementations. Keep the shared Godot editor session untouched.
+
+## 2026-10-04T14:15Z - codex - handoff
+Expanded the Stage 2.1 claim to include RoomController and its typed-context callers after the first four ScreenStateController pairs reduced the live twin count from 20 to 16. Remaining work covers 14 room pairs and direct call-site updates.
+
+## 2026-10-04T14:25Z - codex - handoff
+Expanded the Stage 2.1 claim to include typed-context call sites in GameplayState, GameplayBootstrap, RoomActivationServices, and two smoke sources, plus plan/index updates. The current pre-refactor call graph confirms the room wrappers are either thin adapters or an older dynamic implementation; proceed by moving context assembly to typed boundaries and keep the typed method as the single behavior path.
+
+## 2026-10-04T14:45Z - codex - handoff
+Stage 2.1's 18 planned pairs have been removed. The validator still reports two pairs, in ActiveRunSnapshot.create/create_context and RunSettlement.settle/settle_context; the plan's list was incomplete. Expanded the claim to collapse these remaining pairs and update their typed callers, then target the zero-pair acceptance bar.
+
+## 2026-10-04 - codex - done
+Completed Stage 2.1: all 20 validator-counted context twins are removed, typed callers were updated, and the script index and plan were refreshed. Strict composition, self-test, UID, test-manifest, script-path, and whitespace checks pass. Godot-backed gameplay verification remains pending while the shared editor session is active and no MCP controls are exposed here.
+
+## 2026-10-04 - codex - claim
+Starting composition Stage 2.2. Split HubFlowController routing from hub economy/progression, reconnect GameplayState/bootstrap and the fusion details presenter, and update moved fixture references plus the composition plan/index. Preserve the shared editor session. 
+
+## 2026-10-04 - codex - done
+Completed Stage 2.2: separated hub routing from economy/progression, moved nested back handling with its economy operations, centralized page/mode and optional-property state in HubMenuState, and kept the economy as a RefCounted subcontroller so GameplayState fields and bootstrap registrations did not grow. The combined hub seam metric remains 109 against 120. Updated baseline, role map, plan, fixtures, and generated index. No Godot test or runtime verification was run.
+
+## 2026-10-04 - codex - claim
+Starting Stage 2.3: split pure procedural pixel-art synthesis from EffectsSpawner orchestration, preserving its call surface and updating affected references/index/baseline.
+Completed composition Stage 2.3: extracted the cached pixel text texture factory, preserved EffectsSpawner facade methods, updated the role map, generated index, and per-file baseline. Runtime verification remains pending with the shared editor active.
+
+Completed composition Stage 2.4: extracted the typed collision and walkability query facade, consolidated Firepit lookup, updated the measured composition floor, and passed the regression-floor audit. Godot runtime checks remain pending.
+
+
+## 2026-10-04T13:04Z - codex - done
+Composition Stage 2.5: extracted typed status and combat feedback helpers; corrected the stale call-site/boundary notes and refreshed the index and composition baseline. Regression-floor audit passes.
+
+## 2026-10-04T13:04Z - codex - claim
+Starting Stage 3.1 title-particle extraction in ScreenStateController with its existing GameplayState facade.
+
+
+## 2026-10-04T13:08Z - codex - done
+Composition Stage 3.1: moved title particle state/lifecycle into TitleParticleController; ScreenStateController entry points remain as facades.
+
+## 2026-10-04T13:08Z - codex - claim
+Starting the Stage 3.1 shared menu-widget and retro-styling audit; keep ScreenStateController and cloud-save public callers stable.
+
+
+## 2026-10-04T13:13Z - codex - done
+Composition Stage 3.1: extracted shared menu button, overlay/sprite, and frame/card factories into MenuWidgetFactory; existing ScreenStateController callers remain supported.
+
+## 2026-10-04T13:13Z - codex - claim
+Auditing the Stage 3.1 cursor movement and animation group for a typed helper boundary.
+
+
+## 2026-10-04T13:18Z - codex - done
+Composition Stage 3.1: isolated cursor positioning, movement, bob, and tween cleanup in MenuCursorAnimator while preserving ScreenStateController as tween owner and facade.
+
+## 2026-10-04T13:18Z - codex - blocker
+Stage 3.1 audit correction: the 27-line loading fade completion coordinates title/archetype/hub overlays and controller state, so it is not an isolated low-risk widget seam; keep it with the transition owner.
+
+## 2026-10-04T13:18Z - codex - claim
+Auditing hub-control positioning and remaining ScreenStateController boundaries against current code before selecting the next extraction.
+
+2026-10-04T13:26Z - codex - done
+Composition Stage 3.1: moved loading overlay construction, label animation, and fade visuals into the 30-line LoadingScreenPresenter. ScreenStateController retains the public facade and owns the cross-screen completion transition. The composition audit reports 245 scripts, zero unclassified files, and 5,168 ScreenStateController lines; UID pairing is 245:245 with no duplicates. Runtime checks were not run while the shared editor session is active.
+
+2026-10-04T13:26Z - codex - claim
+Auditing the title/archetype and settings screen groups for state ownership, call sites, and transition edges before choosing the next extraction.
+
+2026-10-04T13:37Z - codex - done
+Composition Stage 3.1: extracted face-button glyph lookup, prompt texture composition/cache, and menu icon layout into MenuPromptTextureFactory. ScreenStateController retains its previous facade methods. Added 25 source section banners. Regenerated the 246-script index; composition regression audit passes with zero unclassified scripts, and all 246 UID sidecars pair uniquely.
+
+2026-10-04T13:37Z - codex - claim
+Auditing a typed owner for Settings and Name Entry UI state before moving screen methods; preserve the transition facade and direct overlay observation used by frame/input routing.
+
+2026-10-04T13:39Z - codex - done
+Stage 3.1 screen-boundary audit: GameplayState copies ten Settings UI references into ScreenStateController; frame/input/reflow observe the overlay. SaveFlowController copies eleven Name Entry node references and later mutates pending-slot/owner/overlay lifecycle fields, while frame/input observers need only the overlay. Recorded the typed-owner boundary in composition-plan-2026.md.
+
+2026-10-04T13:39Z - codex - claim
+Moving Name Entry state and widget wiring behind a typed screen owner while retaining the overlay observation and explicit lifecycle operations.
+
+2026-10-04T13:45Z - codex - done
+Stage 3.1: extracted Name Entry widget construction and positioning into the typed 94-line NameEntryWidgetPresenter. It owns the visual node refs; ScreenStateController keeps forwarding properties so the existing scene probe and frame/input observers retain their API. SaveFlowController now calls the build facade directly instead of copying eleven node references. Composition audit passes at 247 scripts, zero unclassified, and 5,052 ScreenStateController lines; reach-through decreased by eleven sites to 4,373. All UID sidecars pair uniquely. No tests or Godot runtime were launched.
+
+## 2026-10-04T14:06Z - codex - done
+Completed the Name Entry state/lifecycle owner and moved Save Select construction/footer layout behind a typed presenter. Refreshed the script index and composition baseline at 249 scripts; regression audit passes. The strict audit remains open because GameplayState is 7 lines above its target. No Godot runtime or gameplay tests were run.
+
+## 2026-10-04T14:39:52Z - codex - done
+Stage 3.1: separated Game Over presentation into the 72-line GameOverScreenPresenter and Run Complete construction/reflow into the 73-line RunCompleteScreenPresenter. GameplayState no longer copies Run Complete node references out of a Dictionary; ScreenStateController keeps the stable observation surface for frame routing and RunFlowController. Strict composition audit passes at 254 scripts with zero unclassified scripts. GameplayState measures 1,709 lines / 282 fields; ScreenStateController 4,628 lines; root reach-through 4,337. UID sidecars pair uniquely. No Godot runtime or gameplay tests were run. Next: map the high-risk hub/pause screen state and consumers.
+
+## 2026-10-04T15:15Z - codex - done
+Stage 3.1 Hub/Pause boundary: HubScreenActions now names the 29 build callbacks; ScreenStateController.build_hub returns void and stores the refs it creates. Pause construction and node refs moved into PauseScreenPresenter behind typed ScreenStateController accessors. The strict composition audit passes at 256 scripts with zero unclassified files and unique UID sidecars; root accesses remain at 2,092, reach-through falls 4,337 -> 4,258, and ScreenStateController is 4,641 lines. No Godot runtime or gameplay tests were run. Next: map update_hub_ui and update_hub_input before extracting their state.
+## 2026-10-04T15:20Z - codex - done
+Typed the three Hub/Pause input handlers against GameplayState and replaced 222 dynamic root.call dispatches with direct calls. The strict composition audit passes at 1,870 root call/get/set sites, 513 untyped root args, and 70 ScreenStateController seams; reach-through remains 4,258. No Godot runtime or gameplay tests were run. Next: map and split the 450-line update_hub_ui by page/render ownership.
+## 2026-10-04T15:29Z - codex - done
+Stage 3.1: separated the allocation branch of update_hub_ui into a typed rendering boundary and replaced its remaining dynamic GameplayState reads with direct calls. The strict audit passes at 1,867 root call/get/set sites, 513 untyped root args, and 67 ScreenStateController seams; reach-through is 4,257. The generated script index is refreshed. Cross-caller mapping shows stat nodes need typed ScreenStateController forwarding properties when their ownership moves into a presenter. No Godot runtime or gameplay tests were run.
+
+2026-10-04T15:51Z - codex - done
+Stage 3.1: extracted Hub Stats node construction, status/allocation rendering, marker placement, and preview math into HubStatsScreenPresenter while preserving ScreenStateController forwarding properties. Updated fusion_tooltip_smoke.gd to use the typed hub builder/update API and provide HubFlowController to its GameplayState-derived fixture. Refreshed the script index and composition baseline. Strict audit passes at 257 scripts, 1,856 root call/get/set sites, 510 untyped root args, and 56 ScreenStateController seams; the controller is 4,437 lines and reach-through is 4,258. No Godot runtime or gameplay tests were run. Next: map the hub shell/page-visibility seam.
+2026-10-04T15:57Z - codex - done
+Moved Hub page-root lookup, title setup, legacy page-chrome hiding, and root/active-page visibility into HubPageVisibilityPresenter. ScreenStateController keeps typed forwarding accessors for hub_root_page and hub_page_roots and still normalizes the legacy STATUS route before delegating visibility. Updated the script role map. Next: map command-shell rendering and cursor ownership.
+2026-10-04T15:58Z - codex - audit
+Regenerated the script index and baseline after the HubPageVisibilityPresenter extraction. Strict composition audit passes at 258 scripts and zero unclassified files; ScreenStateController is 4,405 lines / 56 seams. No Godot or gameplay tests were run.
+2026-10-04T16:06Z - codex - done
+Extracted Hub command-button and Back-button construction, command-cursor targeting/reanchoring, and active/dimmed cursor presentation into HubCommandShellPresenter. ScreenStateController keeps typed forwarding properties; MenuCursorAnimator retains tween creation and cleanup. Script index and composition baseline refreshed. Strict composition audit passes at 259 scripts, zero unclassified, 4,332 ScreenStateController lines, and 56 measured seams. No Godot or gameplay tests were run. Next: map Hub responsive layout ownership.
+2026-10-04T16:25Z - codex - done
+Stage 3.1: extracted responsive Hub geometry into HubResponsiveLayoutPresenter behind a typed HubResponsiveLayoutContext, retaining ScreenStateController compatibility accessors and MenuCursorAnimator tween ownership. Split positioning into frame/navigation, player/footer, stats, inventory, child-menu, and cursor methods. Then moved allocation/status visibility, focus targets, and stat cursor presentation into HubStatsInteractionPresenter, which operates on HubStatsScreenPresenter's typed node owner. The guard caught StatsScreenPresenter growing beyond 400 lines; the separate 82-line interaction presenter keeps that owner within its size rule. Strict composition audit passes at 262 scripts, zero unclassified files, 1,856 root call/get/set sites, 510 untyped root args, and 56 ScreenStateController seams; ScreenStateController is 4,182 lines. Script index and baseline refreshed. No Godot runtime or gameplay tests were run. Next: map build_hub widget construction against existing presenters and separate ownership from assembly.
+2026-10-04T16:32Z - codex - done
+Stage 3.1: moved Hub player-card, context/back prompt, footer, and gold/soul node construction into HubResponsiveLayoutPresenter, which owns their layout references. build_hub delegates shell chrome construction and retains compatibility currency aliases; it fell from 303 to 262 lines. The presenter is 360 lines, under the 400-line declaration guard. Refreshed SCRIPT_INDEX and composition baseline. Strict audit passes at 262 scripts, zero unclassified, 1,856 root call/get/set, 510 untyped root args, and 56 ScreenStateController seams; controller is 4,141 lines. No Godot runtime or gameplay tests were run. Next: map the 269-line update_hub_ui by page and owner.
+2026-10-04T16:35Z - codex - done
+Stage 3.1: moved Hub footer and back-prompt presentation into HubResponsiveLayoutPresenter.update_footer_content. ScreenStateController retains prompt selection and device-aware texture creation. update_hub_ui fell from 269 to 253 lines; the layout presenter is 392 lines, below the 400-line guard. Regenerated SCRIPT_INDEX and composition baseline. Strict audit passes at 262 scripts, zero unclassified, 1,856 root call/get/set, 510 untyped root args, and 56 ScreenStateController seams; controller is 4,125 lines. No Godot runtime or gameplay tests were run. Next: map remaining update_hub_ui routing and item-page visibility by owner.
+2026-10-04T16:39Z - codex - done
+Stage 3.1: moved nested Fusion/Equipment/Shop visibility, Equipment page chrome handling, and transparent Back hit routing into HubPageVisibilityPresenter. Fusion visibility still resets before cursor-layer reset; legacy STATUS normalization, player-card refresh, and item rendering stay in ScreenStateController. The typed route presenter reduces update_hub_ui from 253 to 223 lines. Refreshed SCRIPT_INDEX and composition baseline. Strict audit passes at 262 scripts, zero unclassified, 1,856 root call/get/set, 510 untyped root args, and 56 ScreenStateController seams; controller is 4,095 lines. No Godot runtime or gameplay tests were run. Next: map legacy item visibility separately, then the 240-line update_hub_input.
+## 2026-10-04T16:48:42Z - codex - done
+Stage 3.1 legacy Hub item visibility moved behind a typed presenter and context. Strict composition audit passes; next map the 240-line Hub input route boundary.
+
+2026-10-04T17:17:06Z - codex - done
+Stage 3.1 Hub input ownership is complete: update_hub_input now delegates to a typed HubInputController, with mutable navigation state in HubMenuState. Composition strict audit passes at 265 scripts and zero unclassified files. Work paused at the item-page boundary for owner check-in; no rendering extraction was started.

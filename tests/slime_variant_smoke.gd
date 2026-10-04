@@ -1,10 +1,10 @@
 extends SceneTree
 
-const CatalogScript = preload("res://scripts/slime_variant_catalog.gd")
-const ElementCatalogScript = preload("res://scripts/element_catalog.gd")
-const MATERIAL_SCRIPT = preload("res://scripts/actor_palette_material.gd")
-const EnemyFactoryScript = preload("res://scripts/enemy_factory.gd")
-const TargetingRuntimeControllerScript = preload("res://scripts/targeting_runtime_controller.gd")
+const CatalogScript = preload("res://scripts/content/slime_variant_catalog.gd")
+const ElementCatalogScript = preload("res://scripts/content/element_catalog.gd")
+const MATERIAL_SCRIPT = preload("res://scripts/actors/actor_palette_material.gd")
+const EnemyFactoryScript = preload("res://scripts/content/enemy_factory.gd")
+const TargetingRuntimeControllerScript = preload("res://scripts/runtime/controllers/targeting_runtime_controller.gd")
 
 var _finished := false
 

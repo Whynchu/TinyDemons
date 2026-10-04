@@ -1,6 +1,6 @@
 extends SceneTree
 
-const PickupRuntime = preload("res://scripts/pickup_runtime_controller.gd")
+const PickupRuntime = preload("res://scripts/runtime/controllers/pickup_runtime_controller.gd")
 
 
 func _initialize() -> void:

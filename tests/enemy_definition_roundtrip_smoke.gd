@@ -1,6 +1,6 @@
 extends SceneTree
 
-const CatalogScript = preload("res://scripts/slime_variant_catalog.gd")
+const CatalogScript = preload("res://scripts/content/slime_variant_catalog.gd")
 
 ## Slice B acceptance: definition-derived enemy runtime state round-trips
 ## through the persisted form (the stable variant id stored in room

@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://cg3k10q75v253"]
 
 [ext_resource type="PackedScene" uid="uid://ukxfdr8udu7t" path="res://scenes/menus/hub/demon_hub_menu.tscn" id="1_hub"]
-[ext_resource type="Script" uid="uid://dg0uwrfb1but5" path="res://scripts/shop_preview.gd" id="2_preview"]
+[ext_resource type="Script" uid="uid://dg0uwrfb1but5" path="res://scripts/editor/shop_preview.gd" id="2_preview"]
 [ext_resource type="Texture2D" uid="uid://cjlw60ovgvd7n" path="res://assets/artwork/GoldFresh2.png" id="5_gold"]
 [ext_resource type="Texture2D" uid="uid://ck41a0ppri3j0" path="res://assets/artwork/Souls.png" id="6_soul"]
 

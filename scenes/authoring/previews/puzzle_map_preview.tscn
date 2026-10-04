@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3]
 
-[ext_resource type="Script" path="res://scripts/puzzle_map_preview.gd" id="1_preview"]
+[ext_resource type="Script" path="res://scripts/editor/puzzle_map_preview.gd" id="1_preview"]
 
 [node name="PuzzleMapPreview" type="Node2D"]
 texture_filter = 1

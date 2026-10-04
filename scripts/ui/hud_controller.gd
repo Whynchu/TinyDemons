@@ -1,0 +1,1640 @@
+extends Node
+class_name HudController
+
+const ElementCatalogScript = preload("res://scripts/content/element_catalog.gd")
+const SoulVisualsScript = preload("res://scripts/runtime/services/soul_visuals.gd")
+const ChromaComponentScript = preload("res://scripts/components/player_chroma_component.gd")
+const ChromaCostsScript = preload("res://scripts/content/chroma_costs.gd")
+const ABILITY_COOLDOWN_SHADER: Shader = preload("res://shaders/ability_cooldown_icon.gdshader")
+const ELITE_OVERHEAD_SYMBOL_TEXTURE: Texture2D = preload("res://assets/artwork/eliteslimeoverheadsymbol.png")
+const TARGET_HEALTH_BAR_TEXTURE: Texture2D = preload("res://assets/artwork/EnemyHpRedBar.png")
+const TARGET_OVERHEAD_BAR_TEXTURE: Texture2D = preload("res://assets/artwork/HpOverheadRedBar.png")
+const INVENTORY_CHEST_IDLE_TEXTURE: Texture2D = preload("res://assets/artwork/ChestGrey.png")
+const INVENTORY_CHEST_RECEIVING_TEXTURE: Texture2D = preload("res://assets/artwork/Chest.png")
+
+const COOLDOWN_FLASH_DURATION := 0.14
+const COOLDOWN_ICON_DIM := 0.58
+const COOLDOWN_ICON_DESATURATION := 0.92
+const COOLDOWN_ELAPSED_BRIGHTNESS := 0.82
+const COOLDOWN_TIMER_SHADOW_COLOR := Color8(17, 19, 24, 235)
+const INVENTORY_CHEST_REACTION_DURATION := 0.24
+const RESOURCE_DELIVERY_REACTION_DURATION := 0.20
+const GOLD_COUNTUP_SPEED := 420.0
+const SOUL_COUNTUP_SPEED := 420.0
+## Each count-up step rasterizes a new pixel-text texture, and at 420/second with
+## a 60 Hz tick that is a fresh glyph table plus a GPU upload on every single
+## frame of the roll. Capping the visible steps keeps the roll readable and
+## bounds the texture churn to a couple of dozen per payout.
+const COUNTUP_MAX_STEPS := 12
+
+var target_health_fill_textures: Dictionary = {}
+var target_health_damage_fill_textures: Dictionary = {}
+var target_overhead_fill_textures: Dictionary = {}
+var target_overhead_damage_fill_textures: Dictionary = {}
+var target_overhead_frames: Dictionary = {}
+var target_overhead_damage_fills: Dictionary = {}
+var target_overhead_fills: Dictionary = {}
+var target_overhead_offsets: Dictionary = {}
+var target_overhead_fill_sizes: Dictionary = {}
+var target_overhead_aggro_markers: Dictionary = {}
+var target_overhead_aggro_offsets: Dictionary = {}
+var target_overhead_elite_symbols: Dictionary = {}
+var target_overhead_status_markers: Dictionary = {}
+var player_status_markers: Array[Sprite2D] = []
+var status_badge_texture_cache: Dictionary = {}
+var _status_transmission_flash_actors: Dictionary = {}
+var enemy_overhead_offset := Vector2(3, 0)
+var enemy_overhead_frame_template: Sprite2D = null
+var enemy_overhead_fill_template: Sprite2D = null
+var bright_bar_cache: Dictionary = {}
+var bar_tint_texture_cache: Dictionary = {}
+var aggro_marker_texture_cache: Dictionary = {}
+var last_run_timer_text := ""
+var room_number_indicator: Sprite2D = null
+var dungeon_run_indicator: Sprite2D = null
+var gold_indicator: Sprite2D = null
+var gold_amount_indicator: Sprite2D = null
+var gold_reaction_id := 0
+var gold_target_base_scale := Vector2.ONE
+var gold_reaction_color := Color.WHITE
+var displayed_gold := -1
+var gold_display_target := -1
+var soul_icon_indicator: Sprite2D = null
+var soul_amount_indicator: Sprite2D = null
+var inventory_chest: Sprite2D = null
+var inventory_chest_receiving: Sprite2D = null
+var inventory_chest_reaction_id := 0
+var inventory_chest_base_scale := Vector2.ONE
+var chroma_delivery_target: Sprite2D = null
+var chroma_highlight_target: Sprite2D = null
+var soul_delivery_target: Sprite2D = null
+var chroma_reaction_id := 0
+var soul_reaction_id := 0
+var chroma_reaction_color := Color.WHITE
+var displayed_souls := -1
+var soul_display_target := -1
+var soul_target_base_scale := Vector2.ONE
+var feedback_animation_registry: FeedbackAnimationRegistry = null
+var run_timer_indicator: Sprite2D = null
+var combo_label: Sprite2D = null
+var combo_base: Sprite2D = null
+var combo_fill: Sprite2D = null
+var gold_animation_frames: Array[Texture2D] = []
+var gold_animation_timer := 0.0
+var button_hud_sprites: Array[Sprite2D] = []
+var ability_prompt_hud: Array[Sprite2D] = []
+var cooldown_hud: Dictionary = {}
+var cooldown_flash_remaining := {&"magic": 0.0, &"imbue": 0.0, &"sword_beam": 0.0}
+var cooldown_previous_remaining := {&"magic": -1.0, &"imbue": -1.0, &"sword_beam": -1.0}
+var cooldown_timer_texture_cache: Dictionary = {}
+var last_combo_text := ""
+var display_view_size := Vector2(DisplayLayout.NATIVE_SIZE)
+var _button_hud_device := -1
+var _button_hud_keyboard_texture_ready := false
+var _ability_prompt_hud_device := -1
+var _ability_prompt_keyboard_texture_ready := false
+
+
+func target_name_position() -> Vector2:
+	return DisplayLayout.position_for(Vector2(120, 148), &"target_name", display_view_size)
+
+
+func apply_display_layout(root: Object) -> void:
+	var display := root.get("display_controller") as DisplayController
+	display_view_size = Vector2(display.view_size_value()) if display != null else Vector2(DisplayLayout.NATIVE_SIZE)
+	var ui := root.get("ui") as Node
+	if ui == null:
+		return
+	var player_hud := ui.get_node_or_null("PlayerHud") as Node2D
+	if player_hud != null:
+		# PlayerStatus is an authored 82x16 composite. Its origin is intentionally
+		# fixed at the active frame's top-left; moving the legacy Health/Mana
+		# groups independently would tear the new layers apart on wide displays.
+		var player_status := player_hud.get_node_or_null("PlayerStatus") as Node2D
+		if player_status != null:
+			player_status.position = Vector2.ZERO
+		_set_layout_position(player_hud.get_node_or_null("GoldDisplay") as Node2D, &"gold")
+		_set_layout_position(player_hud.get_node_or_null("SoulDisplay") as Node2D, &"souls")
+		var inventory_chest := player_hud.get_node_or_null("InventoryChest") as Node2D
+		var inventory_chest_receiving := player_hud.get_node_or_null("InventoryChestReceiving") as Node2D
+		_set_layout_position(inventory_chest, &"inventory_chest")
+		var chest_base_position: Vector2 = inventory_chest.get_meta("display_layout_base_position", inventory_chest.position) as Vector2 if inventory_chest != null else Vector2.INF
+		_set_layout_position(inventory_chest_receiving, &"inventory_chest", chest_base_position)
+		_set_layout_position(player_hud.get_node_or_null("RunTimer") as Sprite2D, &"run_timer")
+	_set_layout_position(combo_label, &"combo")
+	_set_layout_position(combo_base, &"combo")
+	_set_layout_position(combo_fill, &"combo")
+	var target_bar := root.get("target_health_bar") as Sprite2D
+	var target_fill := root.get("target_health_fill") as Sprite2D
+	_set_layout_position(target_bar, &"target")
+	_set_layout_position(target_fill, &"target")
+	_set_layout_position(root.get("target_health_damage_fill") as Sprite2D, &"target")
+	_set_layout_position(root.get("target_name_text") as Sprite2D, &"target_name", Vector2(120, 148))
+	var target_health_text := root.get("target_health_text") as Sprite2D
+	if target_health_text != null:
+		target_health_text.centered = true
+		target_health_text.position = target_health_text_position(target_bar, target_fill.texture if target_fill != null else null)
+	_set_layout_position(root.get("focus_label") as Sprite2D, &"focus", Vector2(120, 148))
+	_set_layout_position(root.get("focus_label_base") as Sprite2D, &"focus", Vector2(120, 148))
+	for button in button_hud_sprites:
+		_set_layout_position(button, &"input_prompts")
+	for prompt in ability_prompt_hud:
+		if prompt != null and prompt.get_parent() != null and prompt.get_parent().name not in ["AbilityIcons", "MagicCooldownIcon", "ImbueCooldownIcon", "SwordBeamCooldownIcon"]:
+			_set_layout_position(prompt, &"ability_icons")
+	for key in cooldown_hud.keys():
+		var control := cooldown_hud[key] as Sprite2D
+		if control != null:
+			_set_layout_position(control, &"ability_icons")
+
+
+func _set_layout_position(node: Node2D, anchor: StringName, base_override: Vector2 = Vector2.INF) -> void:
+	if node == null:
+		return
+	var base := base_override
+	if base == Vector2.INF:
+		if node.has_meta("display_layout_base_position"):
+			base = node.get_meta("display_layout_base_position") as Vector2
+		else:
+			base = node.position
+			node.set_meta("display_layout_base_position", base)
+	node.position = DisplayLayout.position_for(base, anchor, display_view_size)
+
+
+func inventory_chest_target_position() -> Vector2:
+	var target_sprite := inventory_chest if inventory_chest != null and is_instance_valid(inventory_chest) else inventory_chest_receiving
+	if target_sprite == null or not is_instance_valid(target_sprite):
+		return Vector2(198, 10)
+	return target_sprite.to_global(target_sprite.get_rect().get_center())
+
+
+func chroma_target_position() -> Vector2:
+	if chroma_delivery_target == null or not is_instance_valid(chroma_delivery_target):
+		return Vector2.INF
+	var target := chroma_delivery_target.global_position
+	if chroma_delivery_target.texture != null:
+		var track_start := float(chroma_delivery_target.get_meta("fill_track_start_x", 0.0))
+		var track_width := float(chroma_delivery_target.get_meta("fill_track_width", chroma_delivery_target.texture.get_size().x))
+		target += Vector2(track_start + track_width, chroma_delivery_target.texture.get_size().y * 0.5)
+	return target
+
+
+func soul_target_position() -> Vector2:
+	if soul_delivery_target == null or not is_instance_valid(soul_delivery_target):
+		return Vector2.INF
+	var target := soul_delivery_target.global_position
+	if soul_delivery_target.texture != null:
+		target += soul_delivery_target.texture.get_size() * 0.5
+	return target
+
+
+func gold_target_position() -> Vector2:
+	if gold_indicator == null or not is_instance_valid(gold_indicator):
+		return Vector2.INF
+	var target := gold_indicator.global_position
+	if gold_indicator.texture != null:
+		target += gold_indicator.texture.get_size() * 0.5
+	return target
+
+
+func sync_gold_value(value: int) -> void:
+	displayed_gold = maxi(value, 0)
+	gold_display_target = displayed_gold
+
+
+func set_gold_amount_texture(texture: Texture2D) -> void:
+	_set_currency_amount_texture(gold_indicator, gold_amount_indicator, texture)
+
+
+func set_soul_amount_texture(texture: Texture2D) -> void:
+	_set_currency_amount_texture(soul_icon_indicator, soul_amount_indicator, texture)
+
+
+func _set_currency_amount_texture(icon: Sprite2D, amount: Sprite2D, texture: Texture2D) -> void:
+	if icon == null or amount == null:
+		return
+	amount.texture = texture
+	amount.centered = false
+	if texture != null:
+		amount.position.x = icon.position.x - 1.0 - texture.get_width()
+
+
+func acknowledge_gold_delivery(color: Color, value: int) -> void:
+	if displayed_gold < 0:
+		displayed_gold = 0
+	if gold_display_target < displayed_gold:
+		gold_display_target = displayed_gold
+	gold_display_target += maxi(value, 0)
+	gold_reaction_color = color if color.a > 0.0 else Color.WHITE
+	if gold_indicator == null or not is_instance_valid(gold_indicator):
+		return
+	if gold_reaction_id > 0 and feedback_animation_registry != null:
+		feedback_animation_registry.finish(gold_reaction_id)
+	gold_reaction_id = 0
+	if feedback_animation_registry == null:
+		return
+	gold_reaction_id = feedback_animation_registry.register(
+		gold_indicator,
+		RESOURCE_DELIVERY_REACTION_DURATION,
+		Callable(self, "_update_gold_delivery_reaction").bind(gold_reaction_color),
+		Callable(self, "_finish_gold_delivery_reaction"))
+
+
+func _update_gold_delivery_reaction(progress: float, color: Color) -> void:
+	if gold_indicator == null or not is_instance_valid(gold_indicator):
+		return
+	var pulse := sin(progress * PI)
+	gold_indicator.scale = gold_target_base_scale * (1.0 + pulse * 0.10)
+	gold_indicator.modulate = Color(color.r, color.g, color.b, 0.80 + pulse * 0.20)
+
+
+func _finish_gold_delivery_reaction() -> void:
+	gold_reaction_id = 0
+	if gold_indicator != null and is_instance_valid(gold_indicator):
+		gold_indicator.scale = gold_target_base_scale
+		gold_indicator.modulate = Color.WHITE
+
+
+func _tick_gold_counter(root: Object, delta: float) -> void:
+	if gold_amount_indicator == null or not is_instance_valid(gold_amount_indicator) or gold_display_target < 0:
+		return
+	if displayed_gold >= gold_display_target:
+		return
+	displayed_gold = mini(gold_display_target, displayed_gold + _countup_step(displayed_gold, gold_display_target, delta))
+	set_gold_amount_texture(root.call("_pixel_text_texture", str(displayed_gold), Color8(255, 205, 117)) as Texture2D)
+
+
+## Step size for a resource count-up. The per-frame increment is capped so the
+## roll always completes in about COUNTUP_MAX_STEPS visible updates instead of
+## one update per rendered frame.
+func _countup_step(displayed: int, target: int, delta: float) -> int:
+	var remaining := maxi(target - displayed, 0)
+	if remaining <= COUNTUP_MAX_STEPS:
+		return remaining
+	return maxi(1, int(ceil(GOLD_COUNTUP_SPEED * maxf(delta, 0.0))))
+
+
+func sync_soul_value(value: int) -> void:
+	displayed_souls = maxi(value, 0)
+	soul_display_target = displayed_souls
+
+
+func acknowledge_soul_delivery(_color: Color, value: int) -> void:
+	if displayed_souls < 0:
+		displayed_souls = 0
+	if soul_display_target < displayed_souls:
+		soul_display_target = displayed_souls
+	soul_display_target += maxi(value, 0)
+	if soul_delivery_target == null or not is_instance_valid(soul_delivery_target):
+		return
+	if soul_reaction_id > 0 and feedback_animation_registry != null:
+		feedback_animation_registry.finish(soul_reaction_id)
+	soul_reaction_id = 0
+	if feedback_animation_registry == null:
+		soul_delivery_target.scale = soul_target_base_scale
+		return
+	soul_reaction_id = feedback_animation_registry.register(
+		soul_delivery_target,
+		RESOURCE_DELIVERY_REACTION_DURATION,
+		Callable(self, "_update_soul_delivery_reaction"),
+		Callable(self, "_finish_soul_delivery_reaction"))
+
+
+func _tick_soul_counter(root: Object, delta: float) -> void:
+	if soul_amount_indicator == null or not is_instance_valid(soul_amount_indicator) or soul_display_target < 0:
+		return
+	if displayed_souls >= soul_display_target:
+		return
+	displayed_souls = mini(soul_display_target, displayed_souls + _countup_step(displayed_souls, soul_display_target, delta))
+	set_soul_amount_texture(root.call("_pixel_text_texture", str(displayed_souls), SoulVisualsScript.SOUL_HIGHLIGHT_COLOR) as Texture2D)
+
+
+func acknowledge_inventory_delivery(color: Color) -> void:
+	if inventory_chest == null or not is_instance_valid(inventory_chest):
+		return
+	if inventory_chest_reaction_id > 0 and feedback_animation_registry != null:
+		feedback_animation_registry.finish(inventory_chest_reaction_id)
+	inventory_chest_reaction_id = 0
+	var reaction_color := color if color.a > 0.0 else Color.WHITE
+	if inventory_chest_receiving != null and is_instance_valid(inventory_chest_receiving):
+		inventory_chest_receiving.visible = true
+		inventory_chest_receiving.modulate = Color(reaction_color.r, reaction_color.g, reaction_color.b, 1.0)
+	if feedback_animation_registry == null:
+		inventory_chest.scale = inventory_chest_base_scale
+		if inventory_chest_receiving != null and is_instance_valid(inventory_chest_receiving):
+			inventory_chest_receiving.visible = false
+		return
+	inventory_chest_reaction_id = feedback_animation_registry.register(
+		inventory_chest,
+		INVENTORY_CHEST_REACTION_DURATION,
+		Callable(self, "_update_inventory_chest_reaction").bind(reaction_color),
+		Callable(self, "_finish_inventory_chest_reaction"))
+
+
+func _update_inventory_chest_reaction(progress: float, color: Color) -> void:
+	if inventory_chest == null or not is_instance_valid(inventory_chest):
+		return
+	var pulse := sin(progress * PI)
+	inventory_chest.scale = inventory_chest_base_scale * (1.0 + pulse * 0.08)
+	if inventory_chest_receiving != null and is_instance_valid(inventory_chest_receiving):
+		inventory_chest_receiving.visible = true
+		inventory_chest_receiving.modulate = Color(color.r, color.g, color.b, 0.82 + pulse * 0.18)
+
+
+func _finish_inventory_chest_reaction() -> void:
+	inventory_chest_reaction_id = 0
+	if inventory_chest != null and is_instance_valid(inventory_chest):
+		inventory_chest.scale = inventory_chest_base_scale
+	if inventory_chest_receiving != null and is_instance_valid(inventory_chest_receiving):
+		inventory_chest_receiving.visible = false
+
+
+func acknowledge_chroma_delivery(color: Color) -> void:
+	_acknowledge_chroma_reaction(color)
+
+
+func acknowledge_chroma_use(color: Color) -> void:
+	_acknowledge_chroma_reaction(color)
+
+
+func _acknowledge_chroma_reaction(color: Color) -> void:
+	if chroma_delivery_target == null or not is_instance_valid(chroma_delivery_target):
+		return
+	if chroma_reaction_id > 0 and feedback_animation_registry != null:
+		feedback_animation_registry.finish(chroma_reaction_id)
+	chroma_reaction_id = 0
+	chroma_reaction_color = color if color.a > 0.0 else Color.WHITE
+	if chroma_highlight_target != null and is_instance_valid(chroma_highlight_target):
+		chroma_highlight_target.texture = _tint_bar_mask(chroma_delivery_target.texture, chroma_reaction_color.lerp(Color.WHITE, 0.35))
+		chroma_highlight_target.modulate = Color.WHITE
+	if feedback_animation_registry == null:
+		_finish_chroma_delivery_reaction()
+		return
+	chroma_reaction_id = feedback_animation_registry.register(
+		chroma_delivery_target,
+		RESOURCE_DELIVERY_REACTION_DURATION,
+		Callable(self, "_update_chroma_delivery_reaction"),
+		Callable(self, "_finish_chroma_delivery_reaction"))
+
+
+func _update_chroma_delivery_reaction(progress: float) -> void:
+	if chroma_highlight_target != null and is_instance_valid(chroma_highlight_target):
+		# The highlight is a health-style transition fill behind the regular bar.
+		# Its visibility and clipped region are owned by set_chroma_bar_values;
+		# this reaction only keeps the authored accent opaque while it catches up.
+		chroma_highlight_target.modulate = Color.WHITE
+
+
+func _finish_chroma_delivery_reaction() -> void:
+	chroma_reaction_id = 0
+	if chroma_highlight_target != null and is_instance_valid(chroma_highlight_target):
+		chroma_highlight_target.modulate = Color.WHITE
+
+
+func _update_soul_delivery_reaction(progress: float) -> void:
+	if soul_delivery_target == null or not is_instance_valid(soul_delivery_target):
+		return
+	var pulse := sin(progress * PI)
+	soul_delivery_target.scale = soul_target_base_scale * (1.0 + pulse * 0.12)
+
+
+func _finish_soul_delivery_reaction() -> void:
+	soul_reaction_id = 0
+	if soul_delivery_target != null and is_instance_valid(soul_delivery_target):
+		soul_delivery_target.scale = soul_target_base_scale
+
+
+func set_visible(target_name: CanvasItem, target_bar: CanvasItem, target_damage_fill: CanvasItem, target_fill: CanvasItem, target_health_text: CanvasItem, visible: bool) -> void:
+	target_name.visible = visible
+	target_bar.visible = visible
+	if target_damage_fill != null:
+		target_damage_fill.visible = visible
+	target_fill.visible = visible
+	if target_health_text != null:
+		target_health_text.visible = visible
+
+
+func target_health_text_position(target_bar: Sprite2D, fallback_texture: Texture2D = null) -> Vector2:
+	if target_bar == null:
+		return DisplayLayout.position_for(Vector2(120, 148), &"target", display_view_size)
+	var bar_texture: Texture2D = target_bar.texture if target_bar.texture != null else fallback_texture
+	var bar_size := bar_texture.get_size() if bar_texture != null else Vector2.ZERO
+	var bar_origin := target_bar.position
+	if target_bar.centered:
+		bar_origin -= bar_size * 0.5
+	return bar_origin + bar_size * 0.5
+
+
+func target_health_texture_for(target: Sprite2D) -> Texture2D:
+	var texture := target_health_fill_textures.get(target) as Texture2D
+	if texture == null:
+		texture = TARGET_HEALTH_BAR_TEXTURE
+		target_health_fill_textures[target] = texture
+	return texture
+
+
+func target_health_damage_texture_for(target: Sprite2D, base_texture: Texture2D) -> Texture2D:
+	var texture := target_health_damage_fill_textures.get(target) as Texture2D
+	if texture == null:
+		texture = brighter_bar_texture(base_texture if base_texture != null else TARGET_HEALTH_BAR_TEXTURE)
+		target_health_damage_fill_textures[target] = texture
+	return texture
+
+
+func target_overhead_texture_for(slime: Sprite2D) -> Texture2D:
+	var texture := target_overhead_fill_textures.get(slime) as Texture2D
+	if texture == null:
+		texture = TARGET_OVERHEAD_BAR_TEXTURE
+		target_overhead_fill_textures[slime] = texture
+	return texture
+
+
+func target_overhead_damage_texture_for(slime: Sprite2D, base_texture: Texture2D) -> Texture2D:
+	var texture := target_overhead_damage_fill_textures.get(slime) as Texture2D
+	if texture == null:
+		texture = brighter_bar_texture(base_texture if base_texture != null else TARGET_OVERHEAD_BAR_TEXTURE)
+		target_overhead_damage_fill_textures[slime] = texture
+	return texture
+
+
+func update_target_ui(target: Sprite2D, target_name: Sprite2D, target_bar: Sprite2D, target_damage_fill: Sprite2D, target_fill: Sprite2D, target_health_text: Sprite2D, bar_size: Vector2, display_name: Callable, max_health_for: Callable, health_for: Callable, display_health_for: Callable, pixel_name: Callable, pixel_number: Callable, set_values: Callable) -> Vector2:
+	if target == null: return bar_size
+	target_name.texture = pixel_name.call(display_name.call(target), Color.WHITE); target_name.centered = true; target_name.position = target_name_position()
+	var fill_texture := target_health_texture_for(target)
+	if fill_texture != null:
+		target_fill.texture = fill_texture
+		target_fill.self_modulate = Color.WHITE
+		bar_size = fill_texture.get_size()
+	var damage_fill_texture := target_health_damage_texture_for(target, fill_texture)
+	if target_damage_fill != null and damage_fill_texture != null:
+		target_damage_fill.texture = damage_fill_texture
+		target_damage_fill.self_modulate = Color.WHITE
+	var max_health := float(max_health_for.call(target)); var health := float(health_for.call(target)); var display_health := float(display_health_for.call(target))
+	if target_health_text != null:
+		target_health_text.centered = true
+		target_health_text.position = target_health_text_position(target_bar, fill_texture)
+		target_health_text.texture = pixel_number.call("%d/%d" % [ceili(health), ceili(max_health)], Color.WHITE)
+	set_values.call(target_fill, target_damage_fill, bar_size, health, display_health, max_health)
+	return bar_size
+
+
+func update_player_health_ui(health: float, display_health: float, damage_hold: float, delta: float, _regen_speed: float, drain_speed: float, max_health: float, fill: Sprite2D, damage_fill: Sprite2D, fill_size: Vector2, health_text: Sprite2D, pixel_number: Callable, set_values: Callable, status_component: StatusComponent = null) -> Dictionary:
+	# Bar speeds are %-relative: they scale with max HP so the bar fills/drains at
+	# the same visual rate regardless of how large the pool is.
+	var scale := max_health / 100.0
+	if health > display_health: display_health = move_toward(display_health, health, drain_speed * scale * delta)
+	if damage_hold > 0.0: damage_hold = maxf(damage_hold - delta, 0.0)
+	elif display_health > health: display_health = move_toward(display_health, health, drain_speed * scale * delta)
+	set_values.call(fill, damage_fill, fill_size, health, display_health, max_health)
+	if health_text != null: health_text.texture = pixel_number.call("%d/%d" % [ceili(health), ceili(max_health)], Color.WHITE)
+	update_player_status_marks(fill, status_component, pixel_number)
+	return {"display_health": display_health, "damage_hold": damage_hold}
+
+
+func update_player_status_marks(anchor: Sprite2D, status_component: StatusComponent, pixel_text: Callable) -> void:
+	_prune_player_status_markers()
+	if anchor == null or not is_instance_valid(anchor) or status_component == null or not is_instance_valid(status_component) or not pixel_text.is_valid():
+		for marker in player_status_markers:
+			marker.visible = false
+		return
+	var actor := status_component.get_parent() as Sprite2D
+	_connect_status_transmission(actor, status_component)
+	var records := status_component.presentation_records()
+	var parent := anchor.get_node_or_null(^"../../..") as Node2D
+	if parent == null:
+		return
+	while player_status_markers.size() < records.size():
+		player_status_markers.append(_new_status_marker(parent, "PlayerStatusMark%d" % player_status_markers.size()))
+	for index in player_status_markers.size():
+		var marker := player_status_markers[index]
+		if index >= records.size():
+			marker.visible = false
+			continue
+		var record := records[index]
+		marker.texture = status_badge_texture(record.definition, pixel_text, record.arrived_by_transmission)
+		marker.position = Vector2(1.0 + float(index) * 8.0, 16.0) if record.arrived_by_transmission else Vector2(2.0 + float(index) * 8.0, 17.0)
+		marker.scale = Vector2.ONE * (1.25 if _consume_status_transmission_flash(actor, record.definition.id) else 1.0)
+		marker.z_index = 5
+		marker.visible = true
+
+
+func _new_status_marker(parent: Node, marker_name: String) -> Sprite2D:
+	var marker := Sprite2D.new()
+	marker.name = marker_name
+	marker.centered = false
+	marker.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	marker.z_as_relative = true
+	marker.visible = false
+	parent.add_child(marker)
+	return marker
+
+
+func status_badge_texture(definition: StatusEffectDefinition, pixel_text: Callable, arrived_by_transmission: bool = false) -> Texture2D:
+	if definition == null or not pixel_text.is_valid():
+		return null
+	var element_color := ElementCatalogScript.damage_number_color(definition.element)
+	var cache_key := "%s:%s:%s" % [String(definition.id), element_color.to_html(false), arrived_by_transmission]
+	if status_badge_texture_cache.has(cache_key):
+		return status_badge_texture_cache[cache_key] as Texture2D
+	var image := Image.create(7, 7, false, Image.FORMAT_RGBA8)
+	image.fill(Color.TRANSPARENT)
+	for y in 7:
+		for x in 7:
+			var distance := Vector2(float(x) - 3.0, float(y) - 3.0).length_squared()
+			if distance <= 10.0:
+				image.set_pixel(x, y, Color.BLACK if distance <= 4.0 else element_color)
+	var glyph_texture := pixel_text.call(definition.badge_glyph, Color.WHITE) as Texture2D
+	if glyph_texture != null:
+		var glyph := glyph_texture.get_image()
+		var glyph_origin := Vector2i((7 - glyph.get_width()) / 2, (7 - glyph.get_height()) / 2)
+		for y in glyph.get_height():
+			for x in glyph.get_width():
+				if glyph.get_pixel(x, y).a > 0.0:
+					var target := glyph_origin + Vector2i(x, y)
+					if target.x >= 0 and target.y >= 0 and target.x < 7 and target.y < 7:
+						image.set_pixelv(target, Color.WHITE)
+	if arrived_by_transmission:
+		var ring := Image.create(9, 9, false, Image.FORMAT_RGBA8)
+		ring.fill(Color.TRANSPARENT)
+		for y in 9:
+			for x in 9:
+				var distance := Vector2(float(x) - 4.0, float(y) - 4.0).length_squared()
+				if distance >= 10.0 and distance <= 20.0:
+					ring.set_pixel(x, y, Color.WHITE)
+		for y in 7:
+			for x in 7:
+				var color := image.get_pixel(x, y)
+				if color.a > 0.0:
+					ring.set_pixel(x + 1, y + 1, color)
+		image = ring
+	var texture := ImageTexture.create_from_image(image)
+	status_badge_texture_cache[cache_key] = texture
+	return texture
+
+
+func _connect_status_transmission(actor: Sprite2D, status_component: StatusComponent) -> void:
+	if actor == null or status_component == null:
+		return
+	var callback := Callable(self, "_on_status_transmission_received").bind(actor)
+	if not status_component.transmission_received.is_connected(callback):
+		status_component.transmission_received.connect(callback)
+
+
+func _on_status_transmission_received(status_id: StringName, _source_actor: Node, actor: Sprite2D) -> void:
+	if actor != null and is_instance_valid(actor):
+		_status_transmission_flash_actors["%d:%s" % [actor.get_instance_id(), String(status_id)]] = true
+
+
+func _consume_status_transmission_flash(actor: Sprite2D, status_id: StringName) -> bool:
+	if actor == null or not is_instance_valid(actor):
+		return false
+	var key := "%d:%s" % [actor.get_instance_id(), String(status_id)]
+	if not _status_transmission_flash_actors.has(key):
+		return false
+	_status_transmission_flash_actors.erase(key)
+	return true
+
+
+func set_fill_ratio(fill: Sprite2D, fill_size: Vector2, ratio: float) -> void:
+	if fill == null:
+		return
+	fill.region_enabled = true
+	var clamped_ratio := clampf(ratio, 0.0, 1.0)
+	var track_start := float(fill.get_meta("fill_track_start_x", -1.0))
+	if track_start >= 0.0:
+		var track_width := maxf(float(fill.get_meta("fill_track_width", fill_size.x - track_start)), 0.0)
+		var source_width := maxf(track_start + track_width, track_start)
+		var visible_width := clampf(track_start + roundf(track_width * clamped_ratio), 0.0, source_width)
+		fill.region_rect = Rect2(Vector2.ZERO, Vector2(visible_width, fill_size.y))
+		return
+	fill.region_rect = Rect2(Vector2.ZERO, Vector2(fill_size.x * clamped_ratio, fill_size.y))
+
+
+func set_chroma_bar_values(main_fill: Sprite2D, transition_fill: Sprite2D, fill_size: Vector2, chroma: float, display_chroma: float, max_chroma: float) -> void:
+	if main_fill == null or max_chroma <= 0.0:
+		return
+	var chroma_ratio := clampf(chroma / max_chroma, 0.0, 1.0)
+	var display_ratio := clampf(display_chroma / max_chroma, 0.0, 1.0)
+	var main_ratio := display_ratio if display_chroma < chroma else chroma_ratio
+	var transition_ratio := chroma_ratio if display_chroma < chroma else display_ratio
+	set_fill_ratio(main_fill, fill_size, main_ratio)
+	if transition_fill == null:
+		return
+	var transition_active := not is_equal_approx(main_ratio, transition_ratio)
+	set_fill_ratio(transition_fill, fill_size, transition_ratio)
+	transition_fill.visible = transition_active
+	transition_fill.modulate = Color.WHITE
+
+
+func set_health_bar_values(main_fill: Sprite2D, transition_fill: Sprite2D, fill_size: Vector2, health: float, display_health: float, max_health: float) -> void:
+	if main_fill == null or max_health <= 0.0: return
+	var health_ratio := clampf(health / max_health, 0.0, 1.0); var display_ratio := clampf(display_health / max_health, 0.0, 1.0)
+	var main_ratio := display_ratio if display_health < health else health_ratio; var transition_ratio := health_ratio if display_health < health else display_ratio
+	set_fill_ratio(main_fill, fill_size, main_ratio)
+	if transition_fill != null: set_fill_ratio(transition_fill, fill_size, transition_ratio)
+
+
+func update_overhead_bars(
+	slimes: Array[Sprite2D],
+	max_health_for: Callable,
+	health_for: Callable,
+	display_health_for: Callable,
+	is_dead_for: Callable,
+	is_aggroed_for: Callable,
+	set_values: Callable,
+	overwold_ui_z: int,
+	is_hidden_for: Callable = Callable(),
+	pixel_text: Callable = Callable()
+) -> void:
+	for slime in slimes:
+		if slime == null or not is_instance_valid(slime):
+			continue
+		var frame := _valid_sprite_reference(target_overhead_frames.get(slime))
+		var damage_fill := _valid_sprite_reference(target_overhead_damage_fills.get(slime))
+		var fill := _valid_sprite_reference(target_overhead_fills.get(slime))
+		var aggro_marker := _valid_sprite_reference(target_overhead_aggro_markers.get(slime))
+		var elite_symbol := _valid_sprite_reference(target_overhead_elite_symbols.get(slime))
+		var status_markers: Array = target_overhead_status_markers.get(slime, [])
+		_prune_status_markers(status_markers)
+		if frame == null or damage_fill == null or fill == null or aggro_marker == null or elite_symbol == null:
+			continue
+		var hidden := (is_hidden_for.is_valid() and bool(is_hidden_for.call(slime))) or bool(slime.get_meta("boss_jump_ui_suppressed", false))
+		if is_dead_for.call(slime) or hidden:
+			frame.visible = false
+			damage_fill.visible = false
+			fill.visible = false
+			aggro_marker.visible = false
+			elite_symbol.visible = false
+			for status_marker in status_markers:
+				status_marker.visible = false
+			continue
+		var max_health := float(max_health_for.call(slime))
+		var health := float(health_for.call(slime))
+		var is_aggroed := bool(is_aggroed_for.call(slime))
+		var should_show := health < max_health or is_aggroed
+		var is_elite := bool(slime.get_meta("is_elite", false))
+		frame.visible = should_show
+		damage_fill.visible = should_show
+		fill.visible = should_show
+		elite_symbol.visible = is_elite
+		fill.self_modulate = Color.WHITE
+		damage_fill.self_modulate = Color.WHITE
+		aggro_marker.visible = is_aggroed
+		var fill_size := target_overhead_fill_sizes.get(slime, Vector2.ZERO) as Vector2
+		var overhead_offset := target_overhead_offsets.get(slime, Vector2.ZERO) as Vector2
+		if not is_aggroed:
+			overhead_offset.x -= 2.0
+		var overhead_position := slime.global_position + overhead_offset + Vector2(0, -2)
+		if float(slime.get_meta("encounter_scale", 1.0)) > 1.0:
+			overhead_position = ActorGeometry.boss_slime_overhead_origin(slime, fill_size)
+		frame.global_position = overhead_position
+		frame.global_scale = Vector2.ONE
+		frame.z_index = overwold_ui_z
+		damage_fill.global_position = overhead_position
+		damage_fill.global_scale = Vector2.ONE
+		damage_fill.z_index = overwold_ui_z + 1
+		fill.global_position = overhead_position
+		fill.global_scale = Vector2.ONE
+		fill.z_index = overwold_ui_z + 2
+		var symbol_size := elite_symbol.texture.get_size() if elite_symbol.texture != null else Vector2.ZERO
+		var symbol_position := ActorGeometry.slime_head_overhead_origin(slime, symbol_size)
+		if should_show:
+			# Once the damage/aggro bar is present, keep the elite symbol attached
+			# to the bar rather than letting it collide with the slime's head.
+			symbol_position = overhead_position + Vector2((fill_size.x - symbol_size.x) * 0.5, -symbol_size.y - ActorGeometry.ELITE_OVERHEAD_SYMBOL_GAP)
+		elite_symbol.top_level = true
+		elite_symbol.global_position = symbol_position
+		elite_symbol.global_scale = Vector2.ONE
+		elite_symbol.z_index = overwold_ui_z + 4
+		var status_component := slime.get_node_or_null("Status") as StatusComponent
+		_update_actor_status_markers(slime, status_component, status_markers, overhead_position + Vector2(fill_size.x + 2.0, -1.0), overwold_ui_z + 5, pixel_text)
+		aggro_marker.top_level = true
+		var aggro_offset := target_overhead_aggro_offsets.get(slime, Vector2.ZERO) as Vector2
+		if float(slime.get_meta("encounter_scale", 1.0)) > 1.0:
+			# Match the regular-slime layout: the marker's right edge touches the
+			# health bar's left edge. Derive the gap from the actual marker texture
+			# instead of assuming its width is always three pixels.
+			var marker_width := aggro_marker.texture.get_size().x if aggro_marker.texture != null else 0.0
+			aggro_marker.global_position = Vector2(overhead_position.x - marker_width, overhead_position.y)
+		else:
+			# Skeletons use the same authored HUD bar layout as regular slimes.
+			aggro_marker.global_position = slime.global_position + aggro_offset + Vector2(0, -2)
+		aggro_marker.global_scale = Vector2.ONE
+		aggro_marker.z_index = overwold_ui_z + 3
+		if should_show:
+			set_values.call(fill, damage_fill, fill_size, health, float(display_health_for.call(slime)), max_health)
+
+
+func _update_actor_status_markers(actor: Sprite2D, status_component: StatusComponent, markers: Array, origin: Vector2, z_index: int, pixel_text: Callable) -> void:
+	if actor == null or not is_instance_valid(actor):
+		return
+	_prune_status_markers(markers)
+	var records := status_component.presentation_records() if status_component != null and is_instance_valid(status_component) else []
+	if status_component != null and is_instance_valid(status_component):
+		_connect_status_transmission(actor, status_component)
+	while markers.size() < records.size():
+		var marker := _new_status_marker(actor, "StatusMark%d" % markers.size())
+		marker.top_level = true
+		markers.append(marker)
+	for index in markers.size():
+		var marker := _valid_sprite_reference(markers[index])
+		if marker == null:
+			continue
+		if index >= records.size():
+			marker.visible = false
+			continue
+		var record := records[index]
+		marker.texture = status_badge_texture(record.definition, pixel_text, record.arrived_by_transmission)
+		marker.global_position = origin + Vector2(float(index) * 8.0 - (1.0 if record.arrived_by_transmission else 0.0), -1.0 if record.arrived_by_transmission else 0.0)
+		marker.scale = Vector2.ONE * (1.25 if _consume_status_transmission_flash(actor, record.definition.id) else 1.0)
+		marker.global_scale = Vector2.ONE
+		marker.z_as_relative = false
+		marker.z_index = z_index
+		marker.visible = true
+
+
+func _prune_status_markers(markers: Array) -> void:
+	for index in range(markers.size() - 1, -1, -1):
+		var marker_value: Variant = markers[index]
+		if not is_instance_valid(marker_value):
+			markers.remove_at(index)
+			continue
+		if not (marker_value is Sprite2D):
+			markers.remove_at(index)
+
+
+func _valid_sprite_reference(value: Variant) -> Sprite2D:
+	if not is_instance_valid(value) or not (value is Sprite2D):
+		return null
+	return value as Sprite2D
+
+
+func _prune_player_status_markers() -> void:
+	for index in range(player_status_markers.size() - 1, -1, -1):
+		var marker_value: Variant = player_status_markers[index]
+		if not is_instance_valid(marker_value):
+			player_status_markers.remove_at(index)
+			continue
+		if not (marker_value is Sprite2D):
+			player_status_markers.remove_at(index)
+
+
+func update_button_hud(buttons: Array[Sprite2D], _devices: Array[int], router: InputRouter = null, input_device_tracker: Node = null, pixel_texture: Callable = Callable()) -> void:
+	if buttons.size() < 4:
+		return
+	var pressed := [false, false, false, false]
+	if router != null:
+		pressed[0] = router.button_pressed(JOY_BUTTON_Y)
+		pressed[1] = router.button_pressed(JOY_BUTTON_X)
+		pressed[2] = router.button_pressed(JOY_BUTTON_A)
+		pressed[3] = router.button_pressed(JOY_BUTTON_B)
+	var device := int(input_device_tracker.get("current_device")) if input_device_tracker != null else 1
+	var keyboard_texture_ready := device == 0 and pixel_texture.is_valid()
+	var refresh_visuals := device != _button_hud_device or keyboard_texture_ready != _button_hud_keyboard_texture_ready
+	if refresh_visuals:
+		_button_hud_device = device
+		_button_hud_keyboard_texture_ready = keyboard_texture_ready
+		var keyboard_labels := ["U", "J", "K", "E"]
+		for index in buttons.size():
+			var button := buttons[index]
+			if device == 2:
+				button.visible = false
+			elif keyboard_texture_ready:
+				button.visible = true
+				button.texture = pixel_texture.call(keyboard_labels[index] if index < keyboard_labels.size() else "", Color.WHITE) as Texture2D
+			else:
+				button.visible = true
+				var gamepad_texture: Variant = button.get_meta("gamepad_texture", button.texture)
+				if gamepad_texture is Texture2D:
+					button.texture = gamepad_texture as Texture2D
+	for index in buttons.size():
+		var button := buttons[index]
+		button.modulate = Color(1.7, 1.7, 1.7, 1.0) if pressed[index] else Color.WHITE
+
+
+func update_ability_prompt_hud(prompts: Array[Sprite2D], input_device_tracker: Node = null, router: InputRouter = null, pixel_texture: Callable = Callable()) -> void:
+	if prompts.size() < 2:
+		return
+	var device := int(input_device_tracker.get("current_device")) if input_device_tracker != null else 1
+	var pressed := router != null and router.action_pressed(&"magic")
+	var keyboard_texture_ready := device == 0 and pixel_texture.is_valid()
+	var refresh_visuals := device != _ability_prompt_hud_device or keyboard_texture_ready != _ability_prompt_keyboard_texture_ready
+	if refresh_visuals:
+		_ability_prompt_hud_device = device
+		_ability_prompt_keyboard_texture_ready = keyboard_texture_ready
+		for prompt in prompts:
+			if prompt == null:
+				continue
+			if device == 2:
+				prompt.visible = false
+			elif keyboard_texture_ready:
+				prompt.visible = true
+				prompt.texture = pixel_texture.call("U", Color.WHITE) as Texture2D
+			else:
+				prompt.visible = true
+				var gamepad_texture: Variant = prompt.get_meta("gamepad_texture", prompt.texture)
+				if gamepad_texture is Texture2D:
+					prompt.texture = gamepad_texture as Texture2D
+	for prompt in prompts:
+		if prompt == null:
+			continue
+		if device == 2:
+			prompt.modulate = Color.WHITE
+		elif keyboard_texture_ready:
+			prompt.modulate = Color(1.7, 1.7, 1.7, 1.0) if pressed else Color.WHITE
+		else:
+			prompt.modulate = Color(1.7, 1.7, 1.0, 1.0) if pressed else Color.WHITE
+
+
+func update_cooldown_hud(root: Object, delta: float = 0.0) -> void:
+	if cooldown_hud.is_empty():
+		return
+	var ability := root.get("player_aspect_ability_component") as Node
+	var chroma := root.get("player_chroma_component") as Node
+	var regular_remaining := float(ability.get("cooldown_remaining")) if ability != null else 0.0
+	var regular_duration := float(root.get("GREY_MAGIC_COOLDOWN"))
+	if ability != null and chroma != null:
+		var active_duration := float(ability.get("active_cooldown_duration"))
+		regular_duration = active_duration if active_duration > 0.0 and regular_remaining > 0.0 else float(ability.call("cooldown_duration_for_mode", int(chroma.call("ability_mode"))))
+	var imbue_runtime := root.get("magic_runtime_controller") as Node
+	var imbue_remaining := float(imbue_runtime.get("imbue_cooldown_remaining")) if imbue_runtime != null else 0.0
+	var imbue_duration := float(root.get("IMBUE_COOLDOWN"))
+	var attack := root.get("player_attack_component") as PlayerAttackComponent
+	var beam_remaining := attack.sword_beam_cooldown_remaining if attack != null else 0.0
+	var beam_duration := attack.sword_beam_cooldown if attack != null else 8.0
+	var regular_cooldown_ratio := clampf(regular_remaining / maxf(regular_duration, 0.001), 0.0, 1.0)
+	var imbue_cooldown_ratio := clampf(imbue_remaining / maxf(imbue_duration, 0.001), 0.0, 1.0)
+	var beam_cooldown_ratio := clampf(beam_remaining / maxf(beam_duration, 0.001), 0.0, 1.0)
+	_update_cooldown_flash(&"magic", regular_remaining, delta)
+	_update_cooldown_flash(&"imbue", imbue_remaining, delta)
+	_update_cooldown_flash(&"sword_beam", beam_remaining, delta)
+	var magic_available := _magic_cooldown_available(chroma)
+	var imbue_available := _imbue_cooldown_available(root, chroma)
+	var beam_cost := attack.sword_beam_cost_for(chroma) if attack != null else ChromaCostsScript.amount_for_fraction(int(chroma.get("max_chroma")) if chroma != null else 100, ChromaCostsScript.SWORD_BEAM_FRACTION)
+	var beam_available := beam_remaining <= 0.0001 and chroma != null and bool(chroma.call("can_spend_chroma", beam_cost))
+	_update_cooldown_icon(root, &"magic", regular_remaining, regular_cooldown_ratio, magic_available)
+	_update_cooldown_icon(root, &"imbue", imbue_remaining, imbue_cooldown_ratio, imbue_available)
+	_update_cooldown_icon(root, &"sword_beam", beam_remaining, beam_cooldown_ratio, beam_available)
+
+
+func _update_cooldown_flash(ability_key: StringName, remaining: float, delta: float) -> void:
+	var previous := float(cooldown_previous_remaining.get(ability_key, -1.0))
+	if previous >= 0.0 and remaining > previous + 0.0001:
+		cooldown_flash_remaining[ability_key] = COOLDOWN_FLASH_DURATION
+	cooldown_flash_remaining[ability_key] = maxf(float(cooldown_flash_remaining.get(ability_key, 0.0)) - maxf(delta, 0.0), 0.0)
+	cooldown_previous_remaining[ability_key] = remaining
+
+
+func _magic_cooldown_available(chroma: Node) -> bool:
+	if chroma == null or not is_instance_valid(chroma):
+		return true
+	# Magic always requires Chroma: a zero bar disables even the gray triangle.
+	if int(chroma.get("current_chroma")) <= 0:
+		return false
+	var mode := int(chroma.call("ability_mode"))
+	return mode != ChromaComponentScript.AbilityMode.ELEMENTAL or bool(chroma.call("can_use_elemental_ability"))
+
+
+func _imbue_cooldown_available(root: Object, chroma: Node) -> bool:
+	if chroma == null or not is_instance_valid(chroma):
+		return false
+	var element := ElementCatalogScript.element_for_aspect(int(chroma.get("current_aspect")))
+	var cost := ChromaCostsScript.amount_for_fraction(int(chroma.get("max_chroma")), ChromaCostsScript.IMBUE_FRACTION)
+	return element != ElementCatalogScript.Element.NEUTRAL and bool(chroma.call("can_spend_chroma", cost))
+
+
+func _update_cooldown_icon(root: Object, ability_key: StringName, remaining: float, cooldown_ratio: float, available: bool) -> void:
+	var icon := cooldown_hud.get(String(ability_key) + "_icon") as Sprite2D
+	var timer := cooldown_hud.get(String(ability_key) + "_timer") as Sprite2D
+	var timer_shadow := cooldown_hud.get(String(ability_key) + "_timer_shadow") as Sprite2D
+	if icon == null:
+		return
+	var palette_textures: Dictionary = icon.get_meta("cooldown_palette_textures", {}) as Dictionary
+	var palette_name := str(root.get("current_player_palette_name"))
+	if palette_name.is_empty():
+		palette_name = "blue"
+	var palette_texture := palette_textures.get(palette_name, palette_textures.get("blue")) as Texture2D
+	if palette_texture != null and icon.texture != palette_texture:
+		icon.texture = palette_texture
+	var material := icon.material as ShaderMaterial
+	if material != null:
+		material.set_shader_parameter("cooldown_ratio", cooldown_ratio)
+		material.set_shader_parameter("unavailable", 1.0 if not available and remaining <= 0.0001 else 0.0)
+		var flash_ratio := clampf(float(cooldown_flash_remaining.get(ability_key, 0.0)) / COOLDOWN_FLASH_DURATION, 0.0, 1.0)
+		material.set_shader_parameter("flash_strength", flash_ratio * 0.72)
+	var timer_visible := remaining > 0.0001
+	if timer != null:
+		timer.visible = timer_visible
+	if timer_shadow != null:
+		timer_shadow.visible = timer_visible
+	if timer_visible:
+		var shown := ceilf(remaining * 10.0) / 10.0
+		if timer != null:
+			timer.texture = cooldown_timer_texture(shown, Color.WHITE)
+		if timer_shadow != null:
+			timer_shadow.texture = cooldown_timer_texture(shown, COOLDOWN_TIMER_SHADOW_COLOR)
+
+
+func update_overworld(root: Object, delta: float, ui_z: int) -> void:
+	# Pause and Hub keep the overworld HUD node alive for the currency/status
+	# presentation, but the interactive gameplay HUD is covered by the menu.
+	# Rebuilding prompt textures, cooldown textures, and every enemy overhead bar
+	# on every physics tick here is needless steady-state work on mobile and was
+	# especially noticeable while idling in menus. Keep only the small animated
+	# currency/timer elements that remain visible above the menu.
+	var screen_state := root.get("screen_state_controller") as Node
+	if screen_state != null:
+		var state := StringName(screen_state.get("state"))
+		if state == &"pause" or state == &"hub":
+			var menu_timer := fmod(gold_animation_timer + delta, 0.48)
+			gold_animation_timer = menu_timer
+			_tick_gold_counter(root, delta)
+			_tick_soul_counter(root, delta)
+			update_gold_indicator(gold_indicator, gold_animation_frames, menu_timer)
+			update_run_timer(root)
+			return
+	update_button_hud(button_hud_sprites, root.call("_controller_devices"), root.get("input_router") as InputRouter, root.get("input_device_tracker") as Node, Callable(root, "_pixel_text_texture"))
+	update_ability_prompt_hud(ability_prompt_hud, root.get("input_device_tracker") as Node, root.get("input_router") as InputRouter, Callable(root, "_pixel_text_texture"))
+	update_cooldown_hud(root, delta)
+	update_combo_hud(root)
+	var timer := fmod(gold_animation_timer + delta, 0.48); gold_animation_timer = timer; _tick_gold_counter(root, delta); _tick_soul_counter(root, delta); update_gold_indicator(gold_indicator, gold_animation_frames, timer)
+	update_run_timer(root)
+	update_overhead_bars(root.get("slimes"), Callable(root, "_enemy_max_health"), Callable(root, "_slime_current_health"), Callable(root, "_slime_display_health"), Callable(root, "_is_slime_dead"), Callable(root, "_is_slime_aggroed"), Callable(self, "set_health_bar_values"), ui_z, Callable(root, "_is_slime_hidden"), Callable(root, "_pixel_text_texture"))
+
+
+func update_combo_hud(root: Object) -> void:
+	if combo_label == null or combo_base == null or combo_fill == null:
+		return
+	var screen_state := root.get("screen_state_controller") as Node
+	var menu_active := screen_state != null and StringName(screen_state.get("state")) != &"gameplay"
+	var momentum := root.call("_combat_momentum") as CombatMomentumComponent
+	var active := not menu_active and momentum != null and momentum.combo_count > 0 and momentum.combo_timer > 0.0
+	combo_label.visible = active
+	combo_base.visible = active
+	combo_fill.visible = active
+	if not active:
+		last_combo_text = ""
+		return
+	var combo_text: String = "COMBO x%d" % momentum.combo_count
+	if combo_text != last_combo_text:
+		last_combo_text = combo_text
+		combo_label.texture = root.call("_pixel_text_texture", combo_text, Color8(255, 205, 117)) as Texture2D
+	var ratio := momentum.combo_timer / maxf(momentum.combo_hit_window, 0.001)
+	set_fill_ratio(combo_fill, Vector2(48, 4), ratio)
+	combo_fill.self_modulate = Color8(255, 205, 117)
+
+
+func update_run_timer(root: Object) -> void:
+	var indicator := run_timer_indicator
+	if indicator == null:
+		return
+	var run_state := root.get("run_state") as RunState
+	var elapsed := floori(run_state.elapsed_time) if run_state != null and run_state.timer_started else 0
+	var label := "TIME %02d:%02d" % [floori(float(elapsed) / 60.0), elapsed % 60]
+	if label == last_run_timer_text:
+		return
+	last_run_timer_text = label
+	indicator.texture = root.call("_pixel_text_texture", label, Color8(244, 244, 244)) as Texture2D
+
+
+func update_room_number(root: Object) -> void:
+	var indicator := room_number_indicator
+	if indicator == null: return
+	# The room indicator shows landmark names only; the numeric D-label was removed
+	# with the depth-as-difficulty model. Ordinary rooms render no label.
+	var room_label := ""; var room_type: StringName = root.get("current_room_type")
+	if room_type == DungeonGraph.ROOM_START: room_label = "START"
+	elif room_type == DungeonGraph.ROOM_REST: room_label = "REST"
+	elif room_type == DungeonGraph.ROOM_TRADER: room_label = "TRADER"
+	elif room_type == DungeonGraph.ROOM_NPC: room_label = "CLOAKED"
+	elif room_type == DungeonGraph.ROOM_DOWNSTAIRS: room_label = "BOSS"
+	indicator.texture = root.call("_pixel_text_texture", room_label, Color8(244, 244, 244)) as Texture2D if not room_label.is_empty() else null
+	var run_indicator := dungeon_run_indicator
+	if run_indicator != null:
+		var profile := root.get("player_profile") as PlayerProfile
+		# The HUD's R-number is the successful-run progression. Difficulty rank is
+		# performance-sensitive and can fall after an F, but a failed R2 must still
+		# restart as R2 rather than appearing to roll back to R1.
+		var run_number := profile.completed_runs + 1 if profile != null else 1
+		var run_flow := root.get("run_flow_controller") as RunFlowController
+		if run_flow != null and run_flow.debug_run_number > 0:
+			run_number = run_flow.debug_run_number
+		var grade := profile.last_run_grade if profile != null else "D"
+		run_indicator.texture = root.call("_pixel_text_texture", "%s R%d" % [DungeonGraph.DUNGEON_NAME, run_number], _run_grade_color(grade))
+
+func _run_grade_color(grade: String) -> Color:
+	match grade:
+		"S": return Color8(177, 62, 83)
+		"A": return Color8(255, 205, 117)
+		"B": return Color8(118, 66, 138)
+		"C": return Color8(65, 166, 246)
+		"F": return Color8(150, 156, 170)
+		_: return Color.WHITE
+
+
+func update_gold_indicator(indicator: Sprite2D, frames: Array[Texture2D], delta: float) -> float:
+	if indicator == null or frames.is_empty():
+		return 0.0
+	var timer := fmod(delta, 0.48)
+	var frame_index := mini(int(timer / 0.12), frames.size() - 1)
+	indicator.texture = frames[frame_index]
+	return timer
+
+
+func _solid_texture(size: Vector2i, color: Color) -> Texture2D:
+	var image := Image.create(size.x, size.y, false, Image.FORMAT_RGBA8)
+	image.fill(color)
+	return ImageTexture.create_from_image(image)
+
+
+## Chroma reaction tint. The source bar and the reaction color are both fixed
+## per reaction, so the per-pixel pass runs once per color rather than once per
+## pickup contact.
+func _tint_bar_mask(source: Texture2D, color: Color) -> Texture2D:
+	if source == null:
+		return null
+	var cache_key := "%d:%s" % [source.get_instance_id(), color.to_html(false)]
+	if bar_tint_texture_cache.has(cache_key):
+		return bar_tint_texture_cache[cache_key] as Texture2D
+	var source_image: Image = source.get_image()
+	if source_image == null:
+		return null
+	var image: Image = source_image.duplicate()
+	for y in image.get_height():
+		for x in image.get_width():
+			var alpha := image.get_pixel(x, y).a
+			if alpha > 0.0:
+				image.set_pixel(x, y, Color(color.r, color.g, color.b, alpha))
+	var texture := ImageTexture.create_from_image(image)
+	bar_tint_texture_cache[cache_key] = texture
+	return texture
+
+
+func cooldown_timer_texture(seconds: float, color: Color) -> Texture2D:
+	var display_seconds := ceilf(maxf(seconds, 0.0) * 10.0) / 10.0
+	var text := "%.1f" % display_seconds
+	var cache_key := "%s:%s" % [text, color.to_html(false)]
+	if cooldown_timer_texture_cache.has(cache_key):
+		return cooldown_timer_texture_cache[cache_key] as Texture2D
+	var glyphs := {
+		"0": ["111", "101", "101", "101", "111"],
+		"1": ["010", "110", "010", "010", "111"],
+		"2": ["111", "001", "111", "100", "111"],
+		"3": ["111", "001", "111", "001", "111"],
+		"4": ["101", "101", "111", "001", "001"],
+		"5": ["111", "100", "111", "001", "111"],
+		"6": ["111", "100", "111", "101", "111"],
+		"7": ["111", "001", "010", "010", "010"],
+		"8": ["111", "101", "111", "101", "111"],
+		"9": ["111", "101", "111", "001", "111"],
+		".": ["0", "0", "0", "0", "1"],
+	}
+	var text_width := 0
+	for character in text:
+		var pattern: Array = glyphs.get(character, glyphs["0"])
+		text_width += (pattern[0] as String).length() + 1
+	text_width = maxi(text_width - 1, 1)
+	# Four-character countdowns such as 20.0 fit inside the 16px icon with a
+	# one-pixel side margin. Keeping a fixed 14px canvas also keeps every value
+	# centered at an integer pixel coordinate.
+	var image := Image.create(14, 5, false, Image.FORMAT_RGBA8)
+	image.fill(Color.TRANSPARENT)
+	var x_offset := maxi(int(float(14 - text_width) / 2.0), 0)
+	for character in text:
+		var pattern: Array = glyphs.get(character, glyphs["0"])
+		for y in 5:
+			var row := pattern[y] as String
+			for x in row.length():
+				if row[x] == "1":
+					image.set_pixel(x_offset + x, y, color)
+		x_offset += (pattern[0] as String).length() + 1
+	var texture := ImageTexture.create_from_image(image)
+	cooldown_timer_texture_cache[cache_key] = texture
+	return texture
+
+
+func _build_cooldown_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Callable) -> Dictionary:
+	var result: Dictionary = {}
+	var rows := [
+		# PlayerStatus is an authored 82x16 strip. Two pixels of breathing room
+		# and an 18px pitch keep both 16px indicators aligned to its top edge.
+		{"name": "MagicCooldown", "key": "magic", "texture": "magic button 16x16.png", "position": Vector2(84, 0)},
+		{"name": "ImbueCooldown", "key": "imbue", "texture": "imbue button 16x16.png", "position": Vector2(102, 0)},
+		{"name": "SwordBeamCooldown", "key": "sword_beam", "texture": "res://assets/artwork/swordbeambutton 16x16.png", "position": Vector2(120, 0)},
+	]
+	for row in rows:
+		# Use a direct load first so a fresh clone can build the HUD before the
+		# editor has written the optional .import sidecar for a newly added PNG.
+		var texture_path := String(row["texture"])
+		if not texture_path.begins_with("res://"):
+			texture_path = "res://assets/artwork/" + texture_path
+		var source: Texture2D = null
+		# This newly supplied artwork may not have a Godot .import sidecar yet.
+		# Load that PNG through Image so startup does not emit a ResourceLoader
+		# failure before the editor has scanned it.
+		if texture_path.begins_with("res://assets/artwork/"):
+			var image := Image.load_from_file(ProjectSettings.globalize_path(texture_path))
+			if image != null and not image.is_empty():
+				source = ImageTexture.create_from_image(image)
+		else:
+			source = load(texture_path) as Texture2D
+		if source == null:
+			source = load_texture.call(texture_path) as Texture2D
+		var palette_textures: Dictionary = {}
+		for palette_name in PaletteLibrary.PALETTE_NAMES:
+			palette_textures[palette_name] = library.recolor_ability_icon(source, palette_name)
+		var icon := parent.get_node_or_null(row["name"] + "Icon") as Sprite2D
+		if icon == null:
+			icon = Sprite2D.new()
+			icon.name = row["name"] + "Icon"
+			parent.add_child(icon)
+		icon.centered = false
+		icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		icon.texture = palette_textures.get("blue") as Texture2D
+		icon.position = row["position"]
+		icon.z_index = 1
+		icon.set_meta("cooldown_palette_textures", palette_textures)
+		if String(row["key"]) == "sword_beam":
+			var beam_prompt := icon.get_node_or_null("SquarePromptSwordBeam") as Sprite2D
+			if beam_prompt == null:
+				beam_prompt = Sprite2D.new()
+				beam_prompt.name = "SquarePromptSwordBeam"
+				icon.add_child(beam_prompt)
+			beam_prompt.texture = load_texture.call("res://assets/artwork/square55.png") as Texture2D
+			beam_prompt.centered = false
+			beam_prompt.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			beam_prompt.position = Vector2(11, 11)
+			beam_prompt.z_index = 10
+		var material := ShaderMaterial.new()
+		material.shader = ABILITY_COOLDOWN_SHADER
+		material.set_shader_parameter("cooldown_ratio", 0.0)
+		material.set_shader_parameter("unavailable", 0.0)
+		material.set_shader_parameter("desaturation_amount", COOLDOWN_ICON_DESATURATION)
+		material.set_shader_parameter("cooldown_dim", COOLDOWN_ICON_DIM)
+		material.set_shader_parameter("elapsed_brightness", COOLDOWN_ELAPSED_BRIGHTNESS)
+		material.set_shader_parameter("flash_strength", 0.0)
+		icon.material = material
+		var timer_shadow := parent.get_node_or_null(row["name"] + "TimerShadow") as Sprite2D
+		if timer_shadow == null:
+			timer_shadow = Sprite2D.new()
+			timer_shadow.name = row["name"] + "TimerShadow"
+			parent.add_child(timer_shadow)
+		timer_shadow.centered = false
+		timer_shadow.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		timer_shadow.position = row["position"] + Vector2(1, 5)
+		timer_shadow.z_index = 2
+		timer_shadow.visible = false
+		var timer := parent.get_node_or_null(row["name"] + "Timer") as Sprite2D
+		if timer == null:
+			timer = Sprite2D.new()
+			timer.name = row["name"] + "Timer"
+			parent.add_child(timer)
+		timer.centered = false
+		timer.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		timer.position = row["position"] + Vector2(1, 5)
+		timer.z_index = 3
+		timer.visible = false
+		result[String(row["key"]) + "_icon"] = icon
+		result[String(row["key"]) + "_timer"] = timer
+		result[String(row["key"]) + "_timer_shadow"] = timer_shadow
+	return result
+
+
+func _build_combo_hud(parent: Node) -> Dictionary:
+	var label := parent.get_node_or_null("ComboLabel") as Sprite2D
+	if label == null:
+		label = Sprite2D.new()
+		label.name = "ComboLabel"
+		parent.add_child(label)
+	label.centered = true
+	label.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	label.position = Vector2(120, 131)
+	label.z_index = 3
+	label.visible = false
+	var base := parent.get_node_or_null("ComboBase") as Sprite2D
+	if base == null:
+		base = Sprite2D.new()
+		base.name = "ComboBase"
+		parent.add_child(base)
+	base.centered = false
+	base.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	base.texture = _solid_texture(Vector2i(48, 4), Color8(28, 31, 43, 220))
+	base.position = Vector2(96, 139)
+	base.z_index = 1
+	base.visible = false
+	var fill := parent.get_node_or_null("ComboFill") as Sprite2D
+	if fill == null:
+		fill = Sprite2D.new()
+		fill.name = "ComboFill"
+		parent.add_child(fill)
+	fill.centered = false
+	fill.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	fill.texture = _solid_texture(Vector2i(48, 4), Color8(255, 205, 117))
+	fill.position = Vector2(96, 139)
+	fill.z_index = 2
+	fill.visible = false
+	set_fill_ratio(fill, Vector2(48, 4), 1.0)
+	return {"label": label, "base": base, "fill": fill}
+
+
+func build_world_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Callable, target_bar: Sprite2D, _target_fill: Sprite2D, player_fill: Sprite2D) -> Dictionary:
+	var layout := parent.get_node_or_null("PlayerHud") as Node2D
+	var hud_parent: Node = layout if layout != null else parent
+	var room_number := layout.get_node("RoomNumber") as Sprite2D if layout != null else Sprite2D.new()
+	room_number.name = "RoomNumber"
+	room_number.centered = false
+	room_number.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	room_number.z_index = 2
+	if layout == null:
+		room_number.position = Vector2(5, 141)
+		parent.add_child(room_number)
+	var gold := layout.get_node("GoldDisplay/Gold") as Sprite2D if layout != null else Sprite2D.new()
+	gold.name = "GoldIndicator"
+	gold.centered = false
+	gold.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	gold.z_index = 2
+	if layout == null:
+		gold.position = Vector2(64, 2)
+		parent.add_child(gold)
+	var gold_amount := layout.get_node("GoldDisplay/GoldAmount") as Sprite2D if layout != null else Sprite2D.new()
+	gold_amount.name = "GoldAmount"
+	gold_amount.centered = false
+	gold_amount.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	gold_amount.z_index = 2
+	if layout == null:
+		gold_amount.position = Vector2(72, 2)
+		parent.add_child(gold_amount)
+	var inventory_chest := layout.get_node_or_null("InventoryChest") as Sprite2D if layout != null else null
+	if inventory_chest == null:
+		inventory_chest = Sprite2D.new()
+		inventory_chest.name = "InventoryChest"
+		hud_parent.add_child(inventory_chest)
+		inventory_chest.position = Vector2(190, 2)
+	inventory_chest.centered = false
+	inventory_chest.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	inventory_chest.z_index = 2
+	if inventory_chest.texture == null:
+		inventory_chest.texture = INVENTORY_CHEST_IDLE_TEXTURE
+	var inventory_chest_receiving := layout.get_node_or_null("InventoryChestReceiving") as Sprite2D if layout != null else null
+	if inventory_chest_receiving == null:
+		inventory_chest_receiving = Sprite2D.new()
+		inventory_chest_receiving.name = "InventoryChestReceiving"
+		hud_parent.add_child(inventory_chest_receiving)
+		inventory_chest_receiving.position = inventory_chest.position
+	inventory_chest_receiving.centered = false
+	inventory_chest_receiving.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	inventory_chest_receiving.z_index = 3
+	inventory_chest_receiving.texture = INVENTORY_CHEST_RECEIVING_TEXTURE
+	inventory_chest_receiving.visible = false
+	self.inventory_chest = inventory_chest
+	self.inventory_chest_receiving = inventory_chest_receiving
+	inventory_chest_base_scale = inventory_chest.scale
+	var soul_display := layout.get_node_or_null("SoulDisplay") as Node2D if layout != null else null
+	if soul_display == null:
+		soul_display = Node2D.new()
+		soul_display.name = "SoulDisplay"
+		soul_display.position = Vector2(205, 9) if layout != null else Vector2(64, 9)
+		(layout if layout != null else parent).add_child(soul_display)
+	var soul_icon := soul_display.get_node_or_null("SoulIcon") as Sprite2D
+	if soul_icon == null:
+		soul_icon = Sprite2D.new()
+		soul_icon.name = "SoulIcon"
+		soul_display.add_child(soul_icon)
+		soul_icon.position = Vector2.ZERO
+	soul_icon.centered = false
+	soul_icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	soul_icon.z_index = 2
+	var soul_amount := soul_display.get_node_or_null("SoulAmount") as Sprite2D
+	if soul_amount == null:
+		soul_amount = Sprite2D.new()
+		soul_amount.name = "SoulAmount"
+		soul_display.add_child(soul_amount)
+		soul_amount.position = Vector2(7, 0)
+	soul_amount.centered = false
+	soul_amount.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	soul_amount.z_index = 2
+	var run_timer := layout.get_node_or_null("RunTimer") as Sprite2D if layout != null else Sprite2D.new()
+	run_timer.name = "RunTimer"
+	run_timer.centered = false
+	run_timer.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	run_timer.z_index = 2
+	if layout == null:
+		run_timer.position = Vector2(174, 149)
+		parent.add_child(run_timer)
+	var dungeon_run := layout.get_node_or_null("DungeonRun") as Sprite2D if layout != null else Sprite2D.new()
+	dungeon_run.name = "DungeonRun"
+	dungeon_run.centered = false
+	dungeon_run.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	dungeon_run.z_index = 2
+	if layout == null:
+		dungeon_run.position = Vector2(5, 149)
+		parent.add_child(dungeon_run)
+	var gold_frames := library.slice_frames("res://assets/artwork/GoldFresh2.png", Vector2i(5, 5))
+	gold.hframes = 1
+	gold.vframes = 1
+	gold.frame = 0
+	gold.texture = gold_frames[0] if not gold_frames.is_empty() else null
+	self.gold_indicator = gold
+	self.gold_amount_indicator = gold_amount
+	gold_target_base_scale = gold.scale
+	soul_icon.hframes = 1
+	soul_icon.vframes = 1
+	soul_icon.frame = 0
+	soul_icon.texture = SoulVisualsScript.texture()
+	self.chroma_delivery_target = layout.get_node_or_null("PlayerStatus/Mana/MpBarFill") as Sprite2D if layout != null else null
+	self.chroma_highlight_target = layout.get_node_or_null("PlayerStatus/Mana/MpBarHighlight") as Sprite2D if layout != null else null
+	if chroma_delivery_target != null and chroma_highlight_target == null:
+		chroma_highlight_target = duplicate_fill_sprite(chroma_delivery_target, "MpBarHighlight")
+	self.soul_delivery_target = soul_icon
+	if chroma_highlight_target != null:
+		chroma_highlight_target.z_index = chroma_delivery_target.z_index - 1
+		chroma_highlight_target.visible = false
+		chroma_highlight_target.region_rect = chroma_delivery_target.region_rect
+	if soul_delivery_target != null:
+		soul_target_base_scale = soul_delivery_target.scale
+	var buttons: Array[Sprite2D] = []
+	var button_names := ["TrianglePrompt", "SquarePrompt", "XPrompt", "CirclePrompt"]
+	var button_textures := ["triangle55.png", "square55.png", "x55.png", "circle55.png"]
+	var button_positions := [Vector2(224, 64), Vector2(219, 69), Vector2(224, 74), Vector2(229, 69)]
+	for index in button_names.size():
+		var button := hud_parent.get_node_or_null("InputPrompts/" + button_names[index]) as Sprite2D
+		if button == null:
+			button = Sprite2D.new()
+			button.name = button_names[index]
+			hud_parent.add_child(button)
+		button.texture = load_texture.call("res://assets/artwork/" + button_textures[index]) if button.texture == null else button.texture
+		button.set_meta("gamepad_texture", button.texture)
+		button.centered = false
+		button.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		button.position = button_positions[index]
+		button.z_index = 2
+		buttons.append(button)
+	var ability_prompts: Array[Sprite2D] = []
+	var ability_icons := hud_parent.get_node_or_null("AbilityIcons") as Node
+	var prompt_parents := ["MagicCooldownIcon", "ImbueCooldownIcon", "SwordBeamCooldownIcon"]
+	var prompt_names := ["TrianglePromptMagic", "TrianglePromptImbue", "SquarePromptSwordBeam"]
+	for index in prompt_names.size():
+		var prompt_parent := ability_icons.get_node_or_null(prompt_parents[index]) as Node if ability_icons != null else null
+		var prompt := prompt_parent.get_node_or_null(prompt_names[index]) as Sprite2D if prompt_parent != null else null
+		if prompt == null and ability_icons != null:
+			prompt = ability_icons.get_node_or_null(prompt_names[index]) as Sprite2D
+		if prompt == null:
+			prompt = hud_parent.get_node_or_null("InputPrompts/" + prompt_names[index]) as Sprite2D
+		if prompt == null:
+			continue
+		prompt.set_meta("gamepad_texture", prompt.texture if prompt.texture != null else load_texture.call("res://assets/artwork/triangle55.png"))
+		prompt.centered = false
+		prompt.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		prompt.z_index = 10
+		ability_prompts.append(prompt)
+	var cooldowns := _build_cooldown_hud(hud_parent.get_node_or_null("AbilityIcons") if layout != null else parent, library, load_texture)
+	var combo := _build_combo_hud(hud_parent.get_node_or_null("ComboHud") if layout != null else parent)
+	var target_text := hud_parent.get_node_or_null("TargetHud/TargetHealthText") as Sprite2D
+	if target_text == null:
+		target_text = Sprite2D.new()
+		hud_parent.add_child(target_text)
+	target_text.name = "TargetHealthText"
+	target_text.centered = true
+	target_text.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	# Keep the numeric readout in the same draw stack as EnemyHp so it cannot be
+	# ordered behind the bar through the PlayerHud scene boundary.
+	var target_bar_parent := target_bar.get_parent()
+	if target_bar_parent != null and target_text.get_parent() != target_bar_parent:
+		target_text.reparent(target_bar_parent, false)
+	target_text.z_as_relative = true
+	target_text.z_index = target_bar.z_index + 3
+	target_text.position = target_health_text_position(target_bar, target_bar.texture)
+	target_text.visible = false
+	var focus_label_base := hud_parent.get_node_or_null("TargetHud/FocusLabelBase") as Sprite2D
+	if focus_label_base == null:
+		focus_label_base = Sprite2D.new()
+		focus_label_base.name = "FocusLabelBase"
+		hud_parent.add_child(focus_label_base)
+	focus_label_base.centered = false
+	focus_label_base.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	focus_label_base.z_index = 2
+	focus_label_base.position = Vector2(120, 148)
+	focus_label_base.visible = false
+	var focus_label := hud_parent.get_node_or_null("TargetHud/FocusLabel") as Sprite2D
+	if focus_label == null:
+		focus_label = Sprite2D.new()
+		focus_label.name = "FocusLabel"
+		hud_parent.add_child(focus_label)
+	focus_label.centered = false
+	focus_label.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	focus_label.z_index = 3
+	focus_label.position = Vector2(120, 148)
+	focus_label.visible = false
+	var player_text := layout.get_node("PlayerStatus/Health/HpText") as Sprite2D if layout != null else Sprite2D.new()
+	player_text.name = "PlayerHealthText"
+	player_text.centered = true
+	player_text.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	player_text.z_index = 3
+	player_text.position = player_fill.position + player_fill.texture.get_size() * 0.5 + Vector2(0, -1)
+	if layout == null: parent.add_child(player_text)
+	return {"room": room_number, "dungeon_run": dungeon_run, "gold": gold, "gold_amount": gold_amount, "soul": soul_icon, "soul_amount": soul_amount, "inventory_chest": inventory_chest, "inventory_chest_receiving": inventory_chest_receiving, "timer": run_timer, "gold_frames": gold_frames, "buttons": buttons, "ability_prompts": ability_prompts, "cooldowns": cooldowns, "combo_label": combo["label"], "combo_base": combo["base"], "combo_fill": combo["fill"], "target_text": target_text, "focus_label": focus_label, "focus_label_base": focus_label_base, "player_text": player_text}
+
+func update_aggro_markers(markers: Dictionary, _palette_name: String, _pixel_particle: Callable) -> void:
+	var marker_texture := _aggro_marker_texture(_palette_name)
+	for marker in markers.values():
+		var aggro_marker := marker as Sprite2D
+		if aggro_marker != null and marker_texture != null:
+			aggro_marker.texture = marker_texture
+
+
+func _aggro_marker_texture(palette_name: String) -> Texture2D:
+	var shadow_color: Color = PaletteLibrary.shadow(palette_name)
+	var normal_color: Color = PaletteLibrary.normal(palette_name)
+	var key := "%s:%s:%s" % [palette_name, shadow_color.to_html(false), normal_color.to_html(false)]
+	if aggro_marker_texture_cache.has(key):
+		return aggro_marker_texture_cache[key] as Texture2D
+	var source := load("res://assets/artwork/aggrodot(blue).png") as Texture2D
+	if source == null:
+		return null
+	var source_image := source.get_image()
+	var image := Image.create(source_image.get_width(), source_image.get_height(), false, Image.FORMAT_RGBA8)
+	var center := Vector2i(floori(float(source_image.get_width()) * 0.5), floori(float(source_image.get_height()) * 0.5))
+	for y in source_image.get_height():
+		for x in source_image.get_width():
+			var source_pixel := source_image.get_pixel(x, y)
+			if source_pixel.a <= 0.0:
+				continue
+			var output_color := normal_color if Vector2i(x, y) == center else shadow_color
+			image.set_pixel(x, y, Color(output_color.r, output_color.g, output_color.b, source_pixel.a))
+	var texture := ImageTexture.create_from_image(image)
+	aggro_marker_texture_cache[key] = texture
+	return texture
+
+
+func build_enemy_health_ui(
+	slimes: Array[Sprite2D],
+	target_health_fill: Sprite2D,
+	target_health_bar: Sprite2D,
+	player_health_fill: Sprite2D,
+	_player_health_damage_fill: Sprite2D,
+	hp_overhead: Sprite2D,
+	hp_overhead_fill: Sprite2D,
+	slime_green: Sprite2D,
+	load_texture: Callable,
+	bright_texture: Callable,
+	duplicate_fill: Callable,
+	register_overhead: Callable,
+	pixel_particle: Callable
+) -> Texture2D:
+	var target_bar_paths := {"blue": "EnemyHpRedBar.png", "green": "EnemyHpRedBar.png", "red": "EnemyHpRedBar.png", "grey": "EnemyHpRedBar.png", "yellow": "EnemyHpRedBar.png", "orange": "EnemyHpRedBar.png", "aquamarine": "EnemyHpRedBar.png", "purple": "EnemyHpRedBar.png"}; var overhead_bar_paths := {"blue": "HpOverheadRedBar.png", "green": "HpOverheadRedBar.png", "red": "HpOverheadRedBar.png", "grey": "HpOverheadRedBar.png", "yellow": "HpOverheadRedBar.png", "orange": "HpOverheadRedBar.png", "aquamarine": "HpOverheadRedBar.png", "purple": "HpOverheadRedBar.png"}
+	target_health_fill_textures.clear(); target_overhead_fill_textures.clear()
+	for slime in slimes:
+		var palette := SlimeVisualComponent.frame_palette_for(slime); if not target_bar_paths.has(palette): palette = "green"
+		target_health_fill_textures[slime] = load_texture.call("res://assets/artwork/" + target_bar_paths[palette]); target_overhead_fill_textures[slime] = load_texture.call("res://assets/artwork/" + overhead_bar_paths[palette])
+	target_health_damage_fill_textures.clear(); target_overhead_damage_fill_textures.clear()
+	for slime in slimes:
+		target_health_damage_fill_textures[slime] = bright_texture.call(target_health_texture_for(slime))
+		target_overhead_damage_fill_textures[slime] = bright_texture.call(target_overhead_texture_for(slime))
+	target_overhead_frames.clear(); target_overhead_damage_fills.clear(); target_overhead_fills.clear(); target_overhead_offsets.clear(); target_overhead_fill_sizes.clear(); target_overhead_aggro_markers.clear(); target_overhead_aggro_offsets.clear(); target_overhead_elite_symbols.clear(); target_overhead_status_markers.clear()
+	target_health_fill.texture = TARGET_HEALTH_BAR_TEXTURE
+	target_health_fill.self_modulate = Color.WHITE
+	var target_damage_fill := duplicate_fill.call(target_health_fill, "EnemyHpDamageFill") as Sprite2D
+	target_health_bar.z_index = 0; target_health_bar.z_as_relative = true; target_damage_fill.z_index = 1; target_health_fill.z_index = 2; target_damage_fill.z_as_relative = true; target_health_fill.z_as_relative = true; target_damage_fill.get_parent().move_child(target_damage_fill, target_health_fill.get_index())
+	var player_damage_fill := duplicate_fill.call(player_health_fill, "HpBarDamageFill") as Sprite2D
+	player_damage_fill.texture = bright_texture.call(player_health_fill.texture); player_damage_fill.z_index = 1; player_health_fill.z_index = 2; player_damage_fill.z_as_relative = true; player_health_fill.z_as_relative = true; player_damage_fill.get_parent().move_child(player_damage_fill, player_health_fill.get_index())
+	var base_texture := player_health_fill.texture
+	enemy_overhead_frame_template = hp_overhead
+	enemy_overhead_fill_template = hp_overhead_fill
+	enemy_overhead_offset = hp_overhead.global_position - slime_green.global_position
+	register_overhead.call(slime_green, hp_overhead, hp_overhead_fill, enemy_overhead_offset, duplicate_fill, pixel_particle)
+	for slime in slimes:
+		if slime == slime_green: continue
+		ensure_overhead_bar(slime, hp_overhead, hp_overhead_fill, enemy_overhead_offset, duplicate_fill, pixel_particle)
+	return base_texture
+
+
+func refresh_enemy_palette_textures(slimes: Array[Sprite2D], load_texture: Callable, bright_texture: Callable) -> void:
+	var target_bar_paths := {"blue": "EnemyHpRedBar.png", "green": "EnemyHpRedBar.png", "red": "EnemyHpRedBar.png", "grey": "EnemyHpRedBar.png", "yellow": "EnemyHpRedBar.png", "orange": "EnemyHpRedBar.png", "aquamarine": "EnemyHpRedBar.png", "purple": "EnemyHpRedBar.png"}; var overhead_bar_paths := {"blue": "HpOverheadRedBar.png", "green": "HpOverheadRedBar.png", "red": "HpOverheadRedBar.png", "grey": "HpOverheadRedBar.png", "yellow": "HpOverheadRedBar.png", "orange": "HpOverheadRedBar.png", "aquamarine": "HpOverheadRedBar.png", "purple": "HpOverheadRedBar.png"}
+	for slime in slimes:
+		var palette := SlimeVisualComponent.frame_palette_for(slime); if not target_bar_paths.has(palette): palette = "green"
+		var target_texture := load_texture.call("res://assets/artwork/" + target_bar_paths[palette]) as Texture2D; var overhead_texture := load_texture.call("res://assets/artwork/" + overhead_bar_paths[palette]) as Texture2D
+		target_health_fill_textures[slime] = target_texture; target_health_damage_fill_textures[slime] = bright_texture.call(target_texture)
+		target_overhead_fill_textures[slime] = overhead_texture; target_overhead_damage_fill_textures[slime] = bright_texture.call(overhead_texture)
+		var overhead_fill := target_overhead_fills.get(slime) as Sprite2D; var overhead_damage := target_overhead_damage_fills.get(slime) as Sprite2D
+		if overhead_fill != null: overhead_fill.texture = overhead_texture
+		if overhead_damage != null: overhead_damage.texture = target_overhead_damage_fill_textures[slime]
+
+
+func register_overhead_bar(slime: Sprite2D, frame: Sprite2D, fill: Sprite2D, offset: Vector2, duplicate_fill: Callable, _pixel_particle: Callable) -> void:
+	var fill_texture := target_overhead_texture_for(slime)
+	if fill_texture != null: fill.texture = fill_texture
+	var damage_fill := fill.get_parent().get_node_or_null("HpOverheadDamageFill") as Sprite2D
+	if damage_fill == null: damage_fill = duplicate_fill.call(fill, "HpOverheadDamageFill") as Sprite2D; damage_fill.z_index = 1
+	fill.z_index = 2
+	var damage_fill_texture := target_overhead_damage_texture_for(slime, fill_texture)
+	if damage_fill_texture != null: damage_fill.texture = damage_fill_texture
+	var aggro_marker := fill.get_parent().get_node_or_null("AggroMarker") as Sprite2D
+	if aggro_marker == null:
+		aggro_marker = Sprite2D.new(); aggro_marker.name = "AggroMarker"; aggro_marker.texture = load("res://assets/artwork/aggrodot(blue).png") as Texture2D; aggro_marker.centered = false; aggro_marker.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST; aggro_marker.position = Vector2.ZERO; aggro_marker.z_index = 3; aggro_marker.z_as_relative = false; fill.get_parent().add_child(aggro_marker)
+	var aggro_offset := aggro_marker.position
+	var elite_symbol := fill.get_parent().get_node_or_null("EliteOverheadSymbol") as Sprite2D
+	if elite_symbol == null:
+		elite_symbol = Sprite2D.new()
+		elite_symbol.name = "EliteOverheadSymbol"
+		fill.get_parent().add_child(elite_symbol)
+	elite_symbol.texture = ELITE_OVERHEAD_SYMBOL_TEXTURE
+	elite_symbol.centered = false
+	elite_symbol.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	elite_symbol.z_as_relative = false
+	elite_symbol.top_level = true
+	elite_symbol.visible = false
+	var status_markers: Array = target_overhead_status_markers.get(slime, [])
+	if status_markers == null:
+		status_markers = []
+		target_overhead_status_markers[slime] = status_markers
+	# These bars remain children of the slime so hidden/unaggroed bars retain a
+	# valid authored local transform. update_overhead_bars() assigns their world
+	# position and scale whenever they are shown; only the marker needs to stay
+	# top-level because it is placed against the bar's resolved left edge.
+	aggro_marker.top_level = true
+	target_overhead_frames[slime] = frame; target_overhead_damage_fills[slime] = damage_fill; target_overhead_fills[slime] = fill; target_overhead_offsets[slime] = offset; target_overhead_fill_sizes[slime] = fill.texture.get_size() if fill.texture != null else Vector2.ZERO; target_overhead_aggro_markers[slime] = aggro_marker; target_overhead_aggro_offsets[slime] = aggro_offset; target_overhead_elite_symbols[slime] = elite_symbol; target_overhead_status_markers[slime] = status_markers
+	frame.visible = false; damage_fill.visible = false; fill.visible = false; aggro_marker.visible = false
+
+
+## Adds the same runtime overhead presentation used by ordinary enemies to an
+## actor materialized after the initial HUD build (for example a boss-jump
+## support enemy). The bar is runtime UI, not a boss-specific scene surface;
+## keeping creation here makes every factory-created enemy use the same
+## authored offset and aggro-marker registration.
+func ensure_overhead_bar(slime: Sprite2D, frame_template: Sprite2D, fill_template: Sprite2D, offset: Vector2, duplicate_fill: Callable, pixel_particle: Callable) -> void:
+	if frame_template == null:
+		frame_template = enemy_overhead_frame_template
+	if fill_template == null:
+		fill_template = enemy_overhead_fill_template
+	if slime == null or frame_template == null or fill_template == null:
+		return
+	var frame := slime.get_node_or_null("HpOverhead") as Sprite2D
+	if frame == null:
+		frame = _copy_sprite_template(frame_template, "HpOverhead")
+		slime.add_child(frame)
+	var fill := slime.get_node_or_null("HpOverheadFill") as Sprite2D
+	if fill == null:
+		fill = _copy_sprite_template(fill_template, "HpOverheadFill")
+		slime.add_child(fill)
+	register_overhead_bar(slime, frame, fill, offset, duplicate_fill, pixel_particle)
+
+
+func rebind_enemy_actor(old_actor: Sprite2D, new_actor: Sprite2D) -> void:
+	if old_actor == null or new_actor == null:
+		return
+	var actor_caches: Array[Dictionary] = [
+		target_health_fill_textures,
+		target_health_damage_fill_textures,
+		target_overhead_fill_textures,
+		target_overhead_damage_fill_textures,
+		target_overhead_frames,
+		target_overhead_damage_fills,
+		target_overhead_fills,
+		target_overhead_offsets,
+		target_overhead_fill_sizes,
+		target_overhead_aggro_markers,
+		target_overhead_aggro_offsets,
+		target_overhead_elite_symbols,
+		target_overhead_status_markers,
+	]
+	for actor_cache in actor_caches:
+		if actor_cache.has(old_actor):
+			actor_cache[new_actor] = actor_cache[old_actor]
+			actor_cache.erase(old_actor)
+
+
+func _copy_sprite_template(template: Sprite2D, sprite_name: String) -> Sprite2D:
+	var sprite := Sprite2D.new()
+	sprite.name = sprite_name
+	sprite.texture = template.texture
+	sprite.centered = template.centered
+	sprite.position = template.position
+	sprite.offset = template.offset
+	sprite.scale = template.scale
+	sprite.region_enabled = template.region_enabled
+	sprite.region_rect = template.region_rect
+	sprite.texture_filter = template.texture_filter
+	sprite.z_as_relative = false
+	return sprite
+
+
+func duplicate_fill_sprite(source: Sprite2D, sprite_name: String) -> Sprite2D:
+	var sprite := Sprite2D.new(); sprite.name = sprite_name; sprite.texture = source.texture; sprite.centered = source.centered; sprite.position = source.position; sprite.offset = source.offset; sprite.scale = source.scale; sprite.region_enabled = source.region_enabled; sprite.region_rect = source.region_rect; sprite.texture_filter = source.texture_filter; sprite.z_as_relative = source.z_as_relative; sprite.z_index = source.z_index
+	for meta_name in source.get_meta_list():
+		sprite.set_meta(meta_name, source.get_meta(meta_name))
+	source.get_parent().add_child(sprite); return sprite
+
+
+func brighter_bar_texture(source: Texture2D) -> Texture2D:
+	if source == null: return null
+	var key := "%s:%s" % [source.resource_path, source.get_instance_id()]
+	if bright_bar_cache.has(key): return bright_bar_cache[key]
+	var image: Image = source.get_image().duplicate()
+	if image == null: return source
+	var palette_step := {"B13E53": Color8(239, 125, 87), "3B5DC9": Color8(65, 166, 246), "38B764": Color8(167, 240, 112), "764E8E": Color8(170, 145, 167), "3A8A97": Color8(134, 203, 179)}
+	for y in image.get_height():
+		for x in image.get_width():
+			var color := image.get_pixel(x, y)
+			if color.a > 0.0:
+				var bright_color := palette_step.get("%02X%02X%02X" % [int(round(color.r * 255.0)), int(round(color.g * 255.0)), int(round(color.b * 255.0))], color) as Color
+				image.set_pixel(x, y, Color(bright_color.r, bright_color.g, bright_color.b, color.a))
+	var texture := ImageTexture.create_from_image(image); bright_bar_cache[key] = texture; return texture

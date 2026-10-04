@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="RoomPrefabDefinition" format=3 uid="uid://dvj7wk5vha7qw"]
 
-[ext_resource type="Script" uid="uid://dar4m8w2kq7tx" path="res://scripts/room_prefab_definition.gd" id="1"]
+[ext_resource type="Script" uid="uid://c9r4m8w2kq7tx" path="res://scripts/content/room_prefab_definition.gd" id="1"]
 [ext_resource type="PackedScene" uid="uid://bxt6set6lnd6" path="res://scenes/gameplay/rooms/orb_room.tscn" id="2"]
 
 [resource]

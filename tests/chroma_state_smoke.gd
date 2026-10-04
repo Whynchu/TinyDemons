@@ -1,6 +1,6 @@
 extends SceneTree
 
-const Chroma = preload("res://scripts/player_chroma_component.gd")
+const Chroma = preload("res://scripts/components/player_chroma_component.gd")
 
 var _finished := false
 

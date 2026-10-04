@@ -2,7 +2,7 @@ extends SceneTree
 
 ## Pure contract checks for the versioned, isolated enemy preview payload.
 
-const PreviewSessionScript := preload("res://scripts/preview_session.gd")
+const PreviewSessionScript := preload("res://scripts/editor/preview_session.gd")
 
 
 func _initialize() -> void:

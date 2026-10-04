@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="PuzzlePlanData" format=3]
 
-[ext_resource type="Script" path="res://scripts/puzzle_plan_data.gd" id="1_gjrdd"]
+[ext_resource type="Script" path="res://scripts/content/puzzle_plan_data.gd" id="1_gjrdd"]
 
 [resource]
 script = ExtResource("1_gjrdd")

@@ -1,7 +1,7 @@
 extends SceneTree
 
-const ELEMENT_CATALOG = preload("res://scripts/element_catalog.gd")
-const GRAPH = preload("res://scripts/dungeon_graph.gd")
+const ELEMENT_CATALOG = preload("res://scripts/content/element_catalog.gd")
+const GRAPH = preload("res://scripts/algorithms/dungeon_graph.gd")
 
 var _finished := false
 

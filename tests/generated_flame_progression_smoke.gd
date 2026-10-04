@@ -1,9 +1,9 @@
 extends SceneTree
 
-const ASPECT_CATALOG_SCRIPT = preload("res://scripts/aspect_catalog.gd")
-const GENERATOR_SCRIPT = preload("res://scripts/dungeon_layout_generator.gd")
-const GRAPH_SCRIPT = preload("res://scripts/dungeon_graph.gd")
-const MAP_CONTROLLER_SCRIPT = preload("res://scripts/dungeon_map_controller.gd")
+const ASPECT_CATALOG_SCRIPT = preload("res://scripts/content/aspect_catalog.gd")
+const GENERATOR_SCRIPT = preload("res://scripts/algorithms/dungeon_layout_generator.gd")
+const GRAPH_SCRIPT = preload("res://scripts/algorithms/dungeon_graph.gd")
+const MAP_CONTROLLER_SCRIPT = preload("res://scripts/ui/dungeon_map_controller.gd")
 
 const STARTERS: Array[StringName] = [&"fire", &"water", &"electric"]
 

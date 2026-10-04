@@ -36,11 +36,11 @@ func _initialize() -> void:
 	var clear_events: Array[RoomClearResult] = []
 	rooms.room_cleared.connect(func(result: RoomClearResult) -> void: clear_events.append(result))
 	var clear_context := RoomClearContext.new(DungeonGraph.START_ROOM_ID, graph.get_room(DungeonGraph.START_ROOM_ID))
-	var clear_result := rooms.mark_cleared_context(clear_context)
+	var clear_result := rooms.mark_cleared(clear_context)
 	_expect(clear_result.succeeded() and clear_result.is_new_clear(), "room clear applies through a typed context and result", failures)
 	_expect(clear_result.room_id == DungeonGraph.START_ROOM_ID, "room clear result preserves the room identity", failures)
 	_expect(clear_events.size() == 1 and clear_events[0] == clear_result, "room clear emits the typed result once", failures)
-	var repeated_clear := rooms.mark_cleared_context(clear_context)
+	var repeated_clear := rooms.mark_cleared(clear_context)
 	_expect(repeated_clear.status == RoomClearResult.Status.ALREADY_CLEARED, "repeated room clear is reported without re-emitting", failures)
 	_expect(clear_events.size() == 1, "repeated room clear does not duplicate the event", failures)
 

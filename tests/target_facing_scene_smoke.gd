@@ -1,7 +1,7 @@
 extends SceneTree
 
-const INTERACTION_SCRIPT = preload("res://scripts/interaction_component.gd")
-const ACTOR_MOTOR_SCRIPT = preload("res://scripts/actor_motor.gd")
+const INTERACTION_SCRIPT = preload("res://scripts/components/interaction_component.gd")
+const ACTOR_MOTOR_SCRIPT = preload("res://scripts/actors/actor_motor.gd")
 
 
 class FakeRoot extends Node:
