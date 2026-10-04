@@ -2,7 +2,7 @@
 
 _Only codex writes this file._
 
-**Focus:** Stage 3.1 audit remaining Pause routing and screen bridges
+**Focus:** Stage 3.1 type the Pause debug-view boundary
 **Updated:** 2026-10-04
 
 ## Completed: Stage 3.1 Pause view rendering
@@ -957,6 +957,16 @@ search finds no other direct readers of these legacy widget fields outside the
 build/fallback owners. No game or gameplay tests were run while the shared
 editor restriction is active.
 
-Next: map Pause's remaining routing/debug collaborators and ScreenStateController
-field bridges before splitting the high-coupling update path. Keep shared
-Hub/Pause Equipment and debug signal paths explicit.
+## Completed: Stage 3.1 Pause layout
+
+Moved responsive geometry for the Pause overlay, pages, command rail, player
+card, status/equipment text, Equipment view, prompts, and resources into
+`PauseScreenPresenter`. `_position_pause_controls` remains the facade; shared
+frame resizing and cursor tween ownership remain in ScreenStateController.
+Composition strict audit and self-test pass at 274 scripts; ScreenStateController
+is 3,298 lines with 51 seams, and the presenter is 285 lines. UID validation,
+index generation, offline MCP script checks, and `git diff --check` pass. No
+gameplay tests were run while the shared editor session is active.
+
+Next: type the Pause `DebugMenuLayout` field and replace dynamic member calls;
+preserve debug-session lifecycle and existing public signals.

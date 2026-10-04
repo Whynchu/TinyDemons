@@ -925,3 +925,9 @@ Move Pause player-card, resource, read-only status, and legacy equipment-text re
 
 2026-10-04T23:00:00Z - codex - done
 Moved Pause view-owned player/resource/status/equipment text rendering and resource label positioning into PauseScreenPresenter. Strict composition audit/self-test, baseline refresh, UID validation, generated index, offline MCP checks, and diff check pass; ScreenStateController is 3,348 lines, 51 seams, total reach-throughs 4,249. No gameplay tests run.
+
+2026-10-04T23:15:00Z - codex - claim
+Move Pause overlay/page and child-node responsive geometry into the existing PauseScreenPresenter. ScreenStateController retains shared frame resizing and cursor tween ownership behind its compatibility layout method. Static validation only while the shared editor session is active.
+
+2026-10-04T23:40:00Z - codex - done
+Moved Pause overlay and child responsive geometry to PauseScreenPresenter. ScreenStateController retains its compatibility layout method, shared frame resize, and cursor animation. Strict composition audit/self-test, UID validation, index generation, offline MCP checks, and diff check pass; 274 scripts, 51 screen seams, 4,249 reach-throughs. No gameplay tests run.

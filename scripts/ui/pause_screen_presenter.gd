@@ -142,6 +142,56 @@ func build(
 	quit_button = menu_buttons[4] if menu_buttons.size() > 4 else null
 
 
+func position_controls(view_size: Vector2) -> void:
+	if overlay == null:
+		return
+	var width := view_size.x
+	var height := view_size.y
+	overlay.position = Vector2.ZERO
+	overlay.size = view_size
+	for page_root: Control in page_roots.values():
+		page_root.position = Vector2.ZERO
+		page_root.size = view_size
+		var page_background := page_root.get_node_or_null("Background") as NinePatchRect
+		if page_background != null: page_background.size = view_size
+		var page_title_rule := page_root.get_node_or_null("TitleRule") as ColorRect
+		if page_title_rule != null: page_title_rule.size.x = maxf(width - 16.0, 16.0)
+	var divider_x := PauseMenuLayoutScript.divider_x(width)
+	var panel_root := overlay.get_node_or_null("PausePanel8Piece") as Control
+	if panel_root != null:
+		panel_root.position = Vector2.ZERO
+		panel_root.size = view_size
+	var command_divider := overlay.get_node_or_null("CommandDivider") as ColorRect
+	if command_divider != null:
+		command_divider.position = Vector2(divider_x - 1.0, 2.0)
+		command_divider.size = Vector2(1.0, maxf(PauseMenuLayoutScript.upper_rail_height(height) - 2.0, 1.0))
+	var resource_divider := overlay.get_node_or_null("ResourceDivider") as ColorRect
+	if resource_divider != null:
+		resource_divider.position = Vector2(divider_x, height - PauseMenuLayoutScript.RESOURCE_PANEL_HEIGHT)
+		resource_divider.size = Vector2(maxf(width - divider_x - 1.0, 1.0), 1.0)
+	for index in menu_buttons.size(): menu_buttons[index].position = PauseMenuLayoutScript.command_button_position(view_size, index)
+	if debug_menu_layout != null: debug_menu_layout.call("apply_layout", view_size)
+	if back_button != null: back_button.position = PauseMenuLayoutScript.back_button_position(view_size)
+	if player_portrait != null:
+		player_portrait.position = Vector2(PauseMenuLayoutScript.left_field_x(PauseMenuLayoutScript.PLAYER_PORTRAIT_POSITION.x, width), PauseMenuLayoutScript.PLAYER_PORTRAIT_POSITION.y)
+	for index in player_card_texts.size():
+		var authored_position: Vector2 = PauseMenuLayoutScript.PLAYER_CARD_TEXT_POSITIONS[index] if index < PauseMenuLayoutScript.PLAYER_CARD_TEXT_POSITIONS.size() else PauseMenuLayoutScript.PLAYER_CARD_TEXT_POSITIONS.back()
+		player_card_texts[index].position = Vector2(PauseMenuLayoutScript.left_field_x(authored_position.x, width), authored_position.y)
+	for index in status_texts.size():
+		var column := 0 if index < STATUS_LEFT_ROW_COUNT else 1
+		var row := index if index < STATUS_LEFT_ROW_COUNT else index - STATUS_LEFT_ROW_COUNT
+		var authored_x := 14.0 if column == 0 else 122.0
+		status_texts[index].position = Vector2(PauseMenuLayoutScript.left_field_x(authored_x, width), 28 + row * 10)
+	for index in equipment_texts.size(): equipment_texts[index].position = Vector2(14, 28 + index * 12)
+	if equipment_menu != null:
+		equipment_menu.position = Vector2.ZERO
+		equipment_menu.size = view_size
+	if description_text != null: description_text.position = PauseMenuLayoutScript.select_prompt_position(view_size)
+	if gold_icon != null: gold_icon.position = PauseMenuLayoutScript.resource_icon_position(view_size, false)
+	if resource_icon != null: resource_icon.position = PauseMenuLayoutScript.resource_icon_position(view_size, true)
+	position_resource_texts(view_size)
+
+
 func position_resource_texts(view_size: Vector2) -> void:
 	if gold_text != null and gold_text.texture != null:
 		gold_text.position = PauseMenuLayoutScript.resource_text_position(view_size, gold_text.texture.get_width(), false)

@@ -1672,61 +1672,11 @@ func _position_hub_controls(animate_cursor: bool = false, preserve_cursor_motion
 func _position_pause_controls(animate_cursor: bool = false, preserve_cursor_motion: bool = false) -> void:
 	if pause_overlay == null:
 		return
-	var width := display_view_size.x
-	var height := display_view_size.y
-	pause_overlay.position = Vector2.ZERO
-	pause_overlay.size = display_view_size
+	_pause_screen_presenter.position_controls(display_view_size)
 	_resize_menu_frame(pause_overlay, display_view_size)
-	for page_root: Control in pause_page_roots.values():
-		page_root.position = Vector2.ZERO
-		page_root.size = display_view_size
-		var page_background := page_root.get_node_or_null("Background") as NinePatchRect
-		if page_background != null: page_background.size = display_view_size
-		var page_title_rule := page_root.get_node_or_null("TitleRule") as ColorRect
-		if page_title_rule != null: page_title_rule.size.x = maxf(width - 16.0, 16.0)
-	var divider_x := PauseMenuLayoutScript.divider_x(width)
-	var panel_root := pause_overlay.get_node_or_null("PausePanel8Piece") as Control
-	if panel_root != null:
-		panel_root.position = Vector2.ZERO
-		panel_root.size = display_view_size
-	var command_divider := pause_overlay.get_node_or_null("CommandDivider") as ColorRect
-	if command_divider != null:
-		command_divider.position = Vector2(divider_x - 1.0, 2.0)
-		command_divider.size = Vector2(1.0, maxf(PauseMenuLayoutScript.upper_rail_height(height) - 2.0, 1.0))
-	var resource_divider := pause_overlay.get_node_or_null("ResourceDivider") as ColorRect
-	if resource_divider != null:
-		resource_divider.position = Vector2(divider_x, height - PauseMenuLayoutScript.RESOURCE_PANEL_HEIGHT)
-		resource_divider.size = Vector2(maxf(width - divider_x - 1.0, 1.0), 1.0)
-	for index in pause_menu_buttons.size(): pause_menu_buttons[index].position = PauseMenuLayoutScript.command_button_position(display_view_size, index)
-	if debug_menu_layout != null: debug_menu_layout.call("apply_layout", display_view_size)
-	if pause_back_button != null: pause_back_button.position = PauseMenuLayoutScript.back_button_position(display_view_size)
-	if pause_player_portrait != null:
-		pause_player_portrait.position = Vector2(PauseMenuLayoutScript.left_field_x(PauseMenuLayoutScript.PLAYER_PORTRAIT_POSITION.x, width), PauseMenuLayoutScript.PLAYER_PORTRAIT_POSITION.y)
-	for index in pause_player_card_texts.size():
-		var authored_position: Vector2 = PauseMenuLayoutScript.PLAYER_CARD_TEXT_POSITIONS[index] if index < PauseMenuLayoutScript.PLAYER_CARD_TEXT_POSITIONS.size() else PauseMenuLayoutScript.PLAYER_CARD_TEXT_POSITIONS.back()
-		pause_player_card_texts[index].position = Vector2(PauseMenuLayoutScript.left_field_x(authored_position.x, width), authored_position.y)
-	for index in pause_status_texts.size():
-		var column := 0 if index < STATUS_LEFT_ROW_COUNT else 1
-		var row := index if index < STATUS_LEFT_ROW_COUNT else index - STATUS_LEFT_ROW_COUNT
-		var authored_x := 14.0 if column == 0 else 122.0
-		pause_status_texts[index].position = Vector2(PauseMenuLayoutScript.left_field_x(authored_x, width), 28 + row * 10)
-	for index in pause_equipment_texts.size(): pause_equipment_texts[index].position = Vector2(14, 28 + index * 12)
-	if pause_equipment_menu != null:
-		pause_equipment_menu.position = Vector2.ZERO
-		pause_equipment_menu.size = display_view_size
-	if pause_description_text != null: pause_description_text.position = PauseMenuLayoutScript.select_prompt_position(display_view_size)
-	if pause_gold_icon != null: pause_gold_icon.position = PauseMenuLayoutScript.resource_icon_position(display_view_size, false)
-	if pause_resource_icon != null: pause_resource_icon.position = PauseMenuLayoutScript.resource_icon_position(display_view_size, true)
-	_position_pause_resource_texts()
 	if pause_cursor_text != null and not pause_menu_buttons.is_empty():
 		var cursor_index := clampi(pause_menu_row, 0, pause_menu_buttons.size() - 1)
 		_position_menu_cursor(pause_cursor_text, Vector2(pause_menu_buttons[cursor_index].position.x - CURSOR_LEFT_GAP, pause_menu_buttons[cursor_index].position.y + 3.0), animate_cursor, preserve_cursor_motion)
-
-
-func _position_pause_resource_texts() -> void:
-	_pause_screen_presenter.position_resource_texts(display_view_size)
-
-
 func _reset_hub_cursor_layer() -> void:
 	# Every hub render starts from an empty legacy cursor layer.  Each presenter
 	# branch then opts in exactly the cursor(s) it owns, so Shop/Fusion and the

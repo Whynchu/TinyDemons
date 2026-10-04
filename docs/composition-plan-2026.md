@@ -1158,9 +1158,22 @@ validation passes for 429 sidecars, the generated index contains 274 scripts,
 and MCP offline checks pass for both changed scripts. No gameplay tests were
 run while the shared editor session is active.
 
-Next: map the remaining Pause routing/debug collaborators and ScreenStateController
-field bridges before splitting the high-coupling update path; keep shared
-Hub/Pause Equipment and debug signal paths explicit.
+**Implementation record (2026-10-04):** Moved Pause overlay, page, panel,
+divider, command-button, player-card, status/equipment text, Equipment view,
+description, and resource icon/text geometry into `PauseScreenPresenter`.
+ScreenStateController retains `_position_pause_controls` as the caller-facing
+method; it delegates child geometry, resizes the shared frame, then reanchors
+the cursor through the existing tween owner. The existing Pause layout smoke
+probes call that compatibility method. `ScreenStateController` is now 3,298
+lines and `PauseScreenPresenter` is 285 lines. Strict composition audit and
+self-test pass at 274 scripts with zero unclassified scripts; ScreenStateController
+has 51 seams and total root reach-through is 4,249. UID validation and offline
+MCP checks pass, and the generated index contains 274 scripts. No gameplay
+tests were run while the shared editor session is active.
+
+Next: tighten the Pause debug-view contract. Type the existing DebugMenuLayout
+owner and replace its dynamic member calls; keep debug-session lifecycle and
+ScreenStateController's public signals at their current boundaries.
 
 ### 3.2 `gameplay_bootstrap.gd` — declarative assembly
 
