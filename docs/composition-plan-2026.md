@@ -1007,8 +1007,37 @@ The composition audit passes at 265 scripts with zero unclassified files,
 root arguments. The script index and regression baseline were refreshed. No
 Godot runtime or gameplay tests were run.
 
-Next: map `_update_hub_item_page` and `_update_hub_gear_slots` against the Hub
-economy controller and their current widget owners before moving item rendering.
+Boundary audit: the authored Hub Equipment route and the Pause Equipment route
+both use `_render_equipment_menu`; `_update_hub_item_page` and
+`_update_hub_gear_slots` are compatibility fallbacks reached only when their
+authored views are unavailable. Keep those fallback paths separate from the
+active presenter extraction.
+
+**Implementation record (2026-10-04):** Extracted the active shared Hub/Pause
+Equipment renderer into the 240-line `HubEquipmentMenuPresenter`, with a
+16-line `HubEquipmentMenuContext` carrying the authored view, `HubMenuState`,
+profile, stat snapshot, selected-slot candidates, and legacy probe arrays. The
+presenter receives no `GameplayState` or `ScreenStateController`; the screen
+facade supplies typed render inputs and retains compatibility wrappers for
+equipment text/mode helpers used by existing callers. `HubMenuState` now owns
+the Equipment render-mode resolution. The controller is 3,675 lines, down from
+3,898; the new presenter remains below the 400-line per-file ceiling. The
+authored Equipment smoke sources cover the existing Hub/Pause route, slot,
+candidate, stat, and touch behaviors. No game or test run was performed while
+the shared editor session is active.
+
+Static verification after the extraction: strict composition audit passes at
+267 scripts, zero unclassified files, 52 ScreenStateController seams, 4,253
+total root reach-throughs, and 509 untyped root parameters. The generated
+script index contains 267 scripts, and the UID validator confirms 422 unique
+and matching sidecars. These checks do not substitute for gameplay
+verification; none was run while the shared editor session was active.
+
+Next: map the authored Shop and Fusion render-model paths against
+`HubEconomyController` and their existing view/layout models, then extract their
+shared item/detail presentation while leaving transactions and state changes in
+the economy/input owners. Keep `_update_hub_item_page` and
+`_update_hub_gear_slots` as a separately reviewed compatibility fallback.
 
 ### 3.2 `gameplay_bootstrap.gd` — declarative assembly
 

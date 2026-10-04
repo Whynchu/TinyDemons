@@ -7,7 +7,7 @@ tracked `scripts/*.gd` file to exactly one of the eight Stage 1 role folders, wi
 
 Owner: repository architecture and gameplay systems
 
-Current code: the 235-file Stage 1 inventory plus 30 post-migration modules (265 scripts total); all remain distributed across the declared role roots and runtime subfolders
+Current code: the 235-file Stage 1 inventory plus 32 post-migration modules (267 scripts total); all remain distributed across the declared role roots and runtime subfolders
 
 Verification: all 235 destinations and UID sidecars reconciled against the migration
 map; live resource references rewritten; generated index refreshed.
@@ -396,7 +396,7 @@ The map retains each original flat path alongside its current path for traceabil
 
 ## Post-migration additions
 
-These twenty-two modules were added after the 235-script Stage 1 inventory. They
+These thirty-two modules were added after the 235-script Stage 1 inventory. They
 use the same folder roles and are included in the generated script index.
 
 | Current path | Role | Reason |
@@ -431,6 +431,8 @@ use the same folder roles and are included in the generated script index.
 | `scripts/ui/hub_item_visibility_context.gd` | `ui/` | Typed Hub route and focus state for legacy item, equipment, shop, and fusion visibility. |
 | `scripts/ui/hub_item_visibility_presenter.gd` | `ui/` | Applies legacy equipment, shop, and fusion control visibility and input filters using the responsive presenter's typed widget references. |
 | `scripts/ui/hub_stats_interaction_presenter.gd` | `ui/` | Owns stat cursor, allocation focus, and stats-page widget visibility through the typed HubStatsScreenPresenter node owner. |
+| `scripts/ui/hub_equipment_menu_context.gd` | `ui/` | Typed render inputs shared by the authored Hub and Pause Equipment views. |
+| `scripts/ui/hub_equipment_menu_presenter.gd` | `ui/` | Builds Equipment slot, candidate, stat-preview, and item-detail presentation behind ScreenStateController's compatibility facade. |
 
 ## Migration result
 

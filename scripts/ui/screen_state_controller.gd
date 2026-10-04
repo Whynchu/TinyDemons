@@ -37,6 +37,8 @@ const HubResponsiveLayoutContextScript = preload("res://scripts/ui/hub_responsiv
 const HubItemVisibilityPresenterScript = preload("res://scripts/ui/hub_item_visibility_presenter.gd")
 const HubItemVisibilityContextScript = preload("res://scripts/ui/hub_item_visibility_context.gd")
 const HubInputControllerScript = preload("res://scripts/ui/hub_input_controller.gd")
+const HubEquipmentMenuPresenterScript = preload("res://scripts/ui/hub_equipment_menu_presenter.gd")
+const HubEquipmentMenuContextScript = preload("res://scripts/ui/hub_equipment_menu_context.gd")
 const PauseScreenPresenterScript = preload("res://scripts/ui/pause_screen_presenter.gd")
 const MENU_CIRCLE_TEXTURE: Texture2D = MenuPromptTextureFactoryScript.MENU_CIRCLE_TEXTURE
 const MENU_X_TEXTURE: Texture2D = MenuPromptTextureFactoryScript.MENU_X_TEXTURE
@@ -135,6 +137,8 @@ var _hub_item_visibility_presenter: HubItemVisibilityPresenter = HubItemVisibili
 var _hub_item_visibility_context: HubItemVisibilityContext = HubItemVisibilityContextScript.new() as HubItemVisibilityContext
 var _hub_menu_state: HubMenuState = HubMenuStateScript.new() as HubMenuState
 var _hub_input_controller: HubInputController = HubInputControllerScript.new() as HubInputController
+var _hub_equipment_menu_presenter: HubEquipmentMenuPresenter = HubEquipmentMenuPresenterScript.new() as HubEquipmentMenuPresenter
+var _hub_equipment_menu_context: HubEquipmentMenuContext = HubEquipmentMenuContextScript.new() as HubEquipmentMenuContext
 var _menu_world_hidden := false
 var _menu_world_background_visible := true
 var _menu_world_map_visible := true
@@ -2567,73 +2571,21 @@ func _update_hub_binding_page(root: Object, pixel_texture: Callable, profile: Pl
 		set_archetype_button_state(hub_binding_action_button, action_enabled, highlight_color)
 
 
+## Compatibility facade; the render mode now belongs to HubMenuState.
 func _equipment_mode_for_render() -> int:
-	# The typed mode is authoritative for the new presenter.  The fallback keeps
-	# older save/menu probes that still set the two legacy booleans readable while
-	# they migrate to the explicit route enum.
-	if hub_equipment_mode == 4:
-		return 4
-	if hub_equipment_mode == 3 or hub_gear_browsing:
-		return 3
-	if hub_equipment_mode == 1 or hub_equipment_mode == 2:
-		return hub_equipment_mode
-	return 0 if hub_equipment_action_focus else 1
+	return _hub_menu_state.equipment_mode_for_render()
 
 
 func _equipment_bonus_lines(catalog: ItemCatalog, item: ItemInstance) -> Array[String]:
-	if item == null:
-		return []
-	var labels := {"vitality": "VIT", "strength": "STR", "defense": "DEF", "agi": "AGI", "speed": "AGI", "intelligence": "INT", "mnd": "MND", "health_rate": "HP", "damage_rate": "DMG"}
-	var parts: Array[String] = []
-	var bonuses := catalog.bonuses(item)
-	for key in ["vitality", "strength", "defense", "agi", "intelligence", "mnd", "health_rate", "damage_rate"]:
-		if not bonuses.has(key):
-			continue
-		var value := float(bonuses[key])
-		if is_zero_approx(value):
-			continue
-		var shown := "%d" % roundi(value) if is_equal_approx(value, round(value)) else "%.1f" % value
-		if value > 0.0: shown = "+%s" % shown
-		parts.append("%s: %s" % [str(labels.get(key, key.to_upper())), shown])
-	# The authored stat strip has three columns. Keep each column to two
-	# newline-separated stats so a multi-stat item cannot run into its neighbor.
-	var lines: Array[String] = ["", "", ""]
-	for index in parts.size():
-		var column_index := index % 3
-		var row_index := floori(float(index) / 3.0)
-		if row_index >= 2:
-			break
-		if lines[column_index].is_empty():
-			lines[column_index] = parts[index]
-		else:
-			lines[column_index] += "\n%s" % parts[index]
-	return lines
+	return _hub_equipment_menu_presenter.equipment_bonus_lines(catalog, item)
 
 
 func _equipment_item_description(catalog: ItemCatalog, item: ItemInstance) -> Array[String]:
-	if item == null:
-		return []
-	var lines: Array[String] = []
-	var random_text := catalog.random_stat_text(item)
-	if not random_text.is_empty():
-		lines.append(random_text)
-	var description := catalog.player_description(item)
-	if not description.is_empty():
-		lines.append_array(_wrap_gear_text(description, 34))
-	lines.append_array(catalog.effect_display_lines(item))
-	if not item.transmutation_id.is_empty():
-		lines.append_array(_wrap_gear_text(catalog.transmutation_description(item.transmutation_id), 34))
-	return lines
+	return _hub_equipment_menu_presenter.equipment_item_description(catalog, item)
 
 
 func _equipment_item_label(catalog: ItemCatalog, item: ItemInstance) -> String:
-	if item == null:
-		return "EMPTY"
-	var label: String = catalog.gear_name(item)
-	if item.enhancement_level > 0:
-		label += " F%d" % item.enhancement_level
-	return label
-
+	return _hub_equipment_menu_presenter.equipment_item_label(catalog, item)
 
 func _compact_equipment_navigation_prompt(prompt: String, fallback: String) -> String:
 	# Face-art prompts already fit the authored 78-pixel cell. Keyboard and
@@ -2645,184 +2597,29 @@ func _compact_equipment_navigation_prompt(prompt: String, fallback: String) -> S
 	return str(tokens[tokens.size() - 1]) if not tokens.is_empty() else fallback
 
 
-func _render_equipment_menu(root: Object, pixel_texture: Callable, profile: PlayerProfile, _highlight_color: Color, target_view: Control = null, read_only: bool = false) -> void:
+func _render_equipment_menu(root: GameplayState, pixel_texture: Callable, profile: PlayerProfile, _highlight_color: Color, target_view: Control = null, read_only: bool = false) -> void:
 	var view := (target_view if target_view != null else hub_equipment_menu) as EquipmentMenuLayout
 	if view == null or profile == null:
 		return
-	view.set_pixel_texture(pixel_texture)
-	view.set_read_only(read_only)
-	if root.has_method("_equipment_portrait_texture"):
-		view.set_portrait_texture(root.call("_equipment_portrait_texture") as Texture2D)
-	view.set_command_labels(["EQUIPMENT", "EQUIP", "REMOVE", "REMOVE ALL"])
-	view.set_icons_visible(true)
-	# The corrected render reserves the lower-right framed cell for the device
-	# prompt.  It is informational on controller/keyboard, and its BACK half
-	# is a real touch target wired to the same nested route callback.
+	var selected_slot_index := clampi(_hub_menu_state.hub_item_index, 0, ItemCatalog.SLOTS.size() - 1)
+	var selected_slot := ItemCatalog.SLOTS[selected_slot_index]
 	var confirm_prompt := _compact_equipment_navigation_prompt(_menu_confirm_prompt_for(root), "SELECT")
 	var back_prompt := _compact_equipment_navigation_prompt(_menu_back_prompt_for(root), "BACK")
-	# Navigation copy is informational UI, not an accent prompt. Keep the
-	# controller glyphs and SELECT/BACK labels white, with the authored nine
-	# pixel separation between the two prompt groups and a two-pixel glyph/text
-	# breathing gap inside each group.
-	view.set_navigation_texture(_pixel_prompt_sequence_texture(pixel_texture, [confirm_prompt, back_prompt], Color.WHITE, 9, 2))
-	# The Demon Hub already owns its canonical shared SELECT/BACK footer. The
-	# standalone equipment presenter keeps its prompt only in Pause, where it is
-	# the active route's footer and the shared Hub footer is not mounted.
-	if view.has_method("set_navigation_visible"):
-		view.call("set_navigation_visible", target_view != null)
-	var snapshot := root.call("_player_stat_snapshot") as CombatStatSnapshot if root.has_method("_player_stat_snapshot") else null
-
-	var catalog := ItemCatalog.new()
-	var slot_labels: Array[String] = []
-	var slot_colors: Array[Color] = []
-	var slot_locked: Array[bool] = []
-	var selected_slot_index := clampi(hub_item_index, 0, ItemCatalog.SLOTS.size() - 1)
-	var mode := EquipmentMenuLayout.MODE_SLOT_EQUIP if read_only else _equipment_mode_for_render()
-	var head_locked := profile._head_locked_by_body(catalog)
-	var selected_item: ItemInstance = null
-	var any_equipped := false
-	for index in ItemCatalog.SLOTS.size():
-		var slot: StringName = ItemCatalog.SLOTS[index]
-		var item := profile.find_item(profile.get_equipped_instance_id(slot))
-		var locked := slot == &"head" and head_locked
-		if index == selected_slot_index:
-			selected_item = item
-		if item != null:
-			any_equipped = true
-		slot_locked.append(locked)
-		if locked:
-			slot_labels.append("HEAD")
-			slot_colors.append(Color8(88, 92, 102))
-		elif item == null:
-			# An unfilled cell keeps its slot identity (the corrected render shows
-			# HEAD this way) instead of introducing an EMPTY label that was never in
-			# the mockup.
-			slot_labels.append(catalog.slot_label(slot))
-			slot_colors.append(Color8(140, 145, 160))
-		else:
-			slot_labels.append(_equipment_item_label(catalog, item))
-			# Gear identity is communicated by rarity color. Selection belongs to
-			# the cursor layer, so the selected item must not lose its rarity color.
-			slot_colors.append(catalog.rarity_color(item.rarity))
-	view.set_slot_grid(slot_labels, slot_colors, slot_locked)
-	view.set_command_enabled(0, true)
-	# REMOVE always opens the six-slot grid, even when the currently highlighted
-	# slot is empty; the player can then move to whichever equipped slot should
-	# be cleared and confirm it there.
-	view.set_command_enabled(1, true)
-	view.set_command_enabled(2, any_equipped)
-
-	var selected_candidate_index := 0
-	var candidate_labels: Array[String] = []
-	var candidate_colors: Array[Color] = []
-	var candidate_item: ItemInstance = selected_item
-	var selected_slot: StringName = ItemCatalog.SLOTS[selected_slot_index]
-	var candidates: Array[ItemInstance] = []
-	if root.has_method("_hub_gear_candidates"):
-		candidates = root.call("_hub_gear_candidates", selected_slot) as Array[ItemInstance]
-	selected_candidate_index = posmod(int(hub_gear_candidate_indices.get(String(selected_slot), 0)), maxi(candidates.size(), 1))
-	if not candidates.is_empty():
-		candidate_item = candidates[selected_candidate_index]
-	var candidate_window_start := 0
-	var candidate_scroll_fraction := 0.0
-	if candidates.size() > 8:
-		var max_start := EquipmentMenuLayout.candidate_max_scroll(candidates.size())
-		var candidate_scroll := clampf(hub_choice_scroll, 0.0, float(max_start))
-		candidate_window_start = clampi(int(floor(candidate_scroll / 2.0)) * 2, 0, max_start)
-		candidate_scroll_fraction = candidate_scroll - float(candidate_window_start)
-	for index in 8:
-		var source_index := candidate_window_start + index
-		if source_index >= candidates.size():
-			break
-		var item := candidates[source_index]
-		var label: String = "UNEQUIP SHIELD" if item.instance_id == ItemCatalog.UNEQUIP_SHIELD_ID else _equipment_item_label(catalog, item)
-		candidate_labels.append(label)
-		candidate_colors.append(Color8(140, 145, 160) if item.instance_id == ItemCatalog.UNEQUIP_SHIELD_ID else catalog.rarity_color(item.rarity))
-	view.set_candidates(candidate_labels, candidate_colors, selected_candidate_index, candidate_scroll_fraction)
-	# The six-stat summary only tints while the player is choosing a different
-	# item (candidate depth). A stat turns green when the candidate raises it
-	# above the currently equipped item and red when it would be lower; stats the
-	# candidate leaves unchanged, and every depth where no replacement is being
-	# considered, stay white. Candidate focus also previews the would-be effective
-	# stat through the same equipment/snapshot path combat uses.
-	var values: Array[String] = []
-	var stat_colors: Array[Color] = []
-	var stat_keys := ["vit", "strength", "def", "agi", "intelligence", "mnd"]
-	var stat_labels := ["VIT", "STR", "DEF", "AGI", "INT", "MND"]
-	var bonus_keys := ["vitality", "strength", "defense", "agi", "intelligence", "mnd"]
-	var preview_snapshot: CombatStatSnapshot = null
-	var equipped_bonuses: Dictionary = {}
-	var candidate_bonuses: Dictionary = {}
-	if mode == EquipmentMenuLayout.MODE_CANDIDATE:
-		if candidate_item != null and candidate_item.instance_id != ItemCatalog.UNEQUIP_SHIELD_ID:
-			candidate_bonuses = catalog.bonuses(candidate_item)
-		if selected_item != null and selected_item.instance_id != ItemCatalog.UNEQUIP_SHIELD_ID:
-			equipped_bonuses = catalog.bonuses(selected_item)
-		var player_stats := root.get("player_stats") as StatsComponent
-		if player_stats != null and candidate_item != null:
-			var preview_equipment := EquipmentComponent.new()
-			var preview_item := candidate_item
-			if preview_item.instance_id == ItemCatalog.UNEQUIP_SHIELD_ID:
-				preview_item = null
-			preview_equipment.configure_preview_from_profile(profile, catalog, selected_slot, preview_item)
-			preview_snapshot = CombatStatSnapshot.from_components(player_stats, preview_equipment)
-			preview_equipment.free()
-	for index in stat_keys.size():
-		var source := preview_snapshot if preview_snapshot != null else snapshot
-		var value := float(source.get(stat_keys[index])) if source != null else 0.0
-		values.append("%s %d" % [stat_labels[index], roundi(value)])
-		var stat_color := Color.WHITE
-		if mode == EquipmentMenuLayout.MODE_CANDIDATE:
-			var before := float(equipped_bonuses.get(bonus_keys[index], 0.0))
-			var after := float(candidate_bonuses.get(bonus_keys[index], 0.0))
-			if after > before:
-				stat_color = PaletteLibrary.NORMAL["green"]
-			elif after < before:
-				stat_color = PaletteLibrary.NORMAL["red"]
-		stat_colors.append(stat_color)
-	view.set_summary(PlayerProfile.normalize_player_name(profile.player_name), values, Color.WHITE, stat_colors)
-	# Keep the legacy probe arrays populated while the authored renderer owns the
-	# visible pixels. Existing touch/smoke callers still inspect these textures
-	# after entering the nested picker; the authored scene remains above them at
-	# z=5 and the old cursors stay suppressed by _reset_hub_cursor_layer.
-	for index in hub_gear_choice_texts.size():
-		if index < candidate_labels.size():
-			hub_gear_choice_texts[index].texture = pixel_texture.call(candidate_labels[index], candidate_colors[index]) as Texture2D
-		else:
-			hub_gear_choice_texts[index].texture = null
-	for index in hub_item_list_texts.size():
-		if index < slot_labels.size():
-			hub_item_list_texts[index].texture = pixel_texture.call(slot_labels[index], slot_colors[index]) as Texture2D
-		else:
-			hub_item_list_texts[index].texture = null
-
-	var description_lines: Array[String] = []
-	var bonus_lines: Array[String] = []
-	if mode == EquipmentMenuLayout.MODE_CANDIDATE:
-		# Candidate focus replaces the description pane with the two-column 2x4
-		# inventory grid, while the bottom strip previews the selected final
-		# bonuses. The six equipped icons remain visible above it.
-		description_lines = []
-		bonus_lines = _equipment_bonus_lines(catalog, candidate_item)
-	elif mode == EquipmentMenuLayout.MODE_REMOVE_ALL_CONFIRM:
-		description_lines = []
-		bonus_lines = []
-	elif mode == EquipmentMenuLayout.MODE_COMMAND:
-		# The command rail is the menu's top level: no slot is selected here, so
-		# the lower item detail and final-bonus panels must be blank.
-		description_lines = []
-		bonus_lines = []
-	else:
-		description_lines = _equipment_item_description(catalog, selected_item)
-		bonus_lines = _equipment_bonus_lines(catalog, selected_item)
-	view.set_description(description_lines, Color8(210, 220, 235))
-	view.set_bonuses(bonus_lines, [Color.WHITE, Color.WHITE, Color.WHITE])
-	# Remove All uses the locked grey cursor under the normal bobbing cursor;
-	# confirmation is conveyed by the cursor state, not a YES/NO text prompt.
-	view.set_confirm_prompt([], hub_remove_all_confirm_index)
-	var visible_candidate_index := selected_candidate_index - candidate_window_start
-	view.render_mode(mode, clampi(hub_action_column, 0, 2), selected_slot_index, visible_candidate_index, hub_remove_all_confirm_index)
-
+	var context := _hub_equipment_menu_context
+	context.view = view
+	context.menu_state = _hub_menu_state
+	context.profile = profile
+	context.pixel_texture = pixel_texture
+	context.navigation_texture = _pixel_prompt_sequence_texture(pixel_texture, [confirm_prompt, back_prompt], Color.WHITE, 9, 2) as Texture2D
+	context.portrait_texture = root._equipment_portrait_texture()
+	context.stat_snapshot = root._player_stat_snapshot()
+	context.player_stats = root.player_stats
+	context.selected_slot_candidates = root._hub_gear_candidates(selected_slot)
+	context.legacy_slot_texts = hub_item_list_texts
+	context.legacy_candidate_texts = hub_gear_choice_texts
+	context.read_only = read_only
+	context.show_navigation = target_view != null
+	_hub_equipment_menu_presenter.render(context)
 
 # --- Hub inventory and gear details ---
 func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: PlayerProfile, page: int, item_list: Array[Sprite2D], details: Array[Sprite2D], action: Button, highlight_color: Color) -> void:
@@ -3210,28 +3007,8 @@ func _set_transmutation_description(details: Array[Sprite2D], pixel_texture: Cal
 		details[line_index + 2].visible = true
 
 
-func _wrap_gear_text(text: String, line_length: int) -> Array[String]:
-	var lines: Array[String] = []
-	if text.is_empty():
-		return lines
-	var line := ""
-	for word in text.split(" "):
-		if word.length() > line_length:
-			if not line.is_empty():
-				lines.append(line)
-				line = ""
-			while word.length() > line_length:
-				lines.append(word.left(line_length))
-				word = word.substr(line_length)
-		var candidate := word if line.is_empty() else "%s %s" % [line, word]
-		if candidate.length() > line_length and not line.is_empty():
-			lines.append(line)
-			line = word
-		else:
-			line = candidate
-	if not line.is_empty():
-		lines.append(line)
-	return lines
+func _wrap_gear_text(source_text: String, line_length: int) -> Array[String]:
+	return _hub_equipment_menu_presenter.wrap_gear_text(source_text, line_length)
 
 
 func _set_gear_detail_lines(details: Array[Sprite2D], pixel_texture: Callable, lines: Array[String], color: Color) -> void:

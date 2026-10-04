@@ -61,6 +61,19 @@ var hub_binding_state := 0
 var hub_equipment_mode := 0
 var hub_remove_all_confirm_index := 0
 
+
+func equipment_mode_for_render() -> int:
+	# Explicit route state is authoritative. The legacy booleans remain a
+	# compatibility fallback while old menu probes migrate to the enum.
+	if hub_equipment_mode == EQUIPMENT_MODE_REMOVE_ALL_CONFIRM:
+		return EQUIPMENT_MODE_REMOVE_ALL_CONFIRM
+	if hub_equipment_mode == EQUIPMENT_MODE_CANDIDATE or hub_gear_browsing:
+		return EQUIPMENT_MODE_CANDIDATE
+	if hub_equipment_mode == EQUIPMENT_MODE_SLOT_EQUIP or hub_equipment_mode == EQUIPMENT_MODE_SLOT_REMOVE:
+		return hub_equipment_mode
+	return EQUIPMENT_MODE_COMMAND if hub_equipment_action_focus else EQUIPMENT_MODE_SLOT_EQUIP
+
+
 ## Shared state transitions used by hub routing and hub economy controllers.
 ## Keep optional-property handling here so lightweight menu test doubles can
 ## continue to participate without duplicating compatibility checks.

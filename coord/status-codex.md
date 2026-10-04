@@ -2,7 +2,7 @@
 
 _Only codex writes this file._
 
-**Focus:** MCP startup-error repair and runtime verification complete; awaiting next composition slice
+**Focus:** Stage 3.1 Shop/Fusion item presentation boundary mapping
 **Updated:** 2026-10-04
 
 ## Completed: MCP startup-error repair and runtime verification
@@ -813,3 +813,24 @@ counts 510 untyped root parameters repository-wide. The next code slice is a
 typed Equipment-page presenter for the slot list, candidate picker, and stat
 comparison, followed by the shared Shop/Fusion item renderer. Godot runtime
 verification remains pending; no Godot process was launched.
+
+## Completed: Stage 3.1 active Hub/Pause Equipment presenter
+
+Extracted the shared authored Equipment renderer into the typed
+`HubEquipmentMenuPresenter` and `HubEquipmentMenuContext`. ScreenStateController
+retains its adapter and compatibility helper methods; `HubMenuState` owns
+equipment mode resolution. The HubFlow compile repair now routes fusion cache
+invalidation through its typed economy controller to preserve the per-file
+reach-through floor. The authored view path is covered by existing smoke
+sources; the legacy item/gear renderer remains a fallback for unavailable
+authored views.
+
+Strict composition audit passes at 267 scripts, zero unclassified files, 52
+ScreenStateController seams, 4,253 total root reach-throughs, and 509 untyped
+root parameters. The script index contains 267 scripts; UID validation passes
+for 422 sidecars. No game or gameplay test was run while the shared editor is
+active.
+
+Next: map the active Shop and Fusion render-model paths against
+`HubEconomyController` and existing authored view/layout models, keeping
+transactions and mutable state in their current owners.

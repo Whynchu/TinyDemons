@@ -5,7 +5,7 @@ const HubMenuStateScript = preload("res://scripts/ui/hub_menu_state.gd")
 const HubEconomyControllerScript = preload("res://scripts/runtime/controllers/hub_economy_controller.gd")
 const HubScreenActionsScript = preload("res://scripts/ui/hub_screen_actions.gd")
 
-var economy_controller: RefCounted = HubEconomyControllerScript.new()
+var economy_controller: HubEconomyController = HubEconomyControllerScript.new() as HubEconomyController
 
 const HUB_PAGE_COUNT := HubMenuStateScript.HUB_PAGE_COUNT
 const HUB_PAGE_ALLOCATE := HubMenuStateScript.HUB_PAGE_ALLOCATE
@@ -54,7 +54,7 @@ func show_hub(root: Object, from_npc: bool = false, pause_mode: bool = false) ->
 	# Inventory and equipped-slot state can change while the hub is closed. The
 	# fusion page is intentionally cached for UI reads, so refresh its eligibility
 	# whenever the hub is opened instead of showing a stale duplicate list.
-	root._invalidate_hub_fusion_candidates()
+	economy_controller.invalidate_hub_fusion_candidates(root)
 	root.screen_state_controller.hub_opened_from_npc = from_npc
 	root.screen_state_controller.hub_pause_mode = false
 	root.screen_state_controller.hub_is_root = true
@@ -224,7 +224,7 @@ func set_hub_page(root: Object, page: int) -> void:
 	HubMenuStateScript.set_property_if_available(screen, &"hub_binding_message", "")
 	HubMenuStateScript.set_property_if_available(screen, &"hub_fusion_count", 1)
 	if screen.hub_page == HUB_PAGE_FUSION:
-		root._invalidate_hub_fusion_candidates()
+		economy_controller.invalidate_hub_fusion_candidates(root)
 	if root.run_state != null and screen.hub_page == HUB_PAGE_SHOP:
 		root.run_state.ensure_shop_stock(root.player_profile)
 	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))

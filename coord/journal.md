@@ -879,3 +879,10 @@ MCP main-scene verification: fix the Settings overlay argument order and HubFlow
 Expanded MCP startup repair to the two test scripts surfaced by script_check: StatusCombatSmoke still uses a Node fixture for a GameplayState-typed controller API, and the performance harness leaves a dynamic call's result uninferred. The main scene already launches cleanly through MCP.
 2026-10-04T17:36:00Z - codex - done
 MCP fixed both main-scene compile blockers and two test-script parse diagnostics. Main scene is running in active room combat; runtime log and editor error buffer are clean. Six focused script checks pass. No smoke suite was run; whole-project LSP diagnostics are unavailable through this bridge.
+2026-10-04T17:45:00Z - codex - claim
+Stage 3.1 next boundary: source tracing showed the authored Hub and Pause routes share ScreenStateController._render_equipment_menu, while _update_hub_item_page/_update_hub_gear_slots are compatibility fallback branches. Extract the active renderer to a typed UI presenter and context; preserve facade helpers used by smoke sources. No Godot or test runs while the shared editor session remains active.
+2026-10-04T18:03:00Z - codex - claim
+The composition regression audit refused to refresh its baseline because the previous HubFlow compile fix added two per-file root reach-throughs (119 vs floor 117). Expanded the claim to route fusion invalidation through HubFlowController's owned economy controller, restoring the floor without weakening the baseline.
+
+2026-10-04T18:10:00Z - codex - done
+Extracted the shared authored Hub/Pause Equipment renderer into a typed presenter/context, retained legacy fallback and caller facades, and routed HubFlow fusion invalidation through its typed economy owner. Strict composition audit passes at 267 scripts, zero unclassified files, 52 ScreenStateController seams, 4,253 reach-throughs, and 509 untyped root parameters; index and UID validation pass. No game or gameplay tests were run with the shared editor active.
