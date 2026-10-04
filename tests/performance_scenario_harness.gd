@@ -194,7 +194,7 @@ func _measure_boss_transition(gameplay: Node, rooms: Node) -> Dictionary:
 	var transition: Object = rooms.call("plan_connected_room_transition", graph, &"room_1_1", boss_id, &"", &"")
 	if transition == null:
 		return {"total_ms": -1.0, "layout_ms": -1.0, "activate_ms": -1.0, "mount_ms": -1.0}
-	var ok := rooms.enter_connected_room(rooms.make_room_entry_context(gameplay as GameplayState, transition)).succeeded()
+	var ok: bool = rooms.enter_connected_room(rooms.make_room_entry_context(gameplay as GameplayState, transition)).succeeded()
 	var total_ms := float(Time.get_ticks_usec() - started_usec) / 1000.0
 	await process_frame
 	# enter_connected_room runs synchronously on the door-touch frame, so the

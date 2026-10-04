@@ -35,7 +35,7 @@ func build(parent: Node, view_size: Vector2, pixel_texture: Callable, adjust_cal
 	_cursor_left_gap = cursor_left_gap
 	_tween_owner = tween_owner
 	_settings_service = settings_service
-	overlay = widget_factory.create_overlay(parent, "SettingsOverlay", Color(0.015, 0.02, 0.035, 1.0), 8, false)
+	overlay = widget_factory.create_overlay(parent, "SettingsOverlay", view_size, Color(0.015, 0.02, 0.035, 1.0), 8, false)
 	overlay.set_meta("display_full_view", true)
 	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 	widget_factory.add_menu_frame(overlay, view_size)

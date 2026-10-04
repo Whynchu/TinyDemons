@@ -2,8 +2,23 @@
 
 _Only codex writes this file._
 
-**Focus:** Paused after Stage 3.1 Hub input ownership; Equipment item-page extraction is next
+**Focus:** MCP startup-error repair and runtime verification complete; awaiting next composition slice
 **Updated:** 2026-10-04
+
+## Completed: MCP startup-error repair and runtime verification
+
+Fixed the Settings overlay argument order and HubFlow fusion-cache calls that
+prevented dependent scripts from compiling. Updated two smoke-test scripts to
+match the typed status API and explicitly type a dynamic room-entry result.
+MCP file checks pass for both gameplay scripts, the two test scripts, and the
+slime/status runtime controllers. The main scene launched through MCP and is
+currently in active room combat; the editor error buffer is empty and the game
+log contains only runtime-server startup messages. No smoke suite was run.
+
+The whole-project LSP diagnostic tool was advertised by discovery but is not
+callable through this MCP bridge. Per-file checks of GameplayState also produce
+false-positive self-type errors under the temporary `gdscript://` URI, so the
+main-scene runtime launch is the project-level compile evidence for that path.
 
 ## Completed: Stage 2.5 combat status and feedback helpers
 

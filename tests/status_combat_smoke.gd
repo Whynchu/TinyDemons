@@ -4,15 +4,14 @@ const ElementCatalogScript = preload("res://scripts/content/element_catalog.gd")
 
 
 class StatusTickTestRoot:
-	extends Node
+	extends GameplayState
 	var damage_number_count := 0
-	var hitstop_timer := 0.0
 
 	func _is_slime_dead(actor: Sprite2D) -> bool:
 		var health := actor.get_node_or_null("Health") as HealthComponent
 		return health == null or health.is_dead()
 
-	func _spawn_damage_number(_actor: Sprite2D, _amount: float, _critical: bool, _element: int, _immune: bool) -> void:
+	func _spawn_damage_number(_actor: Sprite2D, _amount: float, _critical: bool = false, _element: int = 0, _immune: bool = false) -> void:
 		damage_number_count += 1
 
 
@@ -23,7 +22,6 @@ func _initialize() -> void:
 	call_deferred("_watchdog")
 	var failures: Array[String] = []
 	var root_node := StatusTickTestRoot.new()
-	root.add_child(root_node)
 	var actor := Sprite2D.new()
 	root_node.add_child(actor)
 	var health := HealthComponent.new()

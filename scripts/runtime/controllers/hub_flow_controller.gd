@@ -54,7 +54,7 @@ func show_hub(root: Object, from_npc: bool = false, pause_mode: bool = false) ->
 	# Inventory and equipped-slot state can change while the hub is closed. The
 	# fusion page is intentionally cached for UI reads, so refresh its eligibility
 	# whenever the hub is opened instead of showing a stale duplicate list.
-	invalidate_hub_fusion_candidates(root)
+	root._invalidate_hub_fusion_candidates()
 	root.screen_state_controller.hub_opened_from_npc = from_npc
 	root.screen_state_controller.hub_pause_mode = false
 	root.screen_state_controller.hub_is_root = true
@@ -224,7 +224,7 @@ func set_hub_page(root: Object, page: int) -> void:
 	HubMenuStateScript.set_property_if_available(screen, &"hub_binding_message", "")
 	HubMenuStateScript.set_property_if_available(screen, &"hub_fusion_count", 1)
 	if screen.hub_page == HUB_PAGE_FUSION:
-		invalidate_hub_fusion_candidates(root)
+		root._invalidate_hub_fusion_candidates()
 	if root.run_state != null and screen.hub_page == HUB_PAGE_SHOP:
 		root.run_state.ensure_shop_stock(root.player_profile)
 	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))

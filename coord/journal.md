@@ -872,3 +872,10 @@ Stage 3.1 legacy Hub item visibility moved behind a typed presenter and context.
 
 2026-10-04T17:17:06Z - codex - done
 Stage 3.1 Hub input ownership is complete: update_hub_input now delegates to a typed HubInputController, with mutable navigation state in HubMenuState. Composition strict audit passes at 265 scripts and zero unclassified files. Work paused at the item-page boundary for owner check-in; no rendering extraction was started.
+
+2026-10-04T17:25:16Z - codex - claim
+MCP main-scene verification: fix the Settings overlay argument order and HubFlow fusion-cache calls in the claimed scripts, then retry the main scene. Test-harness parse diagnostics are outside the first repair pass.
+2026-10-04T17:31:00Z - codex - claim
+Expanded MCP startup repair to the two test scripts surfaced by script_check: StatusCombatSmoke still uses a Node fixture for a GameplayState-typed controller API, and the performance harness leaves a dynamic call's result uninferred. The main scene already launches cleanly through MCP.
+2026-10-04T17:36:00Z - codex - done
+MCP fixed both main-scene compile blockers and two test-script parse diagnostics. Main scene is running in active room combat; runtime log and editor error buffer are clean. Six focused script checks pass. No smoke suite was run; whole-project LSP diagnostics are unavailable through this bridge.
