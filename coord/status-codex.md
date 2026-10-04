@@ -914,3 +914,17 @@ restriction is active.
 
 Next: map the remaining legacy Hub data and row-render path against authored
 Shop, Fusion, and Equipment models.
+
+## Completed: Stage 3.1 typed legacy row capacities
+
+Moved HubEconomyController's two fallback row-count reads from legacy button
+arrays to `HubResponsiveLayoutPresenter` capacity constants, and used those
+same values when `build_hub` creates the corresponding item and gear-choice
+rows. Actual node references remain where input must emit button actions.
+Strict composition audit passes at 273 scripts with zero unclassified files;
+root reach-throughs fell from 4,253 to 4,251 and the baseline was refreshed.
+UID validation, index generation, and offline MCP checks pass. No game or
+gameplay tests were run while the shared editor restriction is active.
+
+Next: replace remaining external legacy widget-field reads with typed
+capability/metric accessors where callers need data.

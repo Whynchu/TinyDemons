@@ -1447,16 +1447,16 @@ func build_hub(parent: Node, pixel_texture: Callable, actions: HubScreenActions)
 	item_content_clip.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	items_page.add_child(item_content_clip)
 	var item_list: Array[Sprite2D] = []
-	for list_index in 6:
+	for list_index in HubResponsiveLayoutPresenterScript.LEGACY_ITEM_VISIBLE_ROWS:
 		item_list.append(create_sprite(item_content_clip, "HubItemList%d" % list_index, null, Vector2(6, 4 + list_index * 10), false))
 	var item_row_buttons: Array[Button] = []
-	for list_index in 6:
+	for list_index in HubResponsiveLayoutPresenterScript.LEGACY_ITEM_VISIBLE_ROWS:
 		item_row_buttons.append(_make_transparent_touch_button(item_content_clip, "HubItemRow%d" % list_index, Vector2(0, list_index * 10), Vector2(150, 10), actions.select_item_row, list_index))
 	var shop_prices: Array[Sprite2D] = []
-	for list_index in 6:
+	for list_index in HubResponsiveLayoutPresenterScript.LEGACY_ITEM_VISIBLE_ROWS:
 		shop_prices.append(create_sprite(items_page, "HubShopPrice%d" % list_index, null, Vector2(174, 39 + list_index * 10), false))
 	var gear_slot_buttons: Array[Button] = []
-	for slot_index in 6:
+	for slot_index in ItemCatalog.SLOTS.size():
 		gear_slot_buttons.append(_make_transparent_touch_button(item_content_clip, "HubGearSlot%d" % slot_index, Vector2(0, slot_index * 12), Vector2(150, 12), actions.select_gear_slot, slot_index))
 	# Equipment has two distinct levels of information: the upper window always
 	# remains the six equipped slots, while the lower window is the temporary
@@ -1475,7 +1475,7 @@ func build_hub(parent: Node, pixel_texture: Callable, actions: HubScreenActions)
 	items_page.add_child(gear_choice_content_clip)
 	var gear_choices: Array[Sprite2D] = []
 	var gear_choice_buttons: Array[Button] = []
-	for choice_index in 4:
+	for choice_index in HubResponsiveLayoutPresenterScript.LEGACY_GEAR_CHOICE_VISIBLE_ROWS:
 		gear_choices.append(create_sprite(gear_choice_content_clip, "HubGearChoice%d" % choice_index, null, Vector2(6, 4 + choice_index * 10), false))
 		var choice_button := _make_transparent_touch_button(gear_choice_content_clip, "HubGearChoiceButton%d" % choice_index, Vector2(0, choice_index * 10), Vector2(150, 10), actions.select_gear_candidate, choice_index)
 		gear_choice_buttons.append(choice_button)

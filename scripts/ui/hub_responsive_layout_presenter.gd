@@ -10,6 +10,8 @@ const MenuPromptTextureFactoryScript = preload("res://scripts/ui/menu_prompt_tex
 
 const CURSOR_LEFT_GAP := 10.0
 const CURSOR_VERTICAL_RAISE := MenuCursorAnimatorScript.CURSOR_VERTICAL_RAISE
+const LEGACY_ITEM_VISIBLE_ROWS := 6
+const LEGACY_GEAR_CHOICE_VISIBLE_ROWS := 4
 const HUB_ITEM_DETAIL_TOP := 105.0
 const HUB_ITEM_DETAIL_PITCH := 7.0
 const HUB_ITEM_DETAIL_PANEL_TOP := 103.0

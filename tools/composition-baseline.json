@@ -2065,9 +2065,9 @@
                                                    },
                      "hub_economy_controller.gd":  {
                                                        "path":  "scripts/runtime/controllers/hub_economy_controller.gd",
-                                                       "lines":  1091,
+                                                       "lines":  1093,
                                                        "dynamic_dispatch":  91,
-                                                       "reach_through":  464,
+                                                       "reach_through":  462,
                                                        "untyped_root_parameters":  43,
                                                        "live_context_twin_pairs":  0,
                                                        "runtime_refs":  0,
@@ -2811,6 +2811,39 @@
                                                               "root_callable_strings":  0,
                                                               "string_signal_connects":  0
                                                           },
+                     "hub_legacy_widget_scroll_presenter.gd":  {
+                                                                   "path":  "scripts/ui/hub_legacy_widget_scroll_presenter.gd",
+                                                                   "lines":  19,
+                                                                   "dynamic_dispatch":  0,
+                                                                   "reach_through":  0,
+                                                                   "untyped_root_parameters":  0,
+                                                                   "live_context_twin_pairs":  0,
+                                                                   "runtime_refs":  0,
+                                                                   "root_callable_strings":  0,
+                                                                   "string_signal_connects":  0
+                                                               },
+                     "hub_legacy_widget_visibility_presenter.gd":  {
+                                                                       "path":  "scripts/ui/hub_legacy_widget_visibility_presenter.gd",
+                                                                       "lines":  74,
+                                                                       "dynamic_dispatch":  0,
+                                                                       "reach_through":  0,
+                                                                       "untyped_root_parameters":  0,
+                                                                       "live_context_twin_pairs":  0,
+                                                                       "runtime_refs":  0,
+                                                                       "root_callable_strings":  0,
+                                                                       "string_signal_connects":  0
+                                                                   },
+                     "hub_menu_signal_binder.gd":  {
+                                                       "path":  "scripts/ui/hub_menu_signal_binder.gd",
+                                                       "lines":  81,
+                                                       "dynamic_dispatch":  0,
+                                                       "reach_through":  0,
+                                                       "untyped_root_parameters":  0,
+                                                       "live_context_twin_pairs":  0,
+                                                       "runtime_refs":  0,
+                                                       "root_callable_strings":  0,
+                                                       "string_signal_connects":  0
+                                                   },
                      "hub_menu_state.gd":  {
                                                "path":  "scripts/ui/hub_menu_state.gd",
                                                "lines":  106,
@@ -2846,7 +2879,7 @@
                                                           },
                      "hub_responsive_layout_presenter.gd":  {
                                                                 "path":  "scripts/ui/hub_responsive_layout_presenter.gd",
-                                                                "lines":  392,
+                                                                "lines":  394,
                                                                 "dynamic_dispatch":  0,
                                                                 "reach_through":  0,
                                                                 "untyped_root_parameters":  0,
@@ -2888,6 +2921,28 @@
                                                            "root_callable_strings":  0,
                                                            "string_signal_connects":  0
                                                        },
+                     "hub_transaction_menu_context.gd":  {
+                                                             "path":  "scripts/ui/hub_transaction_menu_context.gd",
+                                                             "lines":  26,
+                                                             "dynamic_dispatch":  0,
+                                                             "reach_through":  0,
+                                                             "untyped_root_parameters":  0,
+                                                             "live_context_twin_pairs":  0,
+                                                             "runtime_refs":  0,
+                                                             "root_callable_strings":  0,
+                                                             "string_signal_connects":  0
+                                                         },
+                     "hub_transaction_menu_presenter.gd":  {
+                                                               "path":  "scripts/ui/hub_transaction_menu_presenter.gd",
+                                                               "lines":  106,
+                                                               "dynamic_dispatch":  0,
+                                                               "reach_through":  0,
+                                                               "untyped_root_parameters":  0,
+                                                               "live_context_twin_pairs":  0,
+                                                               "runtime_refs":  0,
+                                                               "root_callable_strings":  0,
+                                                               "string_signal_connects":  0
+                                                           },
                      "hud_controller.gd":  {
                                                "path":  "scripts/ui/hud_controller.gd",
                                                "lines":  1640,
@@ -3066,14 +3121,14 @@
                                                          },
                      "screen_state_controller.gd":  {
                                                         "path":  "scripts/ui/screen_state_controller.gd",
-                                                        "lines":  3675,
+                                                        "lines":  3435,
                                                         "dynamic_dispatch":  52,
                                                         "reach_through":  211,
                                                         "untyped_root_parameters":  29,
                                                         "live_context_twin_pairs":  0,
                                                         "runtime_refs":  0,
                                                         "root_callable_strings":  16,
-                                                        "string_signal_connects":  7
+                                                        "string_signal_connects":  0
                                                     },
                      "settings_screen_presenter.gd":  {
                                                           "path":  "scripts/ui/settings_screen_presenter.gd",
@@ -3088,7 +3143,7 @@
                                                       },
                      "shop_menu_layout.gd":  {
                                                  "path":  "scripts/ui/shop_menu_layout.gd",
-                                                 "lines":  802,
+                                                 "lines":  810,
                                                  "dynamic_dispatch":  0,
                                                  "reach_through":  0,
                                                  "untyped_root_parameters":  0,
@@ -3097,6 +3152,17 @@
                                                  "root_callable_strings":  0,
                                                  "string_signal_connects":  0
                                              },
+                     "shop_menu_model.gd":  {
+                                                "path":  "scripts/ui/shop_menu_model.gd",
+                                                "lines":  16,
+                                                "dynamic_dispatch":  0,
+                                                "reach_through":  0,
+                                                "untyped_root_parameters":  0,
+                                                "live_context_twin_pairs":  0,
+                                                "runtime_refs":  0,
+                                                "root_callable_strings":  0,
+                                                "string_signal_connects":  0
+                                            },
                      "title_particle_controller.gd":  {
                                                           "path":  "scripts/ui/title_particle_controller.gd",
                                                           "lines":  97,
@@ -3133,11 +3199,11 @@
                  },
     "metric_snapshot":  {
                             "gameplay_lines":  302,
-                            "total_reach_through":  4253,
+                            "total_reach_through":  4251,
                             "untyped_root_parameters":  509,
                             "live_context_twin_pairs":  0,
                             "root_callable_strings":  341,
-                            "string_signal_connects":  7,
+                            "string_signal_connects":  0,
                             "script_subdirectories":  13,
                             "unclassified_scripts":  0
                         },
@@ -3151,7 +3217,7 @@
                            },
     "forward_status":  {
                            "screen_state_controller_lines":  {
-                                                                 "current":  3675,
+                                                                 "current":  3435,
                                                                  "status":  "open",
                                                                  "stage":  3
                                                              },

@@ -1114,6 +1114,22 @@ present in the scene source. The legacy rendering branch remains for missing
 child-view compatibility; widget fields still have consumers and were not
 removed. Offline MCP script validation and strict composition audit pass.
 
+**Implementation record (2026-10-04):** Replaced HubEconomyController's two
+fallback-visible-row calculations that read legacy button-array lengths with
+`HubResponsiveLayoutPresenter` capacity constants. `build_hub` uses the same
+six item-row and four gear-choice-row constants when creating those widgets;
+the authored layouts continue using their own row counts. Economy/input still
+use actual button references when they need to emit an action. Root
+reach-throughs fell from 4,253 to 4,251, and the regression baseline was
+refreshed; strict targets pass at 273 scripts and zero unclassified files.
+UID validation passes for 428 sidecars, the script index has 273 entries, and
+offline MCP checks pass for all three changed scripts. No game or gameplay
+tests were run while the shared editor session is active.
+
+Next: continue replacing external legacy widget-field reads with typed
+capability/metric accessors where callers need data, while preserving actual
+node references only at the input and fallback-render boundaries.
+
 ### 3.2 `gameplay_bootstrap.gd` — declarative assembly
 
 Replace the 44 hand-written `_add_runtime_node` calls with a registration table

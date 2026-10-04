@@ -5,7 +5,9 @@ const ProgressionControllerScript = preload("res://scripts/runtime/controllers/p
 const AspectCatalogScript = preload("res://scripts/content/aspect_catalog.gd")
 const ShopMenuLayoutScript = preload("res://scripts/ui/shop_menu_layout.gd")
 const FusionMenuLayoutScript = preload("res://scripts/ui/fusion_menu_layout.gd")
+const EquipmentMenuLayoutScript = preload("res://scripts/ui/equipment_menu_layout.gd")
 const HubMenuStateScript = preload("res://scripts/ui/hub_menu_state.gd")
+const HubResponsiveLayoutPresenterScript = preload("res://scripts/ui/hub_responsive_layout_presenter.gd")
 
 const HUB_PAGE_COUNT := HubMenuStateScript.HUB_PAGE_COUNT
 const HUB_PAGE_ALLOCATE := HubMenuStateScript.HUB_PAGE_ALLOCATE
@@ -315,7 +317,7 @@ func select_hub_item_row(root: Object, row: int) -> void:
 		count = hub_fusion_candidates(root).size()
 	if count <= 0:
 		return
-	var visible_rows := ShopMenuLayoutScript.VISIBLE_ROWS if page == HUB_PAGE_SHOP and root.screen_state_controller.hub_shop_menu != null else FusionMenuLayoutScript.FUSION_VISIBLE_ROWS if page == HUB_PAGE_FUSION and root.screen_state_controller.hub_fusion_menu != null else maxi(root.screen_state_controller.hub_item_row_buttons.size(), 1)
+	var visible_rows := ShopMenuLayoutScript.VISIBLE_ROWS if page == HUB_PAGE_SHOP and root.screen_state_controller.hub_shop_menu != null else FusionMenuLayoutScript.FUSION_VISIBLE_ROWS if page == HUB_PAGE_FUSION and root.screen_state_controller.hub_fusion_menu != null else HubResponsiveLayoutPresenterScript.LEGACY_ITEM_VISIBLE_ROWS
 	var window_start := int(root.screen_state_controller.hub_list_scroll)
 	var target := window_start + row
 	if row < 0 or row >= visible_rows or target < 0 or target >= count:
@@ -463,7 +465,7 @@ func select_hub_gear_candidate(root: Object, choice_row: int) -> void:
 	var candidates := hub_gear_candidates(root, slot)
 	if candidates.is_empty():
 		return
-	var visible_choice_count := 8 if root.screen_state_controller.hub_equipment_menu != null else maxi(root.screen_state_controller.hub_gear_choice_buttons.size(), 1)
+	var visible_choice_count := EquipmentMenuLayoutScript.CANDIDATE_VISIBLE_COUNT if root.screen_state_controller.hub_equipment_menu != null else HubResponsiveLayoutPresenterScript.LEGACY_GEAR_CHOICE_VISIBLE_ROWS
 	var window_start := int(floor(float(root.screen_state_controller.hub_choice_scroll) / 2.0)) * 2
 	var candidate_index := window_start + choice_row
 	if choice_row < 0 or choice_row >= visible_choice_count or candidate_index < 0 or candidate_index >= candidates.size():

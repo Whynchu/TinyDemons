@@ -909,3 +909,8 @@ Extracted legacy Hub row and gear-choice fractional scroll positioning into HubL
 
 2026-10-04T20:45:00Z - codex - done
 Traced legacy Hub row rendering to the missing-child-view compatibility branch in update_hub_ui. The runtime preloads demon_hub_menu.tscn with authored Equipment/Shop/Fusion children; retained widget fields because fallback, input, scroll-count, layout, and smoke readers remain. Removed three unreferenced Shop helpers. Strict audit, UID validation, index generation, and MCP offline script check pass; no game or gameplay tests were run.
+2026-10-04T21:10:00Z - codex - claim
+Mapped the two remaining HubEconomyController direct reads of legacy row-button array sizes. They represent fixed capacities (six Shop/item rows, four gear choices) created by build_hub. Establish a single layout-owner constant and replace those metric reads while preserving actual node references for input and probes. No game or gameplay tests while shared editor restriction is active.
+
+2026-10-04T21:38:00Z - codex - done
+Replaced two HubEconomyController fallback row-count reads from legacy arrays with shared row-capacity constants on HubResponsiveLayoutPresenter, used consistently by build_hub. Root reach-throughs fell 4,253 -> 4,251; baseline refreshed. Strict composition, UID, index generation, and MCP offline checks pass; no game/gameplay tests run.
