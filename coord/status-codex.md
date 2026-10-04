@@ -2,7 +2,7 @@
 
 _Only codex writes this file._
 
-**Focus:** Stage 3.1 Pause page and command-row presentation
+**Focus:** Stage 3.1 audit residual Pause update ownership
 **Updated:** 2026-10-04
 
 ## Completed: Stage 3.1 Pause view rendering
@@ -989,5 +989,16 @@ and self-test pass at 275 scripts/26 context files/zero unclassified.
 ScreenStateController is 3,306 lines with 51 seams. UID and index checks and
 offline MCP checks for the three changed scripts pass. No gameplay tests run.
 
-Next: move Pause page visibility and command-row presentation behind the
-presenter; retain routing and shared Equipment transactions in current owners.
+## Completed: Stage 3.1 Pause page presentation
+
+Moved page/chrome, command/debug-row, status/equipment-text, description, and
+resource visibility to `PauseScreenPresenter.update_page_visibility`. Typed
+the Equipment view and replaced reflective cursor-stop/layout-refresh calls
+with direct methods. ScreenStateController retains styling, prompt textures,
+cursor tweening, and route transactions. Strict audit/self-test pass at 275
+scripts/26 contexts/zero unclassified; ScreenStateController is 3,279 lines,
+PauseScreenPresenter is 351, and the screen seam count remains 51. UID/index
+validation and offline MCP checks pass. No gameplay tests run.
+
+Next: audit residual Pause prompt/cursor/page-update code and select a distinct
+owner for further extraction within the presenter's size constraints.

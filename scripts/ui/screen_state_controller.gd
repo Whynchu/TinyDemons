@@ -564,7 +564,7 @@ var hub_equipment_menu: Control:
 ## Compatibility alias retained for lightweight menu probes that reflect every
 ## build_hub dictionary key onto the controller by its short name.
 var equipment_menu: Control = null
-var pause_equipment_menu: Control:
+var pause_equipment_menu: EquipmentMenuLayout:
 	get: return _pause_screen_presenter.equipment_menu
 	set(value): _pause_screen_presenter.equipment_menu = value
 var hub_equipment_mode: int:
@@ -890,8 +890,8 @@ func _refresh_active_menu_layout(_root: Object) -> void:
 		hub_equipment_menu.call("refresh_layout_preserving_state")
 	if hub_overlay != null and hub_overlay.visible and hub_shop_menu != null and hub_shop_menu.visible and hub_shop_menu.has_method("refresh_layout_preserving_state"):
 		hub_shop_menu.call("refresh_layout_preserving_state")
-	if pause_overlay != null and pause_overlay.visible and pause_equipment_menu != null and pause_equipment_menu.visible and pause_equipment_menu.has_method("refresh_layout_preserving_state"):
-		pause_equipment_menu.call("refresh_layout_preserving_state")
+	if pause_overlay != null and pause_overlay.visible and pause_equipment_menu != null and pause_equipment_menu.visible:
+		pause_equipment_menu.refresh_layout_preserving_state()
 	_display_layout_refreshing = false
 
 
@@ -2044,33 +2044,13 @@ func update_pause_ui(root: Object, pixel_texture: Callable) -> void:
 	if pause_overlay == null or not pause_overlay.visible:
 		return
 	var highlight := PaletteLibrary.accent(player_palette_name)
-	for page_root: Control in pause_page_roots.values(): page_root.visible = false
-	var active_page := pause_page_roots.get(pause_page) as Control
-	if active_page != null: active_page.visible = true
-	var showing_root := pause_page == 0
-	var pause_equipment_view_active := pause_page == 2 and pause_equipment_menu != null
-	if pause_equipment_menu != null:
-		pause_equipment_menu.visible = pause_equipment_view_active
-		if pause_equipment_menu.has_method("stop_cursor_motion"):
-			pause_equipment_menu.call("stop_cursor_motion")
-		if pause_equipment_view_active:
-			pause_equipment_menu.set_pixel_texture(pixel_texture)
-	var pause_equipment_page_root := pause_page_roots.get(2) as Control
-	if pause_equipment_page_root != null:
-		for chrome_name in ["Background", "TitleTab", "Title", "TitleRule"]:
-			var chrome := pause_equipment_page_root.get_node_or_null(chrome_name) as CanvasItem
-			if chrome != null: chrome.visible = not pause_equipment_view_active
-	var root_panel := pause_overlay.get_node_or_null("PausePanel8Piece") as Control
-	if root_panel != null: root_panel.visible = showing_root
 	var menu_player_context: MenuPlayerContext = (root as GameplayState)._menu_player_context() if root is GameplayState else null
 	_pause_screen_presenter.update_player_info(menu_player_context, pixel_texture, display_view_size)
 	var settings := root.get("settings_service") as SettingsService
 	var debug_menu_enabled := settings != null and bool(settings.get_setting(&"debug_menu_enabled", false))
+	var pause_equipment_view_active := _pause_screen_presenter.update_page_visibility(pause_page, debug_menu_enabled, pixel_texture)
 	for index in pause_menu_buttons.size():
 		var button := pause_menu_buttons[index]
-		var debug_command_hidden := index == 3 and not debug_menu_enabled
-		button.visible = pause_page == 0 and not debug_command_hidden
-		button.disabled = debug_command_hidden
 		# The command rail is intentionally text-only. The cursor is the sole
 		# selected-state treatment, matching the Demon Hub and FFIII reference.
 		set_archetype_button_state(button, false, highlight)
@@ -2081,15 +2061,8 @@ func update_pause_ui(root: Object, pixel_texture: Callable) -> void:
 	var back_prompt := _menu_back_prompt_for(root)
 	var confirm_prompt := _menu_confirm_prompt_for(root)
 	_set_button_text(pause_back_button, back_prompt, pixel_texture, PauseMenuLayoutScript.MUTED_TEXT_COLOR)
-	for node in pause_status_texts: node.visible = pause_page == 1
-	for node in pause_equipment_texts: node.visible = pause_page == 2 and not pause_equipment_view_active
 	if pause_description_text != null:
-		pause_description_text.visible = not pause_equipment_view_active
 		pause_description_text.texture = _pixel_prompt_texture(pixel_texture, confirm_prompt, PauseMenuLayoutScript.MUTED_TEXT_COLOR) as Texture2D
-	if pause_gold_icon != null: pause_gold_icon.visible = showing_root
-	if pause_resource_icon != null: pause_resource_icon.visible = showing_root
-	if pause_gold_text != null: pause_gold_text.visible = showing_root
-	if pause_soul_text != null: pause_soul_text.visible = showing_root
 	if pause_page == 1:
 		_pause_screen_presenter.update_status(menu_player_context, pixel_texture)
 	elif pause_page == 2:

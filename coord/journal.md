@@ -946,3 +946,9 @@ Move Pause debug-state presentation into PauseScreenPresenter using a typed cont
 
 2026-10-05T01:00:00Z - codex - done
 Moved Pause debug projection behind PauseScreenPresenter using PauseDebugMenuContext, with typed DebugSessionController reads. Composition strict/self-test, UID validation, generated index, MCP script checks, and diff check pass; 275 scripts, 26 contexts, zero unclassified, 51 screen seams. No game/tests run.
+
+2026-10-05T01:10:00Z - codex - claim
+Move page/chrome, command-row visibility, and Pause text/resource visibility into PauseScreenPresenter. Type the EquipmentMenuLayout field for direct stop-cursor and responsive-refresh calls; preserve input routing and shared Equipment transactions. No Godot/gameplay tests while editor is active.
+
+2026-10-05T01:30:00Z - codex - done
+Moved Pause page/chrome, command/debug row, status/equipment, description, and resources visibility to PauseScreenPresenter; typed EquipmentMenuLayout and replaced reflective calls with direct methods. Composition audit/self-test, UID/index, MCP offline checks, and diff check pass; ScreenStateController 3,279 lines, presenter 351, 51 seams. No gameplay tests run.

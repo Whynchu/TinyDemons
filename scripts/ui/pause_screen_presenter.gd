@@ -33,7 +33,7 @@ var equipment_button: Button = null
 var settings_button: Button = null
 var debug_button: Button = null
 var quit_button: Button = null
-var equipment_menu: Control = null
+var equipment_menu: EquipmentMenuLayout = null
 var debug_menu_layout: DebugMenuLayout = null
 var debug_menu_buttons: Array[Button] = []
 
@@ -191,6 +191,51 @@ func position_controls(view_size: Vector2) -> void:
 	if gold_icon != null: gold_icon.position = PauseMenuLayoutScript.resource_icon_position(view_size, false)
 	if resource_icon != null: resource_icon.position = PauseMenuLayoutScript.resource_icon_position(view_size, true)
 	position_resource_texts(view_size)
+
+
+func update_page_visibility(page: int, debug_menu_enabled: bool, pixel_texture: Callable) -> bool:
+	for page_root: Control in page_roots.values():
+		page_root.visible = false
+	var active_page := page_roots.get(page) as Control
+	if active_page != null:
+		active_page.visible = true
+	var showing_root := page == 0
+	var equipment_view_active := page == 2 and equipment_menu != null
+	if equipment_menu != null:
+		equipment_menu.visible = equipment_view_active
+		equipment_menu.stop_cursor_motion()
+		if equipment_view_active:
+			equipment_menu.set_pixel_texture(pixel_texture)
+	var equipment_page_root := page_roots.get(2) as Control
+	if equipment_page_root != null:
+		for chrome_name in ["Background", "TitleTab", "Title", "TitleRule"]:
+			var chrome := equipment_page_root.get_node_or_null(chrome_name) as CanvasItem
+			if chrome != null:
+				chrome.visible = not equipment_view_active
+	var root_panel := overlay.get_node_or_null("PausePanel8Piece") as Control
+	if root_panel != null:
+		root_panel.visible = showing_root
+	for index in menu_buttons.size():
+		var debug_command_hidden := index == 3 and not debug_menu_enabled
+		menu_buttons[index].visible = showing_root and not debug_command_hidden
+		menu_buttons[index].disabled = debug_command_hidden
+	if back_button != null:
+		back_button.visible = not equipment_view_active
+	for node in status_texts:
+		node.visible = page == 1
+	for node in equipment_texts:
+		node.visible = page == 2 and not equipment_view_active
+	if description_text != null:
+		description_text.visible = not equipment_view_active
+	if gold_icon != null:
+		gold_icon.visible = showing_root
+	if resource_icon != null:
+		resource_icon.visible = showing_root
+	if gold_text != null:
+		gold_text.visible = showing_root
+	if soul_text != null:
+		soul_text.visible = showing_root
+	return equipment_view_active
 
 
 func position_resource_texts(view_size: Vector2) -> void:

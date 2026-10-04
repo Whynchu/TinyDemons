@@ -1198,9 +1198,25 @@ for 430 sidecars, the UI role map names the new context, and offline MCP checks
 pass for all three changed scripts. No gameplay tests were run while the shared
 editor session is active.
 
-Next: extract Pause page visibility and command-row presentation behind the
-presenter. Keep menu routing, DebugSession lifecycle, and shared Hub/Pause
-Equipment transactions in their existing owners.
+**Implementation record (2026-10-05):** Moved Pause page roots and Equipment
+chrome visibility, command/debug row visibility, read-only status/equipment
+text visibility, description visibility, and root-page resource visibility into
+`PauseScreenPresenter.update_page_visibility`. The presenter now owns its
+`EquipmentMenuLayout` directly and uses typed cursor-stop and responsive-refresh
+methods instead of reflective checks/calls. ScreenStateController retains
+highlight styling, prompt textures, cursor tweening, page transitions, and the
+shared Hub/Pause Equipment transaction path. The Pause layout compatibility
+method remains for current callers and probes. `ScreenStateController` is 3,279
+lines and `PauseScreenPresenter` is 351 lines, below the 400-line file ceiling.
+Strict composition audit/self-test pass at 275 scripts, 26 contexts, and zero
+unclassified files; 51 ScreenStateController seams and 4,249 reach-throughs.
+UID validation passes for 430 sidecars, the index lists 275 scripts, and MCP
+offline checks pass for the presenter, controller, and EquipmentMenuLayout. No
+gameplay tests were run while the shared editor session is active.
+
+Next: audit the remaining Pause prompt/cursor and page-update code, then choose
+a separate owner for the next extraction so the Pause presenter stays within
+its file-size and single-responsibility constraints.
 
 ### 3.2 `gameplay_bootstrap.gd` — declarative assembly
 
