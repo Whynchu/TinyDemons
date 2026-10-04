@@ -7,7 +7,7 @@ tracked `scripts/*.gd` file to exactly one of the eight Stage 1 role folders, wi
 
 Owner: repository architecture and gameplay systems
 
-Current code: the 235-file Stage 1 inventory plus 38 post-migration modules (273 scripts total); all remain distributed across the declared role roots and runtime subfolders
+Current code: the 235-file Stage 1 inventory plus 39 post-migration modules (274 scripts total); all remain distributed across the declared role roots and runtime subfolders
 
 Verification: all 235 destinations and UID sidecars reconciled against the migration
 map; live resource references rewritten; generated index refreshed.
@@ -15,7 +15,7 @@ map; live resource references rewritten; generated index refreshed.
 Supersedes: nothing. Implements the Stage 1 layout table in
 [`composition-plan-2026.md`](composition-plan-2026.md)
 
-Updated: 2026-10-04 (Stage 3.1 legacy Hub scroll presenter recorded)
+Updated: 2026-10-04 (Stage 3.1 legacy Hub action presenter recorded)
 
 Baseline: version `0.3.32`, commit `45db00b`
 
@@ -396,7 +396,7 @@ The map retains each original flat path alongside its current path for traceabil
 
 ## Post-migration additions
 
-These thirty-eight modules were added after the 235-script Stage 1 inventory. They
+These thirty-nine modules were added after the 235-script Stage 1 inventory. They
 use the same folder roles and are included in the generated script index.
 
 | Current path | Role | Reason |
@@ -439,6 +439,7 @@ use the same folder roles and are included in the generated script index.
 | `scripts/ui/hub_menu_signal_binder.gd` | `ui/` | Connects typed Equipment, Shop, Fusion, and Bind view signals to HubScreenActions while keeping menu construction and state in ScreenStateController. |
 | `scripts/ui/hub_legacy_widget_visibility_presenter.gd` | `ui/` | Suppresses legacy Hub inventory widgets beneath the active authored Equipment and Shop views while retaining their input, layout, and fallback readers. |
 | `scripts/ui/hub_legacy_widget_scroll_presenter.gd` | `ui/` | Positions legacy Hub item, price, touch-row, and gear-choice widgets from scroll state without owning input or selection. |
+| `scripts/ui/hub_legacy_widget_action_presenter.gd` | `ui/` | Activates an enabled legacy Equipment or Shop action button behind a typed capability used by HubInputController. |
 
 ## Migration result
 

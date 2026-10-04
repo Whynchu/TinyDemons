@@ -2780,9 +2780,9 @@
                                                          },
                      "hub_input_controller.gd":  {
                                                      "path":  "scripts/ui/hub_input_controller.gd",
-                                                     "lines":  306,
+                                                     "lines":  299,
                                                      "dynamic_dispatch":  0,
-                                                     "reach_through":  150,
+                                                     "reach_through":  149,
                                                      "untyped_root_parameters":  0,
                                                      "live_context_twin_pairs":  0,
                                                      "runtime_refs":  0,
@@ -2811,6 +2811,17 @@
                                                               "root_callable_strings":  0,
                                                               "string_signal_connects":  0
                                                           },
+                     "hub_legacy_widget_action_presenter.gd":  {
+                                                                   "path":  "scripts/ui/hub_legacy_widget_action_presenter.gd",
+                                                                   "lines":  19,
+                                                                   "dynamic_dispatch":  0,
+                                                                   "reach_through":  0,
+                                                                   "untyped_root_parameters":  0,
+                                                                   "live_context_twin_pairs":  0,
+                                                                   "runtime_refs":  0,
+                                                                   "root_callable_strings":  0,
+                                                                   "string_signal_connects":  0
+                                                               },
                      "hub_legacy_widget_scroll_presenter.gd":  {
                                                                    "path":  "scripts/ui/hub_legacy_widget_scroll_presenter.gd",
                                                                    "lines":  19,
@@ -3199,7 +3210,7 @@
                  },
     "metric_snapshot":  {
                             "gameplay_lines":  302,
-                            "total_reach_through":  4251,
+                            "total_reach_through":  4250,
                             "untyped_root_parameters":  509,
                             "live_context_twin_pairs":  0,
                             "root_callable_strings":  341,

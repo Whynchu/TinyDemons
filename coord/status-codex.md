@@ -2,7 +2,7 @@
 
 _Only codex writes this file._
 
-**Focus:** Stage 3.1 migrate remaining legacy Hub widget readers
+**Focus:** Stage 3.1 trace ScreenStateController legacy bridges and test probes
 **Updated:** 2026-10-04
 
 ## Completed: MCP startup-error repair and runtime verification
@@ -928,3 +928,22 @@ gameplay tests were run while the shared editor restriction is active.
 
 Next: replace remaining external legacy widget-field reads with typed
 capability/metric accessors where callers need data.
+
+## Completed: Stage 3.1 typed legacy action capabilities
+
+Removed HubInputController's direct legacy Equipment-action array and Shop
+item-action button reads. `HubLegacyWidgetActionPresenter` activates enabled
+buttons through narrow methods and reports failure so the controller preserves
+its no-input feedback. The helper consumes the typed responsive widget owner,
+without adding methods to that owner's constrained script.
+
+Strict composition audit passes at 274 scripts with zero unclassified files;
+root reach-throughs fell to 4,250 and the baseline was refreshed. UID
+validation passes for 429 sidecars, the generated index contains 274 scripts,
+and offline MCP checks pass for all three changed scripts. A runtime/scripts
+search finds no other direct readers of these legacy widget fields outside the
+build/fallback owners. No game or gameplay tests were run while the shared
+editor restriction is active.
+
+Next: map remaining ScreenStateController legacy bridges and test probes to
+plan an evidence-based retirement sequence.

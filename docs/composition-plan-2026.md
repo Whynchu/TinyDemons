@@ -1126,9 +1126,24 @@ UID validation passes for 428 sidecars, the script index has 273 entries, and
 offline MCP checks pass for all three changed scripts. No game or gameplay
 tests were run while the shared editor session is active.
 
-Next: continue replacing external legacy widget-field reads with typed
-capability/metric accessors where callers need data, while preserving actual
-node references only at the input and fallback-render boundaries.
+**Implementation record (2026-10-04):** Removed HubInputController's direct
+reads of the legacy Equipment-action array and Shop item-action button. The
+new `HubLegacyWidgetActionPresenter` exposes narrow trigger methods and returns
+whether an enabled action was emitted, preserving no-input feedback and leaving
+navigation with HubInputController. Its typed input is the existing
+`HubResponsiveLayoutPresenter`, keeping action activation out of that already
+large layout script. A runtime/scripts search now finds no external reads of
+the listed legacy item/gear widget fields; remaining references are inside
+ScreenStateController's fallback/build path, the widget owner, and tests.
+Strict composition audit passes at 274 scripts with zero unclassified files;
+root reach-throughs fell to 4,250 and the regression baseline was refreshed.
+UID validation passes for 429 sidecars, index generation contains 274 scripts,
+and offline MCP checks pass for the action presenter, input controller, and
+layout owner. No game or gameplay tests were run while the shared editor
+session is active.
+
+Next: trace the remaining ScreenStateController fallback/build field bridges
+and test probes, then define the migration order for retiring those bridges.
 
 ### 3.2 `gameplay_bootstrap.gd` — declarative assembly
 

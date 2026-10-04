@@ -914,3 +914,8 @@ Mapped the two remaining HubEconomyController direct reads of legacy row-button 
 
 2026-10-04T21:38:00Z - codex - done
 Replaced two HubEconomyController fallback row-count reads from legacy arrays with shared row-capacity constants on HubResponsiveLayoutPresenter, used consistently by build_hub. Root reach-throughs fell 4,253 -> 4,251; baseline refreshed. Strict composition, UID, index generation, and MCP offline checks pass; no game/gameplay tests run.
+2026-10-04T22:00:00Z - codex - claim
+Mapped HubInputController's remaining legacy widget accesses to action activation, not widget data: it checks the selected Equipment button and emits pressed, and similarly checks the Shop item-action button. Replace with typed methods on their widget owner while preserving disabled/no-input behavior. No game or gameplay tests while shared editor restriction is active.
+
+2026-10-04T22:30:00Z - codex - done
+Moved HubInputController's two legacy action-button read/emit paths behind HubLegacyWidgetActionPresenter typed capabilities. Input retains failure feedback; no direct legacy button-array reads remain in HubInputController, and economy no longer reads legacy row-array lengths. Strict composition passes at 274 scripts/zero unclassified, reach-throughs 4,250 with baseline refreshed; UID and offline MCP checks pass. No game/gameplay tests run.

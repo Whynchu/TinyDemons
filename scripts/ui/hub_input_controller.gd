@@ -5,9 +5,11 @@ class_name HubInputController
 const HubMenuStateScript = preload("res://scripts/ui/hub_menu_state.gd")
 const EquipmentMenuLayoutScript = preload("res://scripts/ui/equipment_menu_layout.gd")
 const ShopMenuLayoutScript = preload("res://scripts/ui/shop_menu_layout.gd")
+const HubLegacyWidgetActionPresenterScript = preload("res://scripts/ui/hub_legacy_widget_action_presenter.gd")
 
 var stats: HubStatsScreenPresenter
 var widgets: HubResponsiveLayoutPresenter
+var _legacy_widget_action_presenter: HubLegacyWidgetActionPresenterScript = HubLegacyWidgetActionPresenterScript.new() as HubLegacyWidgetActionPresenterScript
 
 
 func bind(stats_presenter: HubStatsScreenPresenter, responsive_layout: HubResponsiveLayoutPresenter) -> void:
@@ -224,13 +226,7 @@ func _handle_equipment_input(root: GameplayState, state: HubMenuState, page: int
 			root._shift_hub_action_column(action_direction); root._play_sound("ui_hover", -6.0, 1.0)
 		# Down must never silently change menu depth or open Remove All.
 		elif bool(root._is_menu_confirm_just_pressed()):
-			if state.hub_action_column >= 0 and state.hub_action_column < widgets.hub_equipment_action_buttons.size():
-				var equipment_action := widgets.hub_equipment_action_buttons[state.hub_action_column]
-				if equipment_action != null and not equipment_action.disabled:
-					equipment_action.pressed.emit()
-				else:
-					root._play_sound("ui_no_input", 0.0, 1.0)
-			else:
+			if not _legacy_widget_action_presenter.trigger_equipment_action(widgets, state.hub_action_column):
 				root._play_sound("ui_no_input", 0.0, 1.0)
 		return true
 	if state.hub_equipment_mode == EquipmentMenuLayoutScript.MODE_SLOT_REMOVE:
@@ -299,8 +295,5 @@ func _handle_inventory_input(root: GameplayState, state: HubMenuState, page: int
 	elif page == HubMenuStateScript.HUB_PAGE_FUSION and bool(root._is_menu_direction_just_pressed(&"ui_right")):
 		root._shift_hub_fusion_count(1); root._play_sound("ui_hover", -6.0, 1.0)
 	elif bool(root._is_menu_confirm_just_pressed()):
-		var action := widgets.hub_item_action_button
-		if action != null and not action.disabled:
-			action.pressed.emit()
-		else:
+		if not _legacy_widget_action_presenter.trigger_item_action(widgets):
 			root._play_sound("ui_no_input", 0.0, 1.0)
