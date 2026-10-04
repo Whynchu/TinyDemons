@@ -36,6 +36,9 @@ var quit_button: Button = null
 var equipment_menu: EquipmentMenuLayout = null
 var debug_menu_layout: DebugMenuLayout = null
 var debug_menu_buttons: Array[Button] = []
+var _widget_factory: MenuWidgetFactory = null
+var _prompt_texture_factory: MenuPromptTextureFactory = null
+var _cursor_animator: MenuCursorAnimator = null
 
 
 func build(
@@ -44,8 +47,13 @@ func build(
 	pixel_texture: Callable,
 	actions: HubScreenActions,
 	widget_factory: MenuWidgetFactory,
+	prompt_texture_factory: MenuPromptTextureFactory,
+	cursor_animator: MenuCursorAnimator,
 	set_hub_action_column: Callable
 ) -> void:
+	_widget_factory = widget_factory
+	_prompt_texture_factory = prompt_texture_factory
+	_cursor_animator = cursor_animator
 	var built_overlay := PAUSE_MENU_SCENE.instantiate() as ColorRect
 	if built_overlay == null:
 		return
@@ -236,6 +244,38 @@ func update_page_visibility(page: int, debug_menu_enabled: bool, pixel_texture: 
 	if soul_text != null:
 		soul_text.visible = showing_root
 	return equipment_view_active
+
+
+func update_navigation_prompts(
+	highlight: Color,
+	equipment_view_active: bool,
+	back_prompt: String,
+	confirm_prompt: String,
+	pixel_texture: Callable
+) -> void:
+	for button in menu_buttons:
+		# The command rail is text-only; the cursor is its selected-state treatment.
+		_widget_factory.set_archetype_button_state(button, false, highlight)
+		_prompt_texture_factory.set_menu_button_icon(button, null, false)
+	if back_button != null:
+		back_button.visible = not equipment_view_active
+		_widget_factory.set_archetype_button_state(back_button, false, highlight)
+		_prompt_texture_factory.set_button_text(back_button, back_prompt, pixel_texture, PauseMenuLayoutScript.MUTED_TEXT_COLOR)
+	if description_text != null:
+		description_text.texture = _prompt_texture_factory.pixel_prompt_texture(pixel_texture, confirm_prompt, PauseMenuLayoutScript.MUTED_TEXT_COLOR)
+
+
+func update_selected_cursor(page: int, selected_row: int, cursor_left_gap: float, tween_owner: Node) -> void:
+	if cursor_text != null and not menu_buttons.is_empty():
+		var cursor_index := clampi(selected_row, 0, menu_buttons.size() - 1)
+		cursor_text.visible = page == 0
+		var button := menu_buttons[cursor_index]
+		_cursor_animator.move_menu_cursor(
+			cursor_text,
+			Vector2(button.position.x - cursor_left_gap, button.position.y + 3.0),
+			true,
+			tween_owner
+		)
 
 
 func position_resource_texts(view_size: Vector2) -> void:

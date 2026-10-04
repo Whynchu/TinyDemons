@@ -1598,7 +1598,16 @@ func build_hub(parent: Node, pixel_texture: Callable, actions: HubScreenActions)
 		self
 	)
 	_hub_input_controller.bind(_hub_stats_presenter, _hub_responsive_layout_presenter)
-	_pause_screen_presenter.build(parent, display_view_size, pixel_texture, actions, _menu_widget_factory, Callable(self, "_set_hub_action_column"))
+	_pause_screen_presenter.build(
+		parent,
+		display_view_size,
+		pixel_texture,
+		actions,
+		_menu_widget_factory,
+		_menu_prompt_texture_factory,
+		_menu_cursor_animator,
+		Callable(self, "_set_hub_action_column")
+	)
 	var pause_debug_page_handler := Callable(self, "_forward_pause_debug_page_requested")
 	if not _pause_screen_presenter.debug_page_requested.is_connected(pause_debug_page_handler):
 		_pause_screen_presenter.debug_page_requested.connect(pause_debug_page_handler)
@@ -2049,20 +2058,15 @@ func update_pause_ui(root: Object, pixel_texture: Callable) -> void:
 	var settings := root.get("settings_service") as SettingsService
 	var debug_menu_enabled := settings != null and bool(settings.get_setting(&"debug_menu_enabled", false))
 	var pause_equipment_view_active := _pause_screen_presenter.update_page_visibility(pause_page, debug_menu_enabled, pixel_texture)
-	for index in pause_menu_buttons.size():
-		var button := pause_menu_buttons[index]
-		# The command rail is intentionally text-only. The cursor is the sole
-		# selected-state treatment, matching the Demon Hub and FFIII reference.
-		set_archetype_button_state(button, false, highlight)
-		_set_menu_button_icon(button, null, false)
-	if pause_back_button != null:
-		pause_back_button.visible = not pause_equipment_view_active
-		set_archetype_button_state(pause_back_button, false, highlight)
 	var back_prompt := _menu_back_prompt_for(root)
 	var confirm_prompt := _menu_confirm_prompt_for(root)
-	_set_button_text(pause_back_button, back_prompt, pixel_texture, PauseMenuLayoutScript.MUTED_TEXT_COLOR)
-	if pause_description_text != null:
-		pause_description_text.texture = _pixel_prompt_texture(pixel_texture, confirm_prompt, PauseMenuLayoutScript.MUTED_TEXT_COLOR) as Texture2D
+	_pause_screen_presenter.update_navigation_prompts(
+		highlight,
+		pause_equipment_view_active,
+		back_prompt,
+		confirm_prompt,
+		pixel_texture
+	)
 	if pause_page == 1:
 		_pause_screen_presenter.update_status(menu_player_context, pixel_texture)
 	elif pause_page == 2:
@@ -2073,10 +2077,12 @@ func update_pause_ui(root: Object, pixel_texture: Callable) -> void:
 		_pause_screen_presenter.update_equipment(pause_profile, pixel_texture)
 	elif pause_page == 3:
 		refresh_debug_menu(root)
-	if pause_cursor_text != null and not pause_menu_buttons.is_empty():
-		var cursor_index := clampi(pause_menu_row, 0, pause_menu_buttons.size() - 1)
-		pause_cursor_text.visible = pause_page == 0
-		move_menu_cursor(pause_cursor_text, Vector2(pause_menu_buttons[cursor_index].position.x - CURSOR_LEFT_GAP, pause_menu_buttons[cursor_index].position.y + 3.0))
+	_pause_screen_presenter.update_selected_cursor(
+		pause_page,
+		pause_menu_row,
+		CURSOR_LEFT_GAP,
+		self
+	)
 
 
 func set_pause_page(root: Object, page: int) -> void:

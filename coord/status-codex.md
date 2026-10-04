@@ -2,7 +2,7 @@
 
 _Only codex writes this file._
 
-**Focus:** Stage 3.1 audit residual Pause update ownership
+**Focus:** Stage 3.1 map residual Pause page-update ownership
 **Updated:** 2026-10-04
 
 ## Completed: Stage 3.1 Pause view rendering
@@ -1000,5 +1000,11 @@ scripts/26 contexts/zero unclassified; ScreenStateController is 3,279 lines,
 PauseScreenPresenter is 351, and the screen seam count remains 51. UID/index
 validation and offline MCP checks pass. No gameplay tests run.
 
-Next: audit residual Pause prompt/cursor/page-update code and select a distinct
-owner for further extraction within the presenter's size constraints.
+Next: inspect remaining Pause page-update and routing code; create presenter headroom before adding more behavior.
+
+
+## Completed: Stage 3.1 Pause prompt and cursor presentation
+
+Moved Pause command styling, prompt textures, and selected-row cursor updates to `PauseScreenPresenter`, using the existing typed menu helpers. ScreenStateController keeps prompt-source selection and routing. The Equipment-menu early return still skips cursor motion as before. The presenter is 391 lines; ScreenStateController remains 3,285 lines. Strict composition targets/self-test, UID validation, `git diff --check`, and MCP offline checks pass. Runtime startup reached the title menu; MCP/editor progress-task errors were logged outside the game runtime. No game launch was performed specifically for this slice.
+
+Next: inspect remaining Pause page-update and routing code; create headroom before adding any more behavior to the presenter.

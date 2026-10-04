@@ -1198,7 +1198,7 @@ for 430 sidecars, the UI role map names the new context, and offline MCP checks
 pass for all three changed scripts. No gameplay tests were run while the shared
 editor session is active.
 
-**Implementation record (2026-10-05):** Moved Pause page roots and Equipment
+**Implementation record (2026-10-04):** Moved Pause page roots and Equipment
 chrome visibility, command/debug row visibility, read-only status/equipment
 text visibility, description visibility, and root-page resource visibility into
 `PauseScreenPresenter.update_page_visibility`. The presenter now owns its
@@ -1214,9 +1214,25 @@ UID validation passes for 430 sidecars, the index lists 275 scripts, and MCP
 offline checks pass for the presenter, controller, and EquipmentMenuLayout. No
 gameplay tests were run while the shared editor session is active.
 
-Next: audit the remaining Pause prompt/cursor and page-update code, then choose
-a separate owner for the next extraction so the Pause presenter stays within
-its file-size and single-responsibility constraints.
+Next: inspect the remaining Pause page-update and routing ownership; create presenter headroom before further view work.
+
+**Implementation record (2026-10-04):** Moved Pause command-button styling,
+back/select prompt rendering, and selected-row cursor presentation into
+`PauseScreenPresenter`. It uses the existing typed menu widget, prompt-texture,
+and cursor-animation helpers through `update_navigation_prompts` and
+`update_selected_cursor`.
+ScreenStateController retains prompt source selection, row state, page routing,
+and the shared Hub/Pause equipment transaction. The equipment-menu early return
+still skips cursor presentation, matching the previous control flow. The
+presenter is 391 lines, within its 400-line ceiling; ScreenStateController is 3,285 lines. Strict composition targets and validator self-tests pass at 275
+scripts, 26 contexts, and zero unclassified files; screen seams remain 51 and
+reach-through remains 4,249. UID validation passes for 430 sidecars and MCP
+offline checks pass for both edited scripts. No gameplay test or new game
+launch was run for this slice while the shared editor session is active.
+
+Next: map the remaining Pause page-update and prompt-source decisions. Any
+further Pause rendering extraction must first create presenter headroom or use
+a distinct owner; keep the single-responsibility boundary and 400-line ceiling.
 
 ### 3.2 `gameplay_bootstrap.gd` — declarative assembly
 
