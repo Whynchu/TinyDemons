@@ -2,8 +2,23 @@
 
 _Only codex writes this file._
 
-**Focus:** Stage 3.1 map residual Pause page-update ownership
+**Focus:** Continue Stage 3.1 by extracting Hub construction and responsive layout
 **Updated:** 2026-10-04
+
+## Completed: Stage 3.1 Hub frame rendering and legacy inventory
+
+Moved Hub frame-to-view orchestration into `HubScreenRenderController` and the
+legacy inventory/equipment/gear comparison render path into
+`HubLegacyInventoryPresenter`. ScreenStateController remains the facade for
+Hub and Pause callers and is now 2,431 lines, down 826 from the previous
+checkpoint. The new owners are 428 and 490 lines. MCP script diagnostics,
+composition strict targets/self-test, UID validation, and index generation
+pass. Existing Hub binding, Fusion tooltip, and Equipment menu smoke coverage
+still exercises the facade. No game or smoke suite was run while the shared
+editor is active.
+
+Next: extract Hub construction and responsive layout ownership, then remap the
+remaining screen route and cross-screen state boundaries.
 
 ## Completed: Stage 3.1 Pause view rendering
 

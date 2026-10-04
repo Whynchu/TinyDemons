@@ -966,3 +966,10 @@ Moved Pause page/chrome, command/debug row, status/equipment, description, and r
 2026-10-04 claim update codex Pause input slice includes tests/menu_route_scene_smoke.gd and tests/pause_menu_scene_smoke.gd to characterize command and debug navigation before commit.
 
 2026-10-04 done codex Pause command/debug input ownership. Added PauseMenuInputController, preserved equipment transaction ownership, and added command/debug navigation characterization to existing smoke sources. Static checks and composition guards pass; runtime suite remains unrun under shared-editor restriction.
+2026-10-04 claim codex Stage 3.1 Hub presenter extraction: reduce ScreenStateController to <=2500 lines with cohesive typed owners, compatibility facade, and focused characterization coverage.
+2026-10-04 done codex Stage 3.1 Hub rendering extraction. ScreenStateController is 2432 lines, down 825; HubScreenRenderController and HubLegacyInventoryPresenter are 431 and 490 lines. MCP script diagnostics and static composition/UID checks pass; no gameplay smoke run in the active editor session.
+2026-10-04 correction codex Hub extraction final line counts include Owner declarations: HubScreenRenderController 432, HubLegacyInventoryPresenter 491.
+2026-10-04 final count correction after removing EOF whitespace: HubScreenRenderController 431 lines and HubLegacyInventoryPresenter 490 lines; ScreenStateController 2431 lines.
+2026-10-04 final rendered line-count correction: HubScreenRenderController 430 lines, HubLegacyInventoryPresenter 490 lines, ScreenStateController 2431 lines.
+2026-10-04 final EOF cleanup count: HubScreenRenderController 429 lines, HubLegacyInventoryPresenter 490 lines, ScreenStateController 2431 lines.
+2026-10-04 final exact counts after byte-level EOF cleanup: HubScreenRenderController 428 lines, HubLegacyInventoryPresenter 490 lines, ScreenStateController 2431 lines.

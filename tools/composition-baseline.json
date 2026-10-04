@@ -2811,6 +2811,17 @@
                                                               "root_callable_strings":  0,
                                                               "string_signal_connects":  0
                                                           },
+                     "hub_legacy_inventory_presenter.gd":  {
+                                                               "path":  "scripts/ui/hub_legacy_inventory_presenter.gd",
+                                                               "lines":  490,
+                                                               "dynamic_dispatch":  10,
+                                                               "reach_through":  11,
+                                                               "untyped_root_parameters":  3,
+                                                               "live_context_twin_pairs":  0,
+                                                               "runtime_refs":  0,
+                                                               "root_callable_strings":  0,
+                                                               "string_signal_connects":  0
+                                                           },
                      "hub_legacy_widget_action_presenter.gd":  {
                                                                    "path":  "scripts/ui/hub_legacy_widget_action_presenter.gd",
                                                                    "lines":  19,
@@ -2910,6 +2921,17 @@
                                                    "root_callable_strings":  28,
                                                    "string_signal_connects":  0
                                                },
+                     "hub_screen_render_controller.gd":  {
+                                                             "path":  "scripts/ui/hub_screen_render_controller.gd",
+                                                             "lines":  428,
+                                                             "dynamic_dispatch":  2,
+                                                             "reach_through":  17,
+                                                             "untyped_root_parameters":  1,
+                                                             "live_context_twin_pairs":  0,
+                                                             "runtime_refs":  0,
+                                                             "root_callable_strings":  0,
+                                                             "string_signal_connects":  0
+                                                         },
                      "hub_stats_interaction_presenter.gd":  {
                                                                 "path":  "scripts/ui/hub_stats_interaction_presenter.gd",
                                                                 "lines":  82,
@@ -3086,6 +3108,28 @@
                                                             "root_callable_strings":  0,
                                                             "string_signal_connects":  0
                                                         },
+                     "pause_debug_menu_context.gd":  {
+                                                         "path":  "scripts/ui/pause_debug_menu_context.gd",
+                                                         "lines":  13,
+                                                         "dynamic_dispatch":  0,
+                                                         "reach_through":  0,
+                                                         "untyped_root_parameters":  0,
+                                                         "live_context_twin_pairs":  0,
+                                                         "runtime_refs":  0,
+                                                         "root_callable_strings":  0,
+                                                         "string_signal_connects":  0
+                                                     },
+                     "pause_menu_input_controller.gd":  {
+                                                            "path":  "scripts/ui/pause_menu_input_controller.gd",
+                                                            "lines":  73,
+                                                            "dynamic_dispatch":  0,
+                                                            "reach_through":  14,
+                                                            "untyped_root_parameters":  0,
+                                                            "live_context_twin_pairs":  0,
+                                                            "runtime_refs":  0,
+                                                            "root_callable_strings":  1,
+                                                            "string_signal_connects":  0
+                                                        },
                      "pause_menu_layout.gd":  {
                                                   "path":  "scripts/ui/pause_menu_layout.gd",
                                                   "lines":  97,
@@ -3097,9 +3141,20 @@
                                                   "root_callable_strings":  0,
                                                   "string_signal_connects":  0
                                               },
+                     "pause_menu_state.gd":  {
+                                                 "path":  "scripts/ui/pause_menu_state.gd",
+                                                 "lines":  21,
+                                                 "dynamic_dispatch":  0,
+                                                 "reach_through":  0,
+                                                 "untyped_root_parameters":  0,
+                                                 "live_context_twin_pairs":  0,
+                                                 "runtime_refs":  0,
+                                                 "root_callable_strings":  0,
+                                                 "string_signal_connects":  0
+                                             },
                      "pause_screen_presenter.gd":  {
                                                        "path":  "scripts/ui/pause_screen_presenter.gd",
-                                                       "lines":  235,
+                                                       "lines":  391,
                                                        "dynamic_dispatch":  0,
                                                        "reach_through":  0,
                                                        "untyped_root_parameters":  0,
@@ -3132,13 +3187,13 @@
                                                          },
                      "screen_state_controller.gd":  {
                                                         "path":  "scripts/ui/screen_state_controller.gd",
-                                                        "lines":  3348,
-                                                        "dynamic_dispatch":  51,
-                                                        "reach_through":  210,
-                                                        "untyped_root_parameters":  28,
+                                                        "lines":  2431,
+                                                        "dynamic_dispatch":  39,
+                                                        "reach_through":  168,
+                                                        "untyped_root_parameters":  25,
                                                         "live_context_twin_pairs":  0,
                                                         "runtime_refs":  0,
-                                                        "root_callable_strings":  16,
+                                                        "root_callable_strings":  15,
                                                         "string_signal_connects":  0
                                                     },
                      "settings_screen_presenter.gd":  {
@@ -3211,7 +3266,7 @@
     "metric_snapshot":  {
                             "gameplay_lines":  302,
                             "total_reach_through":  4249,
-                            "untyped_root_parameters":  508,
+                            "untyped_root_parameters":  509,
                             "live_context_twin_pairs":  0,
                             "root_callable_strings":  341,
                             "string_signal_connects":  0,
@@ -3228,7 +3283,7 @@
                            },
     "forward_status":  {
                            "screen_state_controller_lines":  {
-                                                                 "current":  3348,
+                                                                 "current":  2431,
                                                                  "status":  "open",
                                                                  "stage":  3
                                                              },
@@ -3238,7 +3293,7 @@
                                                              "stage":  2
                                                          },
                            "screen_state_controller_seams":  {
-                                                                 "current":  51,
+                                                                 "current":  39,
                                                                  "status":  "met",
                                                                  "stage":  3
                                                              },
@@ -3258,7 +3313,7 @@
                                                           "stage":  1
                                                       },
                            "untyped_root_parameters":  {
-                                                           "current":  508,
+                                                           "current":  509,
                                                            "status":  "open",
                                                            "stage":  2
                                                        },

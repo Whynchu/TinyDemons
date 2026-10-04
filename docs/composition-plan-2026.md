@@ -8,10 +8,10 @@ replaces the saturated legacy-coupling scorecard
 
 Owner: repository architecture and gameplay systems
 
-Current code: 277 scripts distributed across the declared role folders,
+Current code: 279 scripts distributed across the declared role folders,
 `tools/validate_composition.ps1`, `tools/composition-baseline.json`,
 `scripts/runtime/controllers/gameplay_bootstrap.gd`,
-`scripts/ui/screen_state_controller.gd` (3,257 lines),
+`scripts/ui/screen_state_controller.gd` (2,431 lines),
 `scripts/runtime/controllers/room_controller.gd`,
 `scripts/runtime/controllers/hub_flow_controller.gd`,
 `scripts/runtime/state/gameplay_state.gd`, and the `*Component` classes
@@ -1258,8 +1258,22 @@ existing smoke sources. The controller is 3,257 lines and the input owner is
 73 lines. MCP offline checks pass for both scripts and the two smoke sources;
 no Godot or test run while the shared editor session is active.
 
-Next: audit remaining Pause update/route decisions, then move to the remaining
-Stage 3.1 high-coupling Hub update and legacy widget cluster.
+The remaining screen work continues below; this implementation record updates
+the next boundary after the Hub render extraction.
+
+**Implementation record (2026-10-04):** Extracted the Hub frame-to-view
+pipeline into `HubScreenRenderController` and the compatibility inventory,
+equipment, and gear-comparison path into `HubLegacyInventoryPresenter`.
+ScreenStateController keeps `update_hub_ui` and `_render_equipment_menu` as
+facades for existing frame and Pause routes. The source fell from 3,257 to
+2,431 lines (826 fewer); the new owners are 428 and 490 lines. Existing Hub
+binding, Fusion tooltip, and Equipment menu smoke coverage remains attached to
+the same facade calls. MCP script diagnostics, strict composition targets,
+self-test, UID validation, and index generation pass. No game or smoke test was
+run while the shared editor is active.
+
+Next: continue Stage 3.1 by extracting Hub construction and responsive layout
+ownership, then remeasure the remaining screen routing and cross-screen seams.
 
 ### 3.2 `gameplay_bootstrap.gd` — declarative assembly
 
