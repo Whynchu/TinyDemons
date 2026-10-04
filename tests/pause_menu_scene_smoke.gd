@@ -22,13 +22,14 @@ func _initialize() -> void:
 		await process_frame
 	var screens := gameplay.get("screen_state_controller") as ScreenStateController
 	var profile := gameplay.get("player_profile") as PlayerProfile
+	var router := gameplay.get("input_router") as InputRouter
 	var settings := gameplay.get("settings_service") as SettingsService
 	if settings != null:
 		settings._values = SettingsService.DEFAULTS.duplicate(true)
 		settings._loaded = true
 	var original_profile: Dictionary = profile.to_dictionary() if profile != null else {}
-	_expect(screens != null and profile != null, "pause menu owners are composed", failures)
-	if screens != null and profile != null:
+	_expect(screens != null and profile != null and router != null, "pause menu owners are composed", failures)
+	if screens != null and profile != null and router != null:
 		screens.display_view_size = Vector2(240.0, 160.0)
 		screens.call("_position_pause_controls")
 		var menu_player_context := gameplay.call("_menu_player_context") as MenuPlayerContext
@@ -99,6 +100,11 @@ func _initialize() -> void:
 		_expect(debug_title != null and debug_title.texture != null and debug_title.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST, "Debug page title uses nearest-filtered pixel text", failures)
 		screens.call("set_pause_page", gameplay, 3)
 		_expect(debug_page != null and debug_page.visible and debug_cursor != null and debug_cursor.visible, "Debug page shows the shared menu cursor on entry", failures)
+		if screens.debug_menu_buttons.size() > 1:
+			router.set("_menu_direction_events", {&"ui_down": true})
+			gameplay.call("_update_pause_input")
+			router.set("_menu_direction_events", {})
+			_expect(screens.debug_menu_row == 1, "Pause debug input advances the selected debug command", failures)
 		if debug_cursor != null and screens.debug_menu_buttons.size() > 4:
 			screens.debug_menu_layout.select_row(4)
 			var selected_debug_button := screens.debug_menu_buttons[4]

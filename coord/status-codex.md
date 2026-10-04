@@ -1015,3 +1015,10 @@ Next: inspect remaining Pause page-update and routing code; create headroom befo
 Moved Pause page, command/debug selection, command-list, and input-latch state into the typed `PauseMenuState`; kept the existing ScreenStateController compatibility properties for GameplayState, HubFlowController, and probes. `set_pause_page` now delegates clamping and debug-row reset to the state owner. The role map covers all 276 scripts with no omissions or nonexistent paths, the generated index reports 276, and UID pairing passes at 431:431. MCP script checks, strict composition targets, self-test, and `git diff --check` pass. ScreenStateController is 3,300 lines. No game or test run while the shared editor session is active.
 
 Next: extract a bounded Pause command/debug input owner, keeping the shared Hub Equipment transaction at its current owner.
+
+
+## Completed: Stage 3.1 Pause command/debug input ownership
+
+Moved Pause command-row navigation and Debug-page input into the typed `PauseMenuInputController`. ScreenStateController retains its public frame-schedule facade, visibility guard, Equipment-page touch scrolling, page transitions, and the shared Hub Equipment transaction. Added smoke assertions for moving to the next enabled command, activating Status through input, and advancing Debug selection. MCP script checks pass for the new input owner, ScreenStateController, and both smoke sources. Strict composition targets/self-test pass at 277 scripts and zero unclassified files; UID validation passes for 432 sidecars; role-map reconciliation is 277/277. ScreenStateController is 3,257 lines. No game or smoke run while the shared editor session is active.
+
+Next: map the remaining Hub UI update and legacy widget cluster boundaries before extracting that high-coupling group.

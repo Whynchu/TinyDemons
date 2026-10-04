@@ -8,10 +8,10 @@ replaces the saturated legacy-coupling scorecard
 
 Owner: repository architecture and gameplay systems
 
-Current code: 276 scripts distributed across the declared role folders,
+Current code: 277 scripts distributed across the declared role folders,
 `tools/validate_composition.ps1`, `tools/composition-baseline.json`,
 `scripts/runtime/controllers/gameplay_bootstrap.gd`,
-`scripts/ui/screen_state_controller.gd` (3,300 lines),
+`scripts/ui/screen_state_controller.gd` (3,257 lines),
 `scripts/runtime/controllers/room_controller.gd`,
 `scripts/runtime/controllers/hub_flow_controller.gd`,
 `scripts/runtime/state/gameplay_state.gd`, and the `*Component` classes
@@ -1247,8 +1247,19 @@ and the PauseMenuState is 21 lines; compatibility accessors account for the
 small line increase. No game or test run was made while the shared editor
 session is active.
 
-Next: extract a bounded Pause command/debug input boundary while preserving the
-shared Hub Equipment transaction and current compatibility surface.
+**Implementation record (2026-10-04):** Moved Pause command-row navigation and
+Debug-page input into `PauseMenuInputController`. ScreenStateController retains
+the overlay guard, page transitions, Equipment-page touch scrolling, and the
+shared Hub Equipment transaction; its public update method remains the frame
+schedule entry point. `PauseMenuState` owns the page/row state consumed by the
+input owner. Characterization assertions now drive command-row movement,
+command activation, read-only back routing, and Debug selection through the
+existing smoke sources. The controller is 3,257 lines and the input owner is
+73 lines. MCP offline checks pass for both scripts and the two smoke sources;
+no Godot or test run while the shared editor session is active.
+
+Next: audit remaining Pause update/route decisions, then move to the remaining
+Stage 3.1 high-coupling Hub update and legacy widget cluster.
 
 ### 3.2 `gameplay_bootstrap.gd` — declarative assembly
 

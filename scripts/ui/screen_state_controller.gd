@@ -109,6 +109,7 @@ const STAT_UTILITY_Y := HubStatsScreenPresenterScript.STAT_UTILITY_Y
 ## four commands from the rework render.
 const HubMenuStateScript = preload("res://scripts/ui/hub_menu_state.gd")
 const PauseMenuStateScript = preload("res://scripts/ui/pause_menu_state.gd")
+const PauseMenuInputControllerScript = preload("res://scripts/ui/pause_menu_input_controller.gd")
 const HUB_PAGE_ALLOCATE := HubMenuStateScript.HUB_PAGE_ALLOCATE
 const HUB_PAGE_STATS := HubMenuStateScript.HUB_PAGE_STATS
 const HUB_PAGE_EQUIPMENT := HubMenuStateScript.HUB_PAGE_EQUIPMENT
@@ -144,6 +145,7 @@ var _hub_item_visibility_presenter: HubItemVisibilityPresenter = HubItemVisibili
 var _hub_item_visibility_context: HubItemVisibilityContext = HubItemVisibilityContextScript.new() as HubItemVisibilityContext
 var _hub_menu_state: HubMenuState = HubMenuStateScript.new() as HubMenuState
 var _pause_menu_state: PauseMenuState = PauseMenuStateScript.new() as PauseMenuState
+var _pause_menu_input_controller: PauseMenuInputController = PauseMenuInputControllerScript.new() as PauseMenuInputController
 var _hub_input_controller: HubInputController = HubInputControllerScript.new() as HubInputController
 var _hub_equipment_menu_presenter: HubEquipmentMenuPresenter = HubEquipmentMenuPresenterScript.new() as HubEquipmentMenuPresenter
 var _hub_equipment_menu_context: HubEquipmentMenuContext = HubEquipmentMenuContextScript.new() as HubEquipmentMenuContext
@@ -2719,18 +2721,7 @@ func _effective_item_bonuses(catalog: ItemCatalog, item: ItemInstance, mastery_l
 		return {}
 	return catalog.bonuses(item, mastery_level)
 
-# --- Pause routing, hub input, and debug input ---
-func _pause_command_list() -> MenuCommandList:
-	if pause_command_list == null:
-		pause_command_list = MenuCommandList.new()
-	var base_ys: Array[float] = []
-	for index in pause_menu_buttons.size():
-		base_ys.append(pause_menu_buttons[index].position.y if pause_menu_buttons[index] != null else 0.0)
-	pause_command_list.configure(pause_menu_buttons, base_ys)
-	pause_command_list.row = pause_menu_row
-	return pause_command_list
-
-
+# --- Pause routing and shared Hub equipment input ---
 func update_pause_input(root: GameplayState) -> void:
 	if pause_overlay == null or not pause_overlay.visible:
 		return
@@ -2741,33 +2732,13 @@ func update_pause_input(root: GameplayState) -> void:
 			refresh_equipment_menu(root)
 		_update_pause_equipment_input(root)
 		return
-	if bool(root._is_menu_back_just_pressed()):
-		root._pause_back()
-		return
-	if pause_page == 3:
-		_update_debug_page_input(root)
-		return
-	if pause_page != 0:
-		return
-	if bool(root._is_menu_direction_just_pressed(&"ui_up")) or bool(root._is_menu_direction_just_pressed(&"ui_down")):
-		var command_list := _pause_command_list()
-		if command_list != null:
-			if bool(root._is_menu_direction_just_pressed(&"ui_up")): command_list.move_up()
-			else: command_list.move_down()
-			pause_menu_row = command_list.row
-		else:
-			if bool(root._is_menu_direction_just_pressed(&"ui_up")): pause_menu_row = posmod(pause_menu_row - 1, pause_menu_buttons.size())
-			else: pause_menu_row = posmod(pause_menu_row + 1, pause_menu_buttons.size())
-		update_pause_ui(root, Callable(root, "_pixel_text_texture")); root._play_sound("ui_hover", -6.0, 1.0)
-	elif bool(root._is_menu_confirm_just_pressed()):
-		if pause_menu_row >= 0 and pause_menu_row < pause_menu_buttons.size():
-			var action := pause_menu_buttons[pause_menu_row]
-			if action != null and not action.disabled:
-				action.pressed.emit()
-			else:
-				root._play_sound("ui_no_input", 0.0, 1.0)
-		else:
-			root._play_sound("ui_no_input", 0.0, 1.0)
+	_pause_menu_input_controller.update(
+		root,
+		_pause_menu_state,
+		_pause_screen_presenter,
+		Callable(self, "update_pause_ui"),
+		Callable(self, "refresh_debug_menu")
+	)
 
 
 
@@ -2791,20 +2762,6 @@ func refresh_debug_menu(root: GameplayState) -> void:
 	context.geometry_guides = geometry.enabled if geometry != null else false
 	context.selected_row = debug_menu_row
 	_pause_screen_presenter.refresh_debug_menu(context, Callable(root, "_pixel_text_texture"))
-
-
-func _update_debug_page_input(root: GameplayState) -> void:
-	if debug_menu_buttons.is_empty():
-		return
-	if bool(root._is_menu_direction_just_pressed(&"ui_up")):
-		debug_menu_row = posmod(debug_menu_row - 1, debug_menu_buttons.size())
-		refresh_debug_menu(root)
-	elif bool(root._is_menu_direction_just_pressed(&"ui_down")):
-		debug_menu_row = posmod(debug_menu_row + 1, debug_menu_buttons.size())
-		refresh_debug_menu(root)
-	elif bool(root._is_menu_confirm_just_pressed()):
-		debug_menu_buttons[debug_menu_row].pressed.emit()
-		root._play_sound("ui_confirm", 0.0, 1.0)
 
 
 func _update_pause_equipment_input(root: GameplayState) -> void:

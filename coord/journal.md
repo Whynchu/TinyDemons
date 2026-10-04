@@ -960,3 +960,9 @@ Moved Pause page/chrome, command/debug row, status/equipment, description, and r
 2026-10-04 claim codex Pause route state ownership: scripts/ui/pause_menu_state.gd, scripts/ui/screen_state_controller.gd, docs/composition-plan-2026.md, docs/script-role-map-2026.md, docs/SCRIPT_INDEX.md.
 
 2026-10-04 done codex Pause route-state ownership. Added typed PauseMenuState with ScreenStateController compatibility properties; no runtime behavior moved. Role map reconciles 276/276 files; strict audit/self-test and UID validation pass; no game/test run.
+
+2026-10-04 claim codex Pause input ownership: scripts/ui/pause_menu_input_controller.gd, scripts/ui/screen_state_controller.gd, docs/composition-plan-2026.md, docs/script-role-map-2026.md, docs/SCRIPT_INDEX.md.
+
+2026-10-04 claim update codex Pause input slice includes tests/menu_route_scene_smoke.gd and tests/pause_menu_scene_smoke.gd to characterize command and debug navigation before commit.
+
+2026-10-04 done codex Pause command/debug input ownership. Added PauseMenuInputController, preserved equipment transaction ownership, and added command/debug navigation characterization to existing smoke sources. Static checks and composition guards pass; runtime suite remains unrun under shared-editor restriction.
