@@ -39,6 +39,8 @@ const HubItemVisibilityContextScript = preload("res://scripts/ui/hub_item_visibi
 const HubInputControllerScript = preload("res://scripts/ui/hub_input_controller.gd")
 const HubEquipmentMenuPresenterScript = preload("res://scripts/ui/hub_equipment_menu_presenter.gd")
 const HubEquipmentMenuContextScript = preload("res://scripts/ui/hub_equipment_menu_context.gd")
+const HubTransactionMenuPresenterScript = preload("res://scripts/ui/hub_transaction_menu_presenter.gd")
+const HubTransactionMenuContextScript = preload("res://scripts/ui/hub_transaction_menu_context.gd")
 const PauseScreenPresenterScript = preload("res://scripts/ui/pause_screen_presenter.gd")
 const MENU_CIRCLE_TEXTURE: Texture2D = MenuPromptTextureFactoryScript.MENU_CIRCLE_TEXTURE
 const MENU_X_TEXTURE: Texture2D = MenuPromptTextureFactoryScript.MENU_X_TEXTURE
@@ -139,6 +141,8 @@ var _hub_menu_state: HubMenuState = HubMenuStateScript.new() as HubMenuState
 var _hub_input_controller: HubInputController = HubInputControllerScript.new() as HubInputController
 var _hub_equipment_menu_presenter: HubEquipmentMenuPresenter = HubEquipmentMenuPresenterScript.new() as HubEquipmentMenuPresenter
 var _hub_equipment_menu_context: HubEquipmentMenuContext = HubEquipmentMenuContextScript.new() as HubEquipmentMenuContext
+var _hub_transaction_menu_presenter: HubTransactionMenuPresenterScript = HubTransactionMenuPresenterScript.new() as HubTransactionMenuPresenterScript
+var _hub_transaction_menu_context: HubTransactionMenuContextScript = HubTransactionMenuContextScript.new() as HubTransactionMenuContextScript
 var _menu_world_hidden := false
 var _menu_world_background_visible := true
 var _menu_world_map_visible := true
@@ -1900,35 +1904,7 @@ func _shop_item_details(catalog: ItemCatalog, item: ItemInstance, sell_mode: boo
 
 
 func _shop_stat_comparison(_root: GameplayState, profile: PlayerProfile, catalog: ItemCatalog, item: ItemInstance) -> Array[Dictionary]:
-	var fields := [
-		{"key": "vit", "label": "VIT"},
-		{"key": "strength", "label": "STR"},
-		{"key": "def", "label": "DEF"},
-		{"key": "agi", "label": "AGI"},
-		{"key": "intelligence", "label": "INT"},
-		{"key": "mnd", "label": "MND"},
-	]
-	var result: Array[Dictionary] = []
-	var equipped_item: ItemInstance = null
-	if item != null:
-		var slot := catalog.definition_slot(item.definition_id)
-		equipped_item = profile.find_item(profile.get_equipped_instance_id(slot))
-	var equipped_bonuses := catalog.bonuses(equipped_item, profile.mastery_level(equipped_item.definition_id)) if equipped_item != null else {}
-	var highlighted_bonuses := catalog.bonuses(item, profile.mastery_level(item.definition_id)) if item != null else {}
-	for field: Dictionary in fields:
-		var key := str(field["key"])
-		var catalog_key := "vitality" if key == "vit" else "defense" if key == "def" else key
-		var before := float(equipped_bonuses.get(catalog_key, 0.0))
-		var after := float(highlighted_bonuses.get(catalog_key, 0.0))
-		var delta := after - before
-		result.append({
-			"label": str(field["label"]),
-			"before": before,
-			"after": after,
-			"before_color": Color8(244, 244, 244),
-			"after_color": Color8(56, 183, 100) if delta > 0.0 else Color8(177, 62, 83) if delta < 0.0 else Color8(244, 244, 244),
-		})
-	return result
+	return _hub_transaction_menu_presenter.shop_stat_comparison(profile, catalog, item)
 
 
 # --- Hub sub-screen rendering: fusion, binding, and shop ---
@@ -1936,45 +1912,28 @@ func _render_fusion_menu(root: GameplayState, pixel_texture: Callable, profile: 
 	if hub_fusion_menu == null or profile == null:
 		return
 	var view := hub_fusion_menu
-	var catalog := ItemCatalog.new()
-	var candidates := root._hub_fusion_candidates()
-	var model := FusionMenuModelScript.new()
-	model.state = 0 if hub_is_root else hub_fusion_state
-	model.item_selected = hub_fusion_item_selected
-	model.scroll_fraction = hub_list_scroll - floor(hub_list_scroll)
-	var window_start := int(floor(hub_list_scroll))
-	for row_index in FusionMenuLayoutScript.FUSION_VISIBLE_ROWS:
-		var item_index := window_start + row_index
-		if item_index >= candidates.size():
-			continue
-		var item := candidates[item_index] as ItemInstance
-		var label := _fusion_item_label(catalog, profile, item)
-		model.rows.append({"label": label, "slot": str(catalog.definition_slot(item.definition_id)), "color": catalog.rarity_color(item.rarity), "soul_cost": profile.fusion_batch_cost(item, 1), "equipped": profile.equipped_instance_ids.values().has(item.instance_id), "stat_total": catalog.stat_allocation_total(item)})
-	model.selected_row = clampi(hub_item_index - window_start, 0, model.rows.size() - 1) if not model.rows.is_empty() else -1
-	if not candidates.is_empty():
-		var selected_index := clampi(hub_item_index, 0, candidates.size() - 1)
-		var selected := candidates[selected_index] as ItemInstance
-		var hub_economy_controller := root.hub_flow_controller.get("economy_controller") as RefCounted
-		var selected_details := hub_economy_controller.call("fusion_candidate_details", root, selected) as Dictionary
-		model.owned_count = int(selected_details.get("owned_count", 0))
-		model.fusion_count_max = maxi(int(selected_details.get("material_count", 0)), 1)
-		model.fusion_count = clampi(hub_fusion_count, 1, model.fusion_count_max)
-		model.soul_cost = profile.fusion_batch_cost(selected, model.fusion_count) if model.owned_count > 0 else profile.fusion_batch_cost(selected, 1)
-		model.can_fuse = model.owned_count > 0 and profile.souls >= model.soul_cost
-		model.can_salvage = bool(selected_details.get("can_salvage", false))
-		model.stat_comparison = _shop_stat_comparison(root, profile, catalog, selected)
-	model.message = hub_fusion_message
+	var context := _hub_transaction_menu_context
+	context.profile = profile
+	context.catalog = ItemCatalog.new()
+	context.fusion_candidates = root._hub_fusion_candidates()
+	context.fusion_state = 0 if hub_is_root else hub_fusion_state
+	context.fusion_item_selected = hub_fusion_item_selected
+	context.selected_index = hub_item_index
+	context.scroll = hub_list_scroll
+	context.fusion_count = hub_fusion_count
+	context.fusion_message = hub_fusion_message
+	context.fusion_details.clear()
+	if not context.fusion_candidates.is_empty():
+		var selected := context.fusion_candidates[clampi(hub_item_index, 0, context.fusion_candidates.size() - 1)]
+		var economy := root.hub_flow_controller.get("economy_controller") as RefCounted
+		context.fusion_details = economy.call("fusion_candidate_details", root, selected) as Dictionary
+	var model := _hub_transaction_menu_presenter.build_fusion_model(context)
 	view.call("set_pixel_texture", pixel_texture)
 	view.call("render_fusion", model)
 
 
 func _fusion_item_label(catalog: ItemCatalog, profile: PlayerProfile, item: ItemInstance) -> String:
-	var label := catalog.gear_name(item)
-	if item.enhancement_level > 0:
-		label += " F%d" % item.enhancement_level
-	if profile.equipped_instance_ids.values().has(item.instance_id):
-		label += " E"
-	return label
+	return _hub_transaction_menu_presenter.fusion_item_label(catalog, profile, item)
 
 
 func _render_bind_menu(root: GameplayState, pixel_texture: Callable, profile: PlayerProfile, highlight_color: Color) -> void:
@@ -2004,100 +1963,62 @@ func _render_shop_menu(root: GameplayState, pixel_texture: Callable, profile: Pl
 	if hub_shop_menu == null or profile == null:
 		return
 	var view := hub_shop_menu
-	view.call("set_pixel_texture", pixel_texture)
-	var catalog := ItemCatalog.new()
-	var items: Array[ItemInstance] = []
-	var prices: Array[String] = []
-	var soul_values: Array[int] = []
-	var sold_flags: Array[bool] = []
-	var item_slots: Array[StringName] = []
-	var sell_mode := hub_shop_sell_mode
-	if sell_mode:
-		items = root._hub_shop_sellable_items()
-		for item: ItemInstance in items:
-			item_slots.append(catalog.definition_slot(item.definition_id))
-			prices.append("%d" % catalog.sell_value(item))
-			soul_values.append(catalog.sell_soul_value(item))
-			sold_flags.append(false)
+	var context := _hub_transaction_menu_context
+	context.profile = profile
+	context.catalog = ItemCatalog.new()
+	context.sell_mode = hub_shop_sell_mode
+	context.state = hub_shop_state
+	context.items.clear()
+	context.prices.clear()
+	context.soul_values.clear()
+	context.sold_flags.clear()
+	context.item_slots.clear()
+	context.sell_owned_counts.clear()
+	if context.sell_mode:
+		context.items = root._hub_shop_sellable_items()
+		for item: ItemInstance in context.items:
+			context.item_slots.append(context.catalog.definition_slot(item.definition_id))
+			context.prices.append("%d" % context.catalog.sell_value(item))
+			context.soul_values.append(context.catalog.sell_soul_value(item))
+			context.sold_flags.append(false)
+			context.sell_owned_counts.append(root._hub_shop_owned_matching_count(item))
 	else:
 		var run_state := root.run_state
 		if run_state != null:
 			run_state.ensure_shop_stock(profile)
 			for entry: Dictionary in run_state.shop_stock:
-				var item_data := entry.get("item", {}) as Dictionary
-				var item := ItemInstance.from_dictionary(item_data)
-				items.append(item)
-				item_slots.append(catalog.definition_slot(item.definition_id))
+				var item := ItemInstance.from_dictionary(entry.get("item", {}) as Dictionary)
+				context.items.append(item)
+				context.item_slots.append(context.catalog.definition_slot(item.definition_id))
 				var sold := bool(entry.get("sold", false))
-				sold_flags.append(sold)
-				prices.append("SOLD" if sold else "%d" % int(entry.get("price", 0)))
-				soul_values.append(0)
-	var count := items.size()
-	var selected := clampi(hub_item_index, 0, maxi(count - 1, 0))
-	hub_item_index = selected
-	var visible_rows := ShopMenuLayoutScript.VISIBLE_ROWS
-	var max_scroll := maxi(0, count - visible_rows)
-	hub_list_scroll = clampf(hub_list_scroll, 0.0, float(max_scroll))
-	var window_start := clampi(int(floor(hub_list_scroll)), 0, maxi(count - visible_rows, 0))
-	var visible_selected := selected - window_start
-	var row_labels: Array[String] = []
-	var row_colors: Array[Color] = []
-	var row_prices: Array[String] = []
-	var row_soul_values: Array[int] = []
-	var visible_slots: Array[StringName] = []
-	for row in visible_rows:
-		var source_index := window_start + row
-		if source_index >= count:
-			row_labels.append("")
-			row_colors.append(Color8(140, 145, 160))
-			row_prices.append("")
-			row_soul_values.append(0)
-			visible_slots.append(&"")
-			continue
-		var item := items[source_index]
-		var fusion_suffix := " F%d" % item.enhancement_level if item.enhancement_level > 0 else ""
-		var label := catalog.gear_name(item) + fusion_suffix
-		if sell_mode:
-			var row_quantity := root._hub_shop_owned_matching_count(item)
-			if row_quantity > 1:
-				label += " x%d" % row_quantity
-		row_labels.append(label)
-		row_colors.append(Color8(120, 120, 130) if source_index < sold_flags.size() and sold_flags[source_index] else catalog.rarity_color(item.rarity))
-		row_prices.append(prices[source_index] if source_index < prices.size() else "")
-		row_soul_values.append(soul_values[source_index] if source_index < soul_values.size() else 0)
-		visible_slots.append(item_slots[source_index] if source_index < item_slots.size() else &"")
-	var selected_item: ItemInstance = items[selected] if count > 0 else null
-	var stat_comparison := _shop_stat_comparison(root, profile, catalog, selected_item)
-	var owned_count := 0
-	var max_quantity := 1
-	if selected_item != null:
-		if sell_mode:
-			owned_count = root._hub_shop_owned_matching_count(selected_item)
-			max_quantity = maxi(owned_count, 1)
+				context.sold_flags.append(sold)
+				context.prices.append("SOLD" if sold else "%d" % int(entry.get("price", 0)))
+				context.soul_values.append(0)
+				context.sell_owned_counts.append(0)
+	var count := context.items.size()
+	context.selected_index = clampi(hub_item_index, 0, maxi(count - 1, 0))
+	hub_item_index = context.selected_index
+	context.scroll = clampf(hub_list_scroll, 0.0, float(maxi(0, count - ShopMenuLayoutScript.VISIBLE_ROWS)))
+	hub_list_scroll = context.scroll
+	context.owned_count = 0
+	context.max_quantity = 1
+	context.quantity = hub_shop_sell_amount
+	context.batch_value.clear()
+	if count > 0:
+		var selected_item := context.items[context.selected_index]
+		if context.sell_mode:
+			context.owned_count = root._hub_shop_owned_matching_count(selected_item)
+			context.max_quantity = maxi(context.owned_count, 1)
 		else:
 			for data: Dictionary in profile.inventory:
-				if _shop_item_signature(ItemInstance.from_dictionary(data)) == _shop_item_signature(selected_item):
-					owned_count += 1
-	var selected_quantity := clampi(hub_shop_sell_amount, 1, max_quantity)
-	hub_shop_sell_amount = selected_quantity
-	hub_shop_sell_amount_max = max_quantity
-	# In the sell quantity view, show the transaction total for the selected
-	# concrete stack members. Browse mode continues to show the representative's
-	# unit value. This keeps quality/history differences economically accurate
-	# while still presenting one row for one functional item variant.
-	if sell_mode and hub_shop_state == ShopMenuLayoutScript.SELL_AMOUNT and selected_item != null and selected < prices.size():
-		var batch_value: Dictionary = {"gold": catalog.sell_value(selected_item) * selected_quantity, "souls": catalog.sell_soul_value(selected_item) * selected_quantity}
-		var resolved_batch := root._hub_shop_batch_value(selected_item, selected_quantity)
-		if not resolved_batch.is_empty():
-			batch_value = resolved_batch
-		prices[selected] = "%d" % int(batch_value.get("gold", 0))
-		if selected < soul_values.size():
-			soul_values[selected] = int(batch_value.get("souls", 0))
-		if visible_selected >= 0 and visible_selected < row_prices.size():
-			row_prices[visible_selected] = prices[selected]
-			row_soul_values[visible_selected] = soul_values[selected]
-	var scroll_fraction: float = hub_list_scroll - floor(hub_list_scroll)
-	view.call("render_shop", hub_shop_state, sell_mode, visible_selected, row_labels, row_colors, row_prices, row_soul_values, visible_slots, stat_comparison, owned_count, selected_quantity, max_quantity, pixel_texture, scroll_fraction)
+				if ItemInstance.from_dictionary(data).inventory_stack_key() == selected_item.inventory_stack_key():
+					context.owned_count += 1
+		if context.sell_mode and hub_shop_state == ShopMenuLayoutScript.SELL_AMOUNT:
+			context.batch_value = root._hub_shop_batch_value(selected_item, clampi(context.quantity, 1, maxi(context.owned_count, 1)))
+	var model := _hub_transaction_menu_presenter.build_shop_model(context)
+	hub_shop_sell_amount = model.quantity
+	hub_shop_sell_amount_max = model.max_quantity
+	view.call("render_model", model, pixel_texture)
 
 
 # --- Hub page and player-card rendering ---

@@ -886,3 +886,8 @@ The composition regression audit refused to refresh its baseline because the pre
 
 2026-10-04T18:10:00Z - codex - done
 Extracted the shared authored Hub/Pause Equipment renderer into a typed presenter/context, retained legacy fallback and caller facades, and routed HubFlow fusion invalidation through its typed economy owner. Strict composition audit passes at 267 scripts, zero unclassified files, 52 ScreenStateController seams, 4,253 reach-throughs, and 509 untyped root parameters; index and UID validation pass. No game or gameplay tests were run with the shared editor active.
+2026-10-04T18:25:00Z - codex - claim
+Tracing confirms authored Shop/Fusion layout views are active, but ScreenStateController still assembles row and stat data inline. Extract the pure presentation-model assembly behind typed context; ensure stock initialization and economy mutations stay with existing owners. No Godot or gameplay tests while shared editor restriction is active.
+
+2026-10-04T18:52:00Z - codex - done
+Extracted typed Shop/Fusion presentation-model construction and added ShopMenuModel. Strict composition audit passes at 270 scripts with zero unclassified, 52 ScreenStateController seams, 4,253 root reach-throughs, and 509 untyped root parameters. Script index, UID validation, and offline MCP script checks pass; no game or gameplay tests were run during the shared-editor restriction.

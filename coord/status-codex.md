@@ -2,7 +2,7 @@
 
 _Only codex writes this file._
 
-**Focus:** Stage 3.1 Shop/Fusion item presentation boundary mapping
+**Focus:** Stage 3.1 next active Hub render/build boundary mapping
 **Updated:** 2026-10-04
 
 ## Completed: MCP startup-error repair and runtime verification
@@ -834,3 +834,23 @@ active.
 Next: map the active Shop and Fusion render-model paths against
 `HubEconomyController` and existing authored view/layout models, keeping
 transactions and mutable state in their current owners.
+
+## Completed: Stage 3.1 Shop/Fusion presentation model
+
+Extracted Shop and Fusion render-model assembly to the typed
+`HubTransactionMenuPresenter` and `HubTransactionMenuContext`; added
+`ShopMenuModel` and a model-based Shop renderer adapter while retaining the
+existing argument-based API for preview callers. ScreenStateController gathers
+RunState stock and economy-owned results, and retains menu state and
+transactions. The presenter owns row formatting and shared stat comparison.
+
+Strict composition audit passes at 270 scripts, zero unclassified files, 52
+ScreenStateController seams, 4,253 root reach-throughs, and 509 untyped root
+parameters. The script index contains 270 entries; UID validation passes for
+425 sidecars. Offline MCP validation passes for the three new scripts and the
+two changed controllers/layouts. No game or gameplay tests were run while the
+shared editor restriction is active.
+
+Next: map remaining active Hub render/build responsibilities against their
+typed view owners. Keep the legacy `_update_hub_item_page` and
+`_update_hub_gear_slots` fallback until its external readers have a replacement.

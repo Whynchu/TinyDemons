@@ -1033,11 +1033,27 @@ script index contains 267 scripts, and the UID validator confirms 422 unique
 and matching sidecars. These checks do not substitute for gameplay
 verification; none was run while the shared editor session was active.
 
-Next: map the authored Shop and Fusion render-model paths against
-`HubEconomyController` and their existing view/layout models, then extract their
-shared item/detail presentation while leaving transactions and state changes in
-the economy/input owners. Keep `_update_hub_item_page` and
-`_update_hub_gear_slots` as a separately reviewed compatibility fallback.
+**Implementation record (2026-10-04):** Extracted Shop and Fusion presentation
+model construction into `HubTransactionMenuPresenter`, with typed
+`HubTransactionMenuContext` input and a new `ShopMenuModel` matching the
+existing authored `ShopMenuLayout` renderer contract. Fusion continues through
+its existing typed `FusionMenuModel`. `ScreenStateController` now gathers stock
+and inventory state and resolves economy-owned sell/fusion details; stock
+initialization, transactions, and mutable menu state remain with their current
+owners. The presenter owns row-window formatting, Fusion row/stat comparison,
+and the shared equipment-stat comparison; ShopMenuLayout retains a backward
+compatible argument-based render method for its editor preview and focused
+callers. ScreenStateController fell from 3,675 to 3,596 lines. Strict
+composition audit passes at 270 scripts, zero unclassified files, 52 screen
+controller seams, 4,253 root reach-throughs, and 509 untyped root parameters.
+The script index has 270 entries; UID validation passes for 425 sidecars.
+Offline MCP script validation passes for all five changed scripts. No game or
+gameplay tests were run while the shared editor session is active.
+
+Next: map the remaining active Hub render/build responsibilities against their
+typed view owners, then take the next cohesive seam while retaining the legacy
+`_update_hub_item_page` and `_update_hub_gear_slots` fallback path until its
+external readers have a recorded replacement.
 
 ### 3.2 `gameplay_bootstrap.gd` — declarative assembly
 

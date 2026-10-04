@@ -2,6 +2,8 @@
 extends Control
 class_name ShopMenuLayout
 
+const ShopMenuModelScript = preload("res://scripts/ui/shop_menu_model.gd")
+
 ## Authored 240x160 shop presentation.
 ##
 ## The hub owns route state and transactions. This scene owns the pixel layout,
@@ -553,6 +555,12 @@ func render_cursors(state: int, sell_mode: bool, selected_row: int, row_count: i
 	var item_cursor_visible := nested_focus and has_item and (state == ITEM_BROWSE or (state == SELL_AMOUNT and sell_mode))
 	_position_cursor(item_cursor, item_target, nested_focus and state == ITEM_BROWSE and has_item, item_cursor_visible, preserve_motion)
 	_position_cursor(amount_cursor, amount_target, nested_focus and state == SELL_AMOUNT and sell_mode, nested_focus and state == SELL_AMOUNT and sell_mode, preserve_motion)
+
+
+func render_model(model: ShopMenuModelScript, pixel_texture: Callable, preserve_motion := false) -> void:
+	if model == null:
+		return
+	render_shop(model.state, model.sell_mode, model.selected_row, model.row_labels, model.row_colors, model.row_prices, model.row_soul_values, model.row_slots, model.stat_comparison, model.owned_count, model.quantity, model.max_quantity, pixel_texture, model.scroll_fraction, preserve_motion)
 
 
 func render_shop(state: int, sell_mode: bool, selected_row: int, row_labels: Array, row_colors: Array, row_prices: Array, row_soul_values: Array, row_slots: Array, stat_comparison: Array, owned_count: int, quantity: int, max_quantity: int, pixel_texture: Callable, scroll_fraction: float = 0.0, preserve_motion := false) -> void:
