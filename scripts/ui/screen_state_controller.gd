@@ -45,6 +45,7 @@ const HubMenuSignalBinderScript = preload("res://scripts/ui/hub_menu_signal_bind
 const HubLegacyWidgetVisibilityPresenterScript = preload("res://scripts/ui/hub_legacy_widget_visibility_presenter.gd")
 const HubLegacyWidgetScrollPresenterScript = preload("res://scripts/ui/hub_legacy_widget_scroll_presenter.gd")
 const PauseScreenPresenterScript = preload("res://scripts/ui/pause_screen_presenter.gd")
+const PauseDebugMenuContextScript = preload("res://scripts/ui/pause_debug_menu_context.gd")
 const MENU_CIRCLE_TEXTURE: Texture2D = MenuPromptTextureFactoryScript.MENU_CIRCLE_TEXTURE
 const MENU_X_TEXTURE: Texture2D = MenuPromptTextureFactoryScript.MENU_X_TEXTURE
 const MENU_TRIANGLE_TEXTURE: Texture2D = MenuPromptTextureFactoryScript.MENU_TRIANGLE_TEXTURE
@@ -2778,17 +2779,24 @@ func update_pause_input(root: GameplayState) -> void:
 
 # --- Debug-page and pause-equipment input ---
 func refresh_debug_menu(root: GameplayState) -> void:
-	if debug_menu_layout == null:
-		return
-	var session := root.get_node_or_null("DebugSessionController") as Node
+	var session := root.get_node_or_null("DebugSessionController") as DebugSessionController
 	if session == null:
 		return
-	var stats := root.player_stats
-	var debug_level := int(session.get("player_level_override"))
+	var stats: StatsComponent = root.player_stats
+	var debug_level := session.player_level_override
 	var level := debug_level if debug_level > 0 else (stats.level if stats != null else 1)
-	var geometry := root.actor_geometry_debug_drawer
-	debug_menu_layout.refresh(Callable(root, "_pixel_text_texture"), int(session.get("selected_run_number")), level, int(session.get("debug_unassigned_stat_points")), bool(session.get("reset_confirmation_armed")), {&"invulnerable": bool(session.get("invulnerable")), &"unlimited_chroma": bool(session.get("unlimited_chroma")), &"pause_enemies": bool(session.get("enemies_paused")), &"geometry_guides": geometry.enabled if geometry != null else false})
-	debug_menu_layout.select_row(debug_menu_row)
+	var geometry: ActorGeometryDebugDrawer = root.actor_geometry_debug_drawer
+	var context := PauseDebugMenuContextScript.new() as PauseDebugMenuContext
+	context.run_number = session.selected_run_number
+	context.player_level = level
+	context.unspent_stat_points = session.debug_unassigned_stat_points
+	context.reset_confirmation_armed = session.reset_confirmation_armed
+	context.invulnerable = session.invulnerable
+	context.unlimited_chroma = session.unlimited_chroma
+	context.enemies_paused = session.enemies_paused
+	context.geometry_guides = geometry.enabled if geometry != null else false
+	context.selected_row = debug_menu_row
+	_pause_screen_presenter.refresh_debug_menu(context, Callable(root, "_pixel_text_texture"))
 
 
 func _update_debug_page_input(root: GameplayState) -> void:

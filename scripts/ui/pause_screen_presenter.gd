@@ -8,6 +8,7 @@ const PAUSE_MENU_SCENE: PackedScene = preload("res://scenes/menus/pause/pause_me
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const PauseMenuLayoutScript = preload("res://scripts/ui/pause_menu_layout.gd")
 const DebugMenuLayoutScript = preload("res://scripts/editor/debug_menu_layout.gd")
+const PauseDebugMenuContextScript = preload("res://scripts/ui/pause_debug_menu_context.gd")
 const SoulVisualsScript = preload("res://scripts/runtime/services/soul_visuals.gd")
 const STATUS_LEFT_ROW_COUNT := 10
 
@@ -275,6 +276,26 @@ func update_equipment(profile: PlayerProfile, pixel_texture: Callable) -> void:
 		equipment_texts[index].texture = null
 	if description_text != null:
 		description_text.texture = null
+
+
+func refresh_debug_menu(context: PauseDebugMenuContext, pixel_texture: Callable) -> void:
+	if debug_menu_layout == null or context == null:
+		return
+	var toggles := {
+		&"invulnerable": context.invulnerable,
+		&"unlimited_chroma": context.unlimited_chroma,
+		&"pause_enemies": context.enemies_paused,
+		&"geometry_guides": context.geometry_guides,
+	}
+	debug_menu_layout.refresh(
+		pixel_texture,
+		context.run_number,
+		context.player_level,
+		context.unspent_stat_points,
+		context.reset_confirmation_armed,
+		toggles
+	)
+	debug_menu_layout.select_row(context.selected_row)
 
 
 func _request_debug_page() -> void:

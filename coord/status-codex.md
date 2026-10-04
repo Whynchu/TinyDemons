@@ -2,7 +2,7 @@
 
 _Only codex writes this file._
 
-**Focus:** Stage 3.1 move Pause debug view projection
+**Focus:** Stage 3.1 Pause page and command-row presentation
 **Updated:** 2026-10-04
 
 ## Completed: Stage 3.1 Pause view rendering
@@ -979,5 +979,15 @@ unclassified; 1,851 dynamic accesses, 4,249 total reach-throughs, and 51
 ScreenStateController seams. UID/index checks and offline MCP validation of
 both production scripts and the smoke source pass. No gameplay tests run.
 
-Next: move debug-state view projection behind PauseScreenPresenter while
-leaving DebugSessionController's transient lifecycle with its current owner.
+## Completed: Stage 3.1 Pause debug projection
+
+Added typed `PauseDebugMenuContext` and moved debug toggle mapping plus layout
+refresh/selection to `PauseScreenPresenter`. ScreenStateController now reads a
+typed `DebugSessionController` and builds the snapshot; transient override
+ownership and public signal routing remain unchanged. Strict composition audit
+and self-test pass at 275 scripts/26 context files/zero unclassified.
+ScreenStateController is 3,306 lines with 51 seams. UID and index checks and
+offline MCP checks for the three changed scripts pass. No gameplay tests run.
+
+Next: move Pause page visibility and command-row presentation behind the
+presenter; retain routing and shared Equipment transactions in current owners.

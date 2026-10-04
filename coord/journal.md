@@ -940,3 +940,9 @@ Extend the Pause debug-layout type tightening to tests/pause_menu_scene_smoke.gd
 
 2026-10-04T23:59:00Z - codex - done
 Typed the Pause DebugMenuLayout owner and replaced dynamic operations with direct methods/signals; the smoke source now uses typed members. Strict composition/self-test, UID/index checks, offline MCP checks, and diff check pass. No gameplay test was run.
+
+2026-10-05T00:15:00Z - codex - claim
+Move Pause debug-state presentation into PauseScreenPresenter using a typed context snapshot built from GameplayState, DebugSessionController, and ActorGeometryDebugDrawer; keep transient overrides in DebugSessionController. Add UI role-map/index entries. Static checks only; no Godot/gameplay tests.
+
+2026-10-05T01:00:00Z - codex - done
+Moved Pause debug projection behind PauseScreenPresenter using PauseDebugMenuContext, with typed DebugSessionController reads. Composition strict/self-test, UID validation, generated index, MCP script checks, and diff check pass; 275 scripts, 26 contexts, zero unclassified, 51 screen seams. No game/tests run.

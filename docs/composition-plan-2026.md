@@ -1184,9 +1184,23 @@ has 51 seams. UID validation passes for 429 sidecars, the script index contains
 274 scripts, and MCP offline checks pass for both controllers and the smoke
 source. No gameplay tests were run while the shared editor session is active.
 
-Next: audit `refresh_debug_menu` data acquisition and move debug-state view
-projection behind PauseScreenPresenter while leaving DebugSessionController's
-transient session lifecycle with its current owner.
+**Implementation record (2026-10-04):** Added the typed
+`PauseDebugMenuContext` snapshot for run number, effective player level,
+unspent points, reset confirmation, debug toggles, geometry-guide state, and
+selected row. ScreenStateController now reads a typed `DebugSessionController`
+and assembles that view input; `PauseScreenPresenter` owns toggle mapping and
+refresh/selection calls on the typed `DebugMenuLayout`. The transient overrides
+and lifecycle remain in DebugSessionController, and the existing public signal
+route is unchanged. Strict composition audit and self-test pass with 275
+scripts, 26 context files, and zero unclassified files; ScreenStateController
+has 51 seams and 3,306 lines. The index has 275 entries, UID validation passes
+for 430 sidecars, the UI role map names the new context, and offline MCP checks
+pass for all three changed scripts. No gameplay tests were run while the shared
+editor session is active.
+
+Next: extract Pause page visibility and command-row presentation behind the
+presenter. Keep menu routing, DebugSession lifecycle, and shared Hub/Pause
+Equipment transactions in their existing owners.
 
 ### 3.2 `gameplay_bootstrap.gd` — declarative assembly
 
