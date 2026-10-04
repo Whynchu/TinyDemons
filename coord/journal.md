@@ -690,3 +690,9 @@ Removing room-engaged gating from contact status transmission so carried effects
 
 ## 2026-10-03T22:22Z - codex - done
 Removed the room-engaged gate from status transmission and bumped the release to 0.3.32. Scoped diff checks pass; no Godot process or tests were run.
+
+## 2026-10-04T09:30Z - codex - claim
+Tracing and hardening room clear reconciliation after an elite-room softlock report; restarting from the room-entry checkpoint reinitializes pooled enemies.
+
+## 2026-10-04T09:31Z - codex - done
+Room clear now ignores hidden, out-of-tree, missing-health, and depleted actor slots instead of waiting on their stale non-dead combat flags. Version 0.3.33 prepared. Static diff check passes; no Godot process or tests were run.

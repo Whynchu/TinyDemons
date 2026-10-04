@@ -413,3 +413,7 @@ Restored `renderer/rendering_method.web="gl_compatibility"`, required by `tests/
 ## Contact transmission timing
 
 Removed the room-engaged gate from status contact transmission so an existing transmissible status can transfer as soon as physical contact occurs after room entry. Updated the controller API callers and bumped the release to 0.3.32. Static diff check passes; no Godot process or tests were run.
+
+## Elite-room softlock follow-up
+
+The current room clear predicate now only waits on configured actors that remain visible in the active tree, have positive health, and are not marked dead. This prevents hidden or depleted pooled actors from blocking the elite room exit. Bumped the release to 0.3.33. `git diff --check` passes; no Godot process or tests were run.

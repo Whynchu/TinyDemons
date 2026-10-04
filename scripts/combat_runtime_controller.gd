@@ -481,15 +481,26 @@ func are_all_slimes_dead(root: GameplayState) -> bool:
 			var slime := slimes[slot]
 			if slime == null or not is_instance_valid(slime) or not slime.is_inside_tree():
 				continue
-			if not is_slime_dead(root, slime):
+			if _slime_blocks_room_clear(slime):
 				return false
 		return true
 	for slime in slimes:
 		if slime == null or not is_instance_valid(slime) or not slime.is_inside_tree():
 			continue
-		if not is_slime_dead(root, slime):
+		if _slime_blocks_room_clear(slime):
 			return false
 	return true
+
+
+func _slime_blocks_room_clear(slime: Sprite2D) -> bool:
+	# A pooled actor can retain a non-dead combat flag after becoming hidden or
+	# losing its health component. Neither case leaves a live enemy the player can
+	# find and defeat, so it must not hold a room clear indefinitely.
+	if not slime.visible or not slime.is_visible_in_tree():
+		return false
+	var combat := slime.get_node_or_null("Combat") as SlimeCombatComponent
+	var health := slime.get_node_or_null("Health") as HealthComponent
+	return combat != null and not combat.dead and health != null and health.current_health > 0.0
 
 
 func reconcile_empty_combat_room(root: GameplayState) -> void:
