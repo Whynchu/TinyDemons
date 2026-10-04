@@ -42,6 +42,7 @@ const HubEquipmentMenuContextScript = preload("res://scripts/ui/hub_equipment_me
 const HubTransactionMenuPresenterScript = preload("res://scripts/ui/hub_transaction_menu_presenter.gd")
 const HubTransactionMenuContextScript = preload("res://scripts/ui/hub_transaction_menu_context.gd")
 const HubMenuSignalBinderScript = preload("res://scripts/ui/hub_menu_signal_binder.gd")
+const HubLegacyWidgetVisibilityPresenterScript = preload("res://scripts/ui/hub_legacy_widget_visibility_presenter.gd")
 const PauseScreenPresenterScript = preload("res://scripts/ui/pause_screen_presenter.gd")
 const MENU_CIRCLE_TEXTURE: Texture2D = MenuPromptTextureFactoryScript.MENU_CIRCLE_TEXTURE
 const MENU_X_TEXTURE: Texture2D = MenuPromptTextureFactoryScript.MENU_X_TEXTURE
@@ -145,6 +146,7 @@ var _hub_equipment_menu_context: HubEquipmentMenuContext = HubEquipmentMenuConte
 var _hub_transaction_menu_presenter: HubTransactionMenuPresenterScript = HubTransactionMenuPresenterScript.new() as HubTransactionMenuPresenterScript
 var _hub_transaction_menu_context: HubTransactionMenuContextScript = HubTransactionMenuContextScript.new() as HubTransactionMenuContextScript
 var _hub_menu_signal_binder: HubMenuSignalBinderScript = HubMenuSignalBinderScript.new() as HubMenuSignalBinderScript
+var _hub_legacy_widget_visibility_presenter: HubLegacyWidgetVisibilityPresenterScript = HubLegacyWidgetVisibilityPresenterScript.new() as HubLegacyWidgetVisibilityPresenterScript
 var _menu_world_hidden := false
 var _menu_world_background_visible := true
 var _menu_world_map_visible := true
@@ -1741,85 +1743,11 @@ func _reset_hub_cursor_layer() -> void:
 
 # --- Legacy hub presenters and shop calculations ---
 func _hide_legacy_equipment_presenter() -> void:
-	# The authored EquipmentMenu is the sole visible presenter for this route.
-	# The old inventory widgets remain allocated because a few callers still use
-	# their data arrays, but they must not draw, receive focus, or steal touch
-	# input underneath the pixel-authored scene.
-	var legacy_nodes: Array[CanvasItem] = []
-	legacy_nodes.append(hub_item_name_text)
-	legacy_nodes.append(hub_item_list_panel)
-	legacy_nodes.append(hub_item_content_clip)
-	legacy_nodes.append(hub_gear_choice_panel)
-	legacy_nodes.append(hub_gear_choice_content_clip)
-	legacy_nodes.append(hub_gear_stat_panel)
-	legacy_nodes.append(hub_item_detail_panel)
-	legacy_nodes.append(hub_item_action_button)
-	legacy_nodes.append_array(hub_item_list_texts)
-	legacy_nodes.append_array(hub_item_row_buttons)
-	legacy_nodes.append_array(hub_shop_price_texts)
-	legacy_nodes.append_array(hub_gear_slot_buttons)
-	legacy_nodes.append_array(hub_gear_choice_texts)
-	legacy_nodes.append_array(hub_gear_choice_buttons)
-	legacy_nodes.append_array(hub_gear_stat_texts)
-	legacy_nodes.append_array(hub_gear_stat_texts)
-	legacy_nodes.append_array(hub_item_detail_texts)
-	legacy_nodes.append_array(hub_equipment_action_buttons)
-	for node in legacy_nodes:
-		if node == null:
-			continue
-		node.visible = false
-	# Only Equipment-exclusive hit targets are permanently suppressed here.
-	# The shared item rows and BUY/action button are reused by Shop and Fusion;
-	# leave their normal mouse filters intact so changing pages restores touch
-	# interaction without a separate legacy-presenter reset pass.
-	var equipment_buttons: Array[Button] = []
-	equipment_buttons.append_array(hub_gear_slot_buttons)
-	equipment_buttons.append_array(hub_gear_choice_buttons)
-	equipment_buttons.append_array(hub_equipment_action_buttons)
-	for button in equipment_buttons:
-		if button == null:
-			continue
-		button.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		button.focus_mode = Control.FOCUS_NONE
+	_hub_legacy_widget_visibility_presenter.hide_equipment_legacy(_hub_responsive_layout_presenter)
 
 
 func _hide_legacy_shop_presenter() -> void:
-	# Shop is rendered by the authored ShopMenu scene. The old dynamically-built
-	# labels, panels, buttons, and cursor remain available for compatibility
-	# callers, but none of them may draw or intercept a shop click underneath it.
-	var legacy_nodes: Array[CanvasItem] = []
-	legacy_nodes.append(hub_item_name_text)
-	legacy_nodes.append(hub_item_list_panel)
-	legacy_nodes.append(hub_item_content_clip)
-	legacy_nodes.append(hub_gear_choice_panel)
-	legacy_nodes.append(hub_gear_choice_content_clip)
-	legacy_nodes.append(hub_gear_stat_panel)
-	legacy_nodes.append(hub_item_detail_panel)
-	legacy_nodes.append(hub_item_action_button)
-	legacy_nodes.append_array(hub_item_list_texts)
-	legacy_nodes.append_array(hub_item_row_buttons)
-	legacy_nodes.append_array(hub_shop_price_texts)
-	legacy_nodes.append_array(hub_gear_slot_buttons)
-	legacy_nodes.append_array(hub_gear_choice_texts)
-	legacy_nodes.append_array(hub_gear_choice_buttons)
-	legacy_nodes.append_array(hub_gear_stat_texts)
-	legacy_nodes.append_array(hub_item_detail_texts)
-	legacy_nodes.append_array(hub_equipment_action_buttons)
-	legacy_nodes.append(hub_fusion_decrease_button)
-	legacy_nodes.append(hub_fusion_increase_button)
-	legacy_nodes.append_array(hub_shop_mode_buttons)
-	legacy_nodes.append(hub_list_cursor)
-	legacy_nodes.append(hub_slot_cursor)
-	legacy_nodes.append(hub_choice_cursor)
-	legacy_nodes.append(hub_shop_cursor)
-	for node in legacy_nodes:
-		if node == null:
-			continue
-		node.visible = false
-		if node is Control:
-			(node as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
-	if hub_shop_cursor != null and hub_shop_cursor.has_method("stop_motion"):
-		hub_shop_cursor.call("stop_motion")
+	_hub_legacy_widget_visibility_presenter.hide_shop_legacy(_hub_responsive_layout_presenter)
 
 
 func _shop_item_signature(item: ItemInstance) -> Dictionary:

@@ -1069,6 +1069,24 @@ contains 271 scripts, UID validation passes for 426 sidecars, and offline MCP
 script checks pass for the binder and screen controller. No game or gameplay
 tests were run while the shared editor session is active.
 
+**Implementation record (2026-10-04):** Moved the legacy-widget suppression
+for authored Equipment and Shop routes into
+`HubLegacyWidgetVisibilityPresenter`, which receives the existing typed
+`HubResponsiveLayoutPresenter` widget owner. The suppression rules remain
+distinct: Equipment hides legacy visuals and permanently disables only its
+exclusive hit targets; Shop also ignores all legacy Control input and stops
+the legacy Shop cursor. All widget aliases, fallback rendering, and readers in
+input, economy, responsive layout, and smoke sources remain intact. Removed a
+duplicate stat-text append from the old Equipment suppression list. Strict
+composition audit passes at 272 scripts, zero unclassified files, 52 screen
+controller seams, 4,253 root reach-throughs, and 509 untyped root parameters.
+The index contains 272 scripts, UID validation passes for 427 sidecars, and
+offline MCP script checks pass for the presenter and ScreenStateController.
+No game or gameplay tests were run while the shared editor session is active.
+
+Next: map the remaining legacy Hub data/render path and its scroll consumers
+to determine which typed authored view can replace each fallback reader.
+
 ### 3.2 `gameplay_bootstrap.gd` — declarative assembly
 
 Replace the 44 hand-written `_add_runtime_node` calls with a registration table

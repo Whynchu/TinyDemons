@@ -2,7 +2,7 @@
 
 _Only codex writes this file._
 
-**Focus:** Stage 3.1 legacy Hub item widget ownership audit
+**Focus:** Stage 3.1 legacy Hub item data/render and scroll boundary mapping
 **Updated:** 2026-10-04
 
 ## Completed: MCP startup-error repair and runtime verification
@@ -869,3 +869,21 @@ active.
 
 Next: trace remaining legacy Hub Equipment/Shop widgets built by build_hub
 through rendering and input consumers before moving or deleting that cluster.
+
+## Completed: Stage 3.1 legacy Hub widget visibility
+
+Moved Equipment and Shop legacy-widget suppression into
+`HubLegacyWidgetVisibilityPresenter`, which consumes the existing typed
+`HubResponsiveLayoutPresenter` widget owner. Equipment still suppresses only
+its exclusive input targets; Shop also ignores all legacy Control input and
+stops the legacy cursor. Existing aliases, fallback rendering, layout, and
+input readers remain intact. Removed a duplicate stat-text append from the old
+Equipment suppression path.
+
+Strict composition audit passes at 272 scripts, zero unclassified files, 52
+screen seams, 4,253 reach-throughs, and 509 untyped root parameters. UID
+validation and offline MCP script checks pass. No game or gameplay tests were
+run while the shared editor restriction is active.
+
+Next: map the remaining legacy Hub data/render path and its scroll consumers
+to determine which typed authored view can replace each fallback reader.

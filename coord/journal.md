@@ -896,3 +896,8 @@ Map identified a standalone authored-view wiring boundary in build_hub: Equipmen
 
 2026-10-04T19:22:00Z - codex - done
 Extracted authored Equipment/Shop/Fusion/Bind signal binding from ScreenStateController.build_hub into a typed HubMenuSignalBinder. Strict composition audit passes at 271 scripts, zero unclassified, 52 screen seams, 4,253 reach-throughs, 509 untyped root parameters, and zero string .connect calls. UID and offline MCP script validation pass. No game or gameplay tests were run during the shared-editor restriction.
+2026-10-04T19:30:00Z - codex - claim
+Read audit found the legacy Hub item widgets remain consumed by fallback rendering/input, row-count decisions, responsive layout, and smoke sources. Extract only their hidden-under-authored-view suppression into a typed presenter; retain widget handles and fallback routes. No game or gameplay tests while shared editor restriction is active.
+
+2026-10-04T19:48:00Z - codex - done
+Extracted authored Equipment/Shop legacy-widget visibility suppression into HubLegacyWidgetVisibilityPresenter, preserving the legacy widget handles and all fallback readers. Strict composition audit passes at 272 scripts, zero unclassified, 52 screen seams, 4,253 reach-throughs, and 509 untyped root parameters. UID and offline MCP script validation pass. No game or gameplay tests were run during the shared-editor restriction.
