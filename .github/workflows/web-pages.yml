@@ -67,6 +67,10 @@ jobs:
           & "./tools/validate_composition.ps1"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           & "./tests/web_export_smoke.ps1" -RequireExport -OutputDirectory "dist"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & "./tools/build_design_wiki.ps1" -OutputDirectory "dist/wiki"
+          if (-not (Test-Path "dist/wiki/index.html")) { throw "Design wiki entry page is missing from the Pages artifact" }
+          if (-not (Test-Path "dist/wiki/content/README.md")) { throw "Design wiki Markdown content is missing from the Pages artifact" }
 
       - name: Configure GitHub Pages
         if: ${{ github.event_name != 'pull_request' }}
