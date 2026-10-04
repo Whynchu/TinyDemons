@@ -2,7 +2,7 @@
 
 _Only codex writes this file._
 
-**Focus:** Stage 3.1 type the Pause debug-view boundary
+**Focus:** Stage 3.1 move Pause debug view projection
 **Updated:** 2026-10-04
 
 ## Completed: Stage 3.1 Pause view rendering
@@ -968,5 +968,16 @@ is 3,298 lines with 51 seams, and the presenter is 285 lines. UID validation,
 index generation, offline MCP script checks, and `git diff --check` pass. No
 gameplay tests were run while the shared editor session is active.
 
-Next: type the Pause `DebugMenuLayout` field and replace dynamic member calls;
-preserve debug-session lifecycle and existing public signals.
+## Completed: Stage 3.1 Pause debug view typing
+
+Typed the Pause debug-layout owner and ScreenStateController forwarding
+property as `DebugMenuLayout`; build, layout, refresh, row selection, and action
+signal wiring now use direct members. The Pause smoke source also uses the
+typed methods/properties. Debug-session lifecycle and the public signal route
+remain unchanged. Strict audit/self-test pass at 274 scripts/zero
+unclassified; 1,851 dynamic accesses, 4,249 total reach-throughs, and 51
+ScreenStateController seams. UID/index checks and offline MCP validation of
+both production scripts and the smoke source pass. No gameplay tests run.
+
+Next: move debug-state view projection behind PauseScreenPresenter while
+leaving DebugSessionController's transient lifecycle with its current owner.

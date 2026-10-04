@@ -517,7 +517,7 @@ var pause_equipment_button: Button:
 var pause_debug_button: Button:
 	get: return _pause_screen_presenter.debug_button
 	set(value): _pause_screen_presenter.debug_button = value
-var debug_menu_layout: RefCounted:
+var debug_menu_layout: DebugMenuLayout:
 	get: return _pause_screen_presenter.debug_menu_layout
 	set(value): _pause_screen_presenter.debug_menu_layout = value
 var debug_menu_buttons: Array[Button]:
@@ -2787,8 +2787,8 @@ func refresh_debug_menu(root: GameplayState) -> void:
 	var debug_level := int(session.get("player_level_override"))
 	var level := debug_level if debug_level > 0 else (stats.level if stats != null else 1)
 	var geometry := root.actor_geometry_debug_drawer
-	debug_menu_layout.call("refresh", Callable(root, "_pixel_text_texture"), int(session.get("selected_run_number")), level, int(session.get("debug_unassigned_stat_points")), bool(session.get("reset_confirmation_armed")), {&"invulnerable": bool(session.get("invulnerable")), &"unlimited_chroma": bool(session.get("unlimited_chroma")), &"pause_enemies": bool(session.get("enemies_paused")), &"geometry_guides": geometry.enabled if geometry != null else false})
-	debug_menu_layout.call("select_row", debug_menu_row)
+	debug_menu_layout.refresh(Callable(root, "_pixel_text_texture"), int(session.get("selected_run_number")), level, int(session.get("debug_unassigned_stat_points")), bool(session.get("reset_confirmation_armed")), {&"invulnerable": bool(session.get("invulnerable")), &"unlimited_chroma": bool(session.get("unlimited_chroma")), &"pause_enemies": bool(session.get("enemies_paused")), &"geometry_guides": geometry.enabled if geometry != null else false})
+	debug_menu_layout.select_row(debug_menu_row)
 
 
 func _update_debug_page_input(root: GameplayState) -> void:

@@ -33,7 +33,7 @@ var settings_button: Button = null
 var debug_button: Button = null
 var quit_button: Button = null
 var equipment_menu: Control = null
-var debug_menu_layout: RefCounted = null
+var debug_menu_layout: DebugMenuLayout = null
 var debug_menu_buttons: Array[Button] = []
 
 
@@ -128,9 +128,9 @@ func build(
 	built_overlay.add_child(back_button)
 	cursor_text = widget_factory.create_sprite(root_page, "PauseCursor", MENU_CURSOR_TEXTURE, Vector2.ZERO, false)
 	cursor_text.visible = false
-	debug_menu_layout = DebugMenuLayoutScript.new() as RefCounted
-	var debug_controls := debug_menu_layout.call("build", built_overlay, pixel_texture, Callable(widget_factory, "make_menu_command_button"), MENU_CURSOR_TEXTURE) as Dictionary
-	debug_menu_layout.connect(&"action_requested", Callable(self, "_forward_debug_action_requested"))
+	debug_menu_layout = DebugMenuLayoutScript.new() as DebugMenuLayout
+	var debug_controls := debug_menu_layout.build(built_overlay, pixel_texture, Callable(widget_factory, "make_menu_command_button"), MENU_CURSOR_TEXTURE)
+	debug_menu_layout.action_requested.connect(_forward_debug_action_requested)
 	page_roots[3] = debug_controls["page"] as Control
 	debug_menu_buttons = debug_controls["buttons"] as Array[Button]
 	overlay = built_overlay
@@ -170,7 +170,7 @@ func position_controls(view_size: Vector2) -> void:
 		resource_divider.position = Vector2(divider_x, height - PauseMenuLayoutScript.RESOURCE_PANEL_HEIGHT)
 		resource_divider.size = Vector2(maxf(width - divider_x - 1.0, 1.0), 1.0)
 	for index in menu_buttons.size(): menu_buttons[index].position = PauseMenuLayoutScript.command_button_position(view_size, index)
-	if debug_menu_layout != null: debug_menu_layout.call("apply_layout", view_size)
+	if debug_menu_layout != null: debug_menu_layout.apply_layout(view_size)
 	if back_button != null: back_button.position = PauseMenuLayoutScript.back_button_position(view_size)
 	if player_portrait != null:
 		player_portrait.position = Vector2(PauseMenuLayoutScript.left_field_x(PauseMenuLayoutScript.PLAYER_PORTRAIT_POSITION.x, width), PauseMenuLayoutScript.PLAYER_PORTRAIT_POSITION.y)

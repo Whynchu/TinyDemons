@@ -1171,9 +1171,22 @@ has 51 seams and total root reach-through is 4,249. UID validation and offline
 MCP checks pass, and the generated index contains 274 scripts. No gameplay
 tests were run while the shared editor session is active.
 
-Next: tighten the Pause debug-view contract. Type the existing DebugMenuLayout
-owner and replace its dynamic member calls; keep debug-session lifecycle and
-ScreenStateController's public signals at their current boundaries.
+**Implementation record (2026-10-04):** Typed the Pause debug-layout owner as
+`DebugMenuLayout` in both PauseScreenPresenter and its ScreenStateController
+forwarding property. Construction, layout, refresh, selection, and the action
+signal now use direct methods/signals instead of `RefCounted.call/connect`.
+The Pause smoke source now calls the typed methods and reads the typed value
+field directly. DebugSessionController ownership and the existing
+ScreenStateController/HubFlow public signal path are unchanged. Strict
+composition audit and self-test pass at 274 scripts with zero unclassified
+files; root dispatch is 1,851, reach-through is 4,249, and ScreenStateController
+has 51 seams. UID validation passes for 429 sidecars, the script index contains
+274 scripts, and MCP offline checks pass for both controllers and the smoke
+source. No gameplay tests were run while the shared editor session is active.
+
+Next: audit `refresh_debug_menu` data acquisition and move debug-state view
+projection behind PauseScreenPresenter while leaving DebugSessionController's
+transient session lifecycle with its current owner.
 
 ### 3.2 `gameplay_bootstrap.gd` — declarative assembly
 

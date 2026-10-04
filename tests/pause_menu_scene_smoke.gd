@@ -100,11 +100,11 @@ func _initialize() -> void:
 		screens.call("set_pause_page", gameplay, 3)
 		_expect(debug_page != null and debug_page.visible and debug_cursor != null and debug_cursor.visible, "Debug page shows the shared menu cursor on entry", failures)
 		if debug_cursor != null and screens.debug_menu_buttons.size() > 4:
-			screens.debug_menu_layout.call("select_row", 4)
+			screens.debug_menu_layout.select_row(4)
 			var selected_debug_button := screens.debug_menu_buttons[4]
 			_expect(debug_cursor.position.x < selected_debug_button.position.x and debug_cursor.position.y >= selected_debug_button.position.y, "Debug selection cursor follows pixel-menu navigation without scaling text", failures)
-			screens.debug_menu_layout.call("refresh", Callable(gameplay, "_pixel_text_texture"), 1, 999, 1234, false, {})
-			var debug_level_text := screens.debug_menu_layout.get("level_value") as Sprite2D
+			screens.debug_menu_layout.refresh(Callable(gameplay, "_pixel_text_texture"), 1, 999, 1234, false, {})
+			var debug_level_text: Sprite2D = screens.debug_menu_layout.level_value
 			_expect(debug_level_text != null and debug_level_text.texture != null and debug_level_text.position.x + debug_level_text.texture.get_width() <= selected_debug_button.position.x, "three-digit debug levels fit before the increment button", failures)
 		screens.call("set_pause_page", gameplay, 0)
 		if screens.pause_status_button != null:

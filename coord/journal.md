@@ -931,3 +931,12 @@ Move Pause overlay/page and child-node responsive geometry into the existing Pau
 
 2026-10-04T23:40:00Z - codex - done
 Moved Pause overlay and child responsive geometry to PauseScreenPresenter. ScreenStateController retains its compatibility layout method, shared frame resize, and cursor animation. Strict composition audit/self-test, UID validation, index generation, offline MCP checks, and diff check pass; 274 scripts, 51 screen seams, 4,249 reach-throughs. No gameplay tests run.
+
+2026-10-04T23:50:00Z - codex - claim
+Type PauseScreenPresenter/ScreenStateController DebugMenuLayout fields and replace dynamic build/apply/refresh/select/signal access with direct typed members. Preserve the current ScreenStateController and HubFlow debug signals and DebugSessionController lifecycle. Static validation only while shared editor is active.
+
+2026-10-04T23:55:00Z - codex - handoff
+Extend the Pause debug-layout type tightening to tests/pause_menu_scene_smoke.gd so its existing probe uses direct typed methods/properties; no test run while the editor is active.
+
+2026-10-04T23:59:00Z - codex - done
+Typed the Pause DebugMenuLayout owner and replaced dynamic operations with direct methods/signals; the smoke source now uses typed members. Strict composition/self-test, UID/index checks, offline MCP checks, and diff check pass. No gameplay test was run.
