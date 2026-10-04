@@ -906,3 +906,6 @@ Isolated the legacy item/gear choice scroll geometry as a pure consumer of exist
 
 2026-10-04T20:28:00Z - codex - done
 Extracted legacy Hub row and gear-choice fractional scroll positioning into HubLegacyWidgetScrollPresenter. ScreenStateController retains scroll state, clamping, and row selection. Strict composition audit passes at 273 scripts, zero unclassified, 52 screen seams, 4,253 reach-throughs, and 509 untyped root parameters; UID and MCP offline checks pass. No game or gameplay tests were run during the shared-editor restriction.
+
+2026-10-04T20:45:00Z - codex - done
+Traced legacy Hub row rendering to the missing-child-view compatibility branch in update_hub_ui. The runtime preloads demon_hub_menu.tscn with authored Equipment/Shop/Fusion children; retained widget fields because fallback, input, scroll-count, layout, and smoke readers remain. Removed three unreferenced Shop helpers. Strict audit, UID validation, index generation, and MCP offline script check pass; no game or gameplay tests were run.

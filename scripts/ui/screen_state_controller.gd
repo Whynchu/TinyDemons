@@ -1752,52 +1752,6 @@ func _hide_legacy_shop_presenter() -> void:
 	_hub_legacy_widget_visibility_presenter.hide_shop_legacy(_hub_responsive_layout_presenter)
 
 
-func _shop_item_signature(item: ItemInstance) -> Dictionary:
-	if item == null:
-		return {}
-	return {"stack_key": item.inventory_stack_key()}
-
-
-func _shop_matching_count(items: Array[ItemInstance], target: ItemInstance) -> int:
-	if target == null:
-		return 0
-	var target_signature := _shop_item_signature(target)
-	var count := 0
-	for item: ItemInstance in items:
-		if _shop_item_signature(item) == target_signature:
-			count += 1
-	return count
-
-
-func _shop_item_details(catalog: ItemCatalog, item: ItemInstance, sell_mode: bool) -> Array[String]:
-	if item == null:
-		return []
-	var lines: Array[String] = []
-	var bonuses := catalog.bonuses(item)
-	var stat_labels := {"vitality": "VIT", "strength": "STR", "defense": "DEF", "agi": "AGI", "speed": "AGI", "intelligence": "INT", "mnd": "MND"}
-	for key in ["vitality", "strength", "defense", "agi", "intelligence", "mnd"]:
-		if not bonuses.has(key):
-			continue
-		var value := float(bonuses[key])
-		if is_zero_approx(value):
-			continue
-		var shown := "%d" % roundi(value) if is_equal_approx(value, round(value)) else "%.1f" % value
-		lines.append("%s %s%s" % [str(stat_labels[key]), "+" if value > 0.0 else "", shown])
-	if lines.is_empty():
-		lines.append("NO BONUS")
-	var random_text := catalog.random_stat_text(item)
-	if not random_text.is_empty():
-		# The full random-roll sentence is too wide for the authored detail card;
-		# the gear name already carries the + marker, so show only the compact roll.
-		lines.append(random_text.replace("RANDOM ", ""))
-	var description := catalog.player_description(item)
-	if not description.is_empty() and lines.size() < 4:
-		lines.append_array(_wrap_gear_text(description, 28))
-	if sell_mode and lines.size() < 4:
-		lines.append("SELL %dG" % catalog.sell_value(item))
-	return lines.slice(0, 4)
-
-
 func _shop_stat_comparison(_root: GameplayState, profile: PlayerProfile, catalog: ItemCatalog, item: ItemInstance) -> Array[Dictionary]:
 	return _hub_transaction_menu_presenter.shop_stat_comparison(profile, catalog, item)
 

@@ -1084,9 +1084,14 @@ The index contains 272 scripts, UID validation passes for 427 sidecars, and
 offline MCP script checks pass for the presenter and ScreenStateController.
 No game or gameplay tests were run while the shared editor session is active.
 
-Next: map the remaining legacy Hub data and row-render path against the
-authored Shop, Fusion, and Equipment models before moving or deleting the
-fallback branch.
+Audit result: runtime always instantiates the preloaded
+`demon_hub_menu.tscn`, and that scene contains authored Equipment, Shop, and
+Fusion children. Legacy item/gear rendering therefore runs only when a child
+view is absent. Its widget handles still serve fallback input, row counts,
+responsive positioning, smoke assertions, and debug callers; retain that
+compatibility surface until those consumers move to the authored views. Next,
+map each remaining reader and identify which can use an authored-view contract
+directly.
 
 **Implementation record (2026-10-04):** Moved the fractional y-position updates
 for legacy item rows, Shop prices, touch-row buttons, and gear-choice rows into
@@ -1098,6 +1103,16 @@ root reach-throughs, and 509 untyped root parameters. The index contains 273
 scripts, UID validation passes for 428 sidecars, and MCP offline script checks
 pass for the presenter and ScreenStateController. No game or gameplay tests
 were run while the shared editor session is active.
+
+**Implementation record (2026-10-04):** Removed the unused
+`_shop_item_signature`, `_shop_matching_count`, and `_shop_item_details`
+helpers after a repository-wide scripts/tests search found no callers. The
+active Shop model uses `HubTransactionMenuPresenter`; fallback row rendering
+has its own inline detail path. The runtime scene reference is the preloaded
+`demon_hub_menu.tscn`, whose authored Equipment, Shop, and Fusion children are
+present in the scene source. The legacy rendering branch remains for missing
+child-view compatibility; widget fields still have consumers and were not
+removed. Offline MCP script validation and strict composition audit pass.
 
 ### 3.2 `gameplay_bootstrap.gd` — declarative assembly
 

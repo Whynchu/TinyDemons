@@ -2,7 +2,7 @@
 
 _Only codex writes this file._
 
-**Focus:** Stage 3.1 legacy Hub data and row-render boundary mapping
+**Focus:** Stage 3.1 migrate remaining legacy Hub widget readers
 **Updated:** 2026-10-04
 
 ## Completed: MCP startup-error repair and runtime verification
@@ -887,6 +887,19 @@ run while the shared editor restriction is active.
 
 Next: map the remaining legacy Hub data/render path and its scroll consumers
 to determine which typed authored view can replace each fallback reader.
+
+## Completed: Stage 3.1 legacy Shop helper audit
+
+Confirmed the runtime instantiates `demon_hub_menu.tscn`, whose source contains
+the authored Equipment, Shop, and Fusion views. The old row renderer is a
+compatibility branch taken only when a child view is missing. Its widget
+handles still have fallback, input, scroll-count, layout, and smoke consumers,
+so they remain. Removed three orphaned Shop detail/signature helpers after
+searching all scripts and tests for callers. Offline MCP script validation and
+strict composition audit pass; no game or gameplay test was run.
+
+Next: move remaining live widget readers to typed authored-view contracts
+before considering removal of the legacy fallback fields and renderer.
 
 ## Completed: Stage 3.1 legacy Hub scroll geometry
 
