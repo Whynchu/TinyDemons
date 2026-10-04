@@ -919,3 +919,9 @@ Mapped HubInputController's remaining legacy widget accesses to action activatio
 
 2026-10-04T22:30:00Z - codex - done
 Moved HubInputController's two legacy action-button read/emit paths behind HubLegacyWidgetActionPresenter typed capabilities. Input retains failure feedback; no direct legacy button-array reads remain in HubInputController, and economy no longer reads legacy row-array lengths. Strict composition passes at 274 scripts/zero unclassified, reach-throughs 4,250 with baseline refreshed; UID and offline MCP checks pass. No game/gameplay tests run.
+
+2026-10-04T22:45:00Z - codex - claim
+Move Pause player-card, resource, read-only status, and legacy equipment-text rendering into PauseScreenPresenter. Keep ScreenStateController routing and shared Hub/Pause authored Equipment behavior; preserve existing property and update facades. Static verification only while the shared editor session is active.
+
+2026-10-04T23:00:00Z - codex - done
+Moved Pause view-owned player/resource/status/equipment text rendering and resource label positioning into PauseScreenPresenter. Strict composition audit/self-test, baseline refresh, UID validation, generated index, offline MCP checks, and diff check pass; ScreenStateController is 3,348 lines, 51 seams, total reach-throughs 4,249. No gameplay tests run.

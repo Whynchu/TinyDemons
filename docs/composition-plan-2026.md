@@ -1142,8 +1142,25 @@ and offline MCP checks pass for the action presenter, input controller, and
 layout owner. No game or gameplay tests were run while the shared editor
 session is active.
 
-Next: trace the remaining ScreenStateController fallback/build field bridges
-and test probes, then define the migration order for retiring those bridges.
+**Implementation record (2026-10-04):** Moved Pause player-card, resource,
+read-only status, fallback equipment-text, and resource-label positioning into
+the existing `PauseScreenPresenter`, which already owns those view nodes. The
+presenter receives a typed `MenuPlayerContext` / `PlayerProfile`, the text
+texture callback, and view size; it no longer needs a ScreenStateController or
+GameplayState reference. The screen controller keeps page visibility,
+navigation, prompt/cursor behavior, debug refresh, and the authored Equipment
+transaction route shared with Hub. `PauseScreenPresenter` is 235 lines and
+`ScreenStateController` is 3,348 lines. Existing pause-menu smoke sources still
+exercise the player card, status page, and authored Equipment route. Strict
+composition audit and self-test pass at 274 scripts, zero unclassified files,
+51 screen seams, 4,249 reach-throughs, and 508 untyped root arguments; UID
+validation passes for 429 sidecars, the generated index contains 274 scripts,
+and MCP offline checks pass for both changed scripts. No gameplay tests were
+run while the shared editor session is active.
+
+Next: map the remaining Pause routing/debug collaborators and ScreenStateController
+field bridges before splitting the high-coupling update path; keep shared
+Hub/Pause Equipment and debug signal paths explicit.
 
 ### 3.2 `gameplay_bootstrap.gd` — declarative assembly
 

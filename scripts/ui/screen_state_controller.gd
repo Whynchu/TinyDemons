@@ -1724,10 +1724,7 @@ func _position_pause_controls(animate_cursor: bool = false, preserve_cursor_moti
 
 
 func _position_pause_resource_texts() -> void:
-	if pause_gold_text != null and pause_gold_text.texture != null:
-		pause_gold_text.position = PauseMenuLayoutScript.resource_text_position(display_view_size, pause_gold_text.texture.get_width(), false)
-	if pause_soul_text != null and pause_soul_text.texture != null:
-		pause_soul_text.position = PauseMenuLayoutScript.resource_text_position(display_view_size, pause_soul_text.texture.get_width(), true)
+	_pause_screen_presenter.position_resource_texts(display_view_size)
 
 
 func _reset_hub_cursor_layer() -> void:
@@ -2092,52 +2089,6 @@ func _update_hub_status_page(root: GameplayState, pixel_texture: Callable, profi
 	if updated and hub_context_text != null:
 		hub_context_text.texture = null
 
-func _update_pause_player_info(context: MenuPlayerContext, pixel_texture: Callable) -> void:
-	if pause_player_card_texts.is_empty() or context == null or not context.is_valid():
-		return
-	var profile := context.profile
-	var max_health := context.max_health()
-	var health := context.current_health()
-	var chroma := context.chroma()
-	var values := [
-		PlayerProfile.normalize_player_name(profile.player_name),
-		context.element_display_name(),
-		"HP",
-		"%d/%d" % [health, max_health],
-		"CHR",
-		"%d/%d" % [chroma, context.max_chroma()],
-		"LV %d" % profile.level,
-	]
-	for index in pause_player_card_texts.size():
-		var text := pause_player_card_texts[index]
-		text.visible = true
-		var label: String = str(values[index]) if index < values.size() else ""
-		var label_color := PauseMenuLayoutScript.MUTED_TEXT_COLOR if index == 1 else Color.WHITE
-		text.texture = pixel_texture.call(label, label_color) as Texture2D
-	if pause_player_portrait != null:
-		var portrait_texture := context.portrait_texture()
-		if portrait_texture != null:
-			pause_player_portrait.texture = portrait_texture
-	_update_pause_resources(profile, pixel_texture)
-
-
-func _update_pause_resources(profile: PlayerProfile, pixel_texture: Callable) -> void:
-	if profile == null:
-		return
-	if pause_gold_icon != null:
-		pause_gold_icon.visible = true
-	if pause_resource_icon != null:
-		pause_resource_icon.visible = true
-		pause_resource_icon.texture = SoulVisualsScript.texture()
-	if pause_gold_text != null:
-		var gold_texture := pixel_texture.call(str(profile.gold), PauseMenuLayoutScript.GOLD_TEXT_COLOR) as Texture2D
-		pause_gold_text.texture = gold_texture
-	if pause_soul_text != null:
-		var soul_texture := pixel_texture.call(str(profile.souls), SoulVisualsScript.SOUL_HIGHLIGHT_COLOR) as Texture2D
-		pause_soul_text.texture = soul_texture
-	_position_pause_resource_texts()
-
-
 func update_pause_ui(root: Object, pixel_texture: Callable) -> void:
 	if pause_overlay == null or not pause_overlay.visible:
 		return
@@ -2161,7 +2112,7 @@ func update_pause_ui(root: Object, pixel_texture: Callable) -> void:
 	var root_panel := pause_overlay.get_node_or_null("PausePanel8Piece") as Control
 	if root_panel != null: root_panel.visible = showing_root
 	var menu_player_context: MenuPlayerContext = (root as GameplayState)._menu_player_context() if root is GameplayState else null
-	_update_pause_player_info(menu_player_context, pixel_texture)
+	_pause_screen_presenter.update_player_info(menu_player_context, pixel_texture, display_view_size)
 	var settings := root.get("settings_service") as SettingsService
 	var debug_menu_enabled := settings != null and bool(settings.get_setting(&"debug_menu_enabled", false))
 	for index in pause_menu_buttons.size():
@@ -2189,57 +2140,19 @@ func update_pause_ui(root: Object, pixel_texture: Callable) -> void:
 	if pause_gold_text != null: pause_gold_text.visible = showing_root
 	if pause_soul_text != null: pause_soul_text.visible = showing_root
 	if pause_page == 1:
-		_update_pause_status(menu_player_context, pixel_texture)
-	elif pause_page == 2 and pause_equipment_view_active:
-		var pause_profile := menu_player_context.profile if menu_player_context != null else root.get("player_profile") as PlayerProfile
-		_render_equipment_menu(root, pixel_texture, pause_profile, highlight, pause_equipment_menu, false)
-		return
+		_pause_screen_presenter.update_status(menu_player_context, pixel_texture)
 	elif pause_page == 2:
-		_update_pause_equipment(root, pixel_texture)
+		var pause_profile: PlayerProfile = menu_player_context.profile if menu_player_context != null else root.get("player_profile") as PlayerProfile
+		if pause_equipment_view_active:
+			_render_equipment_menu(root, pixel_texture, pause_profile, highlight, pause_equipment_menu, false)
+			return
+		_pause_screen_presenter.update_equipment(pause_profile, pixel_texture)
 	elif pause_page == 3:
 		refresh_debug_menu(root)
 	if pause_cursor_text != null and not pause_menu_buttons.is_empty():
 		var cursor_index := clampi(pause_menu_row, 0, pause_menu_buttons.size() - 1)
 		pause_cursor_text.visible = pause_page == 0
 		move_menu_cursor(pause_cursor_text, Vector2(pause_menu_buttons[cursor_index].position.x - CURSOR_LEFT_GAP, pause_menu_buttons[cursor_index].position.y + 3.0))
-
-
-func _update_pause_status(context: MenuPlayerContext, pixel_texture: Callable) -> void:
-	if context == null or not context.is_valid():
-		return
-	var profile := context.profile
-	var snapshot := context.snapshot
-	var tuning := context.combat_tuning
-	var player_tuning := context.player_tuning
-	var health := context.current_health()
-	var max_health := context.max_health()
-	var xp_required := PlayerProfile.xp_required_for_level(profile.level, context.progression_tuning)
-	var values := [
-		"LV ...... %d" % profile.level, "XP ...... %d/%d" % [profile.xp, xp_required], "HP ...... %d/%d" % [health, max_health], "CHROMA .. %d/%d" % [context.chroma(), context.max_chroma()], "STR .... %d" % roundi(snapshot.strength), "AGI .... %d" % roundi(snapshot.agi), "VIT .... %d" % roundi(snapshot.vit), "INT .... %d" % roundi(snapshot.intelligence), "MND .... %d" % roundi(snapshot.mnd), "DEF .... %d" % roundi(snapshot.def),
-		"P.ATK .. %d" % roundi(CombatCalculator.attack_power_for_snapshot(snapshot, tuning)), "P.DEF .. %d" % roundi(CombatCalculator.physical_defense_for_snapshot(snapshot)), "M.ATK .. %d" % roundi(CombatCalculator.magic_power_for_snapshot(snapshot, tuning)), "M.DEF .. %d" % roundi(CombatCalculator.magic_defense_for_snapshot(snapshot)), "MOV .... %.2fx" % (player_tuning.agi_multiplier(snapshot.agi) if player_tuning != null else 1.0), "REC .... %.2fx" % (player_tuning.attack_multiplier_for_agi(snapshot.agi) if player_tuning != null else 1.0),
-	]
-	for index in mini(values.size(), pause_status_texts.size()):
-		pause_status_texts[index].texture = pixel_texture.call(values[index], Color8(255, 205, 117) if index == 1 else Color.WHITE) as Texture2D
-	if pause_description_text != null: pause_description_text.texture = null
-
-
-func _update_pause_equipment(root: Object, pixel_texture: Callable) -> void:
-	var profile := root.get("player_profile") as PlayerProfile
-	if profile == null:
-		return
-	var catalog := ItemCatalog.new()
-	var slot_labels := ["WEAPON", "HEAD", "BODY", "ARM", "SHIELD", "ACCESSORY"]
-	for index in mini(slot_labels.size(), pause_equipment_texts.size()):
-		var slot: StringName = ItemCatalog.SLOTS[index]
-		var item := profile.find_item(profile.get_equipped_instance_id(slot))
-		var item_name := "EMPTY"
-		if item != null:
-			item_name = catalog.gear_name(item)
-			if item.enhancement_level > 0: item_name += " F%d" % item.enhancement_level
-		pause_equipment_texts[index].texture = pixel_texture.call("%s .... %s" % [slot_labels[index], item_name], catalog.rarity_color(item.rarity) if item != null else Color8(140, 145, 160)) as Texture2D
-	for index in range(slot_labels.size(), pause_equipment_texts.size()):
-		pause_equipment_texts[index].texture = null
-	if pause_description_text != null: pause_description_text.texture = null
 
 
 func set_pause_page(root: Object, page: int) -> void:

@@ -1,5 +1,5 @@
 ﻿{
-    "root_accesses":  1852,
+    "root_accesses":  1851,
     "gameplay_state_lines":  1709,
     "gameplay_state_fields":  282,
     "room_controller_lines":  2175,
@@ -3099,7 +3099,7 @@
                                               },
                      "pause_screen_presenter.gd":  {
                                                        "path":  "scripts/ui/pause_screen_presenter.gd",
-                                                       "lines":  149,
+                                                       "lines":  235,
                                                        "dynamic_dispatch":  0,
                                                        "reach_through":  0,
                                                        "untyped_root_parameters":  0,
@@ -3132,10 +3132,10 @@
                                                          },
                      "screen_state_controller.gd":  {
                                                         "path":  "scripts/ui/screen_state_controller.gd",
-                                                        "lines":  3435,
-                                                        "dynamic_dispatch":  52,
-                                                        "reach_through":  211,
-                                                        "untyped_root_parameters":  29,
+                                                        "lines":  3348,
+                                                        "dynamic_dispatch":  51,
+                                                        "reach_through":  210,
+                                                        "untyped_root_parameters":  28,
                                                         "live_context_twin_pairs":  0,
                                                         "runtime_refs":  0,
                                                         "root_callable_strings":  16,
@@ -3210,8 +3210,8 @@
                  },
     "metric_snapshot":  {
                             "gameplay_lines":  302,
-                            "total_reach_through":  4250,
-                            "untyped_root_parameters":  509,
+                            "total_reach_through":  4249,
+                            "untyped_root_parameters":  508,
                             "live_context_twin_pairs":  0,
                             "root_callable_strings":  341,
                             "string_signal_connects":  0,
@@ -3228,7 +3228,7 @@
                            },
     "forward_status":  {
                            "screen_state_controller_lines":  {
-                                                                 "current":  3435,
+                                                                 "current":  3348,
                                                                  "status":  "open",
                                                                  "stage":  3
                                                              },
@@ -3238,7 +3238,7 @@
                                                              "stage":  2
                                                          },
                            "screen_state_controller_seams":  {
-                                                                 "current":  52,
+                                                                 "current":  51,
                                                                  "status":  "met",
                                                                  "stage":  3
                                                              },
@@ -3258,7 +3258,7 @@
                                                           "stage":  1
                                                       },
                            "untyped_root_parameters":  {
-                                                           "current":  509,
+                                                           "current":  508,
                                                            "status":  "open",
                                                            "stage":  2
                                                        },

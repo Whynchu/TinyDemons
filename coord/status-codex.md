@@ -2,18 +2,30 @@
 
 _Only codex writes this file._
 
-**Focus:** Stage 3.1 trace ScreenStateController legacy bridges and test probes
+**Focus:** Stage 3.1 audit remaining Pause routing and screen bridges
 **Updated:** 2026-10-04
+
+## Completed: Stage 3.1 Pause view rendering
+
+Moved Pause player-card, resource, status-table, fallback equipment text, and
+resource-label positioning into the existing `PauseScreenPresenter`, which owns
+those nodes. ScreenStateController retains routing, page visibility, prompts,
+debug refresh, and the authored Equipment route. Strict composition audit and
+self-test pass at 274 scripts/zero unclassified; ScreenStateController is 3,348
+lines, the presenter is 235, and its seam target remains met. UID validation,
+index generation, and offline MCP script checks pass. No gameplay tests were
+run while the shared editor session is active.
 
 ## Completed: MCP startup-error repair and runtime verification
 
 Fixed the Settings overlay argument order and HubFlow fusion-cache calls that
 prevented dependent scripts from compiling. Updated two smoke-test scripts to
 match the typed status API and explicitly type a dynamic room-entry result.
-MCP file checks pass for both gameplay scripts, the two test scripts, and the
-slime/status runtime controllers. The main scene launched through MCP and is
-currently in active room combat; the editor error buffer is empty and the game
-log contains only runtime-server startup messages. No smoke suite was run.
+The main scene launched through MCP and reached the Tiny Demons main menu. Its
+fresh runtime log contains only runtime-server startup messages. The editor
+buffer reports six progress-task errors during message-queue flushing; cached
+Hub parse diagnostics did not reproduce in offline checks of the current files.
+No whole-project LSP scan or smoke suite was run.
 
 The whole-project LSP diagnostic tool was advertised by discovery but is not
 callable through this MCP bridge. Per-file checks of GameplayState also produce
@@ -945,5 +957,6 @@ search finds no other direct readers of these legacy widget fields outside the
 build/fallback owners. No game or gameplay tests were run while the shared
 editor restriction is active.
 
-Next: map remaining ScreenStateController legacy bridges and test probes to
-plan an evidence-based retirement sequence.
+Next: map Pause's remaining routing/debug collaborators and ScreenStateController
+field bridges before splitting the high-coupling update path. Keep shared
+Hub/Pause Equipment and debug signal paths explicit.
