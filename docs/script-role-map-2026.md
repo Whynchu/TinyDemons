@@ -15,7 +15,7 @@ map; live resource references rewritten; generated index refreshed.
 Supersedes: nothing. Implements the Stage 1 layout table in
 [`composition-plan-2026.md`](composition-plan-2026.md)
 
-Updated: 2026-10-04 (Stage 3.1 screen composition checkpoint recorded)
+Updated: 2026-10-04 (Stage 3.1 ScreenStateController is at 852 lines)
 
 Baseline: version `0.3.32`, commit `45db00b`
 
@@ -407,11 +407,11 @@ use the same folder roles and are included in the generated script index.
 | `scripts/runtime/controllers/slime_geometry_queries.gd` | `runtime/controllers/` | Owns typed collision, actor-foot, and walkability queries behind the SlimeRuntimeController facade. |
 | `scripts/runtime/controllers/actor_status_runtime_controller.gd` | `runtime/controllers/` | Owns typed status application and actor status ticking behind the CombatRuntimeController facade. |
 | `scripts/runtime/controllers/combat_feedback_presenter.gd` | `runtime/controllers/` | Owns typed combat damage/healing number layout and spawning behind the CombatRuntimeController facade. |
-| `scripts/ui/title_particle_controller.gd` | `ui/` | Owns title particle creation, frame updates, and cleanup behind the ScreenStateController facade. |
-| `scripts/ui/menu_widget_factory.gd` | `ui/` | Builds shared menu buttons, overlays, sprites, frames, and cards behind the ScreenStateController facade. |
-| `scripts/ui/menu_cursor_animator.gd` | `ui/` | Owns menu cursor target motion, idle bob, and tween cleanup behind the ScreenStateController facade. |
+| `scripts/ui/title_particle_controller.gd` | `ui/` | Owns title particle creation, frame updates, and cleanup; screen-flow and gameplay callers use it directly. |
+| `scripts/ui/menu_widget_factory.gd` | `ui/` | Builds shared menu buttons, overlays, sprites, frames, and cards; UI callers use it directly. |
+| `scripts/ui/menu_cursor_animator.gd` | `ui/` | Owns menu cursor target motion, idle bob, and tween cleanup; screen-flow and menu callers use it directly. |
 | `scripts/ui/loading_screen_presenter.gd` | `ui/` | Builds the loading overlay and owns its label/fade visuals behind the ScreenStateController facade. |
-| `scripts/ui/menu_prompt_texture_factory.gd` | `ui/` | Composes, caches, and lays out shared face-button prompt textures and icons behind the ScreenStateController facade. |
+| `scripts/ui/menu_prompt_texture_factory.gd` | `ui/` | Composes, caches, and lays out shared face-button prompt textures and icons; screen and Hub callers use it directly. |
 | `scripts/ui/name_entry_widget_presenter.gd` | `ui/` | Builds and positions the Name Entry widget tree; its references are held by the Name Entry screen owner and exposed through ScreenStateController compatibility properties. |
 | `scripts/ui/name_entry_screen_controller.gd` | `ui/` | Owns Name Entry text, selection, input, visual refresh, callbacks, and pending-slot lifecycle behind ScreenStateController's stable interface. |
 | `scripts/ui/save_select_screen_presenter.gd` | `ui/` | Builds and responsively positions the Save Select view behind ScreenStateController's overlay and footer accessors; save transactions remain in SaveFlowController. |

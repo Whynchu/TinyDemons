@@ -82,7 +82,7 @@ func render_fusion(model: FusionMenuModel) -> void:
 		if node != null: node.visible = false
 	var question := get_node_or_null("SellQuestionText") as Sprite2D
 	if question != null:
-		_set_text(question, "FUSE?", STAT_TEXT_COLOR)
+		_set_text(question, model.message if not model.message.is_empty() else "FUSE?", Color8(255, 105, 105) if model.message.begins_with("NEED ") else STAT_TEXT_COLOR)
 		question.visible = model.state == FUSION_AMOUNT
 	var owned := get_node_or_null("OwnedText") as Sprite2D
 	if owned != null:
@@ -99,6 +99,8 @@ func render_fusion(model: FusionMenuModel) -> void:
 	# performs the transaction through the same action signal.
 	var fusion_action := get_node_or_null("SellConfirmButton") as Button
 	var fusion_action_available := model.state != 0 and not model.rows.is_empty()
+	if model.state == FUSION_AMOUNT:
+		fusion_action_available = model.can_fuse or model.can_salvage
 	_set_button_active(fusion_action, fusion_action_available, fusion_action_available)
 	_last_fusion_model = model
 

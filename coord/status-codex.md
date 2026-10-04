@@ -1037,3 +1037,90 @@ Next: extract a bounded Pause command/debug input owner, keeping the shared Hub 
 Moved Pause command-row navigation and Debug-page input into the typed `PauseMenuInputController`. ScreenStateController retains its public frame-schedule facade, visibility guard, Equipment-page touch scrolling, page transitions, and the shared Hub Equipment transaction. Added smoke assertions for moving to the next enabled command, activating Status through input, and advancing Debug selection. MCP script checks pass for the new input owner, ScreenStateController, and both smoke sources. Strict composition targets/self-test pass at 277 scripts and zero unclassified files; UID validation passes for 432 sidecars; role-map reconciliation is 277/277. ScreenStateController is 3,257 lines. No game or smoke run while the shared editor session is active.
 
 Next: map the remaining Hub UI update and legacy widget cluster boundaries before extracting that high-coupling group.
+
+## Last completed focus: elemental progression separation + Freeze mixture
+
+**Outcome:** Both designs are implemented in source with smoke coverage
+registered as unverified. Definition validation and gameplay smoke execution
+remain open until a supervised standalone Godot slot is available.
+
+## Completed: run-number composition and Freeze mixture
+
+Implemented campaign-run-owned elemental themes/unlocks, renamed encounter
+eligibility to `encounter_min_run_number`, and moved the default matchup lesson
+to campaign progression while preserving difficulty rank for level/density and
+shadow pressure. Added the authored WATER + ICE Freeze mixture, including
+ingredient consumption, innate-status suppression, movement lock, direct-damage
+vulnerability, boss phase resistance, and under-sprite status outlines for
+players, enemies, and NPCs. Wet/Freeze badges are `W`/`F`.
+
+MCP script diagnostics pass for the changed behavior owners and smoke sources.
+The offline GameplayState check reports its known self-reference false positive
+at line 390; the connected editor error buffer is clear. UID, manifest, strict
+composition, and whitespace checks pass. The local definition validator cannot
+run because the configured Godot CLI executable is absent; no gameplay smoke or
+second editor was started. Focused smoke sources remain registered as
+unverified for the next supervised standalone Godot slot.
+
+## Active focus � event hitches and Wet/Chill reaction
+
+Investigating room-entry, pickup, and event slowdowns; fixing the report that Wet suppresses innate Chill before the Freeze mixture can resolve. Avoiding opencode's smoke-runner/Pages files. No runtime/editor started.
+
+
+## Completed focus � event hitches and Wet/Chill reaction
+
+Changed mixture resolution to remember whether an innate ingredient was already suppressed before the incoming hit. This allows Wet + innate Chill (or Chill + innate Wet) to react while preventing later hits from refreshing Freeze for free. Profile persistence from XP now uses the existing deferred queue; room entry no longer requests an unchanged profile save. Active-run checkpoint writes now verify bytes instead of parsing the just-written JSON again. Added room-entry and checkpoint phase scopes for the next controlled capture.
+
+MCP diagnostics pass for the mixture, persistence, room controller, and smoke source. GameplayState offline validation reports its known gdscript:// self-type false positive. After clearing that stale diagnostic buffer, the connected editor started the main game successfully with an empty error buffer. An uncontrolled 78.4-second capture recorded 14.52 ms average frames, 73.02 ms p99, 180 hitches, and profile writes averaging 8.68 ms; it did not exercise room transitions. Controlled before/after captures and the focused mixture smoke remain open; no smoke suite was run.
+
+
+## Active focus � Stage 3.1 Hub construction ownership
+Claimed a bounded Hub construction seam: legacy item, Shop, equipment fallback, and binding controls currently created inside ScreenStateController.build_hub. Will move the legacy item/equipment widget group into a typed builder that populates the existing responsive layout owner, preserving call sites and callbacks. Existing authored-view fallback behavior remains unchanged.
+
+## Completed focus � Stage 3.1 Hub legacy widget construction
+Moved legacy inventory, Shop, equipment-fallback, and Fusion widget construction from ScreenStateController into HubLegacyWidgetBuilder. HubResponsiveLayoutPresenter owns the constructed widget references and shop cursor; a named ScreenStateController callback retains mode-state updates. Controller size is 2,340 lines, down 91 from the 2,431-line checkpoint; helper is 138 lines. Script index and role map refreshed. Focused Godot script diagnostics pass and MCP editor error buffer is empty. Strict composition audit still fails on GameplayState (1,714 vs 1,709 baseline) and RoomController (2,180 vs 2,175 baseline), both outside this slice. UID validator stops on an unresolved resource UID in resources/definitions/element_catalog.tres; this new UI UID was independently checked for format and uniqueness. No gameplay tests run.
+
+Next: continue Stage 3.1 by extracting remaining authored-page and Bind screen setup, then reassess the responsive-layout ownership boundary.
+
+## Completed follow-on � Hub Bind construction
+Moved the legacy Bind panel, its five text labels, and action button into HubLegacyWidgetBuilder. The builder now owns all adjacent legacy Hub fallback widget construction while storing typed references in HubResponsiveLayoutPresenter. Preserved each authored label position, including the wider final message-row gap. Final size: ScreenStateController 2,332 lines, builder 165 lines. Script index regenerated to include the new builder methods; role map and composition plan updated. Focused diagnostics pass for all three changed scripts, the MCP editor error buffer is empty, and git diff --check passes. No gameplay tests run. Next boundary remains authored-page discovery/assembly in build_hub.
+
+## Active focus � Freeze movement lock enforcement
+User reports that frozen enemies display Freeze correctly but keep moving. Trace found that zero speed only affects new SlimeBrain scoots; active scoots, Skeleton's separate walk path, attack lunges, knockback, and actor collision separation bypass it. Fixing the shared movement-lock predicate across those paths while preserving the authored movement-only behavior (attacks remain legal). Avoid opencode's smoke runner and Pages files.
+
+## Active focus � Freeze and Fusion behavior fixes
+Freeze now enforces the movement-only lock across active scoots, Skeleton walking, combat lunge/knockback, and collision separation while leaving attacks usable. Fusion refactor audit found that the new menu discarded the model's affordability state and did not render the failure message. The view now displays the required Soul amount, disables invalid amount confirmation, clears stale feedback as selection/count changes, and reports an inventory race instead of silently rejecting it. The existing next-rank cap remains intentional (for example, a +9 item has one step to +10). MCP runtime is unavailable; use editor script diagnostics and static checks only; do not launch a second editor or smoke runner.
+
+## Completed: Freeze movement and Fusion feedback
+Freeze now enforces a movement-only lock across active scoots, Skeleton walking, attack lunge displacement, knockback, and actor collision separation. Frozen enemies can continue attack timing and hit resolution from their frozen position, as specified by the status design.
+
+Fusion now uses its computed material and affordability state to govern the amount confirmation. The amount view displays the Soul shortfall, stale feedback clears when the selected target/count changes, and stale inventory failures are reported rather than silent. The next-rank batch cap remains intentional: a +9 target can accept one material to reach +10.
+
+All nine affected scripts pass MCP script diagnostics; the editor error buffer is empty and git diff --check passes. No gameplay run or smoke test was performed. The MCP runtime peer is unavailable, and supervised gameplay verification remains open.
+
+## Active focus � Stage 3.1 ScreenStateController to 1,500
+Claimed the ScreenStateController and UI screen-flow documentation surfaces. Current controller is 2,332 lines. Mapping typed ownership boundaries for title/archetype, settings, game-over, and remaining construction/layout code; preserve GameplayState and SaveFlowController facades. No gameplay/test runs. Use connected-editor script diagnostics for each extracted script.
+
+## Completed: Stage 3.1 ScreenStateController 1,500-line checkpoint
+Reduced ScreenStateController from 2,332 to 1,475 lines while preserving its existing public method signatures. Extracted title/archetype/defeat flow, Pause and Settings routes, display and cursor layout, Hub screen setup, and Hub list scrolling into five focused UI owners. All six affected scripts pass MCP script diagnostics; the generated index now covers 287 scripts, and the role map/composition plan record the checkpoint. No gameplay or smoke test was run. The plan's 800-line forward target remains open; further work should start from typed context/compatibility-property review.
+Correction: final EOF cleanup removed one trailing blank line; ScreenStateController is 1,474 lines, 858 fewer than the 2,332-line checkpoint.
+
+## Active focus � Stage 3.1 ScreenStateController to 800
+Continuing from the 1,474-line checkpoint. The remaining target needs a property/caller ownership pass, not more mechanical method extraction. Inspect typed screen owners, move callers off redundant facade accessors where safe, preserve scene/frame APIs only where needed, then verify and commit only this slice. Other worktree changes belong to concurrent or prior tasks and stay out of this commit.
+
+
+## Completed: Stage 3.1 ScreenStateController 1,200-line checkpoint
+Moved screen assembly routes to ScreenAssemblyController, screen presentation references and title/archetype state to typed owners, and display-layout calls to ScreenLayoutController. ScreenStateController is 1,195 lines. Focused MCP diagnostics pass for touched UI scripts; GameplayState still reports compile diagnostics in existing MP desaturation/context call paths. No gameplay or smoke tests ran. Remaining forward target: 800 lines.
+
+## Completed: Stage 3.1 ScreenStateController near 1,000
+Reduced ScreenStateController from 1,195 to 1,050 lines by moving title/archetype and Pause/Settings callers to their existing UI owners and removing redundant name-entry accessors. Kept the shared equipment-state facade used by multiple Hub consumers. The generated script index and composition records are refreshed. MCP script diagnostics pass for changed UI owners and callers; GameplayState retains its known line-390 context diagnostic. No gameplay or smoke tests ran. The 800-line Stage 3.1 target remains open; Stage 3.2 is declarative GameplayBootstrap assembly.
+
+## Active focus - Stage 3.1 ScreenStateController toward 900
+Move remaining shared menu-widget facade calls to the existing widget factory and cursor animator owners, reducing ScreenStateController without changing visual behavior. Keep unrelated worktree changes untouched; use focused MCP diagnostics only, no test suite.
+
+
+## Completed - Stage 3.1 ScreenStateController toward 900
+ScreenStateController is 852 lines. Shared widget, cursor, prompt-texture, and title-particle users now call their responsible owners directly. Dead Hub setup/equipment facades were removed; equipment prompt compaction moved to HubScreenRenderController. Nine changed scripts pass focused MCP checks; GameplayState retains its pre-existing line-390 diagnostic. No gameplay or smoke tests ran. Index and composition records refreshed; the approved 800-line target remains open.
+
+## Active focus - 0.3.36 composition checkpoint
+Reviewing and staging only the ScreenStateController composition slice and matching version/docs; unrelated gameplay/content/MCP changes remain out. Commit and push main as explicitly requested.

@@ -1008,6 +1008,7 @@ func _status_particle_texture(particle_style: StringName, color: Color, pixel_te
 		&"poison_mote": pattern = [".p.", "pPp", ".p."]
 		&"electric_spark": pattern = ["..s.", ".SSs", "SS..", ".s.."]
 		&"frost_crystal": pattern = ["..i..", ".iIi.", "iIiIi", ".iIi.", "..i.."]
+		&"ice_shard": pattern = ["..I..", ".III.", "IIIII", ".III.", "..I.."]
 		_: return null
 	var width := pattern[0].length()
 	var image := Image.create(width, pattern.size(), false, Image.FORMAT_RGBA8)

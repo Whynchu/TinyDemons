@@ -36,6 +36,10 @@ var boss_jump_phase_invulnerable := false
 var boss_jump_phase_stun_resistant := false
 
 
+func movement_lock_is_resisted() -> bool:
+	return boss_jump_phase_stun_resistant
+
+
 func tick(delta: float) -> void:
 	cooldown = maxf(cooldown - delta, 0.0)
 
@@ -97,6 +101,8 @@ func tick_attack(delta: float, actor: Sprite2D, tuning: SlimeTuning, frames: Arr
 	if player_dead:
 		timer = 0.0
 		return false
+	var status := actor.get_node_or_null("Status") as StatusComponent
+	var movement_locked: bool = status != null and status.is_movement_locked()
 	var is_boss := float(actor.get_meta("encounter_scale", 1.0)) > 1.0
 	var frame_time := tuning.attack_frame_time * (tuning.boss_attack_frame_time_multiplier if is_boss else 1.0)
 	frame_time *= float(actor.get_meta("attack_speed_multiplier", 1.0))
@@ -126,7 +132,8 @@ func tick_attack(delta: float, actor: Sprite2D, tuning: SlimeTuning, frames: Arr
 			var progress_delta := lunge_progress - lunge_applied_progress
 			if progress_delta > 0.0:
 				lunge_applied_progress = lunge_progress
-				apply_lunge.call(actor, progress_delta)
+				if not movement_locked:
+					apply_lunge.call(actor, progress_delta)
 		# Physics ticks can cross an authored animation frame when frame time is
 		# low or delta spikes. Resolve the hit on the first tick at or beyond it
 		# so ranged attacks cannot silently lose their projectile launch.
@@ -148,6 +155,12 @@ func tick_attack(delta: float, actor: Sprite2D, tuning: SlimeTuning, frames: Arr
 func tick_knockback(delta: float, actor: Sprite2D, move_actor: Callable, reset_scoot: Callable) -> bool:
 	if knockback_timer <= 0.0:
 		return false
+	var status := actor.get_node_or_null("Status") as StatusComponent
+	if status != null and status.is_movement_locked():
+		knockback_timer = 0.0
+		knockback_velocity = Vector2.ZERO
+		reset_scoot.call(actor)
+		return true
 	var step_time := minf(delta, knockback_timer)
 	knockback_timer = maxf(knockback_timer - delta, 0.0)
 	var did_move := bool(move_actor.call(actor, knockback_velocity * step_time))

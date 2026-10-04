@@ -127,7 +127,7 @@ growth_weights = {
 visual_source = "yellow"
 encounter_role = &"late"
 encounter_weight = 1.0
-encounter_min_rank = 5
+encounter_min_run_number = 5
 preferred_weight = 0.75
 allow_preferred = true
 collision_polygon = PackedVector2Array(3, 7, 13, 7, 13, 10, 12, 10, 12, 11, 11, 11, 11, 12, 5, 12, 5, 11, 4, 11, 4, 10, 3, 10)
@@ -186,7 +186,7 @@ growth_weights = {
 visual_source = "purple"
 encounter_role = &"shadow"
 encounter_weight = 0.12
-encounter_min_rank = 5
+encounter_min_run_number = 5
 collision_polygon = PackedVector2Array(3, 7, 13, 7, 13, 10, 12, 10, 12, 11, 11, 11, 11, 12, 5, 12, 5, 11, 4, 11, 4, 10, 3, 10)
 body_hitbox_polygon = PackedVector2Array(5, 3, 11, 3, 13, 5, 14, 8, 14, 11, 12, 13, 10, 14, 6, 14, 4, 13, 2, 11, 2, 8, 3, 5)
 
@@ -215,7 +215,7 @@ growth_weights = {
 visual_source = "orange"
 encounter_role = &"late"
 encounter_weight = 1.0
-encounter_min_rank = 5
+encounter_min_run_number = 5
 collision_polygon = PackedVector2Array(3, 7, 13, 7, 13, 10, 12, 10, 12, 11, 11, 11, 11, 12, 5, 12, 5, 11, 4, 11, 4, 10, 3, 10)
 body_hitbox_polygon = PackedVector2Array(5, 3, 11, 3, 13, 5, 14, 8, 14, 11, 12, 13, 10, 14, 6, 14, 4, 13, 2, 11, 2, 8, 3, 5)
 
@@ -244,7 +244,7 @@ growth_weights = {
 visual_source = "aquamarine"
 encounter_role = &"late"
 encounter_weight = 1.0
-encounter_min_rank = 5
+encounter_min_run_number = 5
 collision_polygon = PackedVector2Array(3, 7, 13, 7, 13, 10, 12, 10, 12, 11, 11, 11, 11, 12, 5, 12, 5, 11, 4, 11, 4, 10, 3, 10)
 body_hitbox_polygon = PackedVector2Array(5, 3, 11, 3, 13, 5, 14, 8, 14, 11, 12, 13, 10, 14, 6, 14, 4, 13, 2, 11, 2, 8, 3, 5)
 
@@ -273,7 +273,7 @@ growth_weights = {
 visual_source = "red"
 encounter_role = &"late"
 encounter_weight = 0.6
-encounter_min_rank = 5
+encounter_min_run_number = 5
 collision_polygon = PackedVector2Array(3, 7, 13, 7, 13, 10, 12, 10, 12, 11, 11, 11, 11, 12, 5, 12, 5, 11, 4, 11, 4, 10, 3, 10)
 body_hitbox_polygon = PackedVector2Array(5, 3, 11, 3, 13, 5, 14, 8, 14, 11, 12, 13, 10, 14, 6, 14, 4, 13, 2, 11, 2, 8, 3, 5)
 
@@ -300,7 +300,7 @@ growth_weights = {
 visual_source = "grey"
 encounter_role = &"late"
 encounter_weight = 0.5
-encounter_min_rank = 3
+encounter_min_run_number = 3
 collision_polygon = PackedVector2Array(3, 7, 13, 7, 13, 10, 12, 10, 12, 11, 11, 11, 11, 12, 5, 12, 5, 11, 4, 11, 4, 10, 3, 10)
 body_hitbox_polygon = PackedVector2Array(5, 3, 11, 3, 13, 5, 14, 8, 14, 11, 12, 13, 10, 14, 6, 14, 4, 13, 2, 11, 2, 8, 3, 5)
 

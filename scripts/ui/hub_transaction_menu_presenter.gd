@@ -67,16 +67,20 @@ func build_fusion_model(context: HubTransactionMenuContextScript) -> FusionMenuM
 		var item := context.fusion_candidates[item_index]
 		model.rows.append({"label": fusion_item_label(context.catalog, context.profile, item), "slot": str(context.catalog.definition_slot(item.definition_id)), "color": context.catalog.rarity_color(item.rarity), "soul_cost": context.profile.fusion_batch_cost(item, 1), "equipped": context.profile.equipped_instance_ids.values().has(item.instance_id), "stat_total": context.catalog.stat_allocation_total(item)})
 	model.selected_row = clampi(context.selected_index - window_start, 0, model.rows.size() - 1) if not model.rows.is_empty() else -1
+	var selected: ItemInstance = null
+	var material_count := int(context.fusion_details.get("material_count", 0))
 	if not context.fusion_candidates.is_empty():
-		var selected := context.fusion_candidates[clampi(context.selected_index, 0, context.fusion_candidates.size() - 1)]
+		selected = context.fusion_candidates[clampi(context.selected_index, 0, context.fusion_candidates.size() - 1)]
 		model.owned_count = int(context.fusion_details.get("owned_count", 0))
-		model.fusion_count_max = maxi(int(context.fusion_details.get("material_count", 0)), 1)
+		model.fusion_count_max = maxi(material_count, 1)
 		model.fusion_count = clampi(context.fusion_count, 1, model.fusion_count_max)
-		model.soul_cost = context.profile.fusion_batch_cost(selected, model.fusion_count) if model.owned_count > 0 else context.profile.fusion_batch_cost(selected, 1)
-		model.can_fuse = model.owned_count > 0 and context.profile.souls >= model.soul_cost
+		model.soul_cost = context.profile.fusion_batch_cost(selected, model.fusion_count) if material_count > 0 else 0
+		model.can_fuse = selected != null and material_count > 0 and context.profile.souls >= model.soul_cost
 		model.can_salvage = bool(context.fusion_details.get("can_salvage", false))
 		model.stat_comparison = shop_stat_comparison(context.profile, context.catalog, selected)
 	model.message = context.fusion_message
+	if model.message.is_empty() and model.state == 2 and material_count > 0 and not model.can_fuse:
+		model.message = "NEED %dS" % model.soul_cost
 	return model
 
 func shop_stat_comparison(profile: PlayerProfile, catalog: ItemCatalog, item: ItemInstance) -> Array[Dictionary]:

@@ -12,4 +12,4 @@ shadow_bound_variant_weight = 0.8
 three_element_theme_chance = 0.2
 synergy_pair_weight_bonus = 3.0
 synergy_element_pairs = Array[Vector2i]([Vector2i(2, 3)])
-matchup_policy = "rank_default"
+matchup_policy = "run_default"

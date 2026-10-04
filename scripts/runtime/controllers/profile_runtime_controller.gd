@@ -95,7 +95,9 @@ func sync_runtime_progression_to_profile(root: Object) -> void:
 		root.player_profile.allocated_agi = int(allocation.get("AGI", allocation.get("SPD", 0)))
 		root.player_profile.allocated_int = int(allocation.get("INT", 0))
 		root.player_profile.allocated_mnd = int(allocation.get("MND", 0))
-	root.call("_save_player_profile")
+	# Combat XP is awarded on the enemy-death path. Queue the durable write so
+	# serializing the full profile cannot stall the kill, its drops, and effects.
+	ProfileSaveService.request_save(root.player_profile)
 
 
 func respec_player_stats(root: Object) -> int:

@@ -32,7 +32,7 @@ const STATUS_EFFECT_DEFINITION_SCRIPT = preload("res://scripts/content/status_ef
 ## not require a RoomController branch or a parallel allowlist.
 @export var encounter_role: StringName = &"matchup"
 @export var encounter_weight := 0.0
-@export var encounter_min_rank := 1
+@export var encounter_min_run_number := 1
 @export var matchup_weight := 0.0
 @export var preferred_weight := 0.0
 @export var allow_preferred := false
@@ -88,8 +88,8 @@ func validate() -> Array[String]:
 		problems.append("visual_source '%s' must match a palette ID" % visual_source)
 	if encounter_weight < 0.0:
 		problems.append("encounter_weight must be non-negative")
-	if encounter_min_rank < 1:
-		problems.append("encounter_min_rank must be >= 1")
+	if encounter_min_run_number < 1:
+		problems.append("encounter_min_run_number must be >= 1")
 	if matchup_weight < 0.0:
 		problems.append("matchup_weight must be non-negative")
 	if preferred_weight < 0.0:
@@ -104,7 +104,7 @@ func validate() -> Array[String]:
 		problems.append("support_caster variants must use the support encounter role")
 	var seen_status_immunities: Dictionary = {}
 	for status_id in status_immunities:
-		if not STATUS_EFFECT_DEFINITION_SCRIPT.STATUS_IDS.has(status_id):
+		if not STATUS_EFFECT_DEFINITION_SCRIPT.STATUS_IDS.has(status_id) and not STATUS_EFFECT_DEFINITION_SCRIPT.AUXILIARY_STATUS_IDS.has(status_id):
 			problems.append("unknown status immunity '%s'" % String(status_id))
 		if seen_status_immunities.has(status_id):
 			problems.append("duplicate status immunity '%s'" % String(status_id))
@@ -188,7 +188,7 @@ func to_record() -> Dictionary:
 		"visual_source": visual_source,
 		"encounter_role": encounter_role,
 		"encounter_weight": encounter_weight,
-		"encounter_min_rank": encounter_min_rank,
+		"encounter_min_run_number": encounter_min_run_number,
 		"matchup_weight": matchup_weight,
 		"preferred_weight": preferred_weight,
 		"allow_preferred": allow_preferred,

@@ -8,10 +8,10 @@ replaces the saturated legacy-coupling scorecard
 
 Owner: repository architecture and gameplay systems
 
-Current code: 279 scripts distributed across the declared role folders,
+Current code: 288 scripts distributed across the declared role folders,
 `tools/validate_composition.ps1`, `tools/composition-baseline.json`,
 `scripts/runtime/controllers/gameplay_bootstrap.gd`,
-`scripts/ui/screen_state_controller.gd` (2,431 lines),
+`scripts/ui/screen_state_controller.gd` (852 lines),
 `scripts/runtime/controllers/room_controller.gd`,
 `scripts/runtime/controllers/hub_flow_controller.gd`,
 `scripts/runtime/state/gameplay_state.gd`, and the `*Component` classes
@@ -1312,8 +1312,28 @@ script diagnostics pass for the touched UI owners and callers. The 800-line
 forward target remains open; Hub compatibility properties remain for dynamic
 consumers. No gameplay or smoke suite was run.
 
-Next: review authored-page discovery in `build_hub` and continue reducing Hub
-compatibility seams where callers can move to typed owners.
+**Implementation record (2026-10-04):** Continued Stage 3.1 toward the requested
+1,000-line checkpoint. ScreenStateController is now 1,050 lines, down 145 from
+the previous checkpoint. Title/archetype and Pause/Settings routing calls now
+go directly through their existing UI owners; redundant name-entry accessors
+were removed and SaveFlowController reads the name-entry owner directly. The
+index and role map were refreshed. Focused MCP diagnostics pass for the changed
+UI owners and callers; GameplayState retains its pre-existing line-390 context
+diagnostic. No gameplay or smoke tests were run. The plan's 800-line target
+remains open.
+
+**Implementation record (2026-10-04):** Continued Stage 3.1 toward 900 lines.
+ScreenStateController is now 852 lines. Shared menu-widget, cursor, prompt
+texture, and title-particle callers use their responsible owners directly;
+dead Hub setup and equipment forwarding methods were removed, and equipment
+prompt compaction moved to HubScreenRenderController. Ten touched scripts pass
+focused MCP checks except GameplayState, which retains its existing line-390
+context diagnostic. No gameplay or smoke tests were run. The approved 800-line
+target remains open.
+
+Next: continue Stage 3.1 toward the 800-line target only where a remaining
+responsibility has a clear owner. Then proceed to Stage 3.2's declarative
+GameplayBootstrap assembly.
 
 ### 3.2 `gameplay_bootstrap.gd` — declarative assembly
 

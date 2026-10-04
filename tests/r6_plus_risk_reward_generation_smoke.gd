@@ -6,6 +6,7 @@ const GRAPH = preload("res://scripts/algorithms/dungeon_graph.gd")
 const ROOM_CONTROLLER = preload("res://scripts/runtime/controllers/room_controller.gd")
 const GRID = preload("res://scripts/algorithms/puzzle_map_grid.gd")
 const ELEMENTS = preload("res://scripts/content/element_catalog.gd")
+const ENCOUNTERS = preload("res://scripts/content/encounter_definition.gd")
 
 
 func _initialize() -> void:
@@ -70,6 +71,8 @@ func _assert_risk_reward_layout(dungeon_seed: int, completed_runs: int, starter:
 	graph.initialize_from_layout(dungeon_seed, layout)
 	var rooms := ROOM_CONTROLLER.new()
 	rooms.progression_run_rank = completed_runs + 1
+	rooms.progression_run_number = completed_runs + 1
+	rooms.set_run_element_theme(ENCOUNTERS.select_run_element_theme(dungeon_seed, completed_runs + 1))
 	for room_id in graph.get_room_ids():
 		var room := graph.get_room(room_id)
 		var state: Dictionary = rooms.ensure_layout(graph, room_id, room, room.room_type, room.depth)

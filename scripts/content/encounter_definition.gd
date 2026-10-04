@@ -1,7 +1,7 @@
 extends Resource
 class_name EncounterDefinition
 
-## Encounter composition contract (Slice C, T2). Captures the rank-gated enemy
+## Encounter composition contract (Slice C, T2). Captures the run-gated enemy
 ## variant pool and matchup policy as editor-inspectable data, replacing the
 ## hardcoded rank constants that used to live in room_controller. RoomRuntime
 ## owns the mutable runtime state (claims, active actors, locks); this definition
@@ -16,7 +16,7 @@ static func default_data() -> EncounterDefinition:
 	return load(DEFAULT_DATA_PATH) as EncounterDefinition
 
 
-const POLICY_RANK_DEFAULT := "rank_default"
+const POLICY_RUN_DEFAULT := "run_default"
 const POLICY_BASE_ADVANTAGE := "base_advantage"
 const POLICY_BASE_COUNTER := "base_counter"
 const POLICY_FLAME_MIXED := "flame_mixed"
@@ -34,9 +34,9 @@ const POLICY_SHADOW_BOUND := "shadow_bound"
 @export_range(0.0, 10.0, 0.1) var synergy_pair_weight_bonus := 3.0
 @export var synergy_element_pairs: Array[Vector2i] = [Vector2i(2, 3)]
 ## Matchup policy selects how authored primary/secondary families weight in.
-@export var matchup_policy := POLICY_RANK_DEFAULT
+@export var matchup_policy := POLICY_RUN_DEFAULT
 
-var allowed_policies: Array[String] = [POLICY_RANK_DEFAULT, POLICY_BASE_ADVANTAGE, POLICY_BASE_COUNTER, POLICY_FLAME_MIXED, POLICY_SHADOW_BOUND]
+var allowed_policies: Array[String] = [POLICY_RUN_DEFAULT, POLICY_BASE_ADVANTAGE, POLICY_BASE_COUNTER, POLICY_FLAME_MIXED, POLICY_SHADOW_BOUND]
 
 
 ## Validates the definition: non-negative weights, ordered rank gates, and a
@@ -61,11 +61,11 @@ func validate() -> Array[String]:
 	return problems
 
 
-static func available_run_elements_for_rank(run_rank: int) -> Array[int]:
+static func available_run_elements_for_number(run_number: int) -> Array[int]:
 	var elements: Array[int] = []
 	for variant_id in EnemyFactory.variants_for_type(&"slime", &"support"):
 		var definition := EnemyFactory.definition(variant_id)
-		if definition == null or definition.element <= ElementCatalog.Element.NEUTRAL or definition.encounter_min_rank > maxi(run_rank, 1):
+		if definition == null or definition.element <= ElementCatalog.Element.NEUTRAL or definition.encounter_min_run_number > maxi(run_number, 1):
 			continue
 		if definition.matchup_weight <= 0.0 and definition.encounter_weight <= 0.0 and definition.preferred_weight <= 0.0:
 			continue
@@ -75,16 +75,16 @@ static func available_run_elements_for_rank(run_rank: int) -> Array[int]:
 	return elements
 
 
-static func select_run_element_theme(seed: int, run_rank: int) -> Array[int]:
-	var rank := maxi(run_rank, 1)
-	if rank <= 1:
+static func select_run_element_theme(seed: int, run_number: int) -> Array[int]:
+	var theme_run := maxi(run_number, 1)
+	if theme_run <= 1:
 		return []
-	var available := available_run_elements_for_rank(rank)
+	var available := available_run_elements_for_number(theme_run)
 	if available.is_empty():
 		return []
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed ^ 0x454C5448
-	var target_count := 1 if rank == 2 else (3 if rng.randf() < default_data().three_element_theme_chance else 2)
+	var target_count := 1 if theme_run == 2 else (3 if rng.randf() < default_data().three_element_theme_chance else 2)
 	target_count = mini(target_count, available.size())
 	if target_count == 1:
 		return [available[rng.randi_range(0, available.size() - 1)]]
@@ -135,11 +135,11 @@ static func _pair_is_synergistic(pairs: Array[Vector2i], first: int, second: int
 	return false
 
 
-static func filter_variants_for_theme(variants: Array[StringName], theme: Array[int], run_rank: int, allow_shadow: bool = true, include_supports: bool = true) -> Array[StringName]:
+static func filter_variants_for_theme(variants: Array[StringName], theme: Array[int], run_number: int, allow_shadow: bool = true, include_supports: bool = true) -> Array[StringName]:
 	var result: Array[StringName] = []
 	for variant_id in variants:
 		var definition := EnemyFactory.definition(variant_id)
-		if definition == null or definition.encounter_min_rank > maxi(run_rank, 1):
+		if definition == null or definition.encounter_min_run_number > maxi(run_number, 1):
 			continue
 		if definition.element != ElementCatalog.Element.NEUTRAL and not theme.has(definition.element):
 			continue
@@ -151,12 +151,12 @@ static func filter_variants_for_theme(variants: Array[StringName], theme: Array[
 	return result
 
 
-static func filter_weighted_pool_for_theme(entries: Array[Dictionary], theme: Array[int], run_rank: int, allow_shadow: bool = true, include_supports: bool = true) -> Array[Dictionary]:
+static func filter_weighted_pool_for_theme(entries: Array[Dictionary], theme: Array[int], run_number: int, allow_shadow: bool = true, include_supports: bool = true) -> Array[Dictionary]:
 	var filtered: Array[Dictionary] = []
 	for entry in entries:
 		var variant_id := StringName(str(entry.get("variant", "")))
 		var definition := EnemyFactory.definition(variant_id)
-		if definition == null or definition.encounter_min_rank > maxi(run_rank, 1):
+		if definition == null or definition.encounter_min_run_number > maxi(run_number, 1):
 			continue
 		if definition.element != ElementCatalog.Element.NEUTRAL and not theme.has(definition.element):
 			continue
@@ -168,14 +168,14 @@ static func filter_weighted_pool_for_theme(entries: Array[Dictionary], theme: Ar
 	return filtered
 
 
-static func extend_pool_with_theme_variants(entries: Array[Dictionary], theme: Array[int], run_rank: int, allow_shadow: bool = true) -> void:
+static func extend_pool_with_theme_variants(entries: Array[Dictionary], theme: Array[int], run_number: int, allow_shadow: bool = true) -> void:
 	var included: Dictionary = {}
 	for entry in entries:
 		included[StringName(str(entry.get("variant", "")))] = true
 	for type_id in [&"slime"]:
 		for variant_id in EnemyFactory.variants_for_type(type_id, &"support"):
 			var definition := EnemyFactory.definition(variant_id)
-			if definition == null or definition.element == ElementCatalog.Element.NEUTRAL or not theme.has(definition.element) or definition.encounter_min_rank > maxi(run_rank, 1):
+			if definition == null or definition.element == ElementCatalog.Element.NEUTRAL or not theme.has(definition.element) or definition.encounter_min_run_number > maxi(run_number, 1):
 				continue
 			if not allow_shadow and definition.element == ElementCatalog.Element.SHADOW:
 				continue
@@ -196,24 +196,24 @@ static func prepare_variant_pools_for_theme(
 	variant_pool: Array[Dictionary],
 	skeleton_variant_pool: Array[Dictionary],
 	theme: Array[int],
-	run_rank: int,
+	run_number: int,
 	allow_shadow: bool,
 	force_debug_enemy: bool
 ) -> void:
 	if not skeleton_variant_pool.is_empty():
-		var filtered_skeletons := filter_weighted_pool_for_theme(skeleton_variant_pool, theme, run_rank, allow_shadow, false)
+		var filtered_skeletons := filter_weighted_pool_for_theme(skeleton_variant_pool, theme, run_number, allow_shadow, false)
 		skeleton_variant_pool.clear()
 		skeleton_variant_pool.append_array(filtered_skeletons)
-	extend_pool_with_theme_variants(variant_pool, theme, run_rank, allow_shadow)
+	extend_pool_with_theme_variants(variant_pool, theme, run_number, allow_shadow)
 	if not force_debug_enemy:
-		var filtered_variants := filter_weighted_pool_for_theme(variant_pool, theme, run_rank, allow_shadow, false)
+		var filtered_variants := filter_weighted_pool_for_theme(variant_pool, theme, run_number, allow_shadow, false)
 		variant_pool.clear()
 		variant_pool.append_array(filtered_variants)
 	if not skeleton_variant_pool.is_empty():
 		balance_enemy_family_weights(variant_pool, skeleton_variant_pool)
 
 
-static func constrain_roster_to_theme(variants: Array[String], theme: Array[int], run_rank: int, seed: int) -> Dictionary:
+static func constrain_roster_to_theme(variants: Array[String], theme: Array[int], run_number: int, seed: int) -> Dictionary:
 	var constrained := variants.duplicate()
 	var remaps: Array[String] = []
 	var lost_shadow_indices: Array[int] = []
@@ -224,17 +224,17 @@ static func constrain_roster_to_theme(variants: Array[String], theme: Array[int]
 			errors.append("unknown enemy variant '%s' at slot %d" % [String(old_id), slot])
 			continue
 		var old_definition := EnemyFactory.definition(old_id)
-		if _definition_allowed_by_theme(old_definition, theme, run_rank):
+		if _definition_allowed_by_theme(old_definition, theme, run_number):
 			continue
-		var replacement_candidates := _replacement_candidates(old_definition, theme, run_rank, true)
+		var replacement_candidates := _replacement_candidates(old_definition, theme, run_number, true)
 		if replacement_candidates.is_empty():
-			replacement_candidates = _replacement_candidates(old_definition, theme, run_rank, false)
+			replacement_candidates = _replacement_candidates(old_definition, theme, run_number, false)
 		if replacement_candidates.is_empty():
-			replacement_candidates = _replacement_candidates(old_definition, theme, run_rank, true, false)
+			replacement_candidates = _replacement_candidates(old_definition, theme, run_number, true, false)
 		if replacement_candidates.is_empty():
-			replacement_candidates = _replacement_candidates(old_definition, theme, run_rank, false, false)
+			replacement_candidates = _replacement_candidates(old_definition, theme, run_number, false, false)
 		if replacement_candidates.is_empty():
-			replacement_candidates = _replacement_candidates(old_definition, theme, run_rank, false, false, false)
+			replacement_candidates = _replacement_candidates(old_definition, theme, run_number, false, false, false)
 		if replacement_candidates.is_empty():
 			errors.append("no same-family %s replacement for '%s' inside theme %s" % ["elemental" if old_definition.element != 0 else "Normal", String(old_id), str(theme)])
 			continue
@@ -255,7 +255,7 @@ static func constrain_cached_room_theme(
 	room_id: StringName,
 	state: Dictionary,
 	theme: Array[int],
-	run_rank: int,
+	run_number: int,
 	seed: int,
 	debug_bypass: bool = false
 ) -> void:
@@ -264,7 +264,7 @@ static func constrain_cached_room_theme(
 	var variants: Array[String] = []
 	for value in state.get("enemy_variants", []) as Array:
 		variants.append(str(value))
-	var constrained := constrain_roster_to_theme(variants, theme, run_rank, seed)
+	var constrained := constrain_roster_to_theme(variants, theme, run_number, seed)
 	for problem in constrained.errors:
 		push_error("Room '%s' elemental theme: %s" % [String(room_id), str(problem)])
 	if constrained.errors.is_empty() and not constrained.remaps.is_empty():
@@ -276,7 +276,7 @@ static func constrain_cached_room_theme(
 				ambush[slot] = false
 		state["enemy_ambush"] = ambush
 	room_states[room_id] = state
-	for problem in validate_roster_theme(state.get("enemy_variants", []) as Array, theme, run_rank):
+	for problem in validate_roster_theme(state.get("enemy_variants", []) as Array, theme, run_number):
 		push_error("Room '%s' elemental theme invariant: %s" % [String(room_id), problem])
 	for problem in validate_run_rosters(room_states, theme):
 		push_error("Run elemental theme invariant: %s" % problem)
@@ -286,11 +286,11 @@ static func constrain_generated_roster(
 	variants: Array[String],
 	ambush_flags: Array[bool],
 	theme: Array[int],
-	run_rank: int,
+	run_number: int,
 	seed: int,
 	label: String
 ) -> void:
-	var constrained := constrain_roster_to_theme(variants, theme, run_rank, seed)
+	var constrained := constrain_roster_to_theme(variants, theme, run_number, seed)
 	if not constrained.remaps.is_empty():
 		push_warning("%s seed %d remapped %d enemy slots into run theme %s." % [label, seed, constrained.remaps.size(), str(theme)])
 	for problem in constrained.errors:
@@ -300,19 +300,19 @@ static func constrain_generated_roster(
 			ambush_flags[slot] = false
 	for index in constrained.variants.size():
 		variants[index] = constrained.variants[index]
-	for problem in validate_roster_theme(variants, theme, run_rank):
+	for problem in validate_roster_theme(variants, theme, run_number):
 		push_error("%s seed %d elemental theme invariant: %s" % [label, seed, problem])
 
 
-static func select_boss_variant(candidate: StringName, theme: Array[int], run_rank: int, seed: int, rng: RandomNumberGenerator) -> Dictionary:
-	if run_rank <= 1 and candidate == &"purple":
+static func select_boss_variant(candidate: StringName, theme: Array[int], run_number: int, seed: int, rng: RandomNumberGenerator) -> Dictionary:
+	if run_number <= 1 and candidate == &"purple":
 		candidate = &"grey"
 	var definition := SLIME_VARIANT_CATALOG_SCRIPT.definition_resource(candidate)
 	var has_explicit_variant := definition != null and definition.type_id == &"slime"
 	if has_explicit_variant:
 		if definition.element != ElementCatalog.Element.NEUTRAL and not theme.has(definition.element):
 			push_warning("Authored boss variant '%s' conflicts with run theme %s; a same-family elemental replacement will be used." % [String(candidate), str(theme)])
-			var constrained := constrain_roster_to_theme([String(candidate)], theme, run_rank, seed)
+			var constrained := constrain_roster_to_theme([String(candidate)], theme, run_number, seed)
 			if not constrained.errors.is_empty():
 				for problem in constrained.errors:
 					push_error("Authored boss elemental theme: %s" % str(problem))
@@ -320,17 +320,17 @@ static func select_boss_variant(candidate: StringName, theme: Array[int], run_ra
 				candidate = StringName(constrained.variants[0])
 		return {"variant": candidate, "has_explicit_variant": true}
 	var roster := EnemyFactory.variants_for_type(&"slime", &"support")
-	if run_rank <= 1:
+	if run_number <= 1:
 		roster.erase(&"purple")
-	roster = filter_variants_for_theme(roster, theme, run_rank, true, false)
+	roster = filter_variants_for_theme(roster, theme, run_number, true, false)
 	if roster.is_empty():
-		push_error("No legal themed slime boss exists for run theme %s at rank %d." % [str(theme), run_rank])
+		push_error("No legal themed slime boss exists for run theme %s at run %d." % [str(theme), run_number])
 		return {"variant": &"", "has_explicit_variant": false}
 	return {"variant": roster[rng.randi_range(0, roster.size() - 1)], "has_explicit_variant": false}
 
 
-static func _definition_allowed_by_theme(definition: EnemyDefinition, theme: Array[int], run_rank: int) -> bool:
-	if definition == null or definition.encounter_min_rank > maxi(run_rank, 1):
+static func _definition_allowed_by_theme(definition: EnemyDefinition, theme: Array[int], run_number: int) -> bool:
+	if definition == null or definition.encounter_min_run_number > maxi(run_number, 1):
 		return false
 	return definition.element == ElementCatalog.Element.NEUTRAL or theme.has(definition.element)
 
@@ -338,7 +338,7 @@ static func _definition_allowed_by_theme(definition: EnemyDefinition, theme: Arr
 static func _replacement_candidates(
 	source: EnemyDefinition,
 	theme: Array[int],
-	run_rank: int,
+	run_number: int,
 	require_same_role: bool,
 	preserve_elemental_kind: bool = true,
 	preserve_support_class: bool = true
@@ -349,7 +349,7 @@ static func _replacement_candidates(
 	var source_is_elemental := source.element != ElementCatalog.Element.NEUTRAL
 	for variant_id in EnemyFactory.variants_for_type(source.type_id):
 		var candidate := EnemyFactory.definition(variant_id)
-		if candidate == null or not _definition_allowed_by_theme(candidate, theme, run_rank):
+		if candidate == null or not _definition_allowed_by_theme(candidate, theme, run_number):
 			continue
 		if preserve_elemental_kind and ((candidate.element != ElementCatalog.Element.NEUTRAL) != source_is_elemental):
 			continue
@@ -361,7 +361,7 @@ static func _replacement_candidates(
 	return matches
 
 
-static func validate_roster_theme(variants: Array, theme: Array[int], run_rank: int = 99) -> Array[String]:
+static func validate_roster_theme(variants: Array, theme: Array[int], _run_number: int = 99) -> Array[String]:
 	var problems: Array[String] = []
 	var non_normal_elements: Dictionary = {}
 	for value in variants:
@@ -399,7 +399,7 @@ static func validate_run_rosters(room_states: Dictionary, theme: Array[int]) -> 
 	return problems
 
 
-static func legacy_theme_for_rosters(room_states: Dictionary, seed: int, run_rank: int) -> Array[int]:
+static func legacy_theme_for_rosters(room_states: Dictionary, seed: int, run_number: int) -> Array[int]:
 	var counts: Dictionary = {}
 	for state_value in room_states.values():
 		if not state_value is Dictionary:
@@ -422,12 +422,12 @@ static func legacy_theme_for_rosters(room_states: Dictionary, seed: int, run_ran
 	if elements.size() > 3:
 		elements.resize(3)
 	if elements.is_empty():
-		return select_run_element_theme(seed, run_rank)
+		return select_run_element_theme(seed, run_number)
 	elements.sort()
 	return elements
 
 
-static func migrate_cached_rosters(room_states: Dictionary, theme: Array[int], run_rank: int, seed: int) -> Dictionary:
+static func migrate_cached_rosters(room_states: Dictionary, theme: Array[int], run_number: int, seed: int) -> Dictionary:
 	var migrated := room_states.duplicate(true)
 	var remaps: Array[String] = []
 	var errors: Array[String] = []
@@ -438,7 +438,7 @@ static func migrate_cached_rosters(room_states: Dictionary, theme: Array[int], r
 		var variants: Array[String] = []
 		for value in state.get("enemy_variants", []) as Array:
 			variants.append(str(value))
-		var result := constrain_roster_to_theme(variants, theme, run_rank, seed ^ str(room_id).hash())
+		var result := constrain_roster_to_theme(variants, theme, run_number, seed ^ str(room_id).hash())
 		for message in result.errors:
 			errors.append("room '%s': %s" % [str(room_id), str(message)])
 		for mapping in result.remaps:
@@ -450,7 +450,7 @@ static func migrate_cached_rosters(room_states: Dictionary, theme: Array[int], r
 				if slot < ambush.size():
 					ambush[slot] = false
 			state["enemy_ambush"] = ambush
-		for problem in validate_roster_theme(result.variants, theme, run_rank):
+		for problem in validate_roster_theme(result.variants, theme, run_number):
 			errors.append("room '%s': %s" % [str(room_id), problem])
 		migrated[room_id] = state
 	for problem in validate_run_rosters(migrated, theme):
@@ -459,13 +459,13 @@ static func migrate_cached_rosters(room_states: Dictionary, theme: Array[int], r
 
 
 ## Late-run weighted entries that enter once the run rank passes their gate.
-func late_pool_entries(run_rank: int) -> Array[Dictionary]:
+func late_pool_entries(run_number: int) -> Array[Dictionary]:
 	var entries: Array[Dictionary] = []
 	for variant in SLIME_VARIANT_CATALOG_SCRIPT.variants():
 		var definition := SLIME_VARIANT_CATALOG_SCRIPT.definition_resource(variant)
 		if definition == null or definition.encounter_role != &"late":
 			continue
-		if run_rank >= definition.encounter_min_rank and definition.encounter_weight > 0.0:
+		if run_number >= definition.encounter_min_run_number and definition.encounter_weight > 0.0:
 			entries.append({"variant": String(definition.variant_id), "weight": definition.encounter_weight})
 	return entries
 
@@ -499,11 +499,11 @@ static func balance_enemy_family_weights(slime_pool: Array[Dictionary], skeleton
 		slime_pool.append(balanced_entry)
 
 
-static func boss_support_variant_pool(include_skeletons: bool, theme: Array[int] = [], run_rank: int = 99) -> Array[Dictionary]:
+static func boss_support_variant_pool(include_skeletons: bool, theme: Array[int] = [], run_number: int = 99) -> Array[Dictionary]:
 	var support_pool := EnemyFactory.weighted_variants_for_type(&"slime")
 	if include_skeletons:
 		balance_enemy_family_weights(support_pool, EnemyFactory.weighted_variants_for_type(&"skeleton"))
-	return filter_weighted_pool_for_theme(support_pool, theme, run_rank)
+	return filter_weighted_pool_for_theme(support_pool, theme, run_number)
 
 
 static func ensure_room_popcorn_slot(
@@ -546,6 +546,7 @@ func finalize_room_encounter(
 	encounter_rng: RandomNumberGenerator,
 	room_policy: RoomDefinition,
 	run_rank: int,
+	run_number: int,
 	base_level: int,
 	level_spread: int,
 	encounter_tier: StringName,
@@ -565,10 +566,10 @@ func finalize_room_encounter(
 				elite_flags[index] = false
 	append_support_companions(
 		force_debug_enemy, variants, levels, popcorn_flags, popcorn_types,
-		ambush_flags, elite_flags, encounter_rng, room_policy, run_rank,
+		ambush_flags, elite_flags, encounter_rng, room_policy, run_rank, run_number,
 		base_level, level_spread, encounter_tier, enemy_level_cap, run_theme)
 	if not force_debug_enemy:
-		constrain_generated_roster(variants, ambush_flags, run_theme, run_rank, generation_seed, "Generated room")
+		constrain_generated_roster(variants, ambush_flags, run_theme, run_number, generation_seed, "Generated room")
 
 
 static func append_support_companions(
@@ -582,6 +583,7 @@ static func append_support_companions(
 	encounter_rng: RandomNumberGenerator,
 	room_policy: RoomDefinition,
 	run_rank: int,
+	run_number: int,
 	base_level: int,
 	level_spread: int,
 	encounter_tier: StringName,
@@ -594,7 +596,7 @@ static func append_support_companions(
 		if companion_definition != null and companion_definition.type_id in [&"slime", &"skeleton"] and companion_definition.encounter_role != &"support":
 			enemy_companion_count += 1
 	var support_variant_pool := filter_weighted_pool_for_theme(
-		EnemyFactory.weighted_variants_for_role(&"slime", &"support", run_rank), run_theme, run_rank)
+		EnemyFactory.weighted_variants_for_role(&"slime", &"support", run_number), run_theme, run_number)
 	var support_roll_count := room_policy.support_companion_roll_count(enemy_companion_count)
 	if force_debug_enemy or support_variant_pool.is_empty():
 		return 0
@@ -623,6 +625,7 @@ static func migrate_saved_room_support_companions(
 	room_type: StringName,
 	normal_base_level: int,
 	run_rank: int,
+	run_number: int,
 	enemy_level_cap: int,
 	room_policy: RoomDefinition,
 	allow_migration: bool,
@@ -670,7 +673,7 @@ static func migrate_saved_room_support_companions(
 			support_rng.seed = room.generation_seed ^ SAVED_ROOM_SUPPORT_ROLL_SALT
 			var added := append_support_companions(
 				false, typed_variants, levels, popcorn_flags, popcorn_types,
-				ambush_flags, elite_flags, support_rng, room_policy, run_rank,
+				ambush_flags, elite_flags, support_rng, room_policy, run_rank, run_number,
 				base_level, level_spread, room.encounter_tier, enemy_level_cap, run_theme)
 			if added > 0:
 				state["enemy_variants"] = typed_variants

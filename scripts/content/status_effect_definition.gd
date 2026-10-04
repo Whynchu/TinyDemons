@@ -8,15 +8,17 @@ enum Family {
 	PERIODIC_STUN,
 	DAMAGE_AMPLIFICATION,
 	AMBIENT_MODIFIER,
+	DAMAGE_VULNERABILITY,
+	MOVEMENT_LOCK,
 }
 
 const STATUS_IDS: Array[StringName] = [&"burn", &"poison", &"chill", &"shocked", &"wet"]
-const AUXILIARY_STATUS_IDS: Array[StringName] = [&"hex_mark"]
-const PARTICLE_STYLES: Array[StringName] = [&"ember", &"poison_mote", &"electric_spark", &"frost_crystal", &"bubble"]
+const AUXILIARY_STATUS_IDS: Array[StringName] = [&"hex_mark", &"freeze"]
+const PARTICLE_STYLES: Array[StringName] = [&"ember", &"poison_mote", &"electric_spark", &"frost_crystal", &"bubble", &"ice_shard"]
 
 @export var id: StringName = &""
 @export_range(1, 7, 1) var element := 1
-@export_enum("Damage over time", "Movement slow", "Periodic stun", "Damage amplification", "Ambient modifier") var family: int = Family.DAMAGE_OVER_TIME
+@export_enum("Damage over time", "Movement slow", "Periodic stun", "Damage amplification", "Ambient modifier", "Damage vulnerability", "Movement lock") var family: int = Family.DAMAGE_OVER_TIME
 @export_range(0.0, 1.0, 0.01) var proc_chance := 0.2
 @export_range(0.05, 30.0, 0.05) var duration := 2.5
 @export_range(1, 10, 1) var maximum_stacks := 3
@@ -27,6 +29,7 @@ const PARTICLE_STYLES: Array[StringName] = [&"ember", &"poison_mote", &"electric
 @export_range(0.0, 2.0, 0.01) var stun_interval_reduction_per_extra_stack := 0.05
 @export_range(0.05, 10.0, 0.05) var stun_interval_floor := 0.5
 @export_range(0.01, 2.0, 0.01) var stun_lock_duration := 0.2
+@export_range(0.0, 4.0, 0.05) var vulnerability_per_stack := 0.0
 @export var badge_glyph := "?"
 @export var particle_style: StringName = &"ember"
 @export_range(0.02, 1.0, 0.01) var particle_interval := 0.12
@@ -47,7 +50,7 @@ func validate() -> Array[String]:
 		problems.append("status id '%s' is not registered" % String(id))
 	if element < 1 or element > 7:
 		problems.append("status element must be a non-neutral element")
-	if family < Family.DAMAGE_OVER_TIME or family > Family.AMBIENT_MODIFIER:
+	if family < Family.DAMAGE_OVER_TIME or family > Family.MOVEMENT_LOCK:
 		problems.append("status family is invalid")
 	if proc_chance < 0.0 or proc_chance > 1.0:
 		problems.append("proc chance must be between 0 and 1")
@@ -66,6 +69,8 @@ func validate() -> Array[String]:
 			problems.append("periodic stun cadence and floor must be positive")
 		if stun_lock_duration <= 0.0:
 			problems.append("stun_lock_duration must be positive")
+	if family == Family.DAMAGE_VULNERABILITY and vulnerability_per_stack <= 0.0:
+		problems.append("damage vulnerability statuses need a positive vulnerability_per_stack")
 	if family == Family.AMBIENT_MODIFIER:
 		if conducts_element < 0 or conducts_element > 7:
 			problems.append("ambient conducts_element must be a valid non-neutral element or zero")
@@ -79,8 +84,15 @@ func validate() -> Array[String]:
 			if not STATUS_IDS.has(extinguished_id):
 				problems.append("ambient extinguished id '%s' is not a registered status" % String(extinguished_id))
 	else:
-		if conducts_element != 0 or not is_zero_approx(conduct_damage_bonus_per_stack) or not is_equal_approx(conduct_stun_cadence_divisor, 1.0) or not extinguishes.is_empty():
-			problems.append("only ambient modifiers may define conduct or extinguish behavior")
+		if conducts_element != 0 or not is_zero_approx(conduct_damage_bonus_per_stack) or not is_equal_approx(conduct_stun_cadence_divisor, 1.0):
+			problems.append("only ambient modifiers may define conductivity behavior")
+	if family != Family.DAMAGE_VULNERABILITY and not is_zero_approx(vulnerability_per_stack):
+		problems.append("only damage vulnerability statuses may define vulnerability_per_stack")
+	if not extinguishes.is_empty() and extinguish_stacks_per_application <= 0:
+		problems.append("extinguish stack count must be positive")
+	for extinguished_id in extinguishes:
+		if not STATUS_IDS.has(extinguished_id):
+			problems.append("extinguished id '%s' is not a registered status" % String(extinguished_id))
 	if badge_glyph.is_empty():
 		problems.append("badge_glyph must not be empty")
 	if not PARTICLE_STYLES.has(particle_style):

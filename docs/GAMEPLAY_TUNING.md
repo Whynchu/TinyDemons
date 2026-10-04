@@ -120,10 +120,11 @@ Chroma, respectively.
 
 ## Elemental status definitions
 
-The five `StatusEffectDefinition` resources are referenced by
-`ElementCatalogData.status_effects` in `resources/definitions/element_catalog.tres`.
-Edit those resources for status balance; this file is the tuning index, while
-the catalog resource is the runtime registry.
+The five element-owned `StatusEffectDefinition` resources and the auxiliary
+Freeze condition are referenced by `ElementCatalogData.status_effects` in
+`resources/definitions/element_catalog.tres`. Edit those resources for status
+balance; this file is the tuning index, while the catalog resource is the
+runtime registry.
 
 | Status | Element | Proc chance | Duration | Effect | Particle style / interval |
 |---|---|---:|---:|---|---|
@@ -132,6 +133,7 @@ the catalog resource is the runtime registry.
 | Chill | Ice | 20% per eligible hit | 2.0 s | 15% movement and attack-speed reduction per stack; cap 3; multiplier floor 0.55 | Drifting frost crystals / 0.16 s |
 | Shocked | Electric | 10% per eligible hit | 2.5 s | Immediate 0.2 s action lock on proc, then repeat every 1 s; each extra stack reduces repeat cadence by 0.05 s to a 0.5 s floor; cap 3 | Electric sparks every 0.12 s; sprite-only jolt for 0.2 s per lock |
 | Wet | Water | 25% per eligible hit | 3.0 s | Cap 2; each applied stack adds 35% Electric damage taken; divides Shocked cadence by 1.5 per stack (0.5 s interval floor); removes up to 3 applied Burn stacks | Slow-rising bubbles / 0.22 s |
+| Freeze | Water + Ice mixture | Guaranteed when Wet and Chill coexist | 3.0 s | Consumes applied Wet and Chill; locks movement; direct incoming damage +25%; does not slow attacks | Ice shards / 0.14 s |
 
 Ordinary status procs require a successful, non-immune elemental hit with
 positive effectiveness. Contact transmission applies a carried transmissible
@@ -139,15 +141,18 @@ status without another proc roll; authored immunity and special combat defense
 checks still apply. The unordered actor pair then has a three-second cooldown.
 `EnemyDefinition.status_immunities` can reject named status IDs. An enemy's
 elemental status is innate: it is harmless, suppressed by applied ailments, and
-does not provide its own mechanical modifier. Wet's
-numbers are provisional; the status and contact smoke checks are registered but
-unrun, and particle/outline readability remains open for runtime acceptance.
+does not provide its own mechanical modifier. Wet and Freeze use `W` and `F`
+badges; the world-space status outline is drawn below the actor sprite. Wet's
+numbers and Freeze's duration/vulnerability are provisional; the status and
+contact smoke checks are registered but unrun, and particle/outline readability
+remains open for runtime acceptance.
 
 ### Run enemy element themes
 
-`EncounterDefinition.three_element_theme_chance` is 0.20 at rank 3 and above:
-most runs use two non-Normal enemy elements, sometimes three. Rank 1 remains
-Normal-only and rank 2 teaches one element. Water/Electric is favored because
+`EncounterDefinition.three_element_theme_chance` is 0.20 from Run 3 onward:
+most runs use two non-Normal enemy elements, sometimes three. Run 1 remains
+Normal-only and Run 2 teaches one element. Difficulty rank controls enemy
+levels and encounter pressure; it does not remove elemental content. Water/Electric is favored because
 Wet conducts Electric damage and tightens Shocked cadence. The selected set is
 saved in `RunState`; every room, boss, summon, respawn, and support roster must
 stay within it. Every support variant uses the shared ally-healing behavior.

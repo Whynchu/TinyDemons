@@ -191,6 +191,21 @@ func _grid_cell(point: Vector2) -> Vector2i:
 func _separate_slime_pair(root: Object, actor: Sprite2D, other: Sprite2D, push: Vector2) -> bool:
 	var actor_start := actor.position
 	var other_start := other.position
+	var actor_movement_locked := _actor_movement_locked(actor)
+	var other_movement_locked := _actor_movement_locked(other)
+	if actor_movement_locked or other_movement_locked:
+		if actor_movement_locked and other_movement_locked:
+			return false
+		var movable := other if actor_movement_locked else actor
+		if _uses_body_contact(movable):
+			return false
+		var movable_start := movable.position
+		var displacement := -push if actor_movement_locked else push
+		movable.position += displacement
+		if _position_is_valid(root, movable):
+			return true
+		movable.position = movable_start
+		return false
 	var actor_cast_locked := _is_support_cast_locked(actor)
 	var other_cast_locked := _is_support_cast_locked(other)
 	if actor_cast_locked or other_cast_locked:
@@ -339,7 +354,7 @@ func resolve_contact_pair(actor: Sprite2D, other: Sprite2D, movement: Vector2, r
 			var enemy_push := -push if actor == player else push
 			var support := enemy.get_node_or_null("Support") as Node if enemy != null else null
 			var cast_locked := support != null and bool(support.call("is_cast_active"))
-			var can_move_enemy := enemy != null and enemy != player and not cast_locked
+			var can_move_enemy := enemy != null and enemy != player and not cast_locked and not _actor_movement_locked(enemy)
 			if can_move_enemy and try_move_swept(enemy, enemy_push, 0.75, Callable(root, "_can_actor_stand_at_current_position"), Callable(root, "_collides_with_static")):
 				return
 			# If the enemy is pinned against room geometry, preserve the old
@@ -353,6 +368,16 @@ func resolve_contact_pair(actor: Sprite2D, other: Sprite2D, movement: Vector2, r
 func push_actor(root: Object, actor: Sprite2D, other: Sprite2D, movement: Vector2) -> void:
 	var push := overlap_push_vector(root, actor, other)
 	if push == Vector2.ZERO: return
+	var actor_movement_locked := _actor_movement_locked(actor)
+	var other_movement_locked := _actor_movement_locked(other)
+	if actor_movement_locked and other_movement_locked:
+		return
+	if actor_movement_locked:
+		try_move_swept(other, -push + movement * 0.45, 0.75, Callable(root, "_can_actor_stand_at_current_position"), Callable(root, "_collides_with_static"))
+		return
+	if other_movement_locked:
+		try_move_swept(actor, push + movement * 0.45, 0.75, Callable(root, "_can_actor_stand_at_current_position"), Callable(root, "_collides_with_static"))
+		return
 	var actor_weight := 1.0 if actor == root.get("player") else 1.45
 	var other_weight := 1.0 if other == root.get("player") else 1.45
 	var total_weight := actor_weight + other_weight
@@ -363,7 +388,16 @@ func push_actor(root: Object, actor: Sprite2D, other: Sprite2D, movement: Vector
 
 
 func separate_actor(root: Object, actor: Sprite2D, other: Sprite2D) -> void:
+	if _actor_movement_locked(actor):
+		return
 	actor.position += overlap_push_vector(root, actor, other)
+
+
+func _actor_movement_locked(actor: Sprite2D) -> bool:
+	if actor == null or not is_instance_valid(actor):
+		return false
+	var status := actor.get_node_or_null("Status") as StatusComponent
+	return status != null and status.is_movement_locked()
 
 
 func overlap_push_vector(root: Object, actor: Sprite2D, other: Sprite2D) -> Vector2:

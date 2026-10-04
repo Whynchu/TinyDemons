@@ -591,25 +591,25 @@ func _start_player_death() -> void:
 	_reset_magic_runtime(true)
 	effects_spawner.begin_player_death(self, DEPTH_Z_SCALE)
 	if player_equipment_visual_component != null: player_equipment_visual_component.begin_death(gameplay_frame_controller.equipment_visual_context(self))
-func _update_player_death(delta: float) -> void: screen_state_controller.update_player_death(self, delta, 0.8)
+func _update_player_death(delta: float) -> void: screen_state_controller.state_flow_controller.update_player_death(self, delta, 0.8)
 func _spawn_player_death_pixels() -> void: effects_spawner.spawn_player_death_particles(self, player_death_texture, player_death_origin, player_death_offset, player_death_scale, int(round(_depth_key(player) * DEPTH_Z_SCALE)) + 2, player_tuning.death_particle_lifetime, rng.randi(), Callable(self, "_pixel_particle_texture"))
 func _build_game_over_ui() -> void: screen_state_controller.assembly_controller.build_game_over(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_return_to_hub"), Callable(self, "_return_to_title"))
 func _build_run_complete_ui() -> void:
 	screen_state_controller.assembly_controller.build_run_complete(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_return_from_run_complete"))
 func _build_settings_ui() -> void:
-	screen_state_controller.build_settings(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_adjust_setting"), Callable(self, "_close_settings"), Callable(self, "_select_setting_option"))
+	screen_state_controller.route_controller.build_settings(ui, Callable(self, "_pixel_text_texture"), Callable(self, "_adjust_setting"), Callable(self, "_close_settings"), Callable(self, "_select_setting_option"))
 func _open_settings_from_title() -> void:
-	screen_state_controller.open_settings(self, &"title")
+	screen_state_controller.route_controller.open_settings(self, &"title")
 func _open_settings_from_pause() -> void:
-	screen_state_controller.open_settings(self, &"pause")
+	screen_state_controller.route_controller.open_settings(self, &"pause")
 func _adjust_setting(row: int, direction: int) -> void:
-	screen_state_controller.adjust_setting(self, row, direction)
+	screen_state_controller.route_controller.adjust_setting(self, row, direction)
 func _select_setting_option(row: int, option_index: int) -> void:
-	screen_state_controller.select_setting_option(self, row, option_index)
+	screen_state_controller.route_controller.select_setting_option(self, row, option_index)
 func _update_settings_input() -> void:
-	screen_state_controller.update_settings_input(self)
+	screen_state_controller.route_controller.update_settings_input(self)
 func _close_settings() -> void:
-	screen_state_controller.close_settings(self)
+	screen_state_controller.route_controller.close_settings(self)
 func _quit_to_title_from_pause() -> void:
 	screen_state_controller.set_menu_world_hidden(self, false)
 	if screen_state_controller.pause_overlay != null:
@@ -651,7 +651,7 @@ func _hub_back_or_close() -> void:
 	elif screen_state_controller.hub_overlay != null and screen_state_controller.hub_overlay.visible:
 		_hub_economy_controller().call("back_from_hub_route", self)
 func _update_hub_input() -> void: (screen_state_controller as ScreenStateController).update_hub_input(self)
-func _update_pause_input() -> void: screen_state_controller.update_pause_input(self)
+func _update_pause_input() -> void: screen_state_controller.route_controller.update_pause_input(self)
 func _is_hub_previous_page_input_pressed() -> bool: return player_controller != null and player_controller.guard_held(_controller_devices(), 0.35)
 func _is_hub_next_page_input_pressed() -> bool: return player_controller != null and player_controller.target_held(_controller_devices(), 0.35)
 func _is_menu_cancel_input_pressed() -> bool: return player_controller != null and player_controller.action_pressed(&"cancel", _controller_devices(), JOY_BUTTON_A)
@@ -739,13 +739,13 @@ func _select_hub_menu_row(row: int) -> void:
 func _select_hub_stat_row(row: int) -> void:
 	_hub_economy_controller().call("select_hub_stat_row", self, row)
 func _set_pause_status_page() -> void:
-	screen_state_controller.set_pause_page(self, 1)
+	screen_state_controller.route_controller.set_pause_page(self, 1)
 func _set_pause_equipment_page() -> void:
-	screen_state_controller.set_pause_page(self, 2)
+	screen_state_controller.route_controller.set_pause_page(self, 2)
 func _pause_back() -> void:
-	screen_state_controller.pause_back(self)
+	screen_state_controller.route_controller.pause_back(self)
 func _pause_equipment_back() -> void:
-	screen_state_controller.pause_equipment_back(self)
+	screen_state_controller.route_controller.pause_equipment_back(self)
 func _shift_hub_action_column(direction: int) -> void:
 	_hub_economy_controller().call("shift_hub_action_column", self, direction)
 func _hub_adjust_stat(stat_name: StringName, direction: int) -> void:
@@ -772,11 +772,17 @@ func _begin_new_run(preserve_current_dungeon := false) -> void:
 func _save_active_run_checkpoint() -> bool:
 	if not OS.has_feature("web") or run_state == null or not run_state.active or (run_flow_controller != null and run_flow_controller.debug_run_number > 0):
 		return false
+	var phase_started_usec := Time.get_ticks_usec()
 	if player_profile != null: ProfileSaveService.flush_deferred_save(true)  # Never snapshot ahead of the profile.
+	_record_performance_scope(&"active_run_checkpoint_profile", phase_started_usec)
+	phase_started_usec = Time.get_ticks_usec()
 	var snapshot := ActiveRunSnapshotScript.create(_active_run_snapshot_context())
+	_record_performance_scope(&"active_run_checkpoint_snapshot", phase_started_usec)
 	if snapshot.is_empty():
 		return false
+	phase_started_usec = Time.get_ticks_usec()
 	var saved := bool(ActiveRunSaveServiceScript.save_snapshot(snapshot, ProfileSaveService.current_slot()))
+	_record_performance_scope(&"active_run_checkpoint_write", phase_started_usec)
 	if saved:
 		var diagnostics := get_node_or_null("WebRunDiagnostics")
 		if diagnostics != null and diagnostics.has_method("record_checkpoint"):
@@ -843,7 +849,7 @@ func _update_run_complete_input() -> void:
 	if screen_state_controller.run_complete_presenter.return_button == null:
 		return
 	if screen_state_controller.run_complete_presenter.footer_text != null:
-		screen_state_controller.run_complete_presenter.footer_text.texture = screen_state_controller._pixel_prompt_texture(Callable(self, "_pixel_text_texture"), _menu_back_prompt(), Color.WHITE)
+		screen_state_controller.run_complete_presenter.footer_text.texture = screen_state_controller._menu_prompt_texture_factory.pixel_prompt_texture(Callable(self, "_pixel_text_texture"), _menu_back_prompt(), Color.WHITE)
 	if screen_state_controller.menu_input_release_lock:
 		var released := not _is_menu_confirm_pressed() and not _is_menu_back_pressed()
 		if released:
@@ -958,9 +964,9 @@ func _update_player_aggro_marker_colors() -> void: hud_controller.update_aggro_m
 func _spawn_title_pixel_breakup(source_sprite: Sprite2D) -> void:
 	if screen_state_controller.title_particle_layer == null:
 		screen_state_controller.title_particle_layer = Node2D.new(); screen_state_controller.title_particle_layer.name = "TitleParticleLayer"; screen_state_controller.title_particle_layer.z_index = 10; ui.add_child(screen_state_controller.title_particle_layer)
-	screen_state_controller.spawn_pixel_breakup(source_sprite, screen_state_controller.title_particle_layer, Callable(self, "_pixel_particle_texture"), rng.randi())
+	screen_state_controller._title_particle_controller.spawn_pixel_breakup(source_sprite, screen_state_controller.title_particle_layer, Callable(self, "_pixel_particle_texture"), rng.randi())
 func _spawn_title_ui_breakup() -> void:
-	screen_state_controller.clear_title_particles()
+	screen_state_controller._title_particle_controller.clear_title_particles()
 	_spawn_title_pixel_breakup(screen_state_controller.title_presenter.title_text)
 	var version: Sprite2D = screen_state_controller.title_presenter.overlay.get_node_or_null("TitleVersion") as Sprite2D if screen_state_controller.title_presenter.overlay != null else null
 	_spawn_title_pixel_breakup(version)
@@ -969,12 +975,12 @@ func _spawn_title_ui_breakup() -> void:
 		if button == null or button.disabled or not button.visible: continue
 		var label: Sprite2D = button.get_child(0) as Sprite2D if button.get_child_count() > 0 else null
 		_spawn_title_pixel_breakup(label)
-		screen_state_controller.spawn_button_frame_breakup(button, screen_state_controller.title_particle_layer, Callable(self, "_pixel_particle_texture"), rng.randi())
+		screen_state_controller._title_particle_controller.spawn_button_frame_breakup(button, screen_state_controller.title_particle_layer, Callable(self, "_pixel_particle_texture"), rng.randi())
 	if screen_state_controller.title_presenter.cursor_text != null and screen_state_controller.title_presenter.cursor_text.visible:
 		_spawn_title_pixel_breakup(screen_state_controller.title_presenter.cursor_text)
 func _build_scene_transition() -> void:
 	var view_size := Vector2(display_controller.view_size_value()) if display_controller != null else Vector2(DisplayLayout.NATIVE_SIZE)
-	scene_transition_overlay = screen_state_controller.create_overlay(ui, "SceneTransitionOverlay", view_size, Color.BLACK, 200); scene_transition_overlay.set_meta("display_full_view", true); scene_transition_overlay.modulate.a = 0.0
+	scene_transition_overlay = screen_state_controller._menu_widget_factory.create_overlay(ui, "SceneTransitionOverlay", view_size, Color.BLACK, 200); scene_transition_overlay.set_meta("display_full_view", true); scene_transition_overlay.modulate.a = 0.0
 func _begin_scene_transition() -> void:
 	if scene_transition_active or scene_transition_overlay == null: return
 	if input_device_tracker != null:
@@ -1276,10 +1282,9 @@ func _finalize_run_enemy_total() -> void:
 func _ensure_current_room_layout() -> void:
 	var room := dungeon_graph.get_room(current_room_id)
 	if room == null or not room_controller.mount_room_prefab(self, current_room_id): return
-	# Flat per-run difficulty: enemy level, count, and variant pool all key off
-	# the profile's difficulty_rank. room_controller.progression_run_rank mirrors
-	# the completed-run curve so rank milestones (boss minors, popcorn, etc.)
-	# keep their 1:1 meaning without any per-room (depth) difficulty.
+	# Flat difficulty: enemy level and encounter pressure key off difficulty_rank.
+	# Element availability and theme selection use progression_run_number, which
+	# is supplied from the campaign's completed-run count.
 	room_controller.progression_run_rank = _run_rank()
 	room_controller.player_level = int((get_node("DebugSessionController") as Node).call("effective_player_level", maxi(1, player_profile.level if player_profile != null else player_stats.level)))
 	var base_palette := run_start_palette_name if not run_start_palette_name.is_empty() else current_player_palette_name
@@ -1296,11 +1301,11 @@ func _ensure_current_room_layout() -> void:
 		var alternate_flames := dungeon_map_controller.call("alternate_flames") as Array
 		var flame_b_palette := String(AspectCatalogScript.palette_for_flame(alternate_flames[0])) if not alternate_flames.is_empty() else base_palette
 		room_controller.secondary_enemy_variant = _matchup_variant(flame_b_palette, false)
-	elif room_controller.progression_run_rank == 2:
+	elif room_controller.progression_run_number == 2:
 		room_controller.matchup_policy = "base_advantage"
 		room_controller.preferred_enemy_variant = _matchup_variant(base_palette, false)
 		room_controller.secondary_enemy_variant = "grey"
-	elif room_controller.progression_run_rank >= 3:
+	elif room_controller.progression_run_number >= 3:
 		room_controller.matchup_policy = "base_counter"
 		room_controller.preferred_enemy_variant = _matchup_variant(base_palette, true)
 		room_controller.secondary_enemy_variant = "grey"

@@ -116,12 +116,12 @@ static func weighted_variants_for_type(type_id: StringName) -> Array[Dictionary]
 	return weighted_variants
 
 
-static func weighted_variants_for_role(type_id: StringName, encounter_role: StringName, minimum_rank: int) -> Array[Dictionary]:
+static func weighted_variants_for_role(type_id: StringName, encounter_role: StringName, minimum_run_number: int) -> Array[Dictionary]:
 	var weighted_variants: Array[Dictionary] = []
 	for variant_id in variants_for_type(type_id):
 		var enemy_definition := definition(variant_id)
 		if enemy_definition.encounter_role == encounter_role \
-			and enemy_definition.encounter_min_rank <= minimum_rank \
+			and enemy_definition.encounter_min_run_number <= minimum_run_number \
 			and enemy_definition.encounter_weight > 0.0:
 			weighted_variants.append({"variant": String(variant_id), "weight": enemy_definition.encounter_weight})
 	return weighted_variants

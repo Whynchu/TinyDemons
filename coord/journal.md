@@ -973,3 +973,44 @@ Moved Pause page/chrome, command/debug row, status/equipment, description, and r
 2026-10-04 final rendered line-count correction: HubScreenRenderController 430 lines, HubLegacyInventoryPresenter 490 lines, ScreenStateController 2431 lines.
 2026-10-04 final EOF cleanup count: HubScreenRenderController 429 lines, HubLegacyInventoryPresenter 490 lines, ScreenStateController 2431 lines.
 2026-10-04 final exact counts after byte-level EOF cleanup: HubScreenRenderController 428 lines, HubLegacyInventoryPresenter 490 lines, ScreenStateController 2431 lines.
+
+## 2026-10-04T00:00Z — codex — claim
+Implement run-number-owned elemental composition and the authored WATER + ICE
+Freeze status mixture; avoid opencode's smoke-runner/Pages claim.
+2026-10-04 done codex run-number elemental composition and Freeze mixture. Updated roster and variant unlock semantics, authored the WATER + ICE reaction, wired boss movement-lock resistance and under-sprite markers, and refreshed the docs/index. MCP source diagnostics, UID, manifest, strict composition, and diff checks pass; runtime smokes and definition validation remain unverified because no local Godot CLI is available.
+
+2026-10-04 claim codex event hitches and Wet/Chill mixture. Inspecting existing queued-save/prefab work and fixing suppressed-innate mixture matching with focused characterization.
+
+
+2026-10-04 done codex event-hitch and Wet/Chill follow-up. XP profile saves now queue, room entry stops requesting redundant unchanged saves, active-run checkpoint verification no longer reparses its own JSON, and room/checkpoint phases have capture scopes. Innate mixture resolution now distinguishes pre-existing suppression from suppression caused by the incoming ingredient. MCP boot succeeded after clearing stale gdscript:// diagnostics; controlled transition/death/pickup captures remain open.
+
+## 2026-10-04T19:00Z — codex — claim
+Extract the legacy Hub item/equipment widget builder from ScreenStateController into a typed UI construction helper. Existing fallback behavior and compatibility readers remain in place.
+
+## 2026-10-04T19:30Z — codex — done
+Hub legacy widget construction now has a typed builder and the script index/role map are updated. Focused script diagnostics and editor error buffer are clean. Strict composition and full UID validation remain blocked by unrelated existing baseline regressions and element_catalog.tres UID reference.
+
+## 2026-10-04T19:45Z — codex — done
+Folded the legacy Bind panel, labels, and action control into HubLegacyWidgetBuilder alongside the item/equipment fallback group. Final focused diagnostics and MCP editor error check pass; screen facade is 2,332 lines and the builder is 165.
+
+## 2026-10-04T20:10Z — codex — claim
+Fix Freeze runtime enforcement across active enemy movement, combat displacement, and collision separation. Preserve the designed movement-only lock so enemies may finish attacks without lunging from the frozen position.
+2026-10-04 | claim | codex | Extending Freeze movement lock fix to cover Fusion amount-state affordance/feedback and verifying the selected-batch cost against current Fusion rules.
+
+2026-10-04 | done | codex | Freeze movement lock now covers active movement and displacement while retaining attack behavior. Fusion amount view now reflects eligibility/affordability and reports Soul shortfalls or stale inventory instead of silent denial. Nine script diagnostics and git diff --check pass; no runtime or smoke tests ran because no runtime peer was available.
+2026-10-04 claim codex: ScreenStateController composition toward 1500 lines; preserve facades; MCP diagnostics only.
+2026-10-04 done codex: ScreenStateController at 1,475 lines; five UI owners added; focused MCP diagnostics pass; docs/index refreshed.
+2026-10-04 note codex: final controller count 1,474 lines after EOF whitespace cleanup (858 below checkpoint).
+2026-10-04 claim codex: Stage 3.1 ScreenStateController 1,474 to approved 800-line target; caller/property ownership and scoped commit.
+
+2026-10-04 | done | codex | Stage 3.1 ScreenStateController reached 1,195 lines (1,200 checkpoint). Screen assembly, presenter-owned fields/state, and display layout now have direct typed-owner routes; MCP diagnostics pass for changed UI files. No runtime/smoke tests ran. 800-line forward target remains open.
+
+## 2026-10-04 — codex — claim
+Continuing Stage 3.1 toward a 1,000-line ScreenStateController by rewiring flow/route callers to existing typed UI owners and removing redundant name-entry façade methods. No unrelated worktree changes are in scope.
+
+## 2026-10-04 — codex — done
+Stage 3.1 ScreenStateController checkpoint: 1,195 ? 1,050 lines. Routed title/archetype and Pause/Settings calls to their existing owners, removed redundant name-entry accessors, refreshed the generated index and composition docs. Focused MCP diagnostics pass for changed UI owners/callers; GameplayState retains the known line-390 diagnostic. No gameplay/smoke tests run. Claim cleared.
+Correction: ScreenStateController is 1,050 lines, down 145 from the 1,195-line checkpoint.
+2026-10-04 claim codex: Stage 3.1 ScreenStateController 1,050 toward 900; migrate shared UI callers to widget/cursor owners, update docs and focused diagnostics.
+2026-10-04 done codex: ScreenStateController is 852 lines; shared widget/cursor/prompt/particle facades and dead Hub forwarding methods removed, callers use typed owners. Focused diagnostics pass except GameplayState known line-390 context diagnostic. Index and composition records refreshed; 800-line target remains open. No gameplay/smoke tests.
+2026-10-04 claim codex: prepare the 852-line ScreenStateController composition checkpoint for main with required patch version bump; exclude unrelated gameplay and MCP/config changes.

@@ -19,19 +19,19 @@ func build_title_screen(root: Object) -> void:
 
 func build_archetype_screen(root: Object) -> void:
 	root.screen_state_controller.assembly_controller.build_archetype(root.ui, Callable(root, "_shift_archetype"), Callable(root, "_shift_archetype_color"), Callable(root, "_start_selected_archetype"), Callable(root, "_pixel_text_texture"))
-	root.screen_state_controller.update_archetype_screen(root)
+	root.screen_state_controller.state_flow_controller.update_archetype_screen(root)
 
 
 func update_title_screen(root: Object, delta: float) -> void:
-	root.screen_state_controller.update_title_flow(root, delta)
+	root.screen_state_controller.state_flow_controller.update_title_flow(root, delta)
 
 
 func start_new_game(root: Object) -> void:
-	root.screen_state_controller.start_save_select(root, "new")
+	root.screen_state_controller.state_flow_controller.start_save_select(root, "new")
 
 
 func continue_game(root: Object) -> void:
-	root.screen_state_controller.start_save_select(root, "continue")
+	root.screen_state_controller.state_flow_controller.start_save_select(root, "continue")
 
 
 func open_save_select_after_title_transition(root: Object) -> void:
@@ -57,7 +57,7 @@ func update_save_select_cursor(root: Object) -> void:
 	if cursor != null:
 		var display := root.get("display_controller") as DisplayController
 		var view_width := float(display.view_size_value().x) if display != null else 240.0
-		root.screen_state_controller.move_menu_cursor(cursor, Vector2((view_width - 130.0) * 0.5 - root.screen_state_controller.CURSOR_LEFT_GAP, 70 + root.screen_state_controller.save_select_index * 20))
+		root.screen_state_controller._menu_cursor_animator.move_menu_cursor(cursor, Vector2((view_width - 130.0) * 0.5 - root.screen_state_controller.CURSOR_LEFT_GAP, 70 + root.screen_state_controller.save_select_index * 20), true, root)
 
 
 func save_preview_texture(root: Object, palette_name: String) -> Texture2D:
@@ -119,7 +119,7 @@ func set_overwrite_prompt(root: Object, active: bool) -> void:
 		cursor.visible = active
 		var display := root.get("display_controller") as DisplayController
 		var view_width := float(display.view_size_value().x) if display != null else 240.0
-		root.screen_state_controller.move_menu_cursor(cursor, Vector2((view_width - 42.0) * 0.5 - root.screen_state_controller.CURSOR_LEFT_GAP, 140))
+		root.screen_state_controller._menu_cursor_animator.move_menu_cursor(cursor, Vector2((view_width - 42.0) * 0.5 - root.screen_state_controller.CURSOR_LEFT_GAP, 140), true, root)
 	var prompt := root.screen_state_controller.save_select_presenter.overlay.get_node_or_null("OverwritePrompt") as Sprite2D
 	if prompt != null:
 		prompt.texture = root.call("_pixel_text_texture", "OVERWRITE?  YES / NO", Color.WHITE)
@@ -140,7 +140,7 @@ func set_recovery_prompt(root: Object, active: bool) -> void:
 		cursor.visible = active
 		var display := root.get("display_controller") as DisplayController
 		var view_width := float(display.view_size_value().x) if display != null else 240.0
-		root.screen_state_controller.move_menu_cursor(cursor, Vector2((view_width - 42.0) * 0.5 - root.screen_state_controller.CURSOR_LEFT_GAP, 140))
+		root.screen_state_controller._menu_cursor_animator.move_menu_cursor(cursor, Vector2((view_width - 42.0) * 0.5 - root.screen_state_controller.CURSOR_LEFT_GAP, 140), true, root)
 	var prompt := root.screen_state_controller.save_select_presenter.overlay.get_node_or_null("OverwritePrompt") as Sprite2D
 	if prompt != null:
 		prompt.texture = root.call("_pixel_text_texture", "RESUME RUN?  YES / NO", Color.WHITE)
@@ -180,7 +180,7 @@ func confirm_overwrite(root: Object) -> void:
 
 
 func finish_name_entry(root: Object, player_name: String) -> void:
-	var selected_slot: int = root.screen_state_controller.pending_name_entry_slot()
+	var selected_slot: int = root.screen_state_controller.name_entry_controller.pending_name_slot()
 	if selected_slot < 0:
 		return
 	ProfileSaveService.select_slot(selected_slot)
@@ -193,8 +193,8 @@ func finish_name_entry(root: Object, player_name: String) -> void:
 	root.call("_apply_profile_to_runtime")
 	root.call("_update_gold_indicator")
 	root.call("_update_soul_indicator")
-	root.screen_state_controller.complete_name_entry()
-	root.screen_state_controller.show_character_creation(root)
+	root.screen_state_controller.name_entry_controller.complete()
+	root.screen_state_controller.state_flow_controller.show_character_creation(root)
 
 
 func reset_runtime_for_new_save(root: Object) -> void:
@@ -237,7 +237,7 @@ func update_overwrite_cursor(root: Object) -> void:
 		var view_width := float(display.view_size_value().x) if display != null else 240.0
 		var base_x := (view_width - 42.0) * 0.5
 		var gap: float = root.screen_state_controller.CURSOR_LEFT_GAP
-		root.screen_state_controller.move_menu_cursor(cursor, Vector2((base_x if root.screen_state_controller.save_overwrite_choice == 0 else base_x + 30.0) - gap, 140))
+		root.screen_state_controller._menu_cursor_animator.move_menu_cursor(cursor, Vector2((base_x if root.screen_state_controller.save_overwrite_choice == 0 else base_x + 30.0) - gap, 140), true, root)
 
 
 func close_save_select(root: Object) -> void:

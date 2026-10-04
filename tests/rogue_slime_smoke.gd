@@ -29,6 +29,8 @@ func _initialize() -> void:
 	var boss_minor_slot_count := 0
 	for rank in [1, 3, 5, 8, 12]:
 		rooms.progression_run_rank = rank
+		rooms.progression_run_number = rank
+		rooms.set_run_element_theme([] if rank == 1 else [ElementCatalog.Element.SHADOW])
 		for seed in 128:
 			var encounter := rooms._generate_boss_encounter(seed + rank * 1000, 12)
 			var variants := encounter["variants"] as Array
@@ -80,6 +82,8 @@ func _initialize() -> void:
 		if rank == 2:
 			_expect(float(level_one_count) / float(maxi(level_count, 1)) >= 0.30, "Run 2 keeps a substantial level 1 popcorn population", failures)
 	rooms.progression_run_rank = 8
+	rooms.progression_run_number = 8
+	rooms.set_run_element_theme([ElementCatalog.Element.SHADOW])
 	var regular_purple_count := 0
 	var regular_slot_count := 0
 	var shadow_popcorn_count := 0

@@ -733,14 +733,22 @@ pair applies, guarantees eligible contact transfer subject to immunity and
 special-defense gates, and uses one unordered
 three-second pair cooldown with room and spawn-generation isolation.
 
-`RunState` serializes a deterministic enemy-element theme. Rank 1 remains
-Normal-only, rank 2 teaches one element, and rank 3+ usually uses two with a
-configured 20% chance for three. `EncounterDefinition` favors the authored
+`RunState` serializes a deterministic enemy-element theme by campaign run
+number. Run 1 remains Normal-only, Run 2 teaches one element, and Run 3+
+usually uses two with a configured 20% chance for three. Difficulty rank owns
+enemy levels and encounter pressure, not elemental availability.
+`EncounterDefinition` favors the authored
 Water/Electric synergy and migrates cached legacy rosters deterministically;
 `RoomController` constrains generated and cached room/boss rosters. Elemental
 healer variants use the shared ally-healing behavior. Active-run migration keeps
 health, Chroma, death flags, levels, and pickup state in the existing slot
 records while changing only off-theme variants and dependent ambush flags.
+
+The authored WATER + ICE mixture consumes applied Wet and Chill, then applies
+three-second Freeze: movement lock and +25% direct incoming damage. Innate Wet
+remains configured beneath Freeze suppression. Wet/Freeze use `W`/`F` badges;
+the shared `ElementAuraComponent` draws the status outline one z step below
+player, enemy, and NPC sprites.
 
 Focused smoke source now covers Wet/innate state, transfer cooldown/suppression,
 same-frame propagation prevention, run-theme serialization, healer filtering,

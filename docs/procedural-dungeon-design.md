@@ -186,7 +186,7 @@ baseline for the generator.
 
 ## Difficulty model detail
 
-Enemy level, count, and variant pool all derive from `difficulty_rank`
+Enemy level, encounter count, and pressure weights derive from `difficulty_rank`
 (clamped 1–20, advanced/retreated by the previous run's grade via
 `ProgressionController.apply_run_grade`). The boss uses its own
 `_generate_boss_encounter`, scaling with `difficulty_rank` rather than depth.
@@ -202,9 +202,9 @@ Concrete mapping (implemented):
   the `ceil(depth/4)` term is removed, so a rank N encounter peaks at level N.
 - Enemy count: base 1→2 roll with no depth multiplier; `_normal_enemy_cap()` and
   `_late_enemy_add_chance()` (both rank-based) still bound the roster.
-- Variant pool: unlocked by rank — yellow at rank 2
-  (`YELLOW_MIN_RANK`), ground at rank 3 (`GROUND_MIN_RANK`), ice at rank 4
-  (`ICE_MIN_RANK`), shadow at rank 3.
+- Elemental availability and variant unlocks: unlocked by campaign run number,
+  with the active run theme limiting each roster. Difficulty rank changes the
+  pressure weights but does not remove themed elements.
 - Runtime fallback `enemy_level_for_room` mirrors rank base
   (`maxi(1, rank - 1)`) instead of `ceil(depth/4)`.
 

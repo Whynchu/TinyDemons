@@ -19,23 +19,23 @@ func apply_display_layout(root: GameplayState) -> void:
 	for overlay in [screen.title_presenter.overlay, screen.save_select_presenter.overlay, screen.name_entry_controller.widgets.overlay, screen.archetype_presenter.overlay, screen.run_complete_presenter.overlay, game_over] as Array:
 		if overlay != null and bool(overlay.get_meta("display_full_view", false)):
 			overlay.size = screen.display_view_size
-			screen._resize_menu_frame(overlay, screen.display_view_size)
+			screen._menu_widget_factory.resize_menu_frame(overlay, screen.display_view_size)
 	screen._title_screen_presenter.position_controls(screen.display_view_size, screen.CURSOR_LEFT_GAP, screen._menu_cursor_animator, screen)
 	if screen.hub_overlay != null:
 		screen.hub_overlay.position = (screen.display_view_size - screen.hub_overlay.size) * 0.5
 	if screen.pause_overlay != null:
 		screen.pause_overlay.position = (screen.display_view_size - screen.pause_overlay.size) * 0.5
-	screen._position_run_complete_controls()
+	screen._run_complete_screen_presenter.position_controls(screen.display_view_size, screen._menu_cursor_animator, screen, screen.CURSOR_LEFT_GAP)
 	screen._archetype_screen_presenter.position_controls(screen.display_view_size)
 	if screen.hub_overlay != null:
 		screen.hub_overlay.position = Vector2.ZERO
 		screen.hub_overlay.size = screen.display_view_size
 		# Orientation changes are geometry reflows, not route transitions. Keep
 		# active cursor/glove motion alive while the anchors move.
-		screen._position_hub_controls(false, true)
+		screen._screen_layout_controller._position_hub_controls(false, true)
 	if screen.settings_presenter.overlay != null:
 		screen.settings_presenter.overlay.size = screen.display_view_size
-		screen._position_settings_controls()
+	screen._screen_route_controller._position_settings_controls()
 	var cloud_panel := root.cloud_save_panel
 	if cloud_panel != null: cloud_panel.apply_layout(screen.display_view_size)
 	if screen.name_entry_controller.widgets.overlay != null:
@@ -44,10 +44,10 @@ func apply_display_layout(root: GameplayState) -> void:
 	if screen.pause_overlay != null:
 		screen.pause_overlay.position = Vector2.ZERO
 		screen.pause_overlay.size = screen.display_view_size
-		screen._resize_menu_frame(screen.pause_overlay, screen.display_view_size)
-		screen._position_pause_controls(false, true)
+		screen._menu_widget_factory.resize_menu_frame(screen.pause_overlay, screen.display_view_size)
+		screen._screen_layout_controller._position_pause_controls(false, true)
 	_refresh_active_menu_layout(root)
-	screen._position_game_over_controls(root)
+	screen._game_over_screen_presenter.position_controls(screen.display_view_size, screen._menu_cursor_animator, screen, screen.CURSOR_LEFT_GAP)
 	screen._save_select_screen_presenter.position_controls(screen.display_view_size)
 
 
@@ -126,10 +126,10 @@ func _position_pause_controls(animate_cursor: bool = false, preserve_cursor_moti
 	if screen.pause_overlay == null:
 		return
 	screen._pause_screen_presenter.position_controls(screen.display_view_size)
-	screen._resize_menu_frame(screen.pause_overlay, screen.display_view_size)
+	screen._menu_widget_factory.resize_menu_frame(screen.pause_overlay, screen.display_view_size)
 	if screen.pause_cursor_text != null and not screen.pause_menu_buttons.is_empty():
 		var cursor_index := clampi(screen.pause_menu_row, 0, screen.pause_menu_buttons.size() - 1)
-		screen._position_menu_cursor(screen.pause_cursor_text, Vector2(screen.pause_menu_buttons[cursor_index].position.x - screen.CURSOR_LEFT_GAP, screen.pause_menu_buttons[cursor_index].position.y + 3.0), animate_cursor, preserve_cursor_motion)
+		screen._screen_layout_controller._position_menu_cursor(screen.pause_cursor_text, Vector2(screen.pause_menu_buttons[cursor_index].position.x - screen.CURSOR_LEFT_GAP, screen.pause_menu_buttons[cursor_index].position.y + 3.0), animate_cursor, preserve_cursor_motion)
 func _reset_hub_cursor_layer() -> void:
 	# Every hub render starts from an empty legacy cursor layer.  Each presenter
 	# branch then opts in exactly the cursor(s) it owns, so Shop/Fusion and the

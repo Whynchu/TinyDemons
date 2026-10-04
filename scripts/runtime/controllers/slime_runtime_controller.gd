@@ -966,6 +966,11 @@ func _tick_skeleton_notice_presentation(gameplay: GameplayState, skeleton: Skele
 
 func _update_skeleton_walk(root: Object, skeleton: Sprite2D, brain: SlimeBrain, delta: float) -> void:
 	var gameplay := root as GameplayState
+	var status := skeleton.get_node_or_null("Status") as StatusComponent
+	if status != null and status.is_movement_locked():
+		gameplay._set_actor_visual_scale(skeleton, Vector2.ONE)
+		_tick_skeleton_idle_walk(root, skeleton, 0.0, false)
+		return
 	var foot: Vector2 = gameplay._actor_foot(skeleton)
 	var player := gameplay.player
 	var player_foot: Vector2 = gameplay._actor_foot(player) if player != null else foot

@@ -269,6 +269,7 @@ func shift_hub_item(root: Object, direction: int) -> void:
 	elif root.screen_state_controller.hub_page == 3:
 		count = hub_fusion_candidates(root).size()
 		root.screen_state_controller.hub_fusion_count = 1
+		root.screen_state_controller.hub_fusion_message = ""
 	var on_equipment_page: bool = root.screen_state_controller.hub_page == 1 or root.screen_state_controller.is_pause_equipment_active()
 	if count > 0:
 		var target := posmod(root.screen_state_controller.hub_item_index + direction, count)
@@ -346,6 +347,7 @@ func select_hub_item_row(root: Object, row: int) -> void:
 		root.screen_state_controller.hub_fusion_state = 1
 		root.screen_state_controller.hub_fusion_item_selected = false
 		root.screen_state_controller.hub_fusion_count = 1
+		root.screen_state_controller.hub_fusion_message = ""
 	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 	root.call("_play_sound", "ui_hover", -6.0, 1.0)
 
@@ -695,6 +697,7 @@ func shift_hub_fusion_count(root: Object, direction: int) -> void:
 	var material_count := int(target_details.get("material_count", 0))
 	if material_count <= 0: return
 	root.screen_state_controller.hub_fusion_count = clampi(int(root.screen_state_controller.hub_fusion_count) + direction, 1, material_count)
+	root.screen_state_controller.hub_fusion_message = ""
 	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 
 
@@ -849,6 +852,7 @@ func hub_item_action(root: Object) -> void:
 						root.call("_play_sound", "ui_confirm", 0.0, 1.0)
 						root.call("_play_sound", "ui_buy_sell", -16.0, 1.0)
 					else:
+						root.screen_state_controller.hub_fusion_message = "MATERIALS CHANGED"
 						root.call("_play_sound", "ui_no_input", 0.0, 1.0)
 						fusion_feedback_played = true
 			elif bool(target_details.get("can_salvage", false)):

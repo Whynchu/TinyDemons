@@ -156,7 +156,7 @@ func _physics_process(delta: float) -> void:
 		capture_service.call("record_scope", &"post_frame", Time.get_ticks_usec() - started_usec)
 func _update_game_over_input() -> void:
 	if screen_state_controller != null:
-		screen_state_controller.update_game_over_input(self)
+		screen_state_controller.state_flow_controller.update_game_over_input(self)
 func _return_to_title() -> void:
 	_settle_current_run(&"return_to_title")
 	if player_profile != null:

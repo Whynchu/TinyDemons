@@ -262,6 +262,10 @@ func run_rank_for_profile(profile: PlayerProfile) -> int:
 	return maxi(profile.difficulty_rank if profile != null else 1, 1)
 
 
+func element_theme_run_number(profile: PlayerProfile) -> int:
+	return maxi(profile.completed_runs + 1 if profile != null else 1, 1)
+
+
 func apply_run_rank_grade(root: Object, grade: String) -> void:
 	ProgressionController.apply_run_grade(root.player_profile, grade)
 
@@ -310,10 +314,11 @@ func begin_new_run(root: GameplayState, preserve_current_dungeon := false) -> vo
 		root.call("_set_entrance_open", false)
 	if root.run_state != null:
 		var active_run_rank := run_rank(root)
-		root.run_state.begin(root.current_dungeon_seed, run_difficulty_bonus(root), float(root.call("_player_max_health")), active_run_rank)
+		var theme_run_number := element_theme_run_number(root.player_profile)
+		root.run_state.begin(root.current_dungeon_seed, run_difficulty_bonus(root), float(root.call("_player_max_health")), theme_run_number)
 		if root.room_controller != null:
 			root.room_controller.progression_run_rank = active_run_rank
-			root.room_controller.progression_run_number = maxi(root.player_profile.completed_runs + 1, 1) if root.player_profile != null else 1
+			root.room_controller.progression_run_number = theme_run_number
 			root.room_controller.set_run_element_theme(root.run_state.enemy_element_theme)
 	root.set("pending_run_restore", false)
 
@@ -366,11 +371,12 @@ func restore_active_run(root: Object, snapshot: Dictionary) -> bool:
 	if not bool(map_controller.call("restore_map_state", ActiveRunSnapshotScript.denormalize(snapshot.get("map_state", {})) as Dictionary)):
 		return false
 	var restored_rank := maxi(int(snapshot.get("run_rank", root.player_profile.difficulty_rank)), 1)
+	var theme_run_number := element_theme_run_number(root.player_profile)
 	var restored_room_states := ActiveRunSnapshotScript.room_states_from_snapshot(snapshot.get("room_states", {}))
 	var restored_theme := restored_run.enemy_element_theme.duplicate()
 	if not restored_run.element_theme_initialized:
-		restored_theme = EncounterDefinitionScript.legacy_theme_for_rosters(restored_room_states, snapshot_seed, restored_rank)
-	var roster_migration := EncounterDefinitionScript.migrate_cached_rosters(restored_room_states, restored_theme, restored_rank, snapshot_seed)
+		restored_theme = EncounterDefinitionScript.legacy_theme_for_rosters(restored_room_states, snapshot_seed, theme_run_number)
+	var roster_migration := EncounterDefinitionScript.migrate_cached_rosters(restored_room_states, restored_theme, theme_run_number, snapshot_seed)
 	var migration_errors: Array = roster_migration.get("errors", [])
 	if not migration_errors.is_empty():
 		for error in migration_errors:
@@ -381,7 +387,7 @@ func restore_active_run(root: Object, snapshot: Dictionary) -> bool:
 		push_warning("Active run elemental roster migration remapped %d slots to theme %s: %s" % [migration_remaps.size(), str(restored_theme), "; ".join(PackedStringArray(migration_remaps))])
 	restored_run.enemy_element_theme = restored_theme
 	restored_run.element_theme_initialized = true
-	restored_run.element_theme_run_rank = restored_rank
+	restored_run.element_theme_run_number = theme_run_number
 	root.run_state = restored_run
 	root.current_dungeon_seed = snapshot_seed
 	root.puzzle_attempt_rotation_quarter_turns = rotation_turns
@@ -390,7 +396,7 @@ func restore_active_run(root: Object, snapshot: Dictionary) -> bool:
 	root.call("_sync_current_room_metadata", recovery_arrival_socket)
 	root.room_controller.room_states = roster_migration.get("room_states", restored_room_states) as Dictionary
 	root.room_controller.progression_run_rank = restored_rank
-	root.room_controller.progression_run_number = maxi(root.player_profile.completed_runs + 1, 1)
+	root.room_controller.progression_run_number = theme_run_number
 	root.room_controller.set_run_element_theme(restored_theme)
 	if not root.room_controller.mount_room_prefab(root as GameplayState, room_id):
 		return false
@@ -511,8 +517,6 @@ func return_to_hub(root: Object) -> void:
 		root.player_profile.pending_route = "run"
 		root.call("_save_player_profile")
 	root.call("_begin_scene_transition")
-
-
 func settle_current_run(root: GameplayState, result: StringName) -> bool:
 	if not RunSettlement.can_settle(root.run_state, result):
 		return false
@@ -570,7 +574,7 @@ func roll_run_loot_rarity(root: Object, roll: float, score_quality: float = -1.0
 
 
 func complete_run(root: Object) -> void:
-	if root.run_state == null or root.run_state.settled or root.screen_state_controller.run_complete_overlay == null or root.screen_state_controller.run_complete_overlay.visible:
+	if root.run_state == null or root.run_state.settled or root.screen_state_controller.run_complete_presenter.overlay == null or root.screen_state_controller.run_complete_presenter.overlay.visible:
 		return
 	root.call("_finalize_run_metrics")
 	root.call("_finalize_run_enemy_total")
@@ -649,7 +653,7 @@ func complete_run(root: Object) -> void:
 
 
 func show_run_complete(root: Object, _drop_color: Color) -> void:
-	if root.screen_state_controller.run_complete_overlay == null or root.run_state == null:
+	if root.screen_state_controller.run_complete_presenter.overlay == null or root.run_state == null:
 		return
 	# The player can reach the final exit while still holding the same input used
 	# to move through the room. Require a release before the completion action is
@@ -675,11 +679,11 @@ func show_run_complete(root: Object, _drop_color: Color) -> void:
 	line_colors.resize(lines.size())
 	line_colors.fill(Color.WHITE)
 	line_colors[7] = Color8(255, 205, 117)
-	if root.screen_state_controller.run_complete_grade_text != null:
-		root.screen_state_controller.run_complete_grade_text.texture = root.call("_pixel_text_texture", str(summary.get("grade", "D")), Color.WHITE)
-	for index in mini(root.screen_state_controller.run_complete_texts.size(), lines.size()):
-		root.screen_state_controller.run_complete_texts[index].texture = root.call("_pixel_text_texture", lines[index], line_colors[index])
-	root.screen_state_controller.run_complete_overlay.visible = true
+	if root.screen_state_controller.run_complete_presenter.grade_text != null:
+		root.screen_state_controller.run_complete_presenter.grade_text.texture = root.call("_pixel_text_texture", str(summary.get("grade", "D")), Color.WHITE)
+	for index in mini(root.screen_state_controller.run_complete_presenter.lines.size(), lines.size()):
+		root.screen_state_controller.run_complete_presenter.lines[index].texture = root.call("_pixel_text_texture", lines[index], line_colors[index])
+	root.screen_state_controller.run_complete_presenter.overlay.visible = true
 	root.screen_state_controller.set_state(&"run_complete")
 
 
@@ -693,8 +697,8 @@ func metric_color(quality: float) -> Color:
 
 
 func return_from_run_complete(root: Object) -> void:
-	if root.screen_state_controller.run_complete_overlay != null:
-		root.screen_state_controller.run_complete_overlay.visible = false
+	if root.screen_state_controller.run_complete_presenter.overlay != null:
+		root.screen_state_controller.run_complete_presenter.overlay.visible = false
 	if root.player_profile != null:
 		root.player_profile.open_hub_on_load = false
 		root.player_profile.pending_route = "run"

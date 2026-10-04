@@ -4,10 +4,10 @@ Status: design authority; the bounded status implementation lives in
 [`elemental-status-implementation-plan.md`](elemental-status-implementation-plan.md).
 
 Scope: long-term elemental ability + status + presentation direction for the
-player and combat enemies. The current implementation covers five statuses
-through existing elemental hits, plus Water conductivity, innate enemy affinity,
-contact transmission, and themed enemy rosters; a generalized ability resolver
-and new delivery types remain future work.
+player and combat enemies. The current implementation covers five element-owned
+statuses plus the auxiliary Freeze mixture, Water conductivity, innate enemy
+affinity, contact transmission, and themed enemy rosters; a generalized ability
+resolver and new delivery types remain future work.
 
 Owner: element registry (`element_catalog.gd`), the combat damage boundaries
 (`combat_runtime_controller.gd`, `slime_actor.gd`), presentation
@@ -71,8 +71,9 @@ Carried forward from the ratified design contract, not re-opened here:
   **Shadow Poison** (DoT), **Electric Shocked** (periodic stun), **Ice Chill**
   (movement/attack slow), and **Water Wet** (Electric conductivity and Burn
   removal). Ground remains status-free.
-- **The five current statuses may coexist.** Exclusivity and elemental reactions
-  are not part of this bounded status pass.
+- **One authored status mixture is implemented:** Wet + Chill on one actor
+  consumes both and produces Freeze. Other status pairs may coexist; this is
+  not a generalized elemental-reaction system.
 - **Environmental reactions (Water puts out Fire) are a separate system.** They
   belong to authored objects and interaction rules, not the combat damage path
   (`combat-and-dungeon-design-principles.md:245-257`). This document only defines
@@ -244,9 +245,10 @@ every tick (§5.4).
 
 ### 5.3 Stacking and exclusivity
 
-- No exclusivity groups are authored in the current pass; the five statuses
-  can coexist. A future definition that introduces mutually exclusive effects
-  must specify that rule and its reset behavior explicitly.
+- The five element-owned statuses may coexist except for the registered
+  WATER + ICE mixture: Wet and Chill are consumed to create Freeze. No other
+  exclusivity groups are authored. Any future mixture must specify consumption
+  and reset behavior explicitly.
 - Stacking rules (owner-directed, addendum B4/B5): repeated procs **stack
   intensity up to a per-status cap** while active, and re-proc after expiry is
   **immediate** with no immunity window. Both are tuning values, not code

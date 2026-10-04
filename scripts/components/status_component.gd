@@ -13,6 +13,7 @@ signal transmission_received(status_id: StringName, from_actor: Node)
 var _active: Dictionary[StringName, StatusRecord] = {}
 var innate_status_id: StringName = &""
 var _innate_definition: StatusEffectDefinition
+var movement_lock_resistance_check: Callable = Callable()
 
 
 func configure_innate(status_id: StringName) -> void:
@@ -23,6 +24,10 @@ func configure_innate(status_id: StringName) -> void:
 	_install_innate_record()
 	_recompute_suppression(false)
 	status_changed.emit()
+
+
+func set_movement_lock_resistance_check(check: Callable) -> void:
+	movement_lock_resistance_check = check
 
 
 func reset_for_spawn() -> void:
@@ -56,7 +61,7 @@ func apply_effect(definition: StatusEffectDefinition, source_element: int, arriv
 		record.source_element = source_element
 		record.arrived_by_transmission = record.arrived_by_transmission or arrived_by_transmission
 	_active[definition.id] = record
-	if definition.family == StatusEffectDefinition.Family.AMBIENT_MODIFIER and not definition.extinguishes.is_empty():
+	if not definition.extinguishes.is_empty():
 		_strip_statuses_without_notify(definition.extinguishes, definition.extinguish_stacks_per_application)
 	_refresh_stun_cadences()
 	_recompute_suppression()
@@ -255,22 +260,42 @@ func _strip_statuses_without_notify(ids: Array[StringName], stacks_per_applicati
 
 
 func movement_speed_multiplier() -> float:
-	return _slow_speed_multiplier()
+	return _slow_speed_multiplier(true)
+
+
+func is_movement_locked() -> bool:
+	for record_value: Variant in _active.values():
+		var record := record_value as StatusRecord
+		if record == null or record.origin != StatusRecord.Origin.APPLIED or record.definition == null:
+			continue
+		if record.definition.family == StatusEffectDefinition.Family.MOVEMENT_LOCK and not _movement_lock_is_resisted():
+			return true
+	return false
 
 
 func attack_speed_multiplier() -> float:
-	return _slow_speed_multiplier()
+	return _slow_speed_multiplier(false)
 
 
-func _slow_speed_multiplier() -> float:
+func _slow_speed_multiplier(include_movement_lock: bool) -> float:
 	var result := 1.0
 	for record_value: Variant in _active.values():
 		var record := record_value as StatusRecord
-		if record == null or record.origin != StatusRecord.Origin.APPLIED or record.definition == null or record.definition.family != StatusEffectDefinition.Family.MOVEMENT_SLOW:
+		if record == null or record.origin != StatusRecord.Origin.APPLIED or record.definition == null:
+			continue
+		if include_movement_lock and record.definition.family == StatusEffectDefinition.Family.MOVEMENT_LOCK:
+			if not _movement_lock_is_resisted():
+				return 0.0
+			continue
+		if record.definition.family != StatusEffectDefinition.Family.MOVEMENT_SLOW:
 			continue
 		var slow_fraction := record.definition.magnitude_per_stack * float(record.stacks)
 		result = minf(result, maxf(record.definition.movement_multiplier_floor, 1.0 - slow_fraction))
 	return result
+
+
+func _movement_lock_is_resisted() -> bool:
+	return movement_lock_resistance_check.is_valid() and bool(movement_lock_resistance_check.call())
 
 
 func damage_taken_multiplier() -> float:
@@ -283,7 +308,7 @@ func damage_taken_multiplier() -> float:
 	return result
 
 
-func incoming_damage_multiplier_for(element: int) -> float:
+func incoming_damage_multiplier_for(element: int, include_vulnerability: bool = true) -> float:
 	var result := 1.0
 	for record_value: Variant in _active.values():
 		var record := record_value as StatusRecord
@@ -292,6 +317,8 @@ func incoming_damage_multiplier_for(element: int) -> float:
 		var definition := record.definition
 		if definition.family == StatusEffectDefinition.Family.AMBIENT_MODIFIER and definition.conducts_element == element:
 			result *= 1.0 + definition.conduct_damage_bonus_per_stack * float(record.stacks)
+		elif include_vulnerability and definition.family == StatusEffectDefinition.Family.DAMAGE_VULNERABILITY:
+			result *= 1.0 + definition.vulnerability_per_stack * float(record.stacks)
 	return result
 
 

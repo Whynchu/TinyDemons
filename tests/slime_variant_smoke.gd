@@ -63,40 +63,49 @@ func _initialize() -> void:
 
 	var rooms := RoomController.new()
 	var gray_seen := false
-	var yellow_seen_at_rank_five := false
-	var yellow_seen_before_rank_five := false
-	var ground_seen_at_rank_five := false
-	var ground_seen_before_rank_five := false
-	var ice_seen_at_rank_five := false
-	var ice_seen_before_rank_five := false
+	var yellow_seen_at_run_five := false
+	var yellow_seen_before_run_five := false
+	var ground_seen_at_run_five := false
+	var ground_seen_before_run_five := false
+	var ice_seen_at_run_five := false
+	var ice_seen_before_run_five := false
 	rooms.progression_run_rank = 1
+	rooms.progression_run_number = 1
+	rooms.set_run_element_theme([])
 	for seed in 256:
 		for variant in rooms._generate_enemy_encounter(seed, 0, false, false)["variants"] as Array:
 			gray_seen = gray_seen or String(variant) == "grey"
-			yellow_seen_before_rank_five = yellow_seen_before_rank_five or String(variant) == "yellow"
-			ground_seen_before_rank_five = ground_seen_before_rank_five or String(variant) == "orange"
-			ice_seen_before_rank_five = ice_seen_before_rank_five or String(variant) == "aquamarine"
-	rooms.progression_run_rank = 4
+			yellow_seen_before_run_five = yellow_seen_before_run_five or String(variant) == "yellow"
+			ground_seen_before_run_five = ground_seen_before_run_five or String(variant) == "orange"
+			ice_seen_before_run_five = ice_seen_before_run_five or String(variant) == "aquamarine"
+	rooms.progression_run_rank = 1
+	rooms.progression_run_number = 4
+	rooms.set_run_element_theme([ElementCatalogScript.Element.FIRE, ElementCatalogScript.Element.WATER])
 	for seed in 256:
 		for variant in rooms._generate_enemy_encounter(seed + 4000, 0, false, false)["variants"] as Array:
-			yellow_seen_before_rank_five = yellow_seen_before_rank_five or String(variant) == "yellow"
-			ground_seen_before_rank_five = ground_seen_before_rank_five or String(variant) == "orange"
-			ice_seen_before_rank_five = ice_seen_before_rank_five or String(variant) == "aquamarine"
-	rooms.progression_run_rank = 5
-	for seed in 256:
-		for variant in rooms._generate_enemy_encounter(seed + 8000, 0, false, false)["variants"] as Array:
-			yellow_seen_at_rank_five = yellow_seen_at_rank_five or String(variant) == "yellow"
-			ground_seen_at_rank_five = ground_seen_at_rank_five or String(variant) == "orange"
-			ice_seen_at_rank_five = ice_seen_at_rank_five or String(variant) == "aquamarine"
+			yellow_seen_before_run_five = yellow_seen_before_run_five or String(variant) == "yellow"
+			ground_seen_before_run_five = ground_seen_before_run_five or String(variant) == "orange"
+			ice_seen_before_run_five = ice_seen_before_run_five or String(variant) == "aquamarine"
+	rooms.progression_run_rank = 1
+	rooms.progression_run_number = 5
+	for theme in [[ElementCatalogScript.Element.ELECTRIC], [ElementCatalogScript.Element.GROUND], [ElementCatalogScript.Element.ICE]]:
+		rooms.set_run_element_theme(theme)
+		for seed in 256:
+			for variant in rooms._generate_enemy_encounter(seed + 8000, 0, false, false)["variants"] as Array:
+				yellow_seen_at_run_five = yellow_seen_at_run_five or String(variant) == "yellow"
+				ground_seen_at_run_five = ground_seen_at_run_five or String(variant) == "orange"
+				ice_seen_at_run_five = ice_seen_at_run_five or String(variant) == "aquamarine"
 	_expect(gray_seen, "Gray can appear in base encounters", failures)
-	_expect(not yellow_seen_before_rank_five, "Electric is gated below run rank five", failures)
-	_expect(yellow_seen_at_rank_five, "Electric can appear from run rank five", failures)
-	_expect(not ground_seen_before_rank_five, "Ground is gated below run rank five", failures)
-	_expect(ground_seen_at_rank_five, "Ground can appear from run rank five", failures)
-	_expect(not ice_seen_before_rank_five, "Ice is gated below run rank five", failures)
-	_expect(ice_seen_at_rank_five, "Ice can appear from run rank five", failures)
+	_expect(not yellow_seen_before_run_five, "Electric is gated below campaign run five", failures)
+	_expect(yellow_seen_at_run_five, "Electric can appear from campaign run five at low difficulty", failures)
+	_expect(not ground_seen_before_run_five, "Ground is gated below campaign run five", failures)
+	_expect(ground_seen_at_run_five, "Ground can appear from campaign run five at low difficulty", failures)
+	_expect(not ice_seen_before_run_five, "Ice is gated below campaign run five", failures)
+	_expect(ice_seen_at_run_five, "Ice can appear from campaign run five at low difficulty", failures)
 	rooms.matchup_policy = "shadow_bound"
 	rooms.progression_run_rank = 1
+	rooms.progression_run_number = 5
+	rooms.set_run_element_theme([ElementCatalogScript.Element.SHADOW])
 	var shadow_bound_grey := 0
 	var shadow_bound_purple := 0
 	var shadow_ambush_count := 0

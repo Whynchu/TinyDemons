@@ -59,6 +59,14 @@ static func status_effect_for_id(status_id: StringName) -> StatusEffectDefinitio
 	return null
 
 
+static func status_mixture_for_pair(first_element: int, second_element: int) -> StatusMixtureDefinition:
+	for resource in DATA.status_mixtures:
+		var definition := resource as StatusMixtureDefinition
+		if definition != null and definition.matches_pair(first_element, second_element):
+			return definition
+	return null
+
+
 static func innate_status_id_for_element(element: int) -> StringName:
 	var definition := status_effect_for_element(element)
 	return definition.id if definition != null else &""

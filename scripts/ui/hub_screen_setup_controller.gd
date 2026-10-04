@@ -158,36 +158,3 @@ func _forward_pause_debug_page_requested() -> void:
 
 func _forward_pause_debug_action_requested(action: StringName, amount: int) -> void:
 	screen.debug_action_requested.emit(action, amount)
-
-
-func _make_menu_page(parent: Node, page_name: String) -> Control:
-	var page := Control.new()
-	page.name = page_name
-	page.position = Vector2.ZERO
-	page.size = screen.display_view_size
-	page.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	parent.add_child(page)
-	return page
-
-
-func _add_menu_title(overlay: ColorRect, title_name: String, label: String, pixel_texture: Callable) -> Sprite2D:
-	return screen._menu_widget_factory.add_menu_title(overlay, title_name, label, pixel_texture, screen.display_view_size)
-
-
-func _position_menu_cursor(cursor: Sprite2D, target: Vector2, animate: bool = false, preserve_motion: bool = false) -> void:
-	screen._screen_layout_controller._position_menu_cursor(cursor, target, animate, preserve_motion)
-
-func _position_hub_stat_markers(selected_row: int, marker_visible: bool) -> void:
-	screen._screen_layout_controller._position_hub_stat_markers(selected_row, marker_visible)
-
-func _set_hub_stat_adjustment_targets(selected_row: int, enabled: bool) -> void:
-	screen._screen_layout_controller._set_hub_stat_adjustment_targets(selected_row, enabled)
-
-func _position_hub_controls(animate_cursor: bool = false, preserve_cursor_motion: bool = false) -> void:
-	screen._screen_layout_controller._position_hub_controls(animate_cursor, preserve_cursor_motion)
-
-func _position_pause_controls(animate_cursor: bool = false, preserve_cursor_motion: bool = false) -> void:
-	screen._screen_layout_controller._position_pause_controls(animate_cursor, preserve_cursor_motion)
-
-func _reset_hub_cursor_layer() -> void:
-	screen._screen_layout_controller._reset_hub_cursor_layer()

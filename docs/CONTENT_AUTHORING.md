@@ -290,7 +290,7 @@ Workflow (current, typed enemy-definition path):
    workbench selector and runtime renderer resolve that same field.
 3. Set encounter metadata on that same definition when it should enter normal
    generation: `encounter_role` (`baseline`, `matchup`, `late`, `shadow`, or `support`),
-   `encounter_weight`, `encounter_min_rank`, and any preferred/matchup weight.
+   `encounter_weight`, `encounter_min_run_number`, and any preferred/matchup weight.
    `EncounterDefinition` and `RoomController` consume these fields at runtime.
 4. Do not add a `VARIANTS` entry, a `RoomController` constant, a scene-authored
    roster slot, or a count-table expectation. The registry discovers the typed
@@ -373,7 +373,7 @@ polygon arrays:
   palette.
 - `Combat & Growth`: starting values for all six stats, followed by each stat's
   growth weight per level.
-- `Encounter`: spawn role, weight, minimum rank, matchup and preference weights,
+- `Encounter`: spawn role, weight, minimum run number, matchup and preference weights,
   and whether preferred selection is allowed.
 - `Preview`: animation state, facing, actor scale, playback, and frame timing.
 - `Geometry Guides`: independent guide visibility and a viewport edit target.
@@ -432,8 +432,8 @@ healer INT. Cast timing, heal potency/radius,
 self-heal priority and reflected-heal multiplier, cooldown, preferred range, and
 ally steering bias are global `SlimeTuning` values in
 `resources/tuning/slime_default.tres`.
-Encounter eligibility uses `encounter_min_rank`; the healer is eligible from
-rank 1 and is rolled as a companion after the regular room lineup, so a healer
+Encounter eligibility uses `encounter_min_run_number`; the healer is eligible from
+Run 1 and is rolled as a companion after the regular room lineup, so a healer
 room always keeps at least one non-support enemy. The consumed room policy in
 `resources/definitions/room_definition.tres` gives each group of up to three
 non-support Slimes or Skeletons an independent 50% healer roll; a partial final

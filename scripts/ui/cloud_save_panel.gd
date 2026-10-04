@@ -21,29 +21,29 @@ func configure(game_root: Object, cloud_service: CloudSaveService) -> void:
 func build(parent: Node) -> void:
 	overlay = ColorRect.new(); overlay.name = "CloudSaveOverlay"; overlay.color = Color(0.015, 0.02, 0.035, 0.96); overlay.size = Vector2(240, 160); overlay.z_index = 40; overlay.visible = false; overlay.mouse_filter = Control.MOUSE_FILTER_STOP; parent.add_child(overlay)
 	var pixel_texture := Callable(root, "_pixel_text_texture")
-	var title: Sprite2D = root.screen_state_controller.create_sprite(overlay, "CloudSaveTitle", pixel_texture.call("CLOUD SAVE", Color8(148, 220, 255)) as Texture2D, Vector2(12, 7), false)
-	var help_text: Sprite2D = root.screen_state_controller.create_sprite(overlay, "CloudSaveHelp", pixel_texture.call("KEEP YOUR RECOVERY KEY SAFE", Color8(150, 156, 170)) as Texture2D, Vector2(12, 24), false)
+	var title: Sprite2D = root.screen_state_controller._menu_widget_factory.create_sprite(overlay, "CloudSaveTitle", pixel_texture.call("CLOUD SAVE", Color8(148, 220, 255)) as Texture2D, Vector2(12, 7), false)
+	var help_text: Sprite2D = root.screen_state_controller._menu_widget_factory.create_sprite(overlay, "CloudSaveHelp", pixel_texture.call("KEEP YOUR RECOVERY KEY SAFE", Color8(150, 156, 170)) as Texture2D, Vector2(12, 24), false)
 	# Keep these locals typed even though the sprites are configured by the
 	# shared presentation owner. This makes the dynamic pixel UI safe to edit
 	# and easy for tools to index without guessing at Variant return values.
 	title.name = "CloudSaveTitle"
 	help_text.name = "CloudSaveHelp"
 	key_input = LineEdit.new(); key_input.placeholder_text = "PASTE OR TYPE TD1- KEY"; key_input.position = Vector2(12, 36); key_input.size = Vector2(188, 23); key_input.add_theme_font_size_override("font_size", 8); key_input.virtual_keyboard_enabled = true; key_input.select_all_on_focus = false; key_input.clear_button_enabled = false; key_input.text_submitted.connect(_on_key_submitted); overlay.add_child(key_input)
-	var clear_key: Button = root.screen_state_controller.make_retro_button("X", Vector2(204, 36), Vector2(24, 23), pixel_texture) as Button; clear_key.name = "ClearRecoveryKey"; clear_key.focus_mode = Control.FOCUS_NONE; clear_key.pressed.connect(_clear_key_input); overlay.add_child(clear_key)
-	if root != null and root.get("screen_state_controller") != null: root.get("screen_state_controller").set_archetype_button_state(clear_key, false, Color8(239, 125, 87))
+	var clear_key: Button = root.screen_state_controller._menu_widget_factory.make_retro_button("X", Vector2(204, 36), Vector2(24, 23), pixel_texture) as Button; clear_key.name = "ClearRecoveryKey"; clear_key.focus_mode = Control.FOCUS_NONE; clear_key.pressed.connect(_clear_key_input); overlay.add_child(clear_key)
+	if root != null and root.get("screen_state_controller") != null: root.get("screen_state_controller")._menu_widget_factory.set_archetype_button_state(clear_key, false, Color8(239, 125, 87))
 	var labels := ["CREATE BACKUP", "COPY KEY", "PASTE KEY", "RESTORE", "SYNC NOW", "DELETE CLOUD", "BACK"]
 	for index in labels.size():
 		var button_position: Vector2 = Vector2(12 + (index % 2) * 110, 78 + floori(float(index) / 2.0) * 24) if index < 6 else Vector2(176, 5)
 		var button_size: Vector2 = Vector2(106, 22) if index < 6 else Vector2(52, 20)
-		var button: Button = root.screen_state_controller.make_retro_button(labels[index], button_position, button_size, pixel_texture) as Button; button.focus_mode = Control.FOCUS_NONE
+		var button: Button = root.screen_state_controller._menu_widget_factory.make_retro_button(labels[index], button_position, button_size, pixel_texture) as Button; button.focus_mode = Control.FOCUS_NONE
 		if index < 6:
 			button.position = button_position; button.size = button_size
 		overlay.add_child(button); buttons.append(button)
-		if root != null and root.get("screen_state_controller") != null: root.get("screen_state_controller").set_archetype_button_state(button, false, Color8(148, 220, 255))
+		if root != null and root.get("screen_state_controller") != null: root.get("screen_state_controller")._menu_widget_factory.set_archetype_button_state(button, false, Color8(148, 220, 255))
 	buttons[0].pressed.connect(_create); buttons[1].pressed.connect(_copy_key); buttons[2].pressed.connect(_paste); buttons[3].pressed.connect(_restore); buttons[4].pressed.connect(_sync); buttons[5].pressed.connect(_delete); buttons[6].pressed.connect(close)
 	status_texts.clear()
 	for line_index in 2:
-		status_texts.append(root.screen_state_controller.create_sprite(overlay, "CloudSaveStatus%d" % line_index, null, Vector2(12, 62 + line_index * 7), false))
+		status_texts.append(root.screen_state_controller._menu_widget_factory.create_sprite(overlay, "CloudSaveStatus%d" % line_index, null, Vector2(12, 62 + line_index * 7), false))
 	for child in overlay.get_children():
 		if child is Control: (child as Control).set_meta("cloud_base_x", (child as Control).position.x)
 	apply_layout(root.screen_state_controller.layout_controller.layout_view_size())
@@ -87,7 +87,7 @@ func _clear_key_input() -> void:
 
 func _update_selection() -> void:
 	for index in buttons.size():
-		if root != null and root.get("screen_state_controller") != null: root.get("screen_state_controller").set_archetype_button_state(buttons[index], index == selected_row, Color8(148, 220, 255))
+		if root != null and root.get("screen_state_controller") != null: root.get("screen_state_controller")._menu_widget_factory.set_archetype_button_state(buttons[index], index == selected_row, Color8(148, 220, 255))
 func _create() -> void: _clear_confirmations(); _set_status("Encrypting and creating backup..."); service.create_backup(ProfileSaveService.export_cloud_envelope())
 func _copy_key() -> void:
 	_clear_confirmations()

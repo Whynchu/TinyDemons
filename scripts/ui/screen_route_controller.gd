@@ -1,8 +1,8 @@
 extends RefCounted
 class_name ScreenRouteController
 
-## Owns Pause route/input and Settings route/input while the screen facade
-## keeps its stable public calls and shared widget helpers.
+## Owns Pause and Settings route/input; ScreenStateController retains
+## shared widget helpers and unrelated screen routes.
 var screen: ScreenStateController
 
 func bind(owner: Variant) -> void:
@@ -44,11 +44,11 @@ func update_pause_ui(root: Object, pixel_texture: Callable) -> void:
 	elif screen.pause_page == 2:
 		var pause_profile: PlayerProfile = menu_player_context.profile if menu_player_context != null else root.get("player_profile") as PlayerProfile
 		if pause_equipment_view_active:
-			screen._render_equipment_menu(root, pixel_texture, pause_profile, highlight, screen.pause_equipment_menu, false)
+			screen._hub_screen_render_controller._render_equipment_menu(root, pixel_texture, pause_profile, highlight, screen.pause_equipment_menu, false)
 			return
 		screen._pause_screen_presenter.update_equipment(pause_profile, pixel_texture)
 	elif screen.pause_page == 3:
-		screen.refresh_debug_menu(root)
+		refresh_debug_menu(root)
 	screen._pause_screen_presenter.update_selected_cursor(
 		screen.pause_page,
 		screen.pause_menu_row,
@@ -74,7 +74,7 @@ func set_pause_page(root: Object, page: int) -> void:
 		root.call("_play_sound", "ui_confirm", 0.0, 1.0)
 	elif screen.pause_page == 3:
 		root.call("_play_sound", "ui_confirm", 0.0, 1.0)
-	screen.update_pause_ui(root, Callable(root, "_pixel_text_texture"))
+	update_pause_ui(root, Callable(root, "_pixel_text_texture"))
 
 
 func is_pause_equipment_active() -> bool:
@@ -82,15 +82,15 @@ func is_pause_equipment_active() -> bool:
 
 
 func refresh_equipment_menu(root: Object) -> void:
-	if screen.is_pause_equipment_active():
-		screen.update_pause_ui(root, Callable(root, "_pixel_text_texture"))
+	if is_pause_equipment_active():
+		update_pause_ui(root, Callable(root, "_pixel_text_texture"))
 	else:
 		screen.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 
 
 func pause_back(root: Object) -> void:
 	if screen.pause_page != 0:
-		screen.set_pause_page(root, 0)
+		set_pause_page(root, 0)
 		root.call("_play_sound", "ui_decline", 0.0, 1.0)
 		return
 	root.call("_close_hub_to_run")
@@ -106,29 +106,29 @@ func pause_equipment_back(root: Object) -> void:
 		screen.hub_equipment_mode = EquipmentMenuLayout.MODE_COMMAND
 		screen.hub_touch_candidate_slot = ""
 		screen.hub_touch_candidate_index = -1
-		screen.refresh_equipment_menu(root)
+		refresh_equipment_menu(root)
 		root.call("_play_sound", "ui_decline", 0.0, 1.0)
 	else:
-		screen.pause_back(root)
+		pause_back(root)
 
 
 
 func update_pause_input(root: GameplayState) -> void:
 	if screen.pause_overlay == null or not screen.pause_overlay.visible:
 		return
-	if screen.pause_page == 2 and screen.is_pause_equipment_active():
+	if screen.pause_page == 2 and is_pause_equipment_active():
 		var touch_scroll := root._input_touch_scroll_y() as float
 		if not is_zero_approx(touch_scroll):
 			screen.scroll_hub_content(root, touch_scroll)
-			screen.refresh_equipment_menu(root)
-		screen._update_pause_equipment_input(root)
+			refresh_equipment_menu(root)
+		_update_pause_equipment_input(root)
 		return
 	screen._pause_menu_input_controller.update(
 		root,
 		screen._pause_menu_state,
 		screen._pause_screen_presenter,
-		Callable(screen, "update_pause_ui"),
-		Callable(screen, "refresh_debug_menu")
+		Callable(self, "update_pause_ui"),
+		Callable(self, "refresh_debug_menu")
 	)
 
 
@@ -164,7 +164,7 @@ func _update_pause_equipment_input(root: GameplayState) -> void:
 		elif not screen.hub_equipment_action_focus:
 			screen.hub_equipment_action_focus = true
 			screen.hub_equipment_mode = EquipmentMenuLayout.MODE_COMMAND
-			screen.refresh_equipment_menu(root)
+			refresh_equipment_menu(root)
 			root._play_sound("ui_decline", 0.0, 1.0)
 		else:
 			root._pause_back()
@@ -237,7 +237,7 @@ func open_settings(root: Object, origin: StringName) -> void:
 	screen.settings_presenter.overlay.visible = true
 	screen.settings_presenter.overlay.modulate.a = 1.0
 	screen.set_state(&"settings")
-	screen.update_settings_ui(root, Callable(root, "_pixel_text_texture"))
+	update_settings_ui(root, Callable(root, "_pixel_text_texture"))
 	screen._focus_settings_selection()
 
 
@@ -252,7 +252,7 @@ func close_settings(root: Object) -> void:
 		screen.pause_page = 0
 		screen.pause_menu_row = 2
 		screen.set_state(&"pause")
-		screen.update_pause_ui(root, Callable(root, "_pixel_text_texture"))
+		update_pause_ui(root, Callable(root, "_pixel_text_texture"))
 	else:
 		screen.set_menu_world_hidden(root, false)
 		if screen.title_presenter.overlay != null: screen.title_presenter.overlay.visible = true
@@ -283,7 +283,7 @@ func select_setting_option(root: Object, row: int, option_index: int) -> void:
 	if service == null:
 		return
 	screen._settings_screen_presenter.select_option(service, row, option_index)
-	screen.update_settings_ui(root, Callable(root, "_pixel_text_texture"))
+	update_settings_ui(root, Callable(root, "_pixel_text_texture"))
 
 
 func adjust_setting(root: Object, row: int, direction: int) -> void:
@@ -291,7 +291,7 @@ func adjust_setting(root: Object, row: int, direction: int) -> void:
 	if service == null:
 		return
 	screen._settings_screen_presenter.adjust_option(service, row, direction)
-	screen.update_settings_ui(root, Callable(root, "_pixel_text_texture"))
+	update_settings_ui(root, Callable(root, "_pixel_text_texture"))
 
 
 func _update_settings_cursor() -> void:
@@ -303,25 +303,25 @@ func update_settings_input(root: Object) -> void:
 	if screen.settings_presenter.overlay == null or not screen.settings_presenter.overlay.visible:
 		return
 	if bool(root.call("_is_menu_back_just_pressed")):
-		screen.close_settings(root)
+		close_settings(root)
 		return
 	var row_count: Variant = screen.settings_presenter.value_buttons.size() + (1 if screen.settings_presenter.back_button != null else 0)
 	if bool(root.call("_is_menu_direction_just_pressed", &"ui_up")):
 		screen.settings_presenter.row = posmod(screen.settings_presenter.row - 1, row_count)
-		screen.update_settings_ui(root, Callable(root, "_pixel_text_texture"))
+		update_settings_ui(root, Callable(root, "_pixel_text_texture"))
 		screen._focus_settings_selection()
 		root.call("_play_sound", "ui_hover", -6.0, 1.0)
 	elif bool(root.call("_is_menu_direction_just_pressed", &"ui_down")):
 		screen.settings_presenter.row = posmod(screen.settings_presenter.row + 1, row_count)
-		screen.update_settings_ui(root, Callable(root, "_pixel_text_texture"))
+		update_settings_ui(root, Callable(root, "_pixel_text_texture"))
 		screen._focus_settings_selection()
 		root.call("_play_sound", "ui_hover", -6.0, 1.0)
 	elif screen.settings_presenter.row < screen.settings_presenter.value_buttons.size() and bool(root.call("_is_menu_direction_just_pressed", &"ui_left")):
-		screen.adjust_setting(root, screen.settings_presenter.row, -1)
+		adjust_setting(root, screen.settings_presenter.row, -1)
 	elif screen.settings_presenter.row < screen.settings_presenter.value_buttons.size() and bool(root.call("_is_menu_direction_just_pressed", &"ui_right")):
-		screen.adjust_setting(root, screen.settings_presenter.row, 1)
+		adjust_setting(root, screen.settings_presenter.row, 1)
 	elif bool(root.call("_is_menu_confirm_just_pressed")):
 		if screen.settings_presenter.row == screen.settings_presenter.value_buttons.size() and screen.settings_presenter.back_button != null:
 			screen.settings_presenter.back_button.pressed.emit()
 		elif screen.settings_presenter.row >= 0 and screen.settings_presenter.row < screen.settings_presenter.value_buttons.size():
-			screen.adjust_setting(root, screen.settings_presenter.row, 1)
+			adjust_setting(root, screen.settings_presenter.row, 1)

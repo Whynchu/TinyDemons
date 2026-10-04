@@ -35,7 +35,7 @@ const SHOP_STATE_SELL_AMOUNT := HubMenuStateScript.SHOP_STATE_SELL_AMOUNT
 func build_hub_ui(root: Object) -> void:
 	var screen_state_controller := root.screen_state_controller as ScreenStateController
 	var actions := HubScreenActionsScript.from_gameplay_root(root as Node) as HubScreenActions
-	actions.pause_set_page = func(page: int): screen_state_controller.set_pause_page(root, page)
+	actions.pause_set_page = func(page: int): screen_state_controller.route_controller.set_pause_page(root, page)
 	screen_state_controller.build_hub(root.ui, Callable(root, "_pixel_text_texture"), actions)
 	var debug_session := root.get_node_or_null("DebugSessionController") as Node
 	if debug_session != null:
@@ -104,7 +104,7 @@ func open_pause_menu(root: Object) -> void:
 	root.screen_state_controller.pause_overlay.visible = true
 	root.screen_state_controller.set_menu_world_hidden(root, true)
 	root.screen_state_controller.set_state(&"pause")
-	root.screen_state_controller.update_pause_ui(root, Callable(root, "_pixel_text_texture"))
+	root.screen_state_controller.route_controller.update_pause_ui(root, Callable(root, "_pixel_text_texture"))
 	root.call("_play_sound", "ui_pause", 0.0, 1.0)
 
 

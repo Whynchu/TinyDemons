@@ -7,7 +7,7 @@ const SlimeRuntimeControllerScript = preload("res://scripts/runtime/controllers/
 
 var rebound_enemy_damage_count := 0
 
-## Slice C characterization: EncounterDefinition captures the rank-gated enemy
+## Slice C characterization: EncounterDefinition captures the run-gated enemy
 ## pool as validated, editor-inspectable data. It must reject bad weights/policy,
 ## gate late families by run rank, and reproduce the authored shadow-bound
 ## composition contract.
@@ -23,19 +23,19 @@ func _initialize() -> void:
 	_expect(definition.validate().is_empty(), "default encounter definition validates", failures)
 	_expect(definition.grey_weight == 1.0 and definition.shadow_weight == 0.12, "defaults keep the authored neutral/shadow weights", failures)
 
-	var late_rank_1 := definition.late_pool_entries(1)
-	_expect(late_rank_1.is_empty(), "no late elemental families below rank five", failures)
-	var late_rank_5 := definition.late_pool_entries(5)
+	var late_run_1 := definition.late_pool_entries(1)
+	_expect(late_run_1.is_empty(), "no late elemental families below run five", failures)
+	var late_run_5 := definition.late_pool_entries(5)
 	var authored_late_count := 0
 	for variant in CatalogScript.variants():
 		var authored_definition := CatalogScript.definition_resource(variant)
-		if authored_definition != null and authored_definition.encounter_role == &"late" and authored_definition.encounter_min_rank <= 5 and authored_definition.encounter_weight > 0.0:
+		if authored_definition != null and authored_definition.encounter_role == &"late" and authored_definition.encounter_min_run_number <= 5 and authored_definition.encounter_weight > 0.0:
 			authored_late_count += 1
-	_expect(late_rank_5.size() == authored_late_count, "rank five includes every authored late definition", failures)
+	_expect(late_run_5.size() == authored_late_count, "run five includes every authored late definition", failures)
 	var late_names: Array[String] = []
-	for entry in late_rank_5: late_names.append(str(entry["variant"]))
-	_expect("yellow" in late_names and "orange" in late_names and "aquamarine" in late_names and "crimson" in late_names, "rank five pool includes yellow/ground/ice/crimson", failures)
-	for entry in late_rank_5:
+	for entry in late_run_5: late_names.append(str(entry["variant"]))
+	_expect("yellow" in late_names and "orange" in late_names and "aquamarine" in late_names and "crimson" in late_names, "run five pool includes yellow/ground/ice/crimson", failures)
+	for entry in late_run_5:
 		_expect(float(entry["weight"]) > 0.0, "%s late entry carries a positive weight" % str(entry["variant"]), failures)
 
 	var skeleton_entries := EnemyFactoryScript.weighted_variants_for_type(&"skeleton")

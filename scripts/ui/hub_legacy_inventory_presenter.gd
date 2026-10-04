@@ -118,7 +118,7 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 		if owner.hub_content_focus and selected_visible_slot >= 0 and selected_visible_slot < item_list.size() and item != null:
 			owner.hub_list_cursor.visible = true
 			var cursor_row_y := 35.0 + 4.0 + float(selected_visible_slot) * item_pitch - scroll_frac * item_pitch
-			owner.move_menu_cursor(owner.hub_list_cursor, Vector2(20.0 - CURSOR_LEFT_GAP, cursor_row_y + 3.0), false)
+			owner._menu_cursor_animator.move_menu_cursor(owner.hub_list_cursor, Vector2(20.0 - CURSOR_LEFT_GAP, cursor_row_y + 3.0), false, owner)
 		else:
 			owner.hub_list_cursor.visible = false
 	if item == null:
@@ -213,14 +213,14 @@ func _update_hub_item_page(root: Object, pixel_texture: Callable, profile: Playe
 	action.disabled = (owner.hub_shop_sell_mode and equipped) or (not owner.hub_shop_sell_mode and sold) or (page == 2 and not owner.hub_shop_sell_mode and profile.gold < price) or (page == 1 and equipped) or (page == 3 and (not can_fuse and not overflow or (can_fuse and profile.souls < profile.fusion_batch_cost(item, fusion_count))))
 	if owner.hub_fusion_decrease_button != null:
 		owner.hub_fusion_decrease_button.disabled = page != 3 or not can_fuse or fusion_count <= 1
-		owner.set_archetype_button_state(owner.hub_fusion_decrease_button, not owner.hub_fusion_decrease_button.disabled, highlight_color)
+		owner._menu_widget_factory.set_archetype_button_state(owner.hub_fusion_decrease_button, not owner.hub_fusion_decrease_button.disabled, highlight_color)
 	if owner.hub_fusion_increase_button != null:
 		owner.hub_fusion_increase_button.disabled = page != 3 or not can_fuse or fusion_count >= material_count
-		owner.set_archetype_button_state(owner.hub_fusion_increase_button, not owner.hub_fusion_increase_button.disabled, highlight_color)
+		owner._menu_widget_factory.set_archetype_button_state(owner.hub_fusion_increase_button, not owner.hub_fusion_increase_button.disabled, highlight_color)
 	var label := action.get_child(0) as Sprite2D
 	if label != null: label.texture = pixel_texture.call(("SELL" if owner.hub_shop_sell_mode else "BUY") if page == 2 else ("SALVAGE" if page == 3 and overflow else ("FUSE x%d" % fusion_count if page == 3 else "EQUIP")), Color.WHITE) as Texture2D
-	owner.set_archetype_button_state(action, true, highlight_color)
-	owner._set_menu_button_icon(action, MENU_CIRCLE_TEXTURE, owner._menu_uses_face_art(root) and not action.disabled)
+	owner._menu_widget_factory.set_archetype_button_state(action, true, highlight_color)
+	owner._menu_prompt_texture_factory.set_menu_button_icon(action, MENU_CIRCLE_TEXTURE, owner._menu_uses_face_art(root) and not action.disabled)
 
 func _update_hub_gear_slots(root: Object, pixel_texture: Callable, profile: PlayerProfile, catalog: ItemCatalog, item_list: Array[Sprite2D], choices: Array[Sprite2D], details: Array[Sprite2D], action: Button, highlight_color: Color) -> void:
 	# Equipment owns its top Equip/Remove action row. The old lower action
@@ -292,7 +292,7 @@ func _update_hub_gear_slots(root: Object, pixel_texture: Callable, profile: Play
 	if owner.hub_slot_cursor != null:
 		owner.hub_slot_cursor.visible = not action_state and selected_slot_index >= 0 and selected_slot_index < item_list.size()
 		if owner.hub_slot_cursor.visible:
-			owner.move_menu_cursor(owner.hub_slot_cursor, Vector2(20.0 - CURSOR_LEFT_GAP, 35.0 + 4.0 + float(selected_slot_index) * 10.0 + 3.0), false)
+			owner._menu_cursor_animator.move_menu_cursor(owner.hub_slot_cursor, Vector2(20.0 - CURSOR_LEFT_GAP, 35.0 + 4.0 + float(selected_slot_index) * 10.0 + 3.0), false, owner)
 	for choice in choices: choice.texture = null
 	if browsing:
 		var current_index := posmod(int(candidate_indices.get(String(selected_slot), 0)), maxi(slot_candidates.size(), 1))
@@ -321,7 +321,7 @@ func _update_hub_gear_slots(root: Object, pixel_texture: Callable, profile: Play
 			owner.hub_choice_cursor.visible = choice_visible_slot >= 0 and choice_visible_slot < choices.size()
 			if owner.hub_choice_cursor.visible:
 				var choice_cursor_y := 91.0 + 4.0 + float(choice_visible_slot) * choice_pitch - choice_frac * choice_pitch
-				owner.move_menu_cursor(owner.hub_choice_cursor, Vector2(20.0 - CURSOR_LEFT_GAP, choice_cursor_y + 3.0), false)
+				owner._menu_cursor_animator.move_menu_cursor(owner.hub_choice_cursor, Vector2(20.0 - CURSOR_LEFT_GAP, choice_cursor_y + 3.0), false, owner)
 		action.visible = false
 		if owner.hub_item_detail_panel != null: owner.hub_item_detail_panel.visible = true
 		if not details.is_empty():

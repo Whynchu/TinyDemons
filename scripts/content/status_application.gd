@@ -2,6 +2,7 @@ extends RefCounted
 class_name StatusApplication
 
 const StatusApplicationRequestScript = preload("res://scripts/content/status_application_request.gd")
+const StatusMixtureControllerScript = preload("res://scripts/runtime/controllers/status_mixture_controller.gd")
 
 
 static func apply(request: StatusApplicationRequest) -> bool:
@@ -25,9 +26,13 @@ static func apply(request: StatusApplicationRequest) -> bool:
 			return false
 	if not request.guaranteed_proc and request.rng.randf() >= clampf(definition.proc_chance, 0.0, 1.0):
 		return false
-	return component.apply_effect(
+	var prior_innate_suppression := StatusMixtureControllerScript.capture_innate_suppression(request.target, definition.element)
+	var applied := component.apply_effect(
 		definition,
 		request.element,
 		request.source_kind == StatusApplicationRequestScript.SourceKind.CONTACT_TRANSMISSION,
 		request.transmission_source
 	)
+	if applied:
+		StatusMixtureControllerScript.resolve_after_application(request.target, definition.element, prior_innate_suppression)
+	return applied

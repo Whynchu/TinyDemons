@@ -9,6 +9,9 @@ func _initialize() -> void:
 	var rooms := RoomControllerScript.new()
 	rooms.progression_run_rank = 2
 	for variant in CatalogScript.variants():
+		var element := CatalogScript.element_for_variant(variant)
+		rooms.set_run_element_theme([element] if element > ElementCatalogScript.Element.NEUTRAL else [])
+		rooms.progression_run_number = 10
 		rooms.boss_variant_selection = variant
 		var encounter := rooms._generate_boss_encounter(1000, 12)
 		var variants := encounter["variants"] as Array
@@ -19,11 +22,16 @@ func _initialize() -> void:
 			_expect(StringName(variants[index]) == variant, "%s support wave inherits lead variant" % variant, failures)
 	rooms.boss_variant_selection = &""
 	rooms.progression_run_rank = 2
+	rooms.progression_run_number = 10
 	var seen: Dictionary = {}
-	for seed in 512:
-		seen[StringName((rooms._generate_boss_encounter(seed, 12)["variants"] as Array)[0])] = true
+	for element in range(ElementCatalogScript.Element.FIRE, ElementCatalogScript.element_count()):
+		rooms.set_run_element_theme([element])
+		for seed in 64:
+			seen[StringName((rooms._generate_boss_encounter(seed + element * 512, 12)["variants"] as Array)[0])] = true
 	_expect(seen.size() == CatalogScript.variants().size(), "seeded selection reaches every catalog variant", failures)
 	rooms.progression_run_rank = 1
+	rooms.progression_run_number = 1
+	rooms.set_run_element_theme([])
 	var run_one_encounter := rooms._generate_boss_encounter(1000, 12)
 	for run_one_variant in run_one_encounter["variants"] as Array:
 		_expect(String(run_one_variant) != "purple", "Run 1 boss rooms exclude Shadow slimes", failures)

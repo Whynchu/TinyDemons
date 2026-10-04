@@ -53,7 +53,7 @@ const DEFINITION_EDITOR_PROPERTIES := [
 	"vitality", "strength", "defense", "agility", "intelligence", "mind",
 	"vitality_growth", "strength_growth", "defense_growth", "agility_growth",
 	"intelligence_growth", "mind_growth", "spawn_role", "spawn_weight",
-	"minimum_rank", "matchup_weight", "preferred_weight", "allow_preferred",
+	"minimum_run_number", "matchup_weight", "preferred_weight", "allow_preferred",
 ]
 const SUPPORT_CAST_STATE_DEFINITIONS := [&"support_caster"]
 
@@ -249,11 +249,11 @@ const EffectsSpawnerScript = preload("res://scripts/runtime/services/effects_spa
 		return definition.encounter_weight if definition != null else 0.0
 	set(value):
 		_set_definition_field(&"encounter_weight", value)
-@export_range(1, 99, 1) var minimum_rank: int:
+@export_range(1, 99, 1) var minimum_run_number: int:
 	get:
-		return definition.encounter_min_rank if definition != null else 1
+		return definition.encounter_min_run_number if definition != null else 1
 	set(value):
-		_set_definition_field(&"encounter_min_rank", value)
+		_set_definition_field(&"encounter_min_run_number", value)
 
 @export_subgroup("Matchups & Preferences")
 @export_range(0.0, 10.0, 0.01) var matchup_weight: float:
@@ -389,7 +389,7 @@ const EffectsSpawnerScript = preload("res://scripts/runtime/services/effects_spa
 		var problems := definition.validate()
 		if not problems.is_empty():
 			return "Needs attention: %s" % problems[0]
-		return "Unsaved changes — save when ready." if _definition_is_dirty() else "All changes saved."
+		return "Unsaved changes â€” save when ready." if _definition_is_dirty() else "All changes saved."
 	set(_value):
 		pass
 @export_tool_button("Save Enemy Changes") var save_definition_button: Callable
@@ -1021,7 +1021,7 @@ func _apply_definition_edits_to_preview() -> void:
 	preview_actor.set_meta("visual_source", definition.visual_source)
 	preview_actor.set_meta("encounter_role", String(definition.encounter_role))
 	preview_actor.set_meta("encounter_weight", definition.encounter_weight)
-	preview_actor.set_meta("encounter_min_rank", definition.encounter_min_rank)
+	preview_actor.set_meta("encounter_min_run_number", definition.encounter_min_run_number)
 	preview_actor.set_meta("matchup_weight", definition.matchup_weight)
 	preview_actor.set_meta("preferred_weight", definition.preferred_weight)
 	preview_actor.set_meta("allow_preferred", definition.allow_preferred)
@@ -1715,7 +1715,7 @@ func get_preview_summary() -> Dictionary:
 		"visual_source": definition.visual_source,
 		"encounter_role": String(definition.encounter_role),
 		"encounter_weight": definition.encounter_weight,
-		"encounter_min_rank": definition.encounter_min_rank,
+		"encounter_min_run_number": definition.encounter_min_run_number,
 		"matchup_weight": definition.matchup_weight,
 		"preferred_weight": definition.preferred_weight,
 		"allow_preferred": definition.allow_preferred,

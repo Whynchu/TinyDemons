@@ -1,7 +1,9 @@
 # Tiny Demons — Elemental Status Implementation Plan
 
-Status: source implementation is in the working tree; focused runtime and
-rendering acceptance remain open. Balance values are initial playtest defaults.
+Status: bounded five-status implementation is in source; see
+[`freeze-status-design.md`](freeze-status-design.md) for the later WATER + ICE
+mixture. Focused runtime and rendering acceptance remain open. Balance values
+are initial playtest defaults.
 
 Scope: implement Fire Burn, Shadow Poison, Electric Shocked, and Ice Chill for the
 player and combat actors. Statuses are selected from elemental effect data on
@@ -134,8 +136,9 @@ Global rules:
   If an enemy is not on-screen or the room has not engaged, lethal ticks hold it
   at 1 HP until it becomes eligible. Player DoT remains lethal.
 - Shocked respects the existing boss stun-resistance flag.
-- No gear-based status resistance in this pass. No exclusivity groups are
-  authored; the five statuses may coexist.
+- No gear-based status resistance in this pass. The five original element-owned
+  statuses may coexist except for the separately authored Wet + Chill mixture,
+  which consumes both to create Freeze.
 
 ## 3. Data and runtime contracts
 
@@ -196,7 +199,8 @@ Global rules:
 ### S4 — Presentation and render fix
 
 - Show a distinct small pixel mark for each active status in the element color;
-  fit all five possible statuses without silently dropping one. The enemy mark
+  fit all five element-owned statuses plus the auxiliary Freeze condition
+  without silently dropping one. The enemy mark
   is attached to the existing overhead-bar presentation; the player mark sits
   beside the existing player HUD.
 - Use one `ElementAuraComponent` for status aura and imbue outline rendering.
@@ -230,8 +234,9 @@ Global rules:
 
 ## 6. Risks and verification limits
 
-- All five statuses touch multiple combat boundaries. Keep status tick damage
-  behind the typed result contract and keep initial tuning data-only.
+- Element-owned statuses and the auxiliary Freeze condition touch multiple
+  combat boundaries. Keep status tick damage behind the typed result contract
+  and keep initial tuning data-only.
 - Passive stun can chain-interrupt fast enemies; playtest the conservative
   initial proc rate and cadence before raising either value.
 - The current session must not launch another Godot process after the recorded

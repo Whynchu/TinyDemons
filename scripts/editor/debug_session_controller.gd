@@ -35,8 +35,8 @@ func open_page() -> void:
 	if not bool(root.settings_service.get_setting(&"debug_menu_enabled", false)):
 		return
 	begin(root)
-	root.screen_state_controller.set_pause_page(root, DEBUG_PAUSE_PAGE)
-	root.screen_state_controller.refresh_debug_menu(root)
+	root.screen_state_controller.route_controller.set_pause_page(root, DEBUG_PAUSE_PAGE)
+	root.screen_state_controller.route_controller.refresh_debug_menu(root)
 
 
 func handle_action(action: StringName, _amount: int = 0) -> void:
@@ -53,11 +53,11 @@ func handle_action(action: StringName, _amount: int = 0) -> void:
 		&"toggle_pause_enemies": toggle(root, &"pause_enemies")
 		&"toggle_geometry_guides": toggle(root, &"geometry_guides")
 		&"reset_run": reset_run(root)
-		&"back": root.screen_state_controller.set_pause_page(root, 0)
+		&"back": root.screen_state_controller.route_controller.set_pause_page(root, 0)
 		&"end_session":
 			end(root)
-			root.screen_state_controller.set_pause_page(root, 0)
-	root.screen_state_controller.refresh_debug_menu(root)
+			root.screen_state_controller.route_controller.set_pause_page(root, 0)
+	root.screen_state_controller.route_controller.refresh_debug_menu(root)
 
 
 func effective_player_level(default_level: int) -> int:

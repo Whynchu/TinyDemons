@@ -147,7 +147,8 @@ func refresh_status_aura() -> void:
 		_status_outline = Sprite2D.new()
 		_status_outline.name = "ElementStatusOutline"
 		_status_outline.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		_status_outline.z_as_relative = true
+		_status_outline.top_level = true
+		_status_outline.z_as_relative = false
 		overlay_parent.add_child(_status_outline)
 	_status_outline.texture = _outline_texture(actor, ElementCatalogScript.damage_number_color(definition.element))
 	sync_status_outline_transform()
@@ -164,7 +165,6 @@ func sync_status_outline_transform() -> void:
 	_status_outline.offset = actor.offset + (Vector2.ZERO if actor.centered else Vector2(-1.0, -1.0))
 	_status_outline.flip_h = actor.flip_h
 	_status_outline.flip_v = actor.flip_v
-	_status_outline.z_as_relative = actor.z_as_relative
 	_status_outline.z_index = actor.z_index - 1
 
 

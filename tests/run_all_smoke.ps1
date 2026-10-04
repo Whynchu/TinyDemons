@@ -33,6 +33,7 @@ $definitionValidator = Join-Path $root "tools/validate_definitions.ps1"
 $manifestValidator = Join-Path $root "tools/validate_test_manifest.ps1"
 $compositionValidator = Join-Path $root "tools/validate_composition.ps1"
 $uidValidator = Join-Path $root "tools/validate_godot_uids.ps1"
+$definitionManifestChecker = "res://tools/check_definition_manifest.gd"
 
 & $powerShell -NoProfile -ExecutionPolicy Bypass -File $manifestValidator
 if ($LASTEXITCODE -ne 0) {
@@ -68,6 +69,13 @@ if (-not (Test-Path -LiteralPath $godot -PathType Leaf)) {
 $tempRoot = $env:RUNNER_TEMP
 if ([string]::IsNullOrWhiteSpace($tempRoot)) { $tempRoot = $env:TEMP }
 if ([string]::IsNullOrWhiteSpace($tempRoot)) { $tempRoot = [System.IO.Path]::GetTempPath() }
+$manifestCheckUserData = Join-Path $tempRoot ("tiny-demons-manifest-check-{0}" -f $PID)
+New-Item -ItemType Directory -Path $manifestCheckUserData -Force | Out-Null
+& $godot --headless --audio-driver Dummy --user-data-dir $manifestCheckUserData --path $root -s $definitionManifestChecker
+if ($LASTEXITCODE -ne 0) {
+	throw "Definition manifest freshness preflight failed"
+}
+
 $headlessUserData = Join-Path $tempRoot ("tiny-demons-headless-{0}" -f $PID)
 New-Item -ItemType Directory -Path $headlessUserData -Force | Out-Null
 $logFile = Join-Path $headlessUserData "smoke.log"

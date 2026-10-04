@@ -32,7 +32,7 @@
 [ext_resource type="PackedScene" uid="uid://dmwowy0hgwia4" path="res://scenes/ui/hud/player_hud.tscn" id="40_player_hud"]
 [ext_resource type="Script" uid="uid://dqalh1uc2w2ev" path="res://scripts/runtime/world/hub_stone_accent_layer.gd" id="42_hub_stone_accent_layer"]
 [ext_resource type="PackedScene" path="res://scenes/authoring/templates/player_placement.tscn" id="43_player_placement"]
-[ext_resource type="Script" path="res://scripts/editor/placement_root_2d.gd" id="44_placement_root"]
+[ext_resource type="Script" uid="uid://dlh4xpjy51hyn" path="res://scripts/editor/placement_root_2d.gd" id="44_placement_root"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_2wyq8"]
 texture = ExtResource("29_tile_floor")
@@ -371,7 +371,7 @@ texture = ExtResource("18_demon_shadow")
 centered = false
 
 [node name="PlayerPlacement" parent="Actors/Characters" unique_id=1861699678 instance=ExtResource("43_player_placement")]
-position = Vector2(83, 71)
+position = Vector2(87.565, 72)
 
 [node name="SlimeBlue" type="Sprite2D" parent="Actors" unique_id=437783528]
 position = Vector2(112, 57)

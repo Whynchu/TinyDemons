@@ -4,19 +4,17 @@
 
 [resource]
 script = ExtResource("1")
-id = &"wet"
-element = 2
-family = 4
-proc_chance = 0.25
+id = &"freeze"
+element = 7
+family = 6
+proc_chance = 1.0
 duration = 3.0
-maximum_stacks = 2
+maximum_stacks = 1
 magnitude_per_stack = 0.0
-badge_glyph = "W"
-particle_style = &"bubble"
-particle_interval = 0.22
-conducts_element = 3
-conduct_damage_bonus_per_stack = 0.35
-conduct_stun_cadence_divisor = 1.5
+movement_multiplier_floor = 0.1
+badge_glyph = "F"
+particle_style = &"ice_shard"
+particle_interval = 0.14
+vulnerability_per_stack = 0.25
 extinguishes = Array[StringName]([&"burn"])
 extinguish_stacks_per_application = 3
-transmissible = true

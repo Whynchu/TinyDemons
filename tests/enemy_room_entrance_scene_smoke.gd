@@ -135,6 +135,7 @@ func active_variants_size(state: Dictionary) -> int:
 
 func _find_guard_run_seed(rooms: RoomController) -> int:
 	rooms.progression_run_rank = 3
+	rooms.progression_run_number = 3
 	rooms.matchup_policy = "base_counter"
 	rooms.preferred_enemy_variant = "blue"
 	rooms.secondary_enemy_variant = "grey"

@@ -15,7 +15,7 @@ func update_title_flow(root: GameplayState, delta: float) -> void:
 		cloud_panel.update_input()
 		return
 	if screen.settings_presenter.overlay != null and screen.settings_presenter.overlay.visible:
-		root._update_settings_input()
+		screen._screen_route_controller.update_settings_input(root)
 		return
 	if screen.menu_input_release_lock:
 		# A confirm used to close title Settings must be released before the title
@@ -27,10 +27,10 @@ func update_title_flow(root: GameplayState, delta: float) -> void:
 		else:
 			return
 	if screen.archetype_presenter.overlay != null and screen.archetype_presenter.overlay.visible and not screen.title_presenter.transition_active:
-		screen.update_archetype_input(root, delta)
+		update_archetype_input(root, delta)
 		return
 	if screen.title_presenter.transition_active:
-		screen.update_particles(delta, Callable(root, "_snap_half_pixel"))
+		screen._title_particle_controller.update_particles(delta, Callable(root, "_snap_half_pixel"))
 		screen.title_presenter.transition_timer += delta
 		var overlay: Variant = screen.title_presenter.overlay
 		var fade_start := 0.72
@@ -63,7 +63,7 @@ func update_title_flow(root: GameplayState, delta: float) -> void:
 	for button in title_buttons:
 		if button == null or button.disabled or not button.visible: continue
 		var phase := visible_index * 0.3
-		button.modulate.a = screen.retro_button_alpha(frame_timer + phase)
+		button.modulate.a = screen._menu_widget_factory.retro_button_alpha(frame_timer + phase)
 		var base_y := float(button.get_meta("menu_base_y", 93.0 + visible_index * 16.0))
 		button.position.y = base_y
 		visible_index += 1
@@ -83,7 +83,8 @@ func update_title_flow(root: GameplayState, delta: float) -> void:
 		var selected: Variant = command_list.selected()
 		if cursor != null and selected != null:
 			cursor.visible = true
-			screen.move_menu_cursor(cursor, screen._menu_cursor_target(selected))
+			var base_y := float(selected.get_meta("menu_base_y", selected.position.y))
+			screen._menu_cursor_animator.move_menu_cursor(cursor, Vector2(selected.position.x - screen.CURSOR_LEFT_GAP, base_y + 4.0), true, screen)
 			cursor.texture = screen.MENU_CURSOR_TEXTURE
 		if root._is_menu_confirm_just_pressed() and selected != null and not selected.disabled:
 			# Preserve the title transition's original fizzle cue for both NEW GAME
@@ -96,7 +97,7 @@ func update_title_flow(root: GameplayState, delta: float) -> void:
 # --- Archetype selection and preview flow ---
 func update_archetype_input(root: GameplayState, delta: float) -> void:
 	if screen.archetype_presenter.footer_text != null:
-		screen.archetype_presenter.footer_text.texture = screen._pixel_prompt_texture(Callable(root, "_pixel_text_texture"), screen._menu_back_prompt_for(root), Color8(148, 220, 255)) as Texture2D
+		screen._menu_prompt_texture_factory.pixel_prompt_texture(Callable(root, "_pixel_text_texture"), screen._menu_back_prompt_for(root), Color8(148, 220, 255))
 	if screen.archetype_presenter.transition_active:
 		screen.archetype_presenter.transition_timer += delta
 		var transition_timer: Variant = screen.archetype_presenter.transition_timer
@@ -121,25 +122,25 @@ func update_archetype_input(root: GameplayState, delta: float) -> void:
 		return
 	screen.archetype_presenter.frame_timer += delta
 	screen.archetype_presenter.arrow_anim_timer = maxf(screen.archetype_presenter.arrow_anim_timer - delta, 0.0)
-	screen.update_archetype_preview_animation(root)
-	screen.update_archetype_arrow_animation(root)
+	update_archetype_preview_animation(root)
+	update_archetype_arrow_animation(root)
 	var button: Variant = screen.archetype_presenter.start_button
-	button.modulate.a = screen.retro_button_alpha(screen.archetype_presenter.frame_timer)
-	button.position.y = 104.0 + screen.retro_button_bob(screen.archetype_presenter.frame_timer)
+	button.modulate.a = screen._menu_widget_factory.retro_button_alpha(screen.archetype_presenter.frame_timer)
+	button.position.y = 104.0 + screen._menu_widget_factory.retro_button_bob(screen.archetype_presenter.frame_timer)
 	var row: Variant = screen.archetype_presenter.menu_row
 	if root._is_menu_direction_just_pressed(&"ui_up"):
-		screen.select_archetype_menu_row(root, row - 1); root._play_sound("ui_hover", -6.0, 1.0)
+		select_archetype_menu_row(root, row - 1); root._play_sound("ui_hover", -6.0, 1.0)
 	elif root._is_menu_direction_just_pressed(&"ui_down"):
-		screen.select_archetype_menu_row(root, row + 1); root._play_sound("ui_hover", -6.0, 1.0)
+		select_archetype_menu_row(root, row + 1); root._play_sound("ui_hover", -6.0, 1.0)
 	elif root._is_menu_direction_just_pressed(&"ui_left") or root._is_menu_direction_just_pressed(&"ui_right"):
 		var direction := -1 if root._is_menu_direction_just_pressed(&"ui_left") else 1
-		if row == 0: screen.shift_archetype(root, direction)
-		else: screen.select_archetype_menu_row(root, 1)
+		if row == 0: shift_archetype(root, direction)
+		else: select_archetype_menu_row(root, 1)
 		root._play_sound("ui_hover", -6.0, 1.0)
 	if root._is_menu_confirm_just_pressed():
 		root._play_sound("ui_confirm", 0.0, 1.0)
-		if row == 1: screen.start_selected_archetype(root)
-		else: screen.select_archetype_menu_row(root, 1)
+		if row == 1: start_selected_archetype(root)
+		else: select_archetype_menu_row(root, 1)
 
 
 func start_selected_archetype(root: GameplayState) -> void:
@@ -174,14 +175,14 @@ func start_selected_archetype(root: GameplayState) -> void:
 func shift_archetype(root: GameplayState, direction: int) -> void:
 	screen.archetype_presenter.starter_flame_index = posmod(screen.archetype_presenter.starter_flame_index + direction, screen.ASPECT_CATALOG_SCRIPT.STARTER_FLAMES.size())
 	screen.archetype_presenter.index = screen.archetype_presenter.starter_flame_index
-	screen.archetype_arrow_pulse(root, direction)
-	screen.update_archetype_screen(root)
+	archetype_arrow_pulse(root, direction)
+	update_archetype_screen(root)
 
 
 func shift_archetype_color(root: GameplayState, direction: int) -> void:
 	screen.archetype_presenter.color_index = posmod(screen.archetype_presenter.color_index + direction, PaletteLibrary.SELECTABLE_PALETTES.size())
-	screen.archetype_arrow_pulse(root, direction)
-	screen.update_archetype_screen(root)
+	archetype_arrow_pulse(root, direction)
+	update_archetype_screen(root)
 
 
 func archetype_arrow_pulse(_root: GameplayState, direction: int) -> void:
@@ -200,7 +201,7 @@ func update_archetype_arrow_animation(_root: GameplayState) -> void:
 
 func select_archetype_menu_row(root: GameplayState, row: int) -> void:
 	screen.archetype_presenter.menu_row = posmod(row, 2)
-	screen.update_archetype_screen(root)
+	update_archetype_screen(root)
 
 
 func update_archetype_screen(root: GameplayState) -> void:
@@ -226,8 +227,8 @@ func update_archetype_screen(root: GameplayState) -> void:
 			screen.archetype_presenter.preview_frames.clear()
 			screen.archetype_presenter.preview_palette = colors[0]
 			for frame in preview_source_frames: screen.archetype_presenter.preview_frames.append(frame)
-		screen.update_archetype_preview_animation(root)
-	screen.update_archetype_button_styles(root)
+		update_archetype_preview_animation(root)
+		update_archetype_button_styles(root)
 
 
 func update_archetype_preview_animation(root: GameplayState) -> void:
@@ -300,8 +301,8 @@ func update_player_death(root: GameplayState, delta: float, game_over_fade_time:
 		var selected: Variant = title if screen.game_over_presenter.row == 1 and title != null and not title.disabled else restart
 		if selected != null:
 			screen.game_over_presenter.row = 1 if selected == title else 0
-		screen._position_game_over_controls(root)
-		var footer_prompt: Variant = screen._pixel_prompt_texture(Callable(root, "_pixel_text_texture"), screen._menu_back_prompt_for(root), Color8(148, 220, 255)) as Texture2D
+		screen._game_over_screen_presenter.position_controls(screen.display_view_size, screen._menu_cursor_animator, screen, screen.CURSOR_LEFT_GAP)
+		var footer_prompt: Variant = screen._menu_prompt_texture_factory.pixel_prompt_texture(Callable(root, "_pixel_text_texture"), screen._menu_back_prompt_for(root), Color8(148, 220, 255)) as Texture2D
 		screen._game_over_screen_presenter.update_fade(fade_timer, game_over_fade_time, footer_prompt, screen._menu_widget_factory)
 	elif death_timer >= death_effect_end + tuning.death_observe_time:
 		root._show_game_over()
@@ -333,10 +334,10 @@ func update_game_over_input(root: GameplayState) -> void:
 		screen.game_over_presenter.row = 1 if selected == title else 0
 		if screen.game_over_presenter.cursor_text != null:
 			screen.game_over_presenter.cursor_text.visible = true
-			screen.move_menu_cursor(screen.game_over_presenter.cursor_text, Vector2(selected.position.x - screen.CURSOR_LEFT_GAP, selected.position.y + 3.0))
+			screen._menu_cursor_animator.move_menu_cursor(screen.game_over_presenter.cursor_text, Vector2(selected.position.x - screen.CURSOR_LEFT_GAP, selected.position.y + 3.0), true, screen)
 	if screen.game_over_presenter.footer_text != null:
 		screen.game_over_presenter.footer_text.visible = true
-		screen.game_over_presenter.footer_text.texture = screen._pixel_prompt_texture(Callable(root, "_pixel_text_texture"), screen._menu_back_prompt_for(root), Color8(148, 220, 255)) as Texture2D
+		screen.game_over_presenter.footer_text.texture = screen._menu_prompt_texture_factory.pixel_prompt_texture(Callable(root, "_pixel_text_texture"), screen._menu_back_prompt_for(root), Color8(148, 220, 255)) as Texture2D
 	if root._is_menu_confirm_just_pressed() and selected != null and not selected.disabled:
 		root._play_sound("ui_confirm", 0.0, 1.0)
 		selected.pressed.emit()
@@ -347,7 +348,7 @@ func update_archetype_button_styles(_root: Object) -> void:
 	var color := PaletteLibrary.normal(screen.ASPECT_CATALOG_SCRIPT.palette_for_flame(flame)); var row: Variant = screen.archetype_presenter.menu_row
 	var type_active: bool = row == 0; var sprite_active: bool = false; var start_active: bool = row == 1
 	var type_left: Variant = screen.archetype_presenter.type_left_button; var type_right: Variant = screen.archetype_presenter.type_right_button; var start: Variant = screen.archetype_presenter.start_button
-	screen.set_archetype_button_state(type_left, type_active, color); screen.set_archetype_button_state(type_right, type_active, color)
-	for button in screen.archetype_presenter.left_buttons: screen.set_archetype_button_state(button, sprite_active, color)
-	for button in screen.archetype_presenter.right_buttons: screen.set_archetype_button_state(button, sprite_active, color)
-	screen.set_archetype_button_state(start, start_active, color)
+	screen._menu_widget_factory.set_archetype_button_state(type_left, type_active, color); screen._menu_widget_factory.set_archetype_button_state(type_right, type_active, color)
+	for button in screen.archetype_presenter.left_buttons: screen._menu_widget_factory.set_archetype_button_state(button, sprite_active, color)
+	for button in screen.archetype_presenter.right_buttons: screen._menu_widget_factory.set_archetype_button_state(button, sprite_active, color)
+	screen._menu_widget_factory.set_archetype_button_state(start, start_active, color)

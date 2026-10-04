@@ -298,6 +298,13 @@ static func _is_boss(actor: Sprite2D) -> bool:
 
 
 func tick_scoot(actor: Sprite2D, delta: float, tuning: SlimeTuning, is_aggroed: Callable, try_move: Callable, set_scale: Callable, repath: Callable, start_hold: Callable, start_next: Callable) -> void:
+	var status := actor.get_node_or_null("Status") as StatusComponent
+	if status != null and status.is_movement_locked():
+		scoot_timer = 0.0
+		scoot_start = actor.position
+		scoot_target = actor.position
+		set_scale.call(actor, Vector2.ONE)
+		return
 	var timer := scoot_timer
 	if timer > 0.0:
 		var duration := tuning.boss_scoot_duration if _is_boss(actor) and bool(is_aggroed.call(actor)) else tuning.scoot_duration

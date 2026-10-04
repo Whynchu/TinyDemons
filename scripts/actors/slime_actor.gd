@@ -57,11 +57,12 @@ func _ready() -> void:
 func ensure_components() -> void:
 	_ensure_component("Health", HealthComponent)
 	_ensure_component("EnemyChroma", EnemyChromaComponentScript)
+	var combat := _ensure_component("Combat", SlimeCombatComponent) as SlimeCombatComponent
 	var status_component := _ensure_component("Status", StatusComponent) as StatusComponent
+	status_component.set_movement_lock_resistance_check(Callable(combat, "movement_lock_is_resisted"))
 	var aura := _ensure_component("ElementAura", ElementAuraComponent) as ElementAuraComponent
 	aura.configure(self, get_parent() as Node2D, status_component)
 	_ensure_component("Brain", SlimeBrain)
-	_ensure_component("Combat", SlimeCombatComponent)
 	_ensure_component("BossJumpSlam", load("res://scripts/components/boss_jump_slam_component.gd"))
 	_ensure_component("Tactics", EnemyTacticsComponent)
 	_ensure_component("Animation", SlimeAnimationComponent)
@@ -125,13 +126,25 @@ func tick_runtime(delta: float, is_dead: Callable, update_knockback: Callable, u
 	var combat := get_node_or_null("Combat") as SlimeCombatComponent
 	if combat == null or is_dead.call(self) or is_spawn_locked():
 		return
+	var status := get_node_or_null("Status") as StatusComponent
+	var movement_locked: bool = status != null and status.is_movement_locked()
 	var action_delta := _action_delta(delta)
 	combat.cooldown = maxf(combat.cooldown - action_delta, 0.0)
+	if movement_locked:
+		combat.knockback_timer = 0.0
+		combat.knockback_velocity = Vector2.ZERO
+		var brain := get_node_or_null("Brain") as SlimeBrain
+		if brain != null:
+			brain.scoot_timer = 0.0
+			brain.scoot_start = position
+			brain.scoot_target = position
+		# Reset active locomotion/squash presentation without advancing or moving.
+		update_scoot.call(self, 0.0)
 	if combat.status_stun_timer > 0.0:
 		combat.status_stun_timer = maxf(combat.status_stun_timer - delta, 0.0)
 		combat.hitstun_timer = maxf(combat.hitstun_timer - delta, 0.0)
 		return
-	if update_knockback.call(self, delta):
+	if not movement_locked and update_knockback.call(self, delta):
 		var support := get_node_or_null("Support") as Node
 		if support != null:
 			support.call("cancel_cast", &"knockback")
@@ -141,7 +154,9 @@ func tick_runtime(delta: float, is_dead: Callable, update_knockback: Callable, u
 		return
 	if update_attack.call(self, action_delta):
 		return
-	# Movement is the expensive per-frame cost (walkability sampling). The frame
+	if movement_locked:
+		return
+	# This movement stage is skipped for frozen actors; otherwise the frame
 	# controller rotates a movement budget across the crowd, so a slime can be
 	# asked to skip its scoot this frame while combat/knockback stay live.
 	if not allow_movement:
@@ -166,12 +181,25 @@ static func tick_legacy_runtime(actor: Sprite2D, delta: float, is_dead: Callable
 	var combat := actor.get_node_or_null("Combat") as SlimeCombatComponent
 	if combat == null:
 		return
+	var status := actor.get_node_or_null("Status") as StatusComponent
+	var movement_locked: bool = status != null and status.is_movement_locked()
 	var action_delta := _action_delta_for(actor, delta)
 	combat.cooldown = maxf(combat.cooldown - action_delta, 0.0)
-	if bool(update_knockback.call(actor, delta)):
+	if movement_locked:
+		combat.knockback_timer = 0.0
+		combat.knockback_velocity = Vector2.ZERO
+		var brain := actor.get_node_or_null("Brain") as SlimeBrain
+		if brain != null:
+			brain.scoot_timer = 0.0
+			brain.scoot_start = actor.position
+			brain.scoot_target = actor.position
+		update_scoot.call(actor, 0.0)
+	if not movement_locked and bool(update_knockback.call(actor, delta)):
 		return
 	combat.hitstun_timer = maxf(combat.hitstun_timer - delta, 0.0)
 	if combat.hitstun_timer > 0.0 or bool(update_attack.call(actor, action_delta)):
+		return
+	if movement_locked:
 		return
 	if not allow_movement:
 		return

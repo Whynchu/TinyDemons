@@ -34,7 +34,7 @@ var preferred_enemy_variant := "grey"
 var secondary_enemy_variant := "grey"
 var boss_variant_selection: StringName = &""
 var debug_enemy_variant: StringName = &""
-var matchup_policy := "rank_default"
+var matchup_policy := "run_default"
 var encounter_definition: EncounterDefinition = null
 var room_definition: RoomDefinition = null
 var boss_slime_authoring_scene: PackedScene = null
@@ -176,7 +176,7 @@ func ensure_layout(graph: DungeonGraph, room_id: StringName, room: DungeonGraph.
 			state["regular_room_treasure"] = room_type == DungeonGraph.ROOM_COMBAT and progression_run_rank >= 1 and (room.reward_tier == DungeonGraph.REWARD_RISK or treasure_rng.randf() < _room_definition().regular_room_treasure_chance)
 		if not state.has("enemy_spawn_seed"):
 			state["enemy_spawn_seed"] = room.generation_seed + 303
-		EncounterDefinition.migrate_saved_room_support_companions(state, room, room_type, _generated_enemy_base_level(room_depth), progression_run_rank, _enemy_level_cap(), _room_definition(), debug_enemy_variant.is_empty(), run_element_theme); room_states[room_id] = state
+		EncounterDefinition.migrate_saved_room_support_companions(state, room, room_type, _generated_enemy_base_level(room_depth), progression_run_rank, progression_run_number, _enemy_level_cap(), _room_definition(), debug_enemy_variant.is_empty(), run_element_theme); room_states[room_id] = state
 	elif room_type == DungeonGraph.ROOM_DOWNSTAIRS:
 		if not state.has("enemy_variants"):
 			var boss_encounter := _generate_boss_encounter(room.generation_seed, room_depth)
@@ -191,7 +191,7 @@ func ensure_layout(graph: DungeonGraph, room_id: StringName, room: DungeonGraph.
 		room_states[room_id] = state
 	elif room_type == DungeonGraph.ROOM_PUZZLE or room_type == DungeonGraph.ROOM_ORB:
 		room_states[room_id] = state
-	EncounterDefinition.constrain_cached_room_theme(room_states, room_id, state, run_element_theme, progression_run_rank, room.generation_seed, not debug_enemy_variant.is_empty())
+	EncounterDefinition.constrain_cached_room_theme(room_states, room_id, state, run_element_theme, progression_run_number, room.generation_seed, not debug_enemy_variant.is_empty())
 	return state
 
 
@@ -219,7 +219,7 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 	# Authored R4 rooms may provide two explicit target families.
 	var primary_variant := _preferred_variant_or_grey(preferred_enemy_variant)
 	var secondary_variant := _preferred_variant_or_grey(secondary_enemy_variant)
-	if definition.matchup_policy == EncounterDefinition.POLICY_BASE_ADVANTAGE or (definition.matchup_policy == EncounterDefinition.POLICY_RANK_DEFAULT and progression_run_rank == 2):
+	if definition.matchup_policy == EncounterDefinition.POLICY_BASE_ADVANTAGE or (definition.matchup_policy == EncounterDefinition.POLICY_RUN_DEFAULT and progression_run_number == 2):
 		if primary_variant != "grey":
 			variant_pool.append({"variant": primary_variant, "weight": _preferred_variant_weight(primary_variant)})
 	elif definition.matchup_policy == EncounterDefinition.POLICY_BASE_COUNTER:
@@ -229,7 +229,7 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 		for family_variant in [primary_variant, secondary_variant]:
 			if family_variant != "grey" and not _variant_pool_has(variant_pool, family_variant):
 				variant_pool.append({"variant": family_variant, "weight": _preferred_variant_weight(family_variant)})
-	elif definition.matchup_policy == EncounterDefinition.POLICY_RANK_DEFAULT and progression_run_rank >= 3:
+	elif definition.matchup_policy == EncounterDefinition.POLICY_RUN_DEFAULT and progression_run_number >= 3:
 		if primary_variant != "grey":
 			variant_pool.append({"variant": primary_variant, "weight": _preferred_variant_weight(primary_variant)})
 		for elemental_variant in ENEMY_FACTORY_SCRIPT.variants_for_type(&"slime"):
@@ -243,7 +243,7 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 		count = mini(count + 1, count_cap)
 	elif encounter_tier == DungeonGraph.ENCOUNTER_ELITE:
 		count = mini(count + 2, count_cap)
-	variant_pool.append_array(definition.late_pool_entries(progression_run_rank))
+	variant_pool.append_array(definition.late_pool_entries(progression_run_number))
 	var skeleton_variant_pool: Array[Dictionary] = []
 	var force_debug_enemy := not debug_enemy_variant.is_empty() and EnemyFactory.is_variant(debug_enemy_variant)
 	if progression_run_number >= SKELETON_FIRST_RUN_NUMBER:
@@ -253,7 +253,7 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 		# rotation. A small weight keeps it available without making most later
 		# rooms contain one.
 		variant_pool.append({"variant": "purple", "weight": definition.shadow_weight})
-	EncounterDefinition.prepare_variant_pools_for_theme(variant_pool, skeleton_variant_pool, run_element_theme, progression_run_rank, allow_shadow, force_debug_enemy)
+	EncounterDefinition.prepare_variant_pools_for_theme(variant_pool, skeleton_variant_pool, run_element_theme, progression_run_number, allow_shadow, force_debug_enemy)
 	if force_debug_enemy:
 		variant_pool.clear()
 		variant_pool.append({"variant": String(debug_enemy_variant), "weight": 1.0})
@@ -293,7 +293,7 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 	definition.finalize_room_encounter(
 		force_debug_enemy, variants, levels, popcorn_flags, popcorn_types,
 		ambush_flags, elite_flags, _popcorn_enemy_level(), ROOM_POPCORN,
-		ELITE_POPCORN, encounter_rng, _room_definition(), progression_run_rank,
+		ELITE_POPCORN, encounter_rng, _room_definition(), progression_run_rank, progression_run_number,
 		base_level, level_spread, encounter_tier, _enemy_level_cap(), run_element_theme, generation_seed)
 	return {"variants": variants, "levels": levels, "popcorn": popcorn_flags, "popcorn_types": popcorn_types, "ambush": ambush_flags, "elite": elite_flags}
 
@@ -347,7 +347,7 @@ func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictiona
 	# than the ordinary slime variants.
 	var boss_rng := RandomNumberGenerator.new()
 	boss_rng.seed = generation_seed + 991
-	var boss_selection := EncounterDefinition.select_boss_variant(boss_variant_selection, run_element_theme, progression_run_rank, generation_seed, boss_rng)
+	var boss_selection := EncounterDefinition.select_boss_variant(boss_variant_selection, run_element_theme, progression_run_number, generation_seed, boss_rng)
 	var boss_variant := boss_selection.variant as StringName
 	var has_explicit_boss_variant := bool(boss_selection.has_explicit_variant)
 	if boss_variant.is_empty(): return {}
@@ -356,7 +356,7 @@ func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictiona
 	var scales: Array[float] = [3.0]
 	var encounter_rng := RandomNumberGenerator.new()
 	encounter_rng.seed = generation_seed + 707
-	var support_variant_pool := EncounterDefinition.boss_support_variant_pool(progression_run_number >= SKELETON_FIRST_RUN_NUMBER, run_element_theme, progression_run_rank)
+	var support_variant_pool := EncounterDefinition.boss_support_variant_pool(progression_run_number >= SKELETON_FIRST_RUN_NUMBER, run_element_theme, progression_run_number)
 	var use_neutral_boss_support := progression_run_number < SKELETON_FIRST_RUN_NUMBER and progression_run_rank < _room_definition().boss_mixed_support_start_rank
 	for index in minor_count:
 		# Preserve authored boss identity; otherwise choose from the seeded roster.
@@ -384,7 +384,7 @@ func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictiona
 		popcorn_flags.append(true)
 		popcorn_types.append(ELITE_POPCORN)
 		ambush_flags.append(support_variant == "purple" and encounter_rng.randf() < 0.40)
-	EncounterDefinition.constrain_generated_roster(variants, ambush_flags, run_element_theme, progression_run_rank, generation_seed, "Generated boss")
+	EncounterDefinition.constrain_generated_roster(variants, ambush_flags, run_element_theme, progression_run_number, generation_seed, "Generated boss")
 	return {"variants": variants, "levels": levels, "scales": scales, "popcorn": popcorn_flags, "popcorn_types": popcorn_types, "ambush": ambush_flags}
 
 
@@ -639,12 +639,16 @@ func _enter_connected_room_impl(runtime: GameplayState, transition: RoomTransiti
 		return result
 	runtime.room_transition_locked = true
 	begin_transition()
+	var phase_started_usec := Time.get_ticks_usec()
 	runtime._save_current_room_state()
+	runtime._record_performance_scope(&"room_entry_save_current", phase_started_usec)
+	phase_started_usec = Time.get_ticks_usec()
 	if not mount_room_prefab(runtime, transition.destination_room_id):
 		runtime.room_transition_locked = false
 		end_transition()
 		result.status = RoomEntryResult.Status.PREFAB_MOUNT_FAILED
 		return result
+	runtime._record_performance_scope(&"room_entry_mount", phase_started_usec)
 	if runtime.slime_runtime_controller != null:
 		runtime.slime_runtime_controller.clear_room_projectiles()
 	# A combo is local to an encounter. Entering a new room must not carry the
@@ -657,7 +661,9 @@ func _enter_connected_room_impl(runtime: GameplayState, transition: RoomTransiti
 	runtime._sync_current_room_metadata(transition.arrival_socket_id)
 	enter_room(transition.destination_room_id, transition.destination_room_type, transition.arrival_socket_id)
 	_maybe_add_backtrack_popcorn(runtime)
+	phase_started_usec = Time.get_ticks_usec()
 	runtime._ensure_current_room_layout()
+	runtime._record_performance_scope(&"room_entry_layout", phase_started_usec)
 	runtime._update_room_number_indicator()
 	var arrival_socket := dungeon_sockets.get(transition.arrival_socket_id) as DungeonSocket
 	player.global_position = _arrival_player_position(runtime, arrival_socket)
@@ -693,14 +699,13 @@ func _enter_connected_room_impl(runtime: GameplayState, transition: RoomTransiti
 	if npc != null:
 		npc.hide_dialogue(runtime)
 	runtime._set_target_ui_visible(false)
+	phase_started_usec = Time.get_ticks_usec()
 	runtime._apply_room_state()
+	runtime._record_performance_scope(&"room_entry_activation", phase_started_usec)
 	runtime._build_depth_lists()
-	# The destination layout/state is now fully applied. Queue the profile write
-	# and then capture this safe boundary; a browser restart cannot resume from a
-	# half-applied room transition. The profile is flushed ahead of the snapshot
-	# so the snapshot can never outlive the profile it is paired with.
-	if runtime.player_profile != null:
-		ProfileSaveService.request_save(runtime.player_profile)
+	# The destination layout/state is now fully applied. Drain any profile write
+	# already queued by XP or pickups before capturing the safe boundary. Do not
+	# request an unconditional full-profile write on every door crossing.
 	runtime.call_deferred("_save_active_run_checkpoint")
 	runtime.call_deferred("_release_room_transition_lock")
 	result.status = RoomEntryResult.Status.ENTERED

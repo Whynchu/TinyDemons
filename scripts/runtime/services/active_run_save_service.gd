@@ -26,8 +26,13 @@ static func save_snapshot(snapshot: Dictionary, slot: int = -1) -> bool:
 	if file == null:
 		return false
 	file.store_string(json)
+	var wrote_bytes := file.get_position()
 	file.close()
-	if not _read_valid_file(temp_path, safe_slot):
+	# The snapshot was validated before serialization. Re-reading and parsing
+	# the just-written JSON on every room transition rebuilt the full recovery
+	# graph in the same frame as the checkpoint. A byte-count check catches a
+	# short write without repeating that expensive validation.
+	if wrote_bytes != json.to_utf8_buffer().size():
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(temp_path))
 		return false
 	var save_absolute := ProjectSettings.globalize_path(save_path)
@@ -110,10 +115,6 @@ static func _temp_path(slot: int) -> String:
 
 static func _web_key(slot: int) -> String:
 	return "%s%d" % [WEB_KEY_PREFIX, slot]
-
-
-static func _read_valid_file(path: String, slot: int) -> bool:
-	return not _read_file(path, slot).is_empty()
 
 
 static func _read_file(path: String, slot: int) -> Dictionary:

@@ -49,7 +49,7 @@ func _apply_status_damage_tick(root: GameplayState, actor: Sprite2D, result: Sta
 	var status := actor.get_node_or_null("Status") as StatusComponent
 	if status != null:
 		amount *= status.damage_taken_multiplier()
-		amount *= status.incoming_damage_multiplier_for(result.element)
+		amount *= status.incoming_damage_multiplier_for(result.element, false)
 	if amount <= 0.0:
 		return
 	if not is_player and not _enemy_status_tick_may_kill(root, actor):

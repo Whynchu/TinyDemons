@@ -163,7 +163,9 @@ func initialize(root: GameplayState, preview_session: RefCounted = null) -> void
 	root.interaction_component = _add_runtime_node(root, InteractionComponent, "InteractionComponent") as InteractionComponent
 	root.chest_controller = _add_runtime_node(root, ChestController, "ChestController", root.chest) as ChestController
 	root.chest_controller.configure_reward_boundary(root.run_flow_controller, root.room_controller, root.pickup_runtime_controller)
-	root.npc_controller = _add_runtime_node(root, NpcController, "NpcController", root.cloaked_demon) as NpcController
+	var cloaked_demon := root.cloaked_demon
+	root.npc_controller = _add_runtime_node(root, NpcController, "NpcController", cloaked_demon) as NpcController
+	_initialize_npc_status(cloaked_demon)
 	root.rest_fire_controller = _add_runtime_node(root, RestFireController, "RestFireController", root.rest_fire) as RestFireController
 	root.hud_controller = _add_runtime_node(root, HudController, "HudController", root.ui) as HudController
 	root.hud_controller.feedback_animation_registry = root.feedback_animation_registry
@@ -560,6 +562,22 @@ func _initialize_player(root: GameplayState, player: Sprite2D) -> void:
 	root._set_target_ui_visible(false)
 	var player_health: float = root._player_max_health(); health.maximum_health = player_health; health.reset(player_health); root.player_display_health = player_health; root._update_player_health_ui()
 	root._update_player_mp_ui()
+
+
+func _initialize_npc_status(actor: Sprite2D) -> void:
+	if actor == null:
+		return
+	var status := actor.get_node_or_null(^"Status") as StatusComponent
+	if status == null:
+		status = StatusComponent.new()
+		status.name = "Status"
+		actor.add_child(status)
+	var aura := actor.get_node_or_null(^"ElementAura") as ElementAuraComponent
+	if aura == null:
+		aura = ElementAuraComponent.new()
+		aura.name = "ElementAura"
+		actor.add_child(aura)
+	aura.configure(actor, actor.get_parent() as Node2D, status)
 
 
 func _initialize_walkable_area(root: GameplayState, edge_margin: float, slime_edge_padding: float) -> void:

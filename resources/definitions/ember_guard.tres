@@ -14,4 +14,4 @@ growth_weights = {"AGI": 0.08, "DEF": 0.34, "INT": 0.08, "MND": 0.04, "STR": 0.2
 visual_source = "red"
 encounter_role = &"late"
 encounter_weight = 0.5
-encounter_min_rank = 3
+encounter_min_run_number = 3

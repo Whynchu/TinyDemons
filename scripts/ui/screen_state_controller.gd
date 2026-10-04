@@ -56,7 +56,7 @@ const MENU_CIRCLE_TEXTURE: Texture2D = MenuPromptTextureFactoryScript.MENU_CIRCL
 const MENU_X_TEXTURE: Texture2D = MenuPromptTextureFactoryScript.MENU_X_TEXTURE
 const MENU_TRIANGLE_TEXTURE: Texture2D = MenuPromptTextureFactoryScript.MENU_TRIANGLE_TEXTURE
 const MENU_SQUARE_TEXTURE: Texture2D = MenuPromptTextureFactoryScript.MENU_SQUARE_TEXTURE
-const GAME_VERSION := "0.3.35"
+const GAME_VERSION := "0.3.36"
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const HUB_STAT_ADD_TEXTURE: Texture2D = HubStatsScreenPresenterScript.HUB_STAT_ADD_TEXTURE
 const HUB_STAT_SUBTRACT_TEXTURE: Texture2D = HubStatsScreenPresenterScript.HUB_STAT_SUBTRACT_TEXTURE
@@ -143,7 +143,9 @@ func _init() -> void:
 var state: StringName = &"gameplay"
 var _title_particle_controller: TitleParticleController = TitleParticleControllerScript.new() as TitleParticleController
 var _screen_state_flow_controller = ScreenStateFlowControllerScript.new()
+var state_flow_controller: Variant = _screen_state_flow_controller
 var _screen_route_controller = ScreenRouteControllerScript.new()
+var route_controller: Variant = _screen_route_controller
 var _hub_list_scroll_controller = HubListScrollControllerScript.new()
 var _screen_layout_controller = ScreenLayoutControllerScript.new()
 var layout_controller = _screen_layout_controller
@@ -657,26 +659,7 @@ var display_view_size := Vector2(DisplayLayout.NATIVE_SIZE)
 var _display_layout_refreshing := false
 
 
-func retro_button_alpha(timer: float) -> float:
-	return _menu_widget_factory.retro_button_alpha(timer)
-
-func retro_button_bob(timer: float) -> float:
-	return _menu_widget_factory.retro_button_bob(timer)
-
-
-func _position_game_over_controls(_root: GameplayState) -> void:
-	_game_over_screen_presenter.position_controls(display_view_size, _menu_cursor_animator, self, CURSOR_LEFT_GAP)
-
-
-func _menu_cursor_target(button: Button) -> Vector2:
-	var base_y := float(button.get_meta("menu_base_y", button.position.y))
-	return Vector2(button.position.x - CURSOR_LEFT_GAP, base_y + 4.0)
-
-# --- Shared menu visuals and screen-state routing ---
-func set_archetype_button_state(button: Button, active: bool, color: Color) -> void:
-	_menu_widget_factory.set_archetype_button_state(button, active, color)
-
-
+# --- Shared screen-state routing ---
 func set_state(new_state: StringName) -> void:
 	if state == new_state:
 		return
@@ -716,111 +699,7 @@ func set_menu_world_hidden(root: Object, hidden: bool) -> void:
 		actors.visible = _menu_world_actors_visible
 
 
-func update_title_flow(root: GameplayState, delta: float) -> void:
-	_screen_state_flow_controller.update_title_flow(root, delta)
-
-func update_archetype_input(root: GameplayState, delta: float) -> void:
-	_screen_state_flow_controller.update_archetype_input(root, delta)
-
-func start_selected_archetype(root: GameplayState) -> void:
-	_screen_state_flow_controller.start_selected_archetype(root)
-
-func shift_archetype(root: GameplayState, direction: int) -> void:
-	_screen_state_flow_controller.shift_archetype(root, direction)
-
-func shift_archetype_color(root: GameplayState, direction: int) -> void:
-	_screen_state_flow_controller.shift_archetype_color(root, direction)
-
-func archetype_arrow_pulse(_root: GameplayState, direction: int) -> void:
-	_screen_state_flow_controller.archetype_arrow_pulse(_root, direction)
-
-func update_archetype_arrow_animation(_root: GameplayState) -> void:
-	_screen_state_flow_controller.update_archetype_arrow_animation(_root)
-
-func select_archetype_menu_row(root: GameplayState, row: int) -> void:
-	_screen_state_flow_controller.select_archetype_menu_row(root, row)
-
-func update_archetype_screen(root: GameplayState) -> void:
-	_screen_state_flow_controller.update_archetype_screen(root)
-
-func update_archetype_preview_animation(root: GameplayState) -> void:
-	_screen_state_flow_controller.update_archetype_preview_animation(root)
-
-func start_save_select(root: GameplayState, mode: String) -> void:
-	_screen_state_flow_controller.start_save_select(root, mode)
-
-func show_character_creation(root: GameplayState) -> void:
-	_screen_state_flow_controller.show_character_creation(root)
-
-func update_player_death(root: GameplayState, delta: float, game_over_fade_time: float) -> void:
-	_screen_state_flow_controller.update_player_death(root, delta, game_over_fade_time)
-
-func update_game_over_input(root: GameplayState) -> void:
-	_screen_state_flow_controller.update_game_over_input(root)
-
-func update_archetype_button_styles(_root: Object) -> void:
-	_screen_state_flow_controller.update_archetype_button_styles(_root)
-
-
-# --- Title-particle compatibility facade ---
-func add_particle(particle_data: Dictionary) -> void:
-	_title_particle_controller.add_particle(particle_data)
-
-
-func clear_title_particles() -> void:
-	_title_particle_controller.clear_title_particles()
-
-
-func update_particles(delta: float, snap_position: Callable) -> void:
-	_title_particle_controller.update_particles(delta, snap_position)
-
-
-func spawn_pixel_breakup(source_sprite: Sprite2D, particle_parent: Node, pixel_texture: Callable, random_seed: int) -> void:
-	_title_particle_controller.spawn_pixel_breakup(source_sprite, particle_parent, pixel_texture, random_seed)
-
-
-func spawn_button_frame_breakup(button: Button, particle_parent: Node, pixel_texture: Callable, random_seed: int) -> void:
-	_title_particle_controller.spawn_button_frame_breakup(button, particle_parent, pixel_texture, random_seed)
-
-
-# --- Menu widget factory compatibility facade ---
-func style_archetype_button(button: Button) -> void:
-	_menu_widget_factory.style_archetype_button(button)
-
-
-func make_retro_button(label: String, button_position: Vector2, size: Vector2, pixel_texture: Callable) -> Button:
-	return _menu_widget_factory.make_retro_button(label, button_position, size, pixel_texture)
-
-
-func make_menu_command_button(label: String, button_position: Vector2, size: Vector2, pixel_texture: Callable) -> Button:
-	return _menu_widget_factory.make_menu_command_button(label, button_position, size, pixel_texture)
-
-
 # --- Game-over and run-complete screens ---
-func _add_menu_frame(overlay: ColorRect, panel_size: Vector2) -> void:
-	_menu_widget_factory.add_menu_frame(overlay, panel_size)
-
-
-func _resize_menu_frame(overlay: ColorRect, panel_size: Vector2) -> void:
-	_menu_widget_factory.resize_menu_frame(overlay, panel_size)
-
-
-func _position_run_complete_controls() -> void:
-	_run_complete_screen_presenter.position_controls(display_view_size, _menu_cursor_animator, self, CURSOR_LEFT_GAP)
-
-
-func _menu_card_style() -> StyleBoxFlat:
-	return _menu_widget_factory.menu_card_style()
-
-
-func _make_menu_card(parent: Node, card_name: String, card_position: Vector2, card_size: Vector2) -> Panel:
-	return _menu_widget_factory.make_menu_card(parent, card_name, card_position, card_size)
-
-
-func _make_transparent_touch_button(parent: Node, button_name: String, button_position: Vector2, button_size: Vector2, callback: Callable = Callable(), callback_arg: Variant = null) -> Button:
-	return _menu_widget_factory.make_transparent_touch_button(parent, button_name, button_position, button_size, callback, callback_arg)
-
-
 func build_hub(parent: Node, pixel_texture: Callable, actions: HubScreenActions) -> void:
 	_hub_screen_setup_controller.build_hub(parent, pixel_texture, actions)
 
@@ -836,31 +715,6 @@ func _forward_pause_debug_page_requested() -> void:
 func _forward_pause_debug_action_requested(action: StringName, amount: int) -> void:
 	_hub_screen_setup_controller._forward_pause_debug_action_requested(action, amount)
 
-func _make_menu_page(parent: Node, page_name: String) -> Control:
-	return _hub_screen_setup_controller._make_menu_page(parent, page_name)
-
-func _add_menu_title(overlay: ColorRect, title_name: String, label: String, pixel_texture: Callable) -> Sprite2D:
-	return _hub_screen_setup_controller._add_menu_title(overlay, title_name, label, pixel_texture)
-
-func _position_menu_cursor(cursor: Sprite2D, target: Vector2, animate: bool = false, preserve_motion: bool = false) -> void:
-	_hub_screen_setup_controller._position_menu_cursor(cursor, target, animate, preserve_motion)
-
-func _position_hub_stat_markers(selected_row: int, marker_visible: bool) -> void:
-	_hub_screen_setup_controller._position_hub_stat_markers(selected_row, marker_visible)
-
-func _set_hub_stat_adjustment_targets(selected_row: int, enabled: bool) -> void:
-	_hub_screen_setup_controller._set_hub_stat_adjustment_targets(selected_row, enabled)
-
-func _position_hub_controls(animate_cursor: bool = false, preserve_cursor_motion: bool = false) -> void:
-	_hub_screen_setup_controller._position_hub_controls(animate_cursor, preserve_cursor_motion)
-
-func _position_pause_controls(animate_cursor: bool = false, preserve_cursor_motion: bool = false) -> void:
-	_hub_screen_setup_controller._position_pause_controls(animate_cursor, preserve_cursor_motion)
-
-func _reset_hub_cursor_layer() -> void:
-	_hub_screen_setup_controller._reset_hub_cursor_layer()
-
-
 # --- Legacy hub presenters and shop calculations ---
 func _hide_legacy_equipment_presenter() -> void:
 	_hub_legacy_widget_visibility_presenter.hide_equipment_legacy(_hub_responsive_layout_presenter)
@@ -870,94 +724,19 @@ func _hide_legacy_shop_presenter() -> void:
 	_hub_legacy_widget_visibility_presenter.hide_shop_legacy(_hub_responsive_layout_presenter)
 
 
-func _shop_stat_comparison(_root: GameplayState, profile: PlayerProfile, catalog: ItemCatalog, item: ItemInstance) -> Array[Dictionary]:
-	return _hub_transaction_menu_presenter.shop_stat_comparison(profile, catalog, item)
-
-
-func update_pause_ui(root: Object, pixel_texture: Callable) -> void:
-	_screen_route_controller.update_pause_ui(root, pixel_texture)
-
-func set_pause_page(root: Object, page: int) -> void:
-	_screen_route_controller.set_pause_page(root, page)
-
+# --- Hub binding and equipment presentation ---
 func is_pause_equipment_active() -> bool:
 	return _screen_route_controller.is_pause_equipment_active()
 
+
 func refresh_equipment_menu(root: Object) -> void:
 	_screen_route_controller.refresh_equipment_menu(root)
-
-func pause_back(root: Object) -> void:
-	_screen_route_controller.pause_back(root)
-
-func pause_equipment_back(root: Object) -> void:
-	_screen_route_controller.pause_equipment_back(root)
-
-
-# --- Hub binding and equipment presentation ---
-func _update_hub_binding_page(root: Object, pixel_texture: Callable, profile: PlayerProfile, highlight_color: Color) -> void:
-	_hub_screen_render_controller.bind(self as Node)
-	_hub_screen_render_controller._update_hub_binding_page(root, pixel_texture, profile, highlight_color)
-
-
-## Compatibility facade; the render mode now belongs to HubMenuState.
-func _equipment_mode_for_render() -> int:
-	return _hub_menu_state.equipment_mode_for_render()
-
-
-func _equipment_bonus_lines(catalog: ItemCatalog, item: ItemInstance) -> Array[String]:
-	return _hub_equipment_menu_presenter.equipment_bonus_lines(catalog, item)
-
-
-func _equipment_item_description(catalog: ItemCatalog, item: ItemInstance) -> Array[String]:
-	return _hub_equipment_menu_presenter.equipment_item_description(catalog, item)
-
-
-func _equipment_item_label(catalog: ItemCatalog, item: ItemInstance) -> String:
-	return _hub_equipment_menu_presenter.equipment_item_label(catalog, item)
-
-func _compact_equipment_navigation_prompt(prompt: String, fallback: String) -> String:
-	# Face-art prompts already fit the authored 78-pixel cell. Keyboard and
-	# touch labels such as "ENTER SELECT"/"ESC BACK" do not, so retain the
-	# action word while preserving the same device-aware prompt on gamepads.
-	if _menu_face_texture_for_prompt(prompt) != null:
-		return prompt
-	var tokens := prompt.strip_edges().split(" ", false)
-	return str(tokens[tokens.size() - 1]) if not tokens.is_empty() else fallback
-
-
-
-
-
-
-
-
-func _wrap_gear_text(source_text: String, line_length: int) -> Array[String]:
-	return _hub_equipment_menu_presenter.wrap_gear_text(source_text, line_length)
-
-
-
-
-
-
-func update_pause_input(root: GameplayState) -> void:
-	_screen_route_controller.update_pause_input(root)
-
-func refresh_debug_menu(root: GameplayState) -> void:
-	_screen_route_controller.refresh_debug_menu(root)
-
-func _update_pause_equipment_input(root: GameplayState) -> void:
-	_screen_route_controller._update_pause_equipment_input(root)
 
 
 func update_hub_ui(root: GameplayState, pixel_texture: Callable) -> void:
 	_hub_screen_render_controller.bind(self as Node)
 	_hub_legacy_inventory_presenter.bind(self as Node)
 	_hub_screen_render_controller.update_hub_ui(root, pixel_texture)
-
-
-func _render_equipment_menu(root: GameplayState, pixel_texture: Callable, profile: PlayerProfile, highlight_color: Color, target_view: Control = null, read_only: bool = false) -> void:
-	_hub_screen_render_controller.bind(self as Node)
-	_hub_screen_render_controller._render_equipment_menu(root, pixel_texture, profile, highlight_color, target_view, read_only)
 
 
 func update_hub_input(root: GameplayState) -> void:
@@ -973,67 +752,10 @@ func refresh_title_menu_layout(has_profile: bool) -> void:
 	_title_screen_presenter.refresh_menu_layout(has_profile)
 
 
-func build_settings(parent: Node, pixel_texture: Callable, adjust_callback: Callable, close_callback: Callable, select_option_callback: Callable = Callable()) -> Dictionary:
-	return _screen_route_controller.build_settings(parent, pixel_texture, adjust_callback, close_callback, select_option_callback)
-
-func _position_settings_controls() -> void:
-	_screen_route_controller._position_settings_controls()
-
-func open_settings(root: Object, origin: StringName) -> void:
-	_screen_route_controller.open_settings(root, origin)
-
-func close_settings(root: Object) -> void:
-	_screen_route_controller.close_settings(root)
-
-func update_settings_ui(root: Object, pixel_texture: Callable) -> void:
-	_screen_route_controller.update_settings_ui(root, pixel_texture)
-
-func _settings_option_index(row: int, values: Dictionary) -> int:
-	return _screen_route_controller._settings_option_index(row, values)
-
-func _settings_option_index_for_cursor(row: int) -> int:
-	return _screen_route_controller._settings_option_index_for_cursor(row)
-
-func select_setting_option(root: Object, row: int, option_index: int) -> void:
-	_screen_route_controller.select_setting_option(root, row, option_index)
-
-func adjust_setting(root: Object, row: int, direction: int) -> void:
-	_screen_route_controller.adjust_setting(root, row, direction)
-
-func _update_settings_cursor() -> void:
-	_screen_route_controller._update_settings_cursor()
-
-
-func _set_button_text(button: Button, label: String, pixel_texture: Callable, color: Color = Color.WHITE) -> void:
-	_menu_prompt_texture_factory.set_button_text(button, label, pixel_texture, color)
-
-
-func _menu_face_texture_for_prompt(label: String) -> Texture2D:
-	return _menu_prompt_texture_factory.menu_face_texture_for_prompt(label)
-
-
-## Preserve the stable face-button prompt API while the factory owns texture
-## composition and caching for every screen that uses the shared treatment.
-func _pixel_prompt_texture(pixel_texture: Callable, label: String, color: Color) -> Texture2D:
-	return _menu_prompt_texture_factory.pixel_prompt_texture(pixel_texture, label, color)
-
-
-func _pixel_prompt_sequence_texture(pixel_texture: Callable, labels: Array[String], color: Color, gap: int = 5, glyph_gap: int = 1) -> Texture2D:
-	return _menu_prompt_texture_factory.pixel_prompt_sequence_texture(pixel_texture, labels, color, gap, glyph_gap)
-
-
-func _menu_face_label_without_icon(label: String) -> String:
-	return _menu_prompt_texture_factory.menu_face_label_without_icon(label)
-
-
 func _menu_uses_face_art(root: Object) -> bool:
 	if root == null or not root.has_method("_menu_confirm_prompt"):
 		return false
 	return str(root.call("_menu_confirm_prompt")).begins_with("O ")
-
-
-func _set_menu_button_icon(button: Button, icon_texture: Texture2D, visible: bool) -> void:
-	_menu_prompt_texture_factory.set_menu_button_icon(button, icon_texture, visible)
 
 
 func _menu_confirm_prompt_for(root: Object) -> String:
@@ -1052,31 +774,11 @@ func _focus_settings_selection() -> void:
 	# Menu focus is rendered by our pixel cursor and owned by InputRouter. Native
 	# Control focus must not remain on a hidden source page or steal a controller
 	# edge from the active settings route.
-	_update_settings_cursor()
-
-
-func update_settings_input(root: Object) -> void:
-	_screen_route_controller.update_settings_input(root)
+	_screen_route_controller._update_settings_cursor()
 
 
 # --- Save-select and name-entry screen construction ---
 # --- Name-entry state, touch selection, and input ---
-func _name_entry_page_characters(page: int = name_entry_controller.page) -> Array[String]:
-	return _name_entry_screen_controller.page_characters(page)
-
-
-func name_entry_page_case_upper() -> bool:
-	return _name_entry_screen_controller.page_case_upper()
-
-
-func _name_entry_cell_label(token: String) -> String:
-	return _name_entry_screen_controller.cell_label(token)
-
-
-func _position_name_entry_controls() -> void:
-	_name_entry_screen_controller.position_controls(display_view_size, _menu_cursor_animator, self)
-
-
 func show_name_entry(root: Object, pending_slot: int) -> void:
 	if name_entry_controller.widgets.overlay == null:
 		return
@@ -1088,7 +790,8 @@ func show_name_entry(root: Object, pending_slot: int) -> void:
 	name_entry_controller.widgets.overlay.modulate.a = 1.0
 	menu_input_release_lock = true
 	set_state(&"name_entry")
-	update_name_entry_ui(root, Callable(root, "_pixel_text_texture"))
+	if name_entry_controller.widgets.overlay != null:
+		_name_entry_screen_controller.update_visuals(Callable(root, "_pixel_text_texture"), player_palette_name, _menu_confirm_prompt_for(root), _menu_back_prompt_for(root), _menu_prompt_texture_factory, display_view_size, _menu_cursor_animator, self)
 
 
 func cancel_name_entry(root: Object) -> void:
@@ -1105,38 +808,8 @@ func cancel_name_entry(root: Object) -> void:
 	if root.has_method("_play_sound"): root.call("_play_sound", "ui_decline", 0.0, 1.0)
 
 
-func pending_name_entry_slot() -> int:
-	return _name_entry_screen_controller.pending_name_slot()
-
-
-func complete_name_entry() -> void:
-	_name_entry_screen_controller.complete()
-
-
-func update_name_entry_ui(root: Object, pixel_texture: Callable) -> void:
-	if name_entry_controller.widgets.overlay == null:
-		return
-	_name_entry_screen_controller.update_visuals(pixel_texture, player_palette_name, _menu_confirm_prompt_for(root), _menu_back_prompt_for(root), _menu_prompt_texture_factory, display_view_size, _menu_cursor_animator, self)
-
-
 func _activate_name_entry_cell(index: int) -> void:
 	_name_entry_screen_controller.activate_cell(index)
-
-
-func _update_name_entry_visuals() -> void:
-	_name_entry_screen_controller.refresh_visuals()
-
-
-func _move_name_entry_cursor(delta: Vector2i) -> void:
-	_name_entry_screen_controller.move_cursor(delta)
-
-
-func _name_entry_change_page(direction: int) -> void:
-	_name_entry_screen_controller.change_page(direction)
-
-
-func _name_entry_toggle_case() -> void:
-	_name_entry_screen_controller.toggle_case()
 
 
 func update_name_entry_input(root: Object) -> void:
@@ -1154,22 +827,6 @@ func update_name_entry_input(root: Object) -> void:
 
 # --- Archetype and loading screen construction ---
 # --- Shared widget and hub-scroll compatibility facades ---
-func _make_text_button(label: String, button_position: Vector2, normal_style: StyleBoxFlat, focus_style: StyleBoxFlat, pixel_texture: Callable, pressed_callback: Callable) -> Button:
-	return _menu_widget_factory.make_text_button(label, button_position, normal_style, focus_style, pixel_texture, pressed_callback)
-
-
-func create_overlay(parent: Node, overlay_name: String, size: Vector2, color: Color, z_index: int, visible: bool = true) -> ColorRect:
-	return _menu_widget_factory.create_overlay(parent, overlay_name, size, color, z_index, visible)
-
-
-func create_sprite(parent: Node, sprite_name: String, texture: Texture2D, sprite_position: Vector2, centered: bool, scale: Vector2 = Vector2.ONE, z_index: int = 0) -> Sprite2D:
-	return _menu_widget_factory.create_sprite(parent, sprite_name, texture, sprite_position, centered, scale, z_index)
-
-
-func move_menu_cursor(cursor: Sprite2D, target: Vector2, animate: bool = true) -> void:
-	_menu_cursor_animator.move_menu_cursor(cursor, target, animate, self)
-
-
 ## Browser-style list scrolling: a touch drag moves the list CONTENT, never the
 ## cursor. Positive delta is finger movement downward (content follows the
 ## finger, revealing earlier rows).

@@ -83,6 +83,8 @@ For an external product/design review, use the curated [`review/00-astra-review-
     innate element affinity with presentation-only suppression, bidirectional
     contact transmission, and synergy-constrained room generation.
 27. [`script-role-map-2026.md`](script-role-map-2026.md) — Current role-folder locations and the completed Stage 1 assignment for all 235 scripts.
+28. [`elemental-theme-progression-separation-design.md`](elemental-theme-progression-separation-design.md) — implemented contract separating campaign run content from difficulty pressure.
+29. [`freeze-status-design.md`](freeze-status-design.md) — implemented WATER + ICE mixture producing the Freeze status.
 
 ## Authority by question
 
@@ -121,6 +123,8 @@ For an external product/design review, use the curated [`review/00-astra-review-
 | How should elemental abilities, statuses, and auras be built? | [`elemental-ability-and-status-system.md`](elemental-ability-and-status-system.md) | component contract, design principles, and the authoring plan |
 | What is the player's Triangle spell (forms, binding, per-element behavior)? | [`elemental-spell-forms-plan.md`](elemental-spell-forms-plan.md) | [`elemental-ability-and-status-system.md`](elemental-ability-and-status-system.md) for the shared status pipeline |
 | How do innate element affinity, status suppression, contact transmission, and synergy room generation work? | [`elemental-affinity-and-transmission-plan.md`](elemental-affinity-and-transmission-plan.md) | [`elemental-status-implementation-plan.md`](elemental-status-implementation-plan.md) for the existing status pipeline |
+| Which elements spawn as the campaign advances? | [`elemental-theme-progression-separation-design.md`](elemental-theme-progression-separation-design.md) | difficulty rank controls pressure, while run number controls elemental content |
+| What happens when Wet and Chill are on the same actor? | [`freeze-status-design.md`](freeze-status-design.md) | the single authored WATER + ICE status mixture |
 
 ## Document lifecycle
 

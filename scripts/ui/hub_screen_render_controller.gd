@@ -34,7 +34,7 @@ func update_hub_ui(root: GameplayState, pixel_texture: Callable) -> void:
 	# cannot hide it when another route returns early below (notably BIND).
 	# Reset this before any page-specific branch to prevent presenter bleed.
 	owner._hub_page_visibility_presenter.prepare_fusion_visibility(owner.hub_page, owner.hub_fusion_menu)
-	owner._reset_hub_cursor_layer()
+	owner._screen_layout_controller._reset_hub_cursor_layer()
 	# The reworked hub keeps its title/command shell on screen while the
 	# selected command previews its content underneath. Entering a command only
 	# changes focus; it no longer swaps away the top shell.
@@ -62,7 +62,7 @@ func update_hub_ui(root: GameplayState, pixel_texture: Callable) -> void:
 	)
 	# Page changes alter the height of the shared inventory card (Equipment uses
 	# six compact slot rows; Shop/Fusion use the larger inventory rows).
-	owner._position_hub_controls()
+	owner._screen_layout_controller._position_hub_controls()
 	var page_buttons := owner.hub_page_buttons
 	var highlight_color := PaletteLibrary.accent(owner.player_palette_name)
 	highlight_color = root._health_feedback_color(owner.player_palette_name)
@@ -72,8 +72,8 @@ func update_hub_ui(root: GameplayState, pixel_texture: Callable) -> void:
 		# The command rail is pure navigation: the hand cursor marks the selected
 		# command. No box or text highlight may draw around a command, matching the
 		# mockup where only the cursor indicates selection.
-		owner.set_archetype_button_state(page_buttons[page_index], false, highlight_color)
-		owner._set_menu_button_icon(page_buttons[page_index], null, false)
+		owner._menu_widget_factory.set_archetype_button_state(page_buttons[page_index], false, highlight_color)
+		owner._menu_prompt_texture_factory.set_menu_button_icon(page_buttons[page_index], null, false)
 	# The command cursor stays as a dimmed breadcrumb while a nested route is open.
 	owner._hub_command_shell_presenter.update_cursor_for_page(
 		page,
@@ -101,8 +101,8 @@ func update_hub_ui(root: GameplayState, pixel_texture: Callable) -> void:
 	if page == HUB_PAGE_EQUIPMENT:
 		confirm_prompt = confirm_prompt.replace("SELECT", "EQUIP")
 	var back_prompt := owner._menu_back_prompt_for(root)
-	var confirm_prompt_texture := owner._pixel_prompt_texture(pixel_texture, confirm_prompt, Color.WHITE) as Texture2D
-	var back_prompt_texture := owner._pixel_prompt_texture(pixel_texture, back_prompt, Color.WHITE) as Texture2D
+	var confirm_prompt_texture := owner._menu_prompt_texture_factory.pixel_prompt_texture(pixel_texture, confirm_prompt, Color.WHITE) as Texture2D
+	var back_prompt_texture := owner._menu_prompt_texture_factory.pixel_prompt_texture(pixel_texture, back_prompt, Color.WHITE) as Texture2D
 	owner._hub_responsive_layout_presenter.update_footer_content(
 		page,
 		equipment_view_active,
@@ -125,7 +125,7 @@ func update_hub_ui(root: GameplayState, pixel_texture: Callable) -> void:
 	# The counts are regenerated above, so their widths can change (for example
 	# when a player reaches a new digit). Re-apply the right edge anchor after the
 	# textures exist instead of leaving a newly widened number one pixel off.
-	owner._position_hub_controls()
+	owner._screen_layout_controller._position_hub_controls()
 	owner._hub_stats_interaction_presenter.update_page_visibility(
 		owner._hub_stats_presenter,
 		page,
@@ -398,7 +398,7 @@ func _update_hub_binding_page(root: Object, pixel_texture: Callable, profile: Pl
 		if action_label != null:
 			var label := "BIND" if action_enabled else "BOUND" if current_is_bound else "NONE" if current_aspect == &"gray" else "NEED 50S"
 			action_label.texture = pixel_texture.call(label, action_color) as Texture2D
-		owner.set_archetype_button_state(owner.hub_binding_action_button, action_enabled, highlight_color)
+		owner._menu_widget_factory.set_archetype_button_state(owner.hub_binding_action_button, action_enabled, highlight_color)
 
 
 ## Compatibility facade; the render mode now belongs to HubMenuState.
@@ -409,14 +409,14 @@ func _render_equipment_menu(root: GameplayState, pixel_texture: Callable, profil
 		return
 	var selected_slot_index := clampi(owner._hub_menu_state.hub_item_index, 0, ItemCatalog.SLOTS.size() - 1)
 	var selected_slot := ItemCatalog.SLOTS[selected_slot_index]
-	var confirm_prompt := owner._compact_equipment_navigation_prompt(owner._menu_confirm_prompt_for(root), "SELECT")
-	var back_prompt := owner._compact_equipment_navigation_prompt(owner._menu_back_prompt_for(root), "BACK")
+	var confirm_prompt := _compact_equipment_navigation_prompt(owner._menu_confirm_prompt_for(root), "SELECT")
+	var back_prompt := _compact_equipment_navigation_prompt(owner._menu_back_prompt_for(root), "BACK")
 	var context := owner._hub_equipment_menu_context
 	context.view = view
 	context.menu_state = owner._hub_menu_state
 	context.profile = profile
 	context.pixel_texture = pixel_texture
-	context.navigation_texture = owner._pixel_prompt_sequence_texture(pixel_texture, [confirm_prompt, back_prompt], Color.WHITE, 9, 2) as Texture2D
+	context.navigation_texture = owner._menu_prompt_texture_factory.pixel_prompt_sequence_texture(pixel_texture, [confirm_prompt, back_prompt], Color.WHITE, 9, 2) as Texture2D
 	context.portrait_texture = root._equipment_portrait_texture()
 	context.stat_snapshot = root._player_stat_snapshot()
 	context.player_stats = root.player_stats
@@ -426,3 +426,11 @@ func _render_equipment_menu(root: GameplayState, pixel_texture: Callable, profil
 	context.read_only = read_only
 	context.show_navigation = target_view != null
 	owner._hub_equipment_menu_presenter.render(context)
+
+
+func _compact_equipment_navigation_prompt(prompt: String, fallback: String) -> String:
+	# Keep face-art prompts intact; text prompts retain only their action word.
+	if owner._menu_prompt_texture_factory.menu_face_texture_for_prompt(prompt) != null:
+		return prompt
+	var tokens := prompt.strip_edges().split(" ", false)
+	return str(tokens[tokens.size() - 1]) if not tokens.is_empty() else fallback

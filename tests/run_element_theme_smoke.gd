@@ -10,19 +10,26 @@ func _initialize() -> void:
 	var three_element_runs := 0
 	var sample_count := 1000
 	for seed in range(1, sample_count + 1):
-		var theme := EncounterDefinitionScript.select_run_element_theme(seed, 3)
-		_expect(theme == EncounterDefinitionScript.select_run_element_theme(seed, 3), "run theme selection is deterministic for a seed", failures)
-		_expect(theme.size() == 2 or theme.size() == 3, "rank-three runs select two elements or the occasional third", failures)
-		_expect(theme.size() <= 3, "run theme never exceeds the three-element cap", failures)
-		if theme.size() == 3:
+		var teaching_theme := EncounterDefinitionScript.select_run_element_theme(seed, 1)
+		var second_run_theme := EncounterDefinitionScript.select_run_element_theme(seed, 2)
+		var later_run_theme := EncounterDefinitionScript.select_run_element_theme(seed, 3)
+		_expect(teaching_theme.is_empty(), "Run 1 remains Normal-only", failures)
+		_expect(second_run_theme.size() == 1, "Run 2 introduces one elemental theme independent of difficulty", failures)
+		_expect(not later_run_theme.is_empty(), "every run number at or above 3 has a theme", failures)
+		_expect(later_run_theme == EncounterDefinitionScript.select_run_element_theme(seed, 3), "run theme selection is deterministic for a seed", failures)
+		_expect(later_run_theme.size() == 2 or later_run_theme.size() == 3, "later runs select two elements or the occasional third", failures)
+		_expect(later_run_theme.size() <= 3, "run theme never exceeds the three-element cap", failures)
+		if later_run_theme.size() == 3:
 			three_element_runs += 1
+		for run_number in range(2, 9):
+			var run_theme := EncounterDefinitionScript.select_run_element_theme(seed, run_number)
+			_expect(not run_theme.is_empty(), "every run number >= 2 has an elemental theme", failures)
 	var configured_chance := EncounterDefinitionScript.default_data().three_element_theme_chance
 	var observed_chance := float(three_element_runs) / float(sample_count)
 	print("RUN_ELEMENT_THEME_SMOKE_FREQUENCY configured=%.3f observed=%.3f (%d/%d)" % [configured_chance, observed_chance, three_element_runs, sample_count])
 	_expect(observed_chance > 0.0 and observed_chance < 0.5, "two-element runs remain more common than three-element runs", failures)
 	_expect(absf(observed_chance - configured_chance) < 0.06, "seed sweep frequency stays near its configured chance", failures)
-	_expect(EncounterDefinitionScript.select_run_element_theme(77, 1).is_empty(), "rank-one teaching run remains Normal-only", failures)
-	_expect(EncounterDefinitionScript.select_run_element_theme(77, 2).size() == 1, "rank-two teaching run uses one non-Normal element", failures)
+	_expect(EncounterDefinitionScript.available_run_elements_for_number(2).size() > 0, "element availability is derived from run number", failures)
 	var rank_one_legacy_variants: Array[String] = ["healer_slime"]
 	var rank_one_legacy := EncounterDefinitionScript.constrain_roster_to_theme(rank_one_legacy_variants, [], 1, 77)
 	_expect((rank_one_legacy.get("errors", []) as Array).is_empty() and rank_one_legacy.variants == ["grey"], "a Normal-only roster can remap an unsupported legacy healer without breaking its slot", failures)
@@ -33,6 +40,12 @@ func _initialize() -> void:
 	var restored := RunStateScript.new() as RunState
 	_expect(restored.restore_from_dictionary(run_state.to_dictionary()), "active run state restores from its serialized data", failures)
 	_expect(restored.enemy_element_theme == expected_theme and restored.element_theme_initialized, "serialized run theme survives restore without rerolling", failures)
+	_expect(restored.element_theme_run_number == 3, "run theme stores its campaign run number", failures)
+	var legacy_run_state := RunStateScript.new() as RunState
+	var legacy_data := run_state.to_dictionary()
+	legacy_data.erase("element_theme_run_number")
+	legacy_data["element_theme_run_rank"] = 3
+	_expect(legacy_run_state.restore_from_dictionary(legacy_data) and legacy_run_state.element_theme_run_number == 3, "legacy saved theme rank restores through the compatibility key", failures)
 
 	var healer_pool := EnemyFactory.weighted_variants_for_role(&"slime", &"support", 3)
 	for entry in healer_pool:
@@ -81,10 +94,15 @@ func _initialize() -> void:
 	var second_room_controller := RoomControllerScript.new() as Node
 	first_room_controller.set("matchup_policy", EncounterDefinitionScript.POLICY_BASE_COUNTER)
 	second_room_controller.set("matchup_policy", EncounterDefinitionScript.POLICY_BASE_ADVANTAGE)
+	first_room_controller.set("progression_run_rank", 2)
+	first_room_controller.set("progression_run_number", 5)
+	second_room_controller.set("progression_run_rank", 8)
+	second_room_controller.set("progression_run_number", 5)
+	_expect(int(first_room_controller.call("_generated_enemy_base_level", 0)) < int(second_room_controller.call("_generated_enemy_base_level", 0)), "enemy level still follows difficulty rank at a fixed campaign run", failures)
 	var first_definition := first_room_controller.call("_encounter_definition") as EncounterDefinition
 	var second_definition := second_room_controller.call("_encounter_definition") as EncounterDefinition
 	_expect(first_definition != second_definition and first_definition.matchup_policy != second_definition.matchup_policy, "room controllers own isolated matchup definitions", failures)
-	_expect(EncounterDefinitionScript.default_data().matchup_policy == EncounterDefinitionScript.POLICY_RANK_DEFAULT, "runtime matchup policy never mutates the cached shared definition", failures)
+	_expect(EncounterDefinitionScript.default_data().matchup_policy == EncounterDefinitionScript.POLICY_RUN_DEFAULT, "runtime matchup policy never mutates the cached shared definition", failures)
 	first_room_controller.free()
 	second_room_controller.free()
 

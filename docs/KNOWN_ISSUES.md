@@ -143,6 +143,21 @@ and the regular room transition at 41.0 ms, both single samples inside the
 already-documented noise band. `tools/run_perf_harness.ps1`, an F9 capture, and
 the Samsung A17 profile are the next evidence.
 
+**2026-10-04 follow-up:** profile saves triggered by combat XP are queued, and
+room entry no longer requests a redundant profile write when no profile data
+changed. The active-run checkpoint also verifies the serialized byte count
+instead of re-opening and parsing the file on each entry. Room-entry scopes now
+separate room-state save, prefab mount, layout, activation, profile drain,
+snapshot construction, and snapshot storage.
+
+An MCP live-session capture ran for 78.4 seconds and recorded 14.52 ms average
+frames, 73.02 ms p99, and 180 frames over the 16.67 ms hitch threshold. It was
+not a controlled transition route and does not establish room-entry timing.
+The profile-save scope recorded 27 writes totaling 234 ms (8.68 ms average),
+showing that deferred profile persistence can still consume a visible frame
+when it drains. No post-change capture was available; controlled transition,
+pickup, and enemy-death captures remain open.
+
 ### Pre-existing failures found while verifying this pass
 
 Three gate rows fail on unmodified `main` and are **not** caused by this work.
@@ -946,15 +961,22 @@ applied Burn stacks. Contact transfer captures both actors' source statuses
 before applying a pair, uses standard proc/immunity rules, and shares a
 three-second cooldown across both directions.
 
-Runs persist one allowed set: Normal-only for rank 1, one element for rank 2,
-and usually two or sometimes three at rank 3+. Water/Electric is favored for
+Runs persist one allowed set by campaign run number: Normal-only for Run 1,
+one element for Run 2, and usually two or sometimes three from Run 3 onward.
+Difficulty rank owns pressure and cannot remove elemental content.
+Water/Electric is favored for
 its authored Wet/Shocked synergy. Every support variant uses the shared ally
 healing behavior. Legacy cached rosters are deterministically remapped to the
 saved theme while preserving enemy runtime state and pickups.
 
-The Wet values remain provisional. `status_component_smoke`,
-`status_transmission_smoke`, and `run_element_theme_smoke` are registered but
-unrun. Godot parse/definition checks, the 1,000-seed frequency report, legacy
-save-load probes, combat balance, crowd readability at 240x160, and browser
-acceptance remain open. No new Wet audio cue is authored; the existing bubble
-sounds remain specific to the Water spell.
+Wet values remain provisional. Freeze adds one authored WATER + ICE mixture:
+it consumes applied Wet and Chill, locks movement for three seconds, and
+increases direct incoming damage by 25%; innate Wet remains configured beneath
+the applied Freeze aura. Wet and Freeze status badges use `W` and `F`. The
+status resources are validated through the authored ElementCatalog registry.
+`status_component_smoke`, `status_transmission_smoke`,
+`status_mixture_smoke`, and `run_element_theme_smoke` are registered but unrun.
+Godot parse/definition checks, the 1,000-seed report, legacy save-load probes,
+combat balance, crowd readability at 240x160, and browser acceptance remain
+open. No new Wet audio cue is authored; the existing bubble sounds remain
+specific to the Water spell.
