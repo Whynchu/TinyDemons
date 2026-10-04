@@ -696,3 +696,24 @@ Tracing and hardening room clear reconciliation after an elite-room softlock rep
 
 ## 2026-10-04T09:31Z - codex - done
 Room clear now ignores hidden, out-of-tree, missing-health, and depleted actor slots instead of waiting on their stale non-dead combat flags. Version 0.3.33 prepared. Static diff check passes; no Godot process or tests were run.
+
+## 2026-10-04T05:47:04Z - space-bunny - claim
+Authoring docs/composition-plan-2026.md from the independent 2026-10-04 composition audit. Documentation only; no runtime or validator files touched.
+
+## 2026-10-04T14:00Z - codex - claim
+Setting up a repo-native Tiny Demons design wiki, including navigation, page conventions, screenshot guidance, and a scoped browser-prototype proposal. The Pages workflow and runtime files remain outside this claim.
+
+## 2026-10-04T14:12Z - codex - done
+Created the repo-native design wiki under docs/wiki with game overview, systems index, feature brief template, maintenance guidance, and screenshot/browser-prototype notes. Linked it from README.md, AGENTS.md, and DOCUMENTATION_MAP.md. All six wiki pages' relative Markdown links resolve and git diff --check passes. No runtime code, screenshots, hosted lab, or Pages workflow changes.
+
+## 2026-10-04T14:20Z - codex - claim
+Following owner feedback that Markdown-in-repo was not a browsable wiki, building a responsive static wiki site sourced from docs/wiki. The existing Pages workflow remains claimed by opencode and is not being edited in this slice.
+
+## 2026-10-04T05:55:21Z - space-bunny - done
+Authored docs/composition-plan-2026.md (688 lines) from the 2026-10-04 measured composition audit; registered it in docs/DOCUMENTATION_MAP.md as list item 16 plus one FAQ row. Documentation only; no runtime, validator, or test file touched. All 8 relative links in the new plan resolve; the DOCUMENTATION_MAP ordered list renumbered 1-26 cleanly with no encoding damage.
+
+## 2026-10-04T05:55:21Z - space-bunny - blocker
+OVERLAP: codex claimed docs/DOCUMENTATION_MAP.md concurrently with this edit. My change is additive and localized (one new list item after component-composition-design, one new FAQ row, renumbering of items 16-26 by +1). codex should rebase rather than overwrite. No other files of codex's are touched.
+
+## 2026-10-04T14:32Z - codex - done
+Created a responsive static wiki website in wiki-site/ with in-browser Markdown rendering, search, and mobile navigation. Added tools/build_design_wiki.ps1 to assemble wiki-site/ plus docs/wiki content into dist/wiki/. Local build output, JavaScript syntax, source links, and git diff whitespace checks pass. Live publication is not wired because .github/workflows/web-pages.yml is currently claimed by opencode.

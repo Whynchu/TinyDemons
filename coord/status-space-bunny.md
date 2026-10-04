@@ -4,8 +4,70 @@ _Only space-bunny writes this file._ Distinct from the `opencode` session that
 holds the `tests/run_all_smoke.ps1` claim; the board carries separate rows so
 concurrent opencode sessions do not clobber each other's notes.
 
-**Focus:** Design and document the elemental affinity / transmission feature
-**Updated:** 2026-10-03
+**Focus:** Full composition plan (audit → `docs/composition-plan-2026.md`)
+**Updated:** 2026-10-04
+
+## 2026-10-04 — composition plan authored
+
+Documentation only. No runtime, validator, or test file was touched.
+Wrote `docs/composition-plan-2026.md` (688 lines) from an independent measured
+audit, and registered it in `docs/DOCUMENTATION_MAP.md` (list item 16 + a
+FAQ row).
+
+**Measured findings that changed the plan's priorities:**
+
+- `tools/validate_composition.ps1` passes both modes at 100% because every
+  current value already sits *under* a target pinned to the legacy giants. It is
+  a saturated regression floor and cannot see coupling, direction, or
+  complexity. `GameplayState` fields are at 286/286 — zero headroom.
+- **Three different coupling measures rank the files completely differently**,
+  and the validator only tracks one:
+  - dynamic dispatch (`root.get/set/call`) = 2,202 repo-wide
+  - total reach-through (any `root.*`) = 4,434
+  - **untyped `root:` parameters = 560 across 28 files (vs 91 typed)**
+- The largest file is the *cleanest* per line on the validator's metric:
+  `screen_state_controller.gd` is 4.6 dynamic seams/100 lines, the lowest of
+  any large file. The densest are small files a size-sorted review never shows:
+  `chest_controller.gd` 41.5, `actor_motor.gd` 31.5,
+  `targeting_runtime_controller.gd` 31.1.
+- Reach-through is only damning on an *untyped* root. `gameplay_frame_controller`
+  has 455 reach sites but declares `root: GameplayState` in all 17 of its
+  root-taking functions — those are correct static reads. The validator cannot
+  tell the two apart.
+- `magic_runtime_controller.gd` = 1,704 lines with **zero** dynamic seams via a
+  typed `MagicRuntimeContext`. The working template is already in the tree.
+- `gameplay_bootstrap.gd` is 44 hand-written `_add_runtime_node` calls, 31
+  `root.call` dispatches, 34 `_phase()` labels, and a duplicated UI-build
+  sequence. Not "assembled in the only configurable way."
+- 18 documented composition rules have **no** automated check.
+- `scripts/` is 235 files in one flat directory, zero subdirectories.
+
+**Corrections made during authoring** (subagent figures verified, two wrong):
+slime split boundary is **1201** (`collect_walkable_tiles`), not 1199; bootstrap
+`_phase` count is **34**, not 33. Also discarded a mixed-metric density table I
+had drafted and recomputed both measures consistently. Verified all 14
+`room_controller.gd` `_context` twin pairs exist.
+
+**Also authored (plan, not code):** reconciliation with luna's independent
+audit of the same tree. Agreed with all six of her steps; the differences are
+that Stage 0 (guardrail re-base) must precede decomposition, and that her
+line-sorted priority list is the wrong axis.
+
+## Blockers
+
+Unchanged from the previous focus: the recorded session restriction on
+launching a Godot process still applies, so nothing here is runtime-verified.
+The plan's own §Prerequisites names three more: three red gate rows
+(`hub_binding_smoke`, `equipment_menu_scene_smoke`, `imbue_spell_scene_smoke`),
+`GameplayState` 286/286 field headroom, and defining the `_process()` check's
+exemption list before writing it.
+
+## Handoff / next
+
+Owner review of `docs/composition-plan-2026.md`. Stage 0 (validator re-base and
+new checks) is the proposed first code slice and should be a single claimed
+block — it blocks every later stage, and Stage 1's path rewrite is
+merge-conflict-heavy.
 
 ## Current work
 

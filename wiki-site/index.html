@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111419">
+  <meta name="description" content="The Tiny Demons design wiki: game rules, systems, and visual references.">
+  <title>Tiny Demons Wiki</title>
+  <link rel="stylesheet" href="wiki.css">
+  <script defer src="wiki.js"></script>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="./" aria-label="Tiny Demons Wiki home">
+        <span class="brand-mark">TD</span>
+        <span><strong>Tiny Demons</strong><small>DESIGN WIKI</small></span>
+      </a>
+      <label class="search-label" for="search">Find a page</label>
+      <input id="search" class="search" type="search" placeholder="Search pages…" autocomplete="off">
+      <nav aria-label="Wiki pages">
+        <p class="nav-heading">START HERE</p>
+        <a class="nav-link" data-page="README" href="?page=README">Wiki home</a>
+        <a class="nav-link" data-page="game-at-a-glance" href="?page=game-at-a-glance">Game at a glance</a>
+        <a class="nav-link" data-page="systems-map" href="?page=systems-map">Systems map</a>
+        <p class="nav-heading">DESIGN TOOLS</p>
+        <a class="nav-link" data-page="visuals-and-experiments" href="?page=visuals-and-experiments">Visuals &amp; experiments</a>
+        <a class="nav-link" data-page="feature-brief-template" href="?page=feature-brief-template">Feature brief template</a>
+        <a class="nav-link" data-page="maintenance" href="?page=maintenance">Wiki maintenance</a>
+      </nav>
+      <div class="sidebar-bottom"><span class="status-dot"></span>Versioned with the game</div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <button class="menu-button" id="menu-button" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+        <div class="breadcrumbs"><span>DESIGN</span><b>/</b><strong id="crumb">Wiki home</strong></div>
+        <a class="source-link" href="https://github.com/Whynchu/TinyDemons/tree/main/docs/wiki" target="_blank" rel="noreferrer">View source <span aria-hidden="true">↗</span></a>
+      </header>
+      <article id="article" class="article" aria-live="polite">
+        <div class="loading"><span></span>Loading design notes…</div>
+      </article>
+      <footer class="footer">
+        <span>Tiny Demons · Design Wiki</span>
+        <span>Design intent and shipped behavior are labeled separately.</span>
+      </footer>
+    </main>
+  </div>
+</body>
+</html>

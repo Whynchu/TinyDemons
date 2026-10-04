@@ -45,37 +45,40 @@ For an external product/design review, use the curated [`review/00-astra-review-
 15. [`component-composition-design.md`](component-composition-design.md) —
     approved component contract, wiring rules, and the interchangeable-entity
     proof sequence.
-16. [`SCRIPT_INDEX.md`](SCRIPT_INDEX.md) — generated script, class, signal,
+16. [`composition-plan-2026.md`](composition-plan-2026.md) — **active plan** for
+    full composition: measured baseline, guardrail re-base, script role folders,
+    executable composition rules, and the decomposition sequence.
+17. [`SCRIPT_INDEX.md`](SCRIPT_INDEX.md) — generated script, class, signal,
     export, and function location index.
-17. [`combat-and-dungeon-design-principles.md`](combat-and-dungeon-design-principles.md)
+18. [`combat-and-dungeon-design-principles.md`](combat-and-dungeon-design-principles.md)
     — current combat roles, elemental identity, dungeon interaction, and
     minimalist content principles.
-18. [`design-philosophy-interview-questionnaire.md`](design-philosophy-interview-questionnaire.md)
+19. [`design-philosophy-interview-questionnaire.md`](design-philosophy-interview-questionnaire.md)
     — exhaustive producer interview for resolving open product and design
     decisions.
-19. [`design-interview-record-2026-09-18.md`](design-interview-record-2026-09-18.md)
+20. [`design-interview-record-2026-09-18.md`](design-interview-record-2026-09-18.md)
     — ratified decision record: firm principles, player-facing contracts,
     approved/rejected directions, and evidence still needed.
-20. [`agent-workflow.md`](agent-workflow.md) — project-scoped Codex advisor roles
+21. [`agent-workflow.md`](agent-workflow.md) — project-scoped Codex advisor roles
     and the workflow for asking Pip, Thorn, and Hexley for input.
-21. [`elemental-ability-and-status-system.md`](elemental-ability-and-status-system.md)
+22. [`elemental-ability-and-status-system.md`](elemental-ability-and-status-system.md)
     — approved direction for one reusable elemental ability/status/presentation
     pipeline shared by the player and enemies. Decision log:
     [`elemental-ability-and-status-system-addendum.md`](elemental-ability-and-status-system-addendum.md).
     Execution: [`elemental-status-implementation-plan.md`](elemental-status-implementation-plan.md).
-22. [`game-design-document.md`](game-design-document.md) — whole-game design
+23. [`game-design-document.md`](game-design-document.md) — whole-game design
     authority: concept, pillars, systems, shipped content inventory, and 1.0
     direction. `S`/`T`/`O` tags mark shipped, target, and open items; subsystem
     design docs remain the detail authority.
-23. [`elemental-spell-forms-plan.md`](elemental-spell-forms-plan.md) — active
+24. [`elemental-spell-forms-plan.md`](elemental-spell-forms-plan.md) — active
     plan for the player's Triangle spell: one form per element plus a neutral
     stub, binding-selects-form / current-element-selects-payload, the delivery
     model, and the build sequence.
-24. [`repo-review-2026-10-01.md`](repo-review-2026-10-01.md) — repository review
+25. [`repo-review-2026-10-01.md`](repo-review-2026-10-01.md) — repository review
     of composition maturity, code efficiency, practicality, folder flow, and
     player-facing delivery at `0.3.25`, with scores and a moving-forward
     standard.
-25. [`elemental-affinity-and-transmission-plan.md`](elemental-affinity-and-transmission-plan.md)
+26. [`elemental-affinity-and-transmission-plan.md`](elemental-affinity-and-transmission-plan.md)
     — active plan for the weapon imbue's per-element look, the `wet` status,
     innate element affinity with presentation-only suppression, bidirectional
     contact transmission, and synergy-constrained room generation.
@@ -105,6 +108,7 @@ For an external product/design review, use the curated [`review/00-astra-review-
 | What makes a change difficult? | [`engineering-friction-audit.md`](engineering-friction-audit.md) | source files and detailed audits |
 | How is the composition refactor progressing? | [`composition-refactor-analysis.md`](composition-refactor-analysis.md) | historical completion record; the strict scorecard is 100% and the regression floor is re-baselined |
 | What is the component contract for reusable entity behavior? | [`component-composition-design.md`](component-composition-design.md) | wiring rules, adapter refinement, and the interchangeable-entity proof |
+| What is the plan for full composition, script hierarchy, and enforced rules? | [`composition-plan-2026.md`](composition-plan-2026.md) | measured baseline, guardrail re-base, role folders, executable rules, decomposition sequence |
 | What is the long-term modularity and performance direction? | [`long-term-composition-and-performance-plan.md`](long-term-composition-and-performance-plan.md) | content definitions, runtime composition, authoring workflows, and device-backed performance work |
 | What is the end-to-end performance execution plan? | [`peak-performance-plan.md`](peak-performance-plan.md) | boot/menu gates, capture scenarios, lifecycle separation, runtime budgets, and A17 verification |
 | What is the current target HUD and touch-polish contract? | [`ui-consistency-and-touch-polish-plan.md`](ui-consistency-and-touch-polish-plan.md) | target health geometry, map footer anchoring, and shop row hitboxes |

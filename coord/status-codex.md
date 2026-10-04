@@ -2,8 +2,18 @@
 
 _Only codex writes this file._
 
-**Focus:** Reconcile room clears when an enemy disappears without a death callback
-**Updated:** 2026-10-03
+**Focus:** Establish the Tiny Demons design wiki and visual reference workflow
+**Updated:** 2026-10-04
+
+## Completed: browsable design wiki site
+
+Added `docs/wiki/` as the content source and `wiki-site/` as a responsive,
+searchable Markdown-rendering website. `tools/build_design_wiki.ps1` assembles
+the site at `dist/wiki/` for the existing Pages domain's `/wiki/` path. Linked
+the wiki from the README, contributor map, and documentation map. The local
+static build succeeds, all source Markdown links resolve, and JavaScript syntax
+is clean. Publishing integration remains pending until opencode releases the
+Pages workflow claim.
 
 ## Completed this pass: room remains locked with no enemies alive
 

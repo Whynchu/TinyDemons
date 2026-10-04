@@ -9,21 +9,22 @@
    content data.
 3. `docs/AUDIT.md` — current findings and phase status.
 4. `docs/DOCUMENTATION_MAP.md` — authority and document lifecycle guide.
-5. `docs/ROADMAP.md` — active product and infrastructure sequence.
-6. `docs/KNOWN_ISSUES.md` — open behavior, verification, and infrastructure findings.
-7. `docs/verification-surface-audit.md` — test/report roles, release-gate scope, and test-debt cleanup.
-8. `docs/CONTENT_AUTHORING.md` — current content workflows and boundaries. It
+5. `docs/wiki/README.md` — concise design wiki and topic navigation.
+6. `docs/ROADMAP.md` — active product and infrastructure sequence.
+7. `docs/KNOWN_ISSUES.md` — open behavior, verification, and infrastructure findings.
+8. `docs/verification-surface-audit.md` — test/report roles, release-gate scope, and test-debt cleanup.
+9. `docs/CONTENT_AUTHORING.md` — current content workflows and boundaries. It
    documents the runtime as it is, including the data paths that currently do
    nothing; the authoring plan is the target it moves toward.
-9. `docs/refactor-route.md` — accepted migration route.
-10. `docs/composition-refactor-analysis.md` — component/composition measurements and handoff sequence.
-11. `docs/component-composition-design.md` — approved component contract, wiring rules, and interchangeable-entity proof sequence.
-12. `docs/long-term-composition-and-performance-plan.md` — long-term content composition, authoring, and performance direction.
-13. `docs/ARCHITECTURE.md` — ownership and runtime boundaries.
-14. `docs/GAMEPLAY_TUNING.md` — designer-facing balance index.
-15. `docs/web-port-implementation-plan.md` — browser export, input, and Pages workflow.
-16. `docs/SCRIPT_INDEX.md` — generated script, class, signal, export, and function navigation.
-17. `docs/agent-workflow.md` — project-scoped Pip, Thorn, and Hexley advisory roles and usage.
+10. `docs/refactor-route.md` — accepted migration route.
+11. `docs/composition-refactor-analysis.md` — component/composition measurements and handoff sequence.
+12. `docs/component-composition-design.md` — approved component contract, wiring rules, and interchangeable-entity proof sequence.
+13. `docs/long-term-composition-and-performance-plan.md` — long-term content composition, authoring, and performance direction.
+14. `docs/ARCHITECTURE.md` — ownership and runtime boundaries.
+15. `docs/GAMEPLAY_TUNING.md` — designer-facing balance index.
+16. `docs/web-port-implementation-plan.md` — browser export, input, and Pages workflow.
+17. `docs/SCRIPT_INDEX.md` — generated script, class, signal, export, and function navigation.
+18. `docs/agent-workflow.md` — project-scoped Pip, Thorn, and Hexley advisory roles and usage.
 ## Coordination with other agents
 
 More than one AI agent may work this repo at the same time (opencode and codex
