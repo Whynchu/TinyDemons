@@ -108,6 +108,7 @@ const STAT_UTILITY_Y := HubStatsScreenPresenterScript.STAT_UTILITY_Y
 ## longer exposed as a Demon Hub command. The authored hub presents only the
 ## four commands from the rework render.
 const HubMenuStateScript = preload("res://scripts/ui/hub_menu_state.gd")
+const PauseMenuStateScript = preload("res://scripts/ui/pause_menu_state.gd")
 const HUB_PAGE_ALLOCATE := HubMenuStateScript.HUB_PAGE_ALLOCATE
 const HUB_PAGE_STATS := HubMenuStateScript.HUB_PAGE_STATS
 const HUB_PAGE_EQUIPMENT := HubMenuStateScript.HUB_PAGE_EQUIPMENT
@@ -142,6 +143,7 @@ var _hub_responsive_layout_context: HubResponsiveLayoutContext = HubResponsiveLa
 var _hub_item_visibility_presenter: HubItemVisibilityPresenter = HubItemVisibilityPresenterScript.new() as HubItemVisibilityPresenter
 var _hub_item_visibility_context: HubItemVisibilityContext = HubItemVisibilityContextScript.new() as HubItemVisibilityContext
 var _hub_menu_state: HubMenuState = HubMenuStateScript.new() as HubMenuState
+var _pause_menu_state: PauseMenuState = PauseMenuStateScript.new() as PauseMenuState
 var _hub_input_controller: HubInputController = HubInputControllerScript.new() as HubInputController
 var _hub_equipment_menu_presenter: HubEquipmentMenuPresenter = HubEquipmentMenuPresenterScript.new() as HubEquipmentMenuPresenter
 var _hub_equipment_menu_context: HubEquipmentMenuContext = HubEquipmentMenuContextScript.new() as HubEquipmentMenuContext
@@ -274,9 +276,15 @@ var hub_page_previous_input_was_down: bool:
 var hub_page_next_input_was_down: bool:
 	get: return _hub_menu_state.hub_page_next_input_was_down
 	set(value): _hub_menu_state.hub_page_next_input_was_down = value
-var pause_input_was_down := false
-var pause_interact_input_was_down := false
-var pause_cancel_input_was_down := false
+var pause_input_was_down: bool:
+	get: return _pause_menu_state.pause_input_was_down
+	set(value): _pause_menu_state.pause_input_was_down = value
+var pause_interact_input_was_down: bool:
+	get: return _pause_menu_state.pause_interact_input_was_down
+	set(value): _pause_menu_state.pause_interact_input_was_down = value
+var pause_cancel_input_was_down: bool:
+	get: return _pause_menu_state.pause_cancel_input_was_down
+	set(value): _pause_menu_state.pause_cancel_input_was_down = value
 var hub_page: int:
 	get: return _hub_menu_state.hub_page
 	set(value): _hub_menu_state.hub_page = value
@@ -469,15 +477,21 @@ var pause_overlay: ColorRect:
 var pause_title_text: Sprite2D:
 	get: return _pause_screen_presenter.title_text
 	set(value): _pause_screen_presenter.title_text = value
-var pause_page := 0
+var pause_page: int:
+	get: return _pause_menu_state.pause_page
+	set(value): _pause_menu_state.pause_page = value
 var pause_root_page: Control:
 	get: return _pause_screen_presenter.root_page
 	set(value): _pause_screen_presenter.root_page = value
 var pause_page_roots: Dictionary:
 	get: return _pause_screen_presenter.page_roots
 	set(value): _pause_screen_presenter.page_roots = value
-var pause_menu_row := 0
-var pause_command_list: MenuCommandList = null
+var pause_menu_row: int:
+	get: return _pause_menu_state.pause_menu_row
+	set(value): _pause_menu_state.pause_menu_row = value
+var pause_command_list: MenuCommandList:
+	get: return _pause_menu_state.command_list
+	set(value): _pause_menu_state.command_list = value
 var pause_player_card_panel: Panel = null
 var pause_player_card_texts: Array[Sprite2D]:
 	get: return _pause_screen_presenter.player_card_texts
@@ -524,7 +538,9 @@ var debug_menu_layout: DebugMenuLayout:
 var debug_menu_buttons: Array[Button]:
 	get: return _pause_screen_presenter.debug_menu_buttons
 	set(value): _pause_screen_presenter.debug_menu_buttons = value
-var debug_menu_row := 0
+var debug_menu_row: int:
+	get: return _pause_menu_state.debug_menu_row
+	set(value): _pause_menu_state.debug_menu_row = value
 var hub_item_name_text: Sprite2D:
 	get: return _hub_responsive_layout_presenter.hub_item_name_text
 	set(value): _hub_responsive_layout_presenter.hub_item_name_text = value
@@ -2086,7 +2102,7 @@ func update_pause_ui(root: Object, pixel_texture: Callable) -> void:
 
 
 func set_pause_page(root: Object, page: int) -> void:
-	pause_page = clampi(page, 0, 3)
+	_pause_menu_state.set_page(page)
 	# A pause page transition is a fresh route entry. Never carry a touch
 	# candidate arm from Hub Equipment (or an earlier pause page) into it.
 	hub_touch_candidate_slot = ""
@@ -2101,7 +2117,6 @@ func set_pause_page(root: Object, page: int) -> void:
 	elif pause_page == 1:
 		root.call("_play_sound", "ui_confirm", 0.0, 1.0)
 	elif pause_page == 3:
-		debug_menu_row = 0
 		root.call("_play_sound", "ui_confirm", 0.0, 1.0)
 	update_pause_ui(root, Callable(root, "_pixel_text_texture"))
 

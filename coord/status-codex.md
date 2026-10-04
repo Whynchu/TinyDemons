@@ -1008,3 +1008,10 @@ Next: inspect remaining Pause page-update and routing code; create presenter hea
 Moved Pause command styling, prompt textures, and selected-row cursor updates to `PauseScreenPresenter`, using the existing typed menu helpers. ScreenStateController keeps prompt-source selection and routing. The Equipment-menu early return still skips cursor motion as before. The presenter is 391 lines; ScreenStateController remains 3,285 lines. Strict composition targets/self-test, UID validation, `git diff --check`, and MCP offline checks pass. Runtime startup reached the title menu; MCP/editor progress-task errors were logged outside the game runtime. No game launch was performed specifically for this slice.
 
 Next: inspect remaining Pause page-update and routing code; create headroom before adding any more behavior to the presenter.
+
+
+## Completed: Stage 3.1 Pause route state ownership
+
+Moved Pause page, command/debug selection, command-list, and input-latch state into the typed `PauseMenuState`; kept the existing ScreenStateController compatibility properties for GameplayState, HubFlowController, and probes. `set_pause_page` now delegates clamping and debug-row reset to the state owner. The role map covers all 276 scripts with no omissions or nonexistent paths, the generated index reports 276, and UID pairing passes at 431:431. MCP script checks, strict composition targets, self-test, and `git diff --check` pass. ScreenStateController is 3,300 lines. No game or test run while the shared editor session is active.
+
+Next: extract a bounded Pause command/debug input owner, keeping the shared Hub Equipment transaction at its current owner.

@@ -8,10 +8,10 @@ replaces the saturated legacy-coupling scorecard
 
 Owner: repository architecture and gameplay systems
 
-Current code: 265 scripts distributed across the declared role folders,
+Current code: 276 scripts distributed across the declared role folders,
 `tools/validate_composition.ps1`, `tools/composition-baseline.json`,
 `scripts/runtime/controllers/gameplay_bootstrap.gd`,
-`scripts/ui/screen_state_controller.gd`,
+`scripts/ui/screen_state_controller.gd` (3,300 lines),
 `scripts/runtime/controllers/room_controller.gd`,
 `scripts/runtime/controllers/hub_flow_controller.gd`,
 `scripts/runtime/state/gameplay_state.gd`, and the `*Component` classes
@@ -1233,6 +1233,22 @@ launch was run for this slice while the shared editor session is active.
 Next: map the remaining Pause page-update and prompt-source decisions. Any
 further Pause rendering extraction must first create presenter headroom or use
 a distinct owner; keep the single-responsibility boundary and 400-line ceiling.
+
+**Implementation record (2026-10-04):** Gathered Pause page, command/debug
+selection, command-list, and input-latch state in the typed `PauseMenuState`.
+ScreenStateController keeps its existing typed compatibility properties for
+GameplayState, HubFlowController, and probes; `set_pause_page` delegates its
+clamp/debug-row invariant to the state owner. The new state is classified under
+`ui/` and has a generated UID sidecar. No route or input behavior was moved.
+MCP offline checks pass for the new state and controller. Strict composition
+targets/self-test pass at 276 scripts, 26 contexts, and zero unclassified files;
+UID validation passes for 431 sidecars. ScreenStateController is 3,300 lines
+and the PauseMenuState is 21 lines; compatibility accessors account for the
+small line increase. No game or test run was made while the shared editor
+session is active.
+
+Next: extract a bounded Pause command/debug input boundary while preserving the
+shared Hub Equipment transaction and current compatibility surface.
 
 ### 3.2 `gameplay_bootstrap.gd` — declarative assembly
 

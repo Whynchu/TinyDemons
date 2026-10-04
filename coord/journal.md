@@ -956,3 +956,7 @@ Moved Pause page/chrome, command/debug row, status/equipment, description, and r
 2026-10-04 claim codex Stage 3.1 Pause prompt/cursor presentation: scripts/ui/pause_screen_presenter.gd, scripts/ui/screen_state_controller.gd, docs/composition-plan-2026.md, docs/script-role-map-2026.md, docs/SCRIPT_INDEX.md.
 
 2026-10-04 done codex Stage 3.1 Pause prompt/cursor presentation. PauseScreenPresenter owns command styling, prompt textures, and selected-row cursor presentation; ScreenStateController retains page routing. Static script checks and composition validation pass; no gameplay suite run while shared editor session is active.
+
+2026-10-04 claim codex Pause route state ownership: scripts/ui/pause_menu_state.gd, scripts/ui/screen_state_controller.gd, docs/composition-plan-2026.md, docs/script-role-map-2026.md, docs/SCRIPT_INDEX.md.
+
+2026-10-04 done codex Pause route-state ownership. Added typed PauseMenuState with ScreenStateController compatibility properties; no runtime behavior moved. Role map reconciles 276/276 files; strict audit/self-test and UID validation pass; no game/test run.
