@@ -2,7 +2,7 @@
 
 _Only codex writes this file._
 
-**Focus:** Stage 3.1 legacy Hub item data/render and scroll boundary mapping
+**Focus:** Stage 3.1 legacy Hub data and row-render boundary mapping
 **Updated:** 2026-10-04
 
 ## Completed: MCP startup-error repair and runtime verification
@@ -887,3 +887,17 @@ run while the shared editor restriction is active.
 
 Next: map the remaining legacy Hub data/render path and its scroll consumers
 to determine which typed authored view can replace each fallback reader.
+
+## Completed: Stage 3.1 legacy Hub scroll geometry
+
+Moved fractional y-position updates for the legacy item, Shop price,
+touch-row, and gear-choice rows into `HubLegacyWidgetScrollPresenter`. It reads
+the existing typed responsive widget owner. ScreenStateController retains
+scroll deltas, state clamping, and row selection. Strict composition audit
+passes at 273 scripts with zero unclassified files, 52 screen seams, 4,253
+reach-throughs, and 509 untyped root parameters. UID validation and offline MCP
+checks pass. No game or gameplay tests were run while the shared editor
+restriction is active.
+
+Next: map the remaining legacy Hub data and row-render path against authored
+Shop, Fusion, and Equipment models.

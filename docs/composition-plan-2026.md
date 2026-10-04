@@ -1084,8 +1084,20 @@ The index contains 272 scripts, UID validation passes for 427 sidecars, and
 offline MCP script checks pass for the presenter and ScreenStateController.
 No game or gameplay tests were run while the shared editor session is active.
 
-Next: map the remaining legacy Hub data/render path and its scroll consumers
-to determine which typed authored view can replace each fallback reader.
+Next: map the remaining legacy Hub data and row-render path against the
+authored Shop, Fusion, and Equipment models before moving or deleting the
+fallback branch.
+
+**Implementation record (2026-10-04):** Moved the fractional y-position updates
+for legacy item rows, Shop prices, touch-row buttons, and gear-choice rows into
+`HubLegacyWidgetScrollPresenter`. It reads the widget references from the
+existing `HubResponsiveLayoutPresenter`; ScreenStateController still chooses
+scroll deltas, clamps state, and selects rows. Strict composition audit passes
+at 273 scripts, zero unclassified files, 52 screen controller seams, 4,253
+root reach-throughs, and 509 untyped root parameters. The index contains 273
+scripts, UID validation passes for 428 sidecars, and MCP offline script checks
+pass for the presenter and ScreenStateController. No game or gameplay tests
+were run while the shared editor session is active.
 
 ### 3.2 `gameplay_bootstrap.gd` — declarative assembly
 

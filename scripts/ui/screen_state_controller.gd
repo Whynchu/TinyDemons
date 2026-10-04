@@ -43,6 +43,7 @@ const HubTransactionMenuPresenterScript = preload("res://scripts/ui/hub_transact
 const HubTransactionMenuContextScript = preload("res://scripts/ui/hub_transaction_menu_context.gd")
 const HubMenuSignalBinderScript = preload("res://scripts/ui/hub_menu_signal_binder.gd")
 const HubLegacyWidgetVisibilityPresenterScript = preload("res://scripts/ui/hub_legacy_widget_visibility_presenter.gd")
+const HubLegacyWidgetScrollPresenterScript = preload("res://scripts/ui/hub_legacy_widget_scroll_presenter.gd")
 const PauseScreenPresenterScript = preload("res://scripts/ui/pause_screen_presenter.gd")
 const MENU_CIRCLE_TEXTURE: Texture2D = MenuPromptTextureFactoryScript.MENU_CIRCLE_TEXTURE
 const MENU_X_TEXTURE: Texture2D = MenuPromptTextureFactoryScript.MENU_X_TEXTURE
@@ -147,6 +148,7 @@ var _hub_transaction_menu_presenter: HubTransactionMenuPresenterScript = HubTran
 var _hub_transaction_menu_context: HubTransactionMenuContextScript = HubTransactionMenuContextScript.new() as HubTransactionMenuContextScript
 var _hub_menu_signal_binder: HubMenuSignalBinderScript = HubMenuSignalBinderScript.new() as HubMenuSignalBinderScript
 var _hub_legacy_widget_visibility_presenter: HubLegacyWidgetVisibilityPresenterScript = HubLegacyWidgetVisibilityPresenterScript.new() as HubLegacyWidgetVisibilityPresenterScript
+var _hub_legacy_widget_scroll_presenter: HubLegacyWidgetScrollPresenterScript = HubLegacyWidgetScrollPresenterScript.new() as HubLegacyWidgetScrollPresenterScript
 var _menu_world_hidden := false
 var _menu_world_background_visible := true
 var _menu_world_map_visible := true
@@ -3461,22 +3463,12 @@ func snap_hub_list_scroll_to_selection(root: Object) -> void:
 
 ## Applies the fractional item-list scroll to the row/button/price y positions.
 func _apply_hub_item_scroll(pitch: float) -> void:
-	var frac: float = hub_list_scroll - floor(hub_list_scroll)
-	for index in hub_item_list_texts.size():
-		hub_item_list_texts[index].position.y = 4 + index * pitch - frac * pitch
-		if index < hub_item_row_buttons.size():
-			hub_item_row_buttons[index].position.y = index * pitch - frac * pitch
-		if index < hub_shop_price_texts.size():
-			hub_shop_price_texts[index].position.y = 39 + index * pitch - frac * pitch
+	_hub_legacy_widget_scroll_presenter.position_item_rows(_hub_responsive_layout_presenter, hub_list_scroll, pitch)
 
 
 ## Applies the fractional gear-choice scroll to the picker row positions.
 func _apply_hub_choice_scroll(pitch: float) -> void:
-	var frac: float = hub_choice_scroll - floor(hub_choice_scroll)
-	for index in hub_gear_choice_texts.size():
-		hub_gear_choice_texts[index].position.y = 4 + index * pitch - frac * pitch
-		if index < hub_gear_choice_buttons.size():
-			hub_gear_choice_buttons[index].position.y = index * pitch - frac * pitch
+	_hub_legacy_widget_scroll_presenter.position_gear_choices(_hub_responsive_layout_presenter, hub_choice_scroll, pitch)
 
 
 ## Resting idle for the hand cursor: it glides a few pixels to the right, then

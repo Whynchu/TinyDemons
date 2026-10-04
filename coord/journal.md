@@ -901,3 +901,8 @@ Read audit found the legacy Hub item widgets remain consumed by fallback renderi
 
 2026-10-04T19:48:00Z - codex - done
 Extracted authored Equipment/Shop legacy-widget visibility suppression into HubLegacyWidgetVisibilityPresenter, preserving the legacy widget handles and all fallback readers. Strict composition audit passes at 272 scripts, zero unclassified, 52 screen seams, 4,253 reach-throughs, and 509 untyped root parameters. UID and offline MCP script validation pass. No game or gameplay tests were run during the shared-editor restriction.
+2026-10-04T20:05:00Z - codex - claim
+Isolated the legacy item/gear choice scroll geometry as a pure consumer of existing row and button references. Move only y-position updates; keep input deltas, selected-row state, and clamping in ScreenStateController. No game or gameplay tests while shared editor restriction is active.
+
+2026-10-04T20:28:00Z - codex - done
+Extracted legacy Hub row and gear-choice fractional scroll positioning into HubLegacyWidgetScrollPresenter. ScreenStateController retains scroll state, clamping, and row selection. Strict composition audit passes at 273 scripts, zero unclassified, 52 screen seams, 4,253 reach-throughs, and 509 untyped root parameters; UID and MCP offline checks pass. No game or gameplay tests were run during the shared-editor restriction.
