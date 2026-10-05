@@ -59,6 +59,17 @@ static func visible_size_for_window(window_size: Vector2, content_size: Vector2,
 	return Vector2(maxf(content_size.x, roundf(expanded_width)), content_size.y)
 
 
+static func browser_surface_size(layout_size: Vector2, visual_size: Vector2, visual_scale: float) -> Vector2:
+	# The visual viewport shrinks under browser zoom. Godot's canvas follows the
+	# layout viewport, so compare against the visual dimensions restored to that
+	# scale and use whichever reports the larger available surface.
+	var scale := maxf(visual_scale, 0.01)
+	var restored_visual_size := visual_size * scale
+	return Vector2(
+		maxf(layout_size.x, restored_visual_size.x),
+		maxf(layout_size.y, restored_visual_size.y))
+
+
 static func centered_origin(visible_size: Vector2, content_size: Vector2) -> Vector2:
 	return Vector2(
 		maxf((visible_size.x - content_size.x) * 0.5, 0.0),

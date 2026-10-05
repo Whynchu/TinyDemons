@@ -1166,3 +1166,11 @@ Done: 8 cast removals, refreshed measured baseline floors with ceilings/forward 
 
 Focus: preload constant parsing and composition baseline regression repair
 Done: 8 cast removals, refreshed measured baseline floors with ceilings/forward targets unchanged, version 0.3.40; script diagnostics + composition audit pass. Runtime smoke unavailable here because standalone Godot 4.7.1 is not installed.
+
+## Current task: mobile landscape menu centering (2026-10-05)
+Fix title/menu centering across responsive layout, add regression coverage, bump patch version per README, then commit and push. Existing MCP/config and opencode-owned changes stay outside the scoped commit. Verification uses the connected Godot MCP editor; do not run the standalone smoke runner while it is active.
+
+**Blocker (2026-10-05):** Current source reflow math centers title/menu geometry on the presented viewport, so there is no source-backed incorrect coordinate to change without the device frame. MCP editor registry was unavailable. A focused headless responsive smoke attempt aborted at an existing null hub_stat_cursor_text access on line 126 and was stopped; it did not reach complete verification. Awaiting user's landscape screenshot and selected aspect. Next: inspect the supplied frame, correct the responsible responsive owner, add/adjust focused acceptance, bump ScreenStateController.GAME_VERSION and README per version policy, verify with a safe focused path, then scoped commit and push.
+
+## Completed: mobile landscape menu centering (2026-10-05)
+Changed browser surface sizing to reconcile layout viewport dimensions with visualViewport dimensions restored by browser zoom. The screenshot-shaped 1280x576 case now uses the full phone surface for centering; added focused DisplayLayout smoke assertions and bumped to 0.3.42 in README and the title version. Composition self-test/audit and manifest validation pass; UID validation remains red on an existing missing sidecar for element_catalog.tres. A Godot scene smoke attempt was stopped after its existing Hub fixture null-cursor abort; no phone playtest available. Scoped change committed and pushed to main.

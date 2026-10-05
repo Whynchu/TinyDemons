@@ -23,6 +23,13 @@ func _initialize() -> void:
 	var expanded := DisplayLayout.visible_size_for_window(Vector2(844, 390), native, true)
 	_expect(expanded == Vector2(346, 160), "wide surfaces expose their full logical width", failures)
 	_expect(DisplayLayout.centered_origin(expanded, native) == Vector2(53, 0), "native frame centers inside a wide logical surface", failures)
+	var phone_surface := DisplayLayout.browser_surface_size(Vector2(1280, 576), Vector2(1126, 576), 1.0)
+	_expect(phone_surface == Vector2(1280, 576), "adaptive layout follows the wider mobile canvas viewport", failures)
+	var phone_visible := DisplayLayout.visible_size_for_window(phone_surface, wide, true)
+	var phone_origin := DisplayLayout.centered_origin(phone_visible, wide)
+	_expect(is_equal_approx(phone_origin.x + wide.x * 0.5, phone_visible.x * 0.5), "fixed-width landscape menus center on the full phone surface", failures)
+	_expect(DisplayLayout.browser_surface_size(Vector2(844, 390), Vector2(422, 195), 2.0) == Vector2(844, 390), "mobile browser zoom does not shrink the layout surface", failures)
+	_expect(DisplayLayout.browser_surface_size(Vector2.ZERO, Vector2(900, 420), 1.0) == Vector2(900, 420), "visual viewport remains a fallback when layout dimensions are missing", failures)
 	_expect(DisplayLayout.visible_size_for_window(Vector2(390, 844), wide, true) == wide, "narrow surfaces do not crop a fixed frame", failures)
 	_finish(failures)
 

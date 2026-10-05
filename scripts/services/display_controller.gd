@@ -484,16 +484,19 @@ func _visible_view_size_for_presentation() -> Vector2:
 
 func _live_window_size() -> Vector2:
 	if OS.has_feature("web"):
-		# Adaptive web canvases can retain the project override in Window.size
-		# while the standalone iPhone page has already resized its CSS viewport.
-		# Read the browser viewport when available so FULL follows the actual
-		# borderless landscape surface, including home-screen launches.
-		var browser_size: Variant = JavaScriptBridge.eval("(window.visualViewport ? [window.visualViewport.width, window.visualViewport.height] : [window.innerWidth, window.innerHeight])")
-		if browser_size is Array and (browser_size as Array).size() >= 2:
-			var browser_width := float((browser_size as Array)[0])
-			var browser_height := float((browser_size as Array)[1])
-			if browser_width > 0.0 and browser_height > 0.0:
-				return Vector2(browser_width, browser_height)
+		# Adaptive web canvases can retain the project override in Window.size.
+		# The canvas follows the layout viewport, while visualViewport can be
+		# narrower under mobile browser zoom; restore its scale and prefer the
+		# larger surface so FULL does not leave the menu centered left of screen.
+		var browser_size: Variant = JavaScriptBridge.eval("(()=>{const v=window.visualViewport;return [window.innerWidth,window.innerHeight,v?v.width:0,v?v.height:0,v?v.scale:1];})()")
+		if browser_size is Array and (browser_size as Array).size() >= 5:
+			var values := browser_size as Array
+			var surface_size := DisplayLayout.browser_surface_size(
+				Vector2(float(values[0]), float(values[1])),
+				Vector2(float(values[2]), float(values[3])),
+				float(values[4]))
+			if surface_size.x > 0.0 and surface_size.y > 0.0:
+				return surface_size
 	var window := get_window()
 	if window != null and window.size.x > 0 and window.size.y > 0:
 		return Vector2(window.size)
