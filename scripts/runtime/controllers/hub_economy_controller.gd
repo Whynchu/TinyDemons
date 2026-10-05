@@ -729,14 +729,14 @@ func _reconcile_fusion_selection(root: Object) -> void:
 func fusion_candidate_details(root: Object, item: ItemInstance) -> Dictionary:
 	if item == null or root.player_profile == null:
 		return {}
-	hub_fusion_candidates(root)
-	var details_by_id: Dictionary = _fusion_details_by_root.get(root.get_instance_id(), {})
-	if details_by_id.has(item.instance_id):
-		return details_by_id[item.instance_id] as Dictionary
+	var live_target: ItemInstance = root.player_profile.find_item(item.instance_id)
+	if live_target == null:
+		return {}
+	var catalog := ItemCatalog.new()
 	return {
-		"owned_count": root.player_profile.fusion_owned_count(item.instance_id),
-		"material_count": root.player_profile.fusion_material_count(item.instance_id),
-		"can_salvage": root.player_profile.can_salvage_overflow(item.instance_id),
+		"owned_count": root.player_profile.fusion_owned_count(live_target.instance_id, catalog),
+		"material_count": root.player_profile.fusion_material_count(live_target.instance_id, catalog),
+		"can_salvage": root.player_profile.can_salvage_overflow(live_target.instance_id, catalog),
 	}
 
 
@@ -754,27 +754,30 @@ func fuse_profile_target(root: Object, instance_id: String, count: int) -> bool:
 
 func shift_hub_fusion_count(root: Object, direction: int) -> void:
 	if root.screen_state_controller.hub_page != 3: return
+	# The amount controls are only live after the target confirmation has entered
+	# the quantity step. On the browse/preview page, +/- must not implicitly pick
+	# an item or look like a failed action.
+	if root.screen_state_controller.hub_fusion_state != 2: return
 	var candidates := hub_fusion_candidates(root)
 	if candidates.is_empty(): return
 	var selected_id := str(root.screen_state_controller.hub_fusion_target_instance_id)
-	if root.screen_state_controller.hub_fusion_state == 2 and selected_id.is_empty():
+	if selected_id.is_empty():
 		return
 	var index := -1
 	for candidate_index in candidates.size():
 		if candidates[candidate_index].instance_id == selected_id:
 			index = candidate_index
 			break
-	if index < 0 and root.screen_state_controller.hub_fusion_state == 2:
-		return
 	if index < 0:
-		index = clampi(root.screen_state_controller.hub_item_index, 0, candidates.size() - 1)
-		root.screen_state_controller.hub_fusion_target_instance_id = candidates[index].instance_id
+		return
 	var target: ItemInstance = candidates[index]
 	var target_details := fusion_candidate_details(root, target)
-	if bool(target_details.get("can_salvage", false)): return
 	var material_count := int(target_details.get("material_count", 0))
 	if material_count <= 0: return
-	root.screen_state_controller.hub_fusion_count = clampi(int(root.screen_state_controller.hub_fusion_count) + direction, 1, material_count)
+	var previous_count := clampi(int(root.screen_state_controller.hub_fusion_count), 1, material_count)
+	var next_count := clampi(previous_count + direction, 1, material_count)
+	if next_count == previous_count: return
+	root.screen_state_controller.hub_fusion_count = next_count
 	root.screen_state_controller.hub_fusion_message = ""
 	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 
@@ -918,6 +921,8 @@ func hub_item_action(root: Object) -> void:
 			root.screen_state_controller.hub_fusion_target_instance_id = selected_target.instance_id
 			root.screen_state_controller.hub_fusion_item_selected = true
 			root.screen_state_controller.hub_fusion_state = 2
+			root.screen_state_controller.hub_is_root = false
+			root.screen_state_controller.hub_content_focus = true
 			root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 			root.call("_play_sound", "ui_confirm", 0.0, 1.0)
 			return
@@ -991,10 +996,10 @@ func _selected_fusion_target(root: Object, candidates: Array[ItemInstance]) -> I
 	if not selected_id.is_empty():
 		for candidate: ItemInstance in candidates:
 			if candidate.instance_id == selected_id:
-				return candidate
+				return root.player_profile.find_item(selected_id)
 		return null
 	var index := clampi(root.screen_state_controller.hub_item_index, 0, candidates.size() - 1)
-	return candidates[index] if not candidates.is_empty() else null
+	return root.player_profile.find_item(candidates[index].instance_id) if not candidates.is_empty() else null
 
 
 # Equipment removal and confirmation.

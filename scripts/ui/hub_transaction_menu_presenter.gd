@@ -81,12 +81,13 @@ func build_fusion_model(context: HubTransactionMenuContextScript) -> FusionMenuM
 	var owned_count := int(context.fusion_details.get("owned_count", 0))
 	var can_salvage := bool(context.fusion_details.get("can_salvage", false))
 	if selected != null:
-		# Candidate details are a render cache. A listed fusion target cannot have
-		# zero owned items or zero materials (unless it is salvage-only), so repair
-		# an impossible zero snapshot from the selected target's live profile.
-		if owned_count <= 0 or (material_count <= 0 and not can_salvage):
-			owned_count = context.profile.fusion_owned_count(selected.instance_id, context.catalog)
-			material_count = context.profile.fusion_material_count(selected.instance_id, context.catalog)
+		# The list may be cached, but eligibility and price must use the same live
+		# target and material count as the eventual profile transaction.
+		selected = context.profile.find_item(selected.instance_id)
+	if selected != null:
+		owned_count = context.profile.fusion_owned_count(selected.instance_id, context.catalog)
+		material_count = context.profile.fusion_material_count(selected.instance_id, context.catalog)
+		can_salvage = context.profile.can_salvage_overflow(selected.instance_id, context.catalog)
 		model.owned_count = owned_count
 		model.material_count = material_count
 		model.fusion_count_max = maxi(material_count, 1)

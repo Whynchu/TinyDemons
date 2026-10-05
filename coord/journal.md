@@ -586,22 +586,22 @@ Player polish pass landed. Fire Cinder Cone aim: the lateral-only rule only ran 
 ## 2026-10-02T09:43Z â€” opencode â€” release
 Release 0.3.28 for mobile web testing. Carries the Fire cone lateral-only aim fix, the orb-room height fix, and the transition/pickup hitch work, plus the two bubble OGG .import files that 0.3.27 committed the assets for but not the import metadata. GAME_VERSION, README (three references), and docs/VERSIONING.md bumped together per docs/VERSIONING.md. Rendered/mobile acceptance for all three fixes is still open; see docs/KNOWN_ISSUES.md 2026-10-02.
 
-## 2026-10-03T16:10Z — codex — claim
+## 2026-10-03T16:10Z ï¿½ codex ï¿½ claim
 Organize the source-only Artwork archive by content domain and add a repository folder map. Preserve active Godot paths and unrelated local changes.
 
-## 2026-10-03T16:13Z — codex — done
+## 2026-10-03T16:13Z ï¿½ codex ï¿½ done
 Grouped all 210 loose source-art files and 21 stone accents under Artwork domain folders, preserved filenames and .gdignore, and added Artwork/README.md plus docs/CONTENT_FOLDERS.md. Linked the guide from AGENTS.md and DOCUMENTATION_MAP.md. Runtime assets/resources and the existing project.godot edit were left untouched. Static reference and file-inventory checks pass; no Godot process or test suite was launched.
 
-## 2026-10-03T16:14Z — codex — claim
+## 2026-10-03T16:14Z ï¿½ codex ï¿½ claim
 Exact-case scanning found map-reference fixtures and a HUD fallback still using the old Artwork root. Update those references before completing the folder move.
 
-## 2026-10-03T16:16Z — codex — done
+## 2026-10-03T16:16Z ï¿½ codex ï¿½ done
 Updated all 13 source-art references to the new grouped paths; changed the HUD fallback prefix to assets/artwork/. Static checks confirm all references resolve, all 232 original names remain present, and git diff --check is clean. No test suite or Godot process was launched.
 
-## 2026-10-03T16:30Z — codex — claim
+## 2026-10-03T16:30Z ï¿½ codex ï¿½ claim
 Organize the flat scene folder by runtime and authoring role, preserve the configured main-scene path, and migrate every scene reference.
 
-## 2026-10-03T16:37Z — codex — done
+## 2026-10-03T16:37Z ï¿½ codex ï¿½ done
 Moved 25 scenes into gameplay, menus, UI, authoring, and debug folders while keeping scenes/main.tscn at its existing path. Updated 38 distinct references across scenes, code, tests, tools, resources, and docs. Static reference checks and git diff --check pass; no Godot process or test suite was launched.
 
 ## 2026-10-03T17:25Z - codex - claim
@@ -974,7 +974,7 @@ Moved Pause page/chrome, command/debug row, status/equipment, description, and r
 2026-10-04 final EOF cleanup count: HubScreenRenderController 429 lines, HubLegacyInventoryPresenter 490 lines, ScreenStateController 2431 lines.
 2026-10-04 final exact counts after byte-level EOF cleanup: HubScreenRenderController 428 lines, HubLegacyInventoryPresenter 490 lines, ScreenStateController 2431 lines.
 
-## 2026-10-04T00:00Z — codex — claim
+## 2026-10-04T00:00Z ï¿½ codex ï¿½ claim
 Implement run-number-owned elemental composition and the authored WATER + ICE
 Freeze status mixture; avoid opencode's smoke-runner/Pages claim.
 2026-10-04 done codex run-number elemental composition and Freeze mixture. Updated roster and variant unlock semantics, authored the WATER + ICE reaction, wired boss movement-lock resistance and under-sprite markers, and refreshed the docs/index. MCP source diagnostics, UID, manifest, strict composition, and diff checks pass; runtime smokes and definition validation remain unverified because no local Godot CLI is available.
@@ -984,16 +984,16 @@ Freeze status mixture; avoid opencode's smoke-runner/Pages claim.
 
 2026-10-04 done codex event-hitch and Wet/Chill follow-up. XP profile saves now queue, room entry stops requesting redundant unchanged saves, active-run checkpoint verification no longer reparses its own JSON, and room/checkpoint phases have capture scopes. Innate mixture resolution now distinguishes pre-existing suppression from suppression caused by the incoming ingredient. MCP boot succeeded after clearing stale gdscript:// diagnostics; controlled transition/death/pickup captures remain open.
 
-## 2026-10-04T19:00Z — codex — claim
+## 2026-10-04T19:00Z ï¿½ codex ï¿½ claim
 Extract the legacy Hub item/equipment widget builder from ScreenStateController into a typed UI construction helper. Existing fallback behavior and compatibility readers remain in place.
 
-## 2026-10-04T19:30Z — codex — done
+## 2026-10-04T19:30Z ï¿½ codex ï¿½ done
 Hub legacy widget construction now has a typed builder and the script index/role map are updated. Focused script diagnostics and editor error buffer are clean. Strict composition and full UID validation remain blocked by unrelated existing baseline regressions and element_catalog.tres UID reference.
 
-## 2026-10-04T19:45Z — codex — done
+## 2026-10-04T19:45Z ï¿½ codex ï¿½ done
 Folded the legacy Bind panel, labels, and action control into HubLegacyWidgetBuilder alongside the item/equipment fallback group. Final focused diagnostics and MCP editor error check pass; screen facade is 2,332 lines and the builder is 165.
 
-## 2026-10-04T20:10Z — codex — claim
+## 2026-10-04T20:10Z ï¿½ codex ï¿½ claim
 Fix Freeze runtime enforcement across active enemy movement, combat displacement, and collision separation. Preserve the designed movement-only lock so enemies may finish attacks without lunging from the frozen position.
 2026-10-04 | claim | codex | Extending Freeze movement lock fix to cover Fusion amount-state affordance/feedback and verifying the selected-batch cost against current Fusion rules.
 
@@ -1005,10 +1005,10 @@ Fix Freeze runtime enforcement across active enemy movement, combat displacement
 
 2026-10-04 | done | codex | Stage 3.1 ScreenStateController reached 1,195 lines (1,200 checkpoint). Screen assembly, presenter-owned fields/state, and display layout now have direct typed-owner routes; MCP diagnostics pass for changed UI files. No runtime/smoke tests ran. 800-line forward target remains open.
 
-## 2026-10-04 — codex — claim
-Continuing Stage 3.1 toward a 1,000-line ScreenStateController by rewiring flow/route callers to existing typed UI owners and removing redundant name-entry façade methods. No unrelated worktree changes are in scope.
+## 2026-10-04 ï¿½ codex ï¿½ claim
+Continuing Stage 3.1 toward a 1,000-line ScreenStateController by rewiring flow/route callers to existing typed UI owners and removing redundant name-entry faï¿½ade methods. No unrelated worktree changes are in scope.
 
-## 2026-10-04 — codex — done
+## 2026-10-04 ï¿½ codex ï¿½ done
 Stage 3.1 ScreenStateController checkpoint: 1,195 ? 1,050 lines. Routed title/archetype and Pause/Settings calls to their existing owners, removed redundant name-entry accessors, refreshed the generated index and composition docs. Focused MCP diagnostics pass for changed UI owners/callers; GameplayState retains the known line-390 diagnostic. No gameplay/smoke tests run. Claim cleared.
 Correction: ScreenStateController is 1,050 lines, down 145 from the 1,195-line checkpoint.
 2026-10-04 claim codex: Stage 3.1 ScreenStateController 1,050 toward 900; migrate shared UI callers to widget/cursor owners, update docs and focused diagnostics.
@@ -1041,3 +1041,39 @@ Responsive centering issue is not identifiable from current geometry alone; requ
 
 ## 2026-10-05 done codex
 Mobile landscape sizing now uses the larger layout or zoom-restored visual viewport; added 1280x576 centering coverage and bumped game/README version to 0.3.42. Static composition and manifest checks pass; Godot runtime/phone acceptance remains unavailable, and UID validation found the unrelated existing missing sidecar for element_catalog.tres. Change committed and pushed to main.
+
+## 2026-10-05 claim codex
+Investigating title-only centering in FULL after report; supplied image shows 0.3.41 while prior fix is in 0.3.42. Trace title path and verify whether current build applied before deciding follow-up.
+
+## 2026-10-05 blocker codex
+Supplied screenshot is labeled 0.3.41, predating pushed 0.3.42 viewport fix. Await confirmation/current screenshot before making a follow-up title-specific change.
+
+## 2026-10-05T18:08Z â€” codex â€” claim
+Fusion count regression report. Tracing Fusion candidate identity, cached counts, and quantity-state UI; add a focused regression check. Runtime verification remains restricted by the recorded Godot editor constraint.
+
+## 2026-10-05T18:08Z â€” codex â€” done
+Fusion amount selection now visibly reports its eligible material count; the view-model regression covers count preservation after selection. MCP script diagnostics could not connect (AUTH_FAILED); no runtime test ran.
+
+## 2026-10-05T18:12Z â€” codex â€” claim
+Follow-up on reported zero Fusion counts: make view-model candidate and details resolution use the stable selected instance ID, and cover a cursor-index drift case.
+
+## 2026-10-05T18:15Z â€” codex â€” done
+Fusion menu count, affordability, and transaction target now share stable instance-ID resolution; stale-index regression coverage and version 0.3.44 pushed as bc497b8. Runtime check remains open because MCP returned AUTH_FAILED.
+
+## 2026-10-05T20:05Z â€” codex â€” done
+Fusion amount and owned counts now recover from an impossible zero candidate snapshot using the selected target's live profile. Version 0.3.46 prepared. git diff --check passes; Godot MCP diagnostics returned AUTH_FAILED, so no runtime test was run.
+
+## 2026-10-05T14:00Z — codex — claim
+Fix save-select menu reflow and Fusion quantity changes; touching the presenter, economy controller, and focused regression coverage.
+
+## 2026-10-05T14:30Z — codex — done
+Save-select positioning now recenters the title, slot buttons, overwrite controls, navigation footer, and selected cursor on every display reflow. Fusion amount controls are gated to the confirmed amount state, update/clamp the batch count, and have direct method coverage in the candidate-cache regression. Added responsive centering assertions for save title and slot. git diff --check passes; Godot smoke diagnostics were not run under the shared-editor restriction.
+
+## 2026-10-05T15:00Z — codex — done
+Fusion quantity step now exits root preview and retains content focus after target confirmation. The inherited Shop confirm hitbox ignores input in Fusion so it cannot cover +/- controls; plus/minus activate by the available quantity, the 1/x label centers between their glyphs, and controller boundary feedback distinguishes blocked input. Focused scene coverage presses the plus button and checks its signal, active hitboxes, and label lane. git diff --check passes; no standalone Godot CLI is available and shared editor policy prevents launching another process.
+
+## 2026-10-05 — codex — claim
+Reopen Fusion input after player reports quantity and confirmation both reject; use the connected Godot MCP bridge and repair the runtime path.
+
+## 2026-10-05 - codex - done
+Godot MCP reproduced a Demon Cloak with eight eligible materials and 810 Souls. The live plus button and touch-layer finger path each increased quantity; an in-memory profile clone fused two materials for 3 Souls, and the FUSE touch region showed NEED 6S with a zero-Souls clone. The original save retained 810 Souls and Fusion count zero. Fusion now resolves live target/material data and keeps its FUSE touch target active. Save-select reflow and version 0.3.47 are included.

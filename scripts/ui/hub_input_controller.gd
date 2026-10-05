@@ -147,9 +147,13 @@ func _handle_fusion_input(root: GameplayState, state: HubMenuState, page: int, r
 		return true
 	if state.hub_fusion_state == 2:
 		if bool(root._is_menu_direction_just_pressed(&"ui_left")):
-			root._shift_hub_fusion_count(-1); root._play_sound("ui_hover", -6.0, 1.0)
+			var previous_count := state.hub_fusion_count
+			root._shift_hub_fusion_count(-1)
+			root._play_sound("ui_hover" if state.hub_fusion_count != previous_count else "ui_no_input", -6.0 if state.hub_fusion_count != previous_count else 0.0, 1.0)
 		elif bool(root._is_menu_direction_just_pressed(&"ui_right")):
-			root._shift_hub_fusion_count(1); root._play_sound("ui_hover", -6.0, 1.0)
+			var previous_count := state.hub_fusion_count
+			root._shift_hub_fusion_count(1)
+			root._play_sound("ui_hover" if state.hub_fusion_count != previous_count else "ui_no_input", -6.0 if state.hub_fusion_count != previous_count else 0.0, 1.0)
 		elif bool(root._is_menu_confirm_just_pressed()):
 			root._hub_item_action()
 		return true

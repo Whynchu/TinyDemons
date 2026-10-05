@@ -50,6 +50,12 @@ func _initialize() -> void:
 			_expect((gameplay.get_node("InterfaceCanvas") as CanvasLayer).offset.is_equal_approx(display.presentation_origin_value()), "%s interface canvas follows the centered presentation frame" % aspect, failures)
 			var title_overlay := (gameplay.get("screen_state_controller") as ScreenStateController).title_presenter.overlay
 			_expect(title_overlay != null and title_overlay.size == Vector2(expected), "%s title overlay covers the full view" % aspect, failures)
+			var save_presenter := (gameplay.get("screen_state_controller") as ScreenStateController).save_select_presenter
+			save_presenter.position_controls(Vector2(expected))
+			var save_title := save_presenter.overlay.get_node("SaveSelectTitle") as Sprite2D if save_presenter.overlay != null else null
+			var save_slot := save_presenter.slot_button(0)
+			_expect(save_title != null and is_equal_approx(save_title.position.x + save_title.texture.get_width() * 0.5, float(expected.x) * 0.5), "%s save title stays centered after reflow" % aspect, failures)
+			_expect(save_slot != null and is_equal_approx(save_slot.position.x + save_slot.size.x * 0.5, float(expected.x) * 0.5), "%s save slot stays centered after reflow" % aspect, failures)
 			_expect(screens.settings_presenter.overlay != null and screens.settings_presenter.overlay.size == Vector2(expected), "%s settings overlay covers the full view" % aspect, failures)
 			var result_metrics := screens.run_complete_presenter.overlay.get_node_or_null("RunCompleteMetrics") as Panel if screens.run_complete_presenter.overlay != null else null
 			var result_width := minf(220.0, maxf(float(expected.x) - 20.0, 100.0))

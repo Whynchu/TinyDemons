@@ -73,6 +73,8 @@ func _initialize() -> void:
 	_expect(root._hub_item_action_count == 0 and root.player_profile.inventory.size() == inventory_size_before_selection and root.player_profile.inventory_revision == inventory_revision_before_selection, "selecting a Fusion row never calls the transaction or changes inventory", failures)
 	controller.hub_item_action(root)
 	_expect(root.screen_state_controller.hub_fusion_state == 2 and root.player_profile.inventory.size() == inventory_size_before_selection and root.player_profile.inventory_revision == inventory_revision_before_selection, "first Fusion confirmation only enters amount selection", failures)
+	controller.shift_hub_fusion_count(root, 1)
+	_expect(root.screen_state_controller.hub_fusion_count == 2, "Fusion quantity control advances the selected target above one", failures)
 	var fusion_context := HubTransactionMenuContextScript.new()
 	fusion_context.profile = root.player_profile
 	fusion_context.catalog = catalog
@@ -84,7 +86,6 @@ func _initialize() -> void:
 	fusion_context.fusion_details = controller.fusion_candidate_details(root, candidates[0])
 	var fusion_model := HubTransactionMenuPresenterScript.new().build_fusion_model(fusion_context)
 	_expect(fusion_model.selected_row == 0 and fusion_model.owned_count == 2 and fusion_model.material_count == 2 and fusion_model.fusion_count_max == 2, "Fusion amount view resolves selected target by instance ID despite stale cursor and preserves its counts", failures)
-	root.screen_state_controller.hub_fusion_count = 2
 	controller.hub_item_action(root)
 	_expect(root.player_profile.inventory.size() == inventory_size_before_selection - 2 and root.player_profile.inventory_revision == inventory_revision_before_selection + 1, "second Fusion confirmation consumes the requested materials as one transaction", failures)
 	_expect(root.player_profile.find_item(target.instance_id).fusion_count == 2, "completed Fusion applies both enhancement steps to the selected target", failures)

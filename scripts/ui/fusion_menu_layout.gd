@@ -71,10 +71,17 @@ func render_fusion(model: FusionMenuModel) -> void:
 	_hide_shop_mode()
 	_apply_fusion_geometry()
 	if model.state == FUSION_AMOUNT:
-		# The shared amount footer already has the x glyph. Use its value cell for
-		# the selected amount and the hard cap for this rank, so the player can see
-		# that Fusion stops at the next +10/rarity boundary.
-		_set_text(get_node_or_null("SellQuantityValue") as Sprite2D, "%d/%d" % [model.fusion_count, model.fusion_count_max], STAT_TEXT_COLOR)
+		# Center the count in the gap between the +/- glyphs. The old fixed x=74
+		# anchor started wider counts on top of the plus glyph.
+		var quantity_value := get_node_or_null("SellQuantityValue") as Sprite2D
+		var quantity_text := "%d/%d" % [model.fusion_count, model.fusion_count_max]
+		_set_text(quantity_value, quantity_text, STAT_TEXT_COLOR)
+		if quantity_value != null and quantity_value.texture != null:
+			var minus_icon := get_node_or_null("SellSubtractIcon") as Sprite2D
+			var plus_icon := get_node_or_null("SellAddIcon") as Sprite2D
+			var lane_left := minus_icon.position.x + 5.0 if minus_icon != null else 57.0
+			var lane_right := plus_icon.position.x if plus_icon != null else 85.0
+			quantity_value.position.x = floorf((lane_left + lane_right - float(quantity_value.texture.get_width())) * 0.5)
 	_set_text(get_node_or_null("FooterSelectText") as Sprite2D, "SELECT" if model.state == 0 or not model.item_selected else "FUSE", PROMPT_TEXT_COLOR)
 	_set_text(get_node_or_null("FooterBackText") as Sprite2D, "BACK", PROMPT_TEXT_COLOR)
 	for path in ["SellConfirmGlyph", "SellConfirmText", "SellCancelGlyph", "SellCancelText"]:
@@ -104,8 +111,16 @@ func render_fusion(model: FusionMenuModel) -> void:
 	var fusion_action := get_node_or_null("SellConfirmButton") as Button
 	var fusion_action_available := model.state != 0 and not model.rows.is_empty()
 	if model.state == FUSION_AMOUNT:
-		fusion_action_available = model.can_fuse or model.can_salvage
+		# Keep confirmation reachable when Souls are short so the transaction
+		# owner can show the exact required cost instead of silently blocking it.
+		fusion_action_available = model.material_count > 0 or model.can_salvage
 	_set_button_active(fusion_action, fusion_action_available, fusion_action_available)
+	var decrease := get_node_or_null("SellMinusButton") as Button
+	var increase := get_node_or_null("SellPlusButton") as Button
+	# The confirmation rectangle begins after the plus lane. It must remain
+	# touchable so the FUSE footer can submit the selected quantity.
+	_set_button_active(decrease, model.state == FUSION_AMOUNT and model.fusion_count > 1, model.state == FUSION_AMOUNT)
+	_set_button_active(increase, model.state == FUSION_AMOUNT and model.fusion_count < model.fusion_count_max, model.state == FUSION_AMOUNT)
 	_last_fusion_model = model
 
 func _apply_fusion_geometry() -> void:

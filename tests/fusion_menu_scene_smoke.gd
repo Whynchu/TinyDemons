@@ -42,10 +42,26 @@ func _initialize() -> void:
 	amount_model.item_selected = true
 	amount_model.rows = browse_model.rows
 	amount_model.selected_row = 0
+	amount_model.fusion_count = 1
+	amount_model.fusion_count_max = 8
+	amount_model.material_count = 8
+	amount_model.can_fuse = true
 	layout.render_fusion(amount_model)
 	_expect(fusion_button.visible and not fusion_button.disabled and (fusion.get_node("SellCancelButton") as Button).visible, "Fusion amount footer keeps FUSE and BACK touch targets active", failures)
-	layout.item_pressed.connect(func(index: int): _item_row = index)
+	var minus_button := fusion.get_node("SellMinusButton") as Button
+	var plus_button := fusion.get_node("SellPlusButton") as Button
+	var quantity_value := fusion.get_node("SellQuantityValue") as Sprite2D
+	_expect(plus_button.visible and not plus_button.disabled and plus_button.mouse_filter == Control.MOUSE_FILTER_STOP, "Fusion plus touch target is enabled when additional materials are available", failures)
+	_expect(minus_button.visible and minus_button.disabled and minus_button.mouse_filter == Control.MOUSE_FILTER_IGNORE, "Fusion minus touch target is disabled at quantity one", failures)
+	_expect(fusion_button.mouse_filter == Control.MOUSE_FILTER_STOP, "Fusion FUSE footer remains touchable in amount state", failures)
+	_expect(quantity_value.texture != null and quantity_value.position.x > 52.0 and quantity_value.position.x + quantity_value.texture.get_width() < 85.0, "Fusion quantity is centered between the minus and plus glyphs", failures)
 	layout.sell_amount_changed.connect(func(delta: int): _count_delta += delta)
+	plus_button.pressed.emit()
+	_expect(_count_delta == 1, "Fusion plus hitbox emits quantity increase", failures)
+	amount_model.fusion_count = 2
+	layout.render_fusion(amount_model)
+	_expect(minus_button.visible and not minus_button.disabled and plus_button.visible and not plus_button.disabled, "Fusion minus and plus controls enable for a multi-material quantity", failures)
+	layout.item_pressed.connect(func(index: int): _item_row = index)
 	layout.item_action_pressed.connect(func(): _action_presses += 1)
 	layout.shop_back_pressed.connect(func(): _back_presses += 1)
 	(fusion.get_node("ListClip/ItemButton2") as Button).pressed.emit()

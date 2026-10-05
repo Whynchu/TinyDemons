@@ -1174,3 +1174,30 @@ Fix title/menu centering across responsive layout, add regression coverage, bump
 
 ## Completed: mobile landscape menu centering (2026-10-05)
 Changed browser surface sizing to reconcile layout viewport dimensions with visualViewport dimensions restored by browser zoom. The screenshot-shaped 1280x576 case now uses the full phone surface for centering; added focused DisplayLayout smoke assertions and bumped to 0.3.42 in README and the title version. Composition self-test/audit and manifest validation pass; UID validation remains red on an existing missing sidecar for element_catalog.tres. A Godot scene smoke attempt was stopped after its existing Hub fixture null-cursor abort; no phone playtest available. Scoped change committed and pushed to main.
+
+## Current task: FULL title centering follow-up (2026-10-05)
+User reports title remains left-centered with aspect FULL. Attached screenshot displays version 0.3.41, predating pushed viewport fix 0.3.42; trace title-only layout/reflow and check for stale build before changing code. Prior commit 75d03f7 is already on origin/main; new fix, if needed, needs next patch bump.
+
+**Follow-up pending:** The supplied image shows title version 0.3.41, before commit 75d03f7 / version 0.3.42 changed browser viewport sizing. Current source trace shows title x positions use the layout width passed by ScreenLayoutController, which in FULL comes from DisplayController's adaptive viewport width. Await confirmation that phone is showing 0.3.42 after a reload; if so, request a fresh screenshot to diagnose remaining title-only reflow before another patch.
+
+## Completed: Fusion item counts after selection (2026-10-05)
+The quantity view now keeps the eligible material count visible after selecting a target. Added a model regression assertion for owned count, material count, and quantity cap; source selection does not mutate inventory. `git diff --check` passes. MCP `script_check` returned AUTH_FAILED (no editor registry), so no Godot test was run. If the report means inventory copies are actually removed on selection, further repro evidence is still needed.
+
+## Completed: Fusion target count identity regression (2026-10-05)
+Menu count, affordability, and transaction target now resolve from one stable instance ID instead of mixing identity and cursor index. Added stale-index model coverage, bumped to 0.3.44, and pushed commit bc497b8. `git diff --check` passes; Godot MCP script_check remains AUTH_FAILED and the smoke was not run. Await player retest on the published 0.3.44 build.
+
+## Completed: Fusion zero-count recovery (2026-10-05)
+When a selected Fusion row's cached details report zero owned materials despite the row being a valid fusion candidate, the presenter now repairs those counts from the selected live profile. Normal cached details retain the existing fast path. Version 0.3.46. git diff --check passes; Godot MCP script_check returned AUTH_FAILED, and no runtime check was run.
+
+## Current: menu orientation and Fusion quantity recovery
+
+Claimed save-select responsive positioning and Fusion quantity path plus focused regressions. In flight; verify statically and run focused checks if environment permits.
+
+## Completed: menu orientation and Fusion quantity recovery (2026-10-05)
+Save-select elements and selected cursor are repositioned from current view geometry on display reflow. Fusion quantity adjustment is explicit to the confirmed amount state and regression coverage now calls the quantity method, proving count 2 flows into the batch transaction. Added save centering checks to responsive scene coverage. git diff --check passes. No Godot suite/test launched under shared-editor restriction.
+
+## Completed follow-up: Fusion quantity controls (2026-10-05)
+Fixed Fusion amount rendering/input ownership: amount confirm exits root preview and retains content focus; disabled Shop confirmation hitbox ignores Fusion input; dedicated +/- controls reflect allowed quantity and count label centers between icons. Expanded scene smoke to exercise the real plus signal and hitbox states; candidate-cache smoke now advances the transaction quantity through the controller. Static diff check passes. Godot verification not run: standalone CLI missing and shared editor policy forbids second process.
+
+## Verified Fusion recovery (2026-10-05)
+Godot MCP main-scene playtest used the loaded Demon Cloak profile: eight eligible materials, 810 Souls. Direct plus button, coordinate click, and TouchControlsLayer finger down/up all incremented quantity. An in-memory cloned profile fused two materials for 3 Souls; a zero-Souls clone proved the FUSE region reaches the handler and displays NEED 6S. Restored original profile was 810 Souls, Fusion count zero; editor error buffer was empty. Version 0.3.47 prepared with the Fusion and save-select fixes.
