@@ -9,16 +9,28 @@ func _initialize() -> void:
 	call_deferred("_watchdog")
 	var failures: Array[String] = []
 	var burn := ElementCatalogScript.status_effect_for_id(&"burn")
+	var poison := ElementCatalogScript.status_effect_for_id(&"poison")
 	var chill := ElementCatalogScript.status_effect_for_id(&"chill")
 	var shocked := ElementCatalogScript.status_effect_for_id(&"shocked")
 	var wet := ElementCatalogScript.status_effect_for_id(&"wet")
 	_expect(ElementCatalogScript.DATA.validate().is_empty(), "element catalog validates its registered statuses", failures)
-	_expect(burn != null and chill != null and shocked != null and wet != null, "catalog resolves Burn, Chill, Shocked, and Wet by stable id", failures)
-	if burn == null or chill == null or shocked == null or wet == null:
+	_expect(burn != null and poison != null and chill != null and shocked != null and wet != null, "catalog resolves Burn, Poison, Chill, Shocked, and Wet by stable id", failures)
+	_expect(burn != null and is_equal_approx(burn.duration, 3.0) and is_equal_approx(burn.damage_percent_max_health_per_stack, 3.0) and is_equal_approx(burn.tick_interval, 1.0), "Burn uses its 3%-by-1-second base cadence", failures)
+	_expect(poison != null and is_equal_approx(poison.duration, 6.0) and is_equal_approx(poison.damage_percent_max_health_per_stack, 2.0) and is_equal_approx(poison.tick_interval, 2.0), "Poison uses its 2%-by-2-second cadence over 6 seconds", failures)
+	_expect(shocked != null and is_equal_approx(shocked.duration, 12.0) and is_equal_approx(shocked.periodic_damage_percent_max_health_per_stack, 2.0) and is_equal_approx(shocked.periodic_damage_interval, 3.0), "Shocked uses its 2%-by-3-second cadence over 12 seconds", failures)
+	if burn == null or poison == null or chill == null or shocked == null or wet == null:
 		_finish(failures)
 		return
 
+	var status_actor := Node2D.new()
+	get_root().add_child(status_actor)
+	var status_health := HealthComponent.new()
+	status_health.maximum_health = 100.0
+	status_actor.add_child(status_health)
+	status_health.reset(100.0)
 	var status := StatusComponent.new()
+	status.name = "Status"
+	status_actor.add_child(status)
 	_expect(status.apply_effect(burn, ElementCatalogScript.Element.FIRE), "first Burn applies", failures)
 	status.advance(0.4)
 	_expect(status.apply_effect(burn, ElementCatalogScript.Element.FIRE), "reapplying Burn succeeds", failures)
@@ -27,7 +39,7 @@ func _initialize() -> void:
 	var tick_results := status.advance(0.02)
 	_expect(tick_results.size() == 1, "Burn ticks once at its preserved phase", failures)
 	if tick_results.size() == 1:
-		_expect(tick_results[0].kind == StatusTickResult.Kind.DAMAGE and is_equal_approx(tick_results[0].amount, 2.0), "Burn tick magnitude scales with active stacks", failures)
+		_expect(tick_results[0].kind == StatusTickResult.Kind.DAMAGE and is_equal_approx(tick_results[0].amount, 6.0), "Burn tick magnitude scales with active stacks", failures)
 	status.apply_effect(burn, ElementCatalogScript.Element.FIRE)
 	status.apply_effect(burn, ElementCatalogScript.Element.FIRE)
 	_expect(status.stacks_for(&"burn") == burn.maximum_stacks, "reapplication respects the stack cap", failures)
@@ -36,7 +48,7 @@ func _initialize() -> void:
 	var expiry_ticks := status.advance(2.49)
 	_expect(expiry_ticks.size() == 2, "DoT can tick only during the active duration", failures)
 	_expect(status.active_definitions().size() == 1, "status remains active until its duration expires", failures)
-	status.advance(0.02)
+	status.advance(0.52)
 	_expect(status.active_definitions().is_empty(), "status expires cleanly", failures)
 
 	status.apply_effect(chill, ElementCatalogScript.Element.ICE)
@@ -48,7 +60,7 @@ func _initialize() -> void:
 	_expect(not status.apply_effect(chill, ElementCatalogScript.Element.ICE), "actor immunity rejects the matching status", failures)
 	status.clear_all()
 	_expect(is_equal_approx(status.movement_speed_multiplier(), 1.0), "clearing statuses restores normal movement", failures)
-	status.free()
+	status_actor.queue_free()
 
 	var wet_status := StatusComponent.new()
 	wet_status.apply_effect(wet, ElementCatalogScript.Element.WATER)

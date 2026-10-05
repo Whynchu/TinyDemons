@@ -706,7 +706,7 @@ func update_overhead_bars(
 		elite_symbol.global_scale = Vector2.ONE
 		elite_symbol.z_index = overwold_ui_z + 4
 		var status_component := slime.get_node_or_null("Status") as StatusComponent
-		_update_actor_status_markers(slime, status_component, status_markers, overhead_position + Vector2(fill_size.x + 2.0, -1.0), overwold_ui_z + 5, pixel_text)
+		_update_actor_status_markers(slime, status_component, status_markers, overhead_position + Vector2(fill_size.x + 2.0, -1.0), pixel_text)
 		aggro_marker.top_level = true
 		var aggro_offset := target_overhead_aggro_offsets.get(slime, Vector2.ZERO) as Vector2
 		if float(slime.get_meta("encounter_scale", 1.0)) > 1.0:
@@ -724,7 +724,7 @@ func update_overhead_bars(
 			set_values.call(fill, damage_fill, fill_size, health, float(display_health_for.call(slime)), max_health)
 
 
-func _update_actor_status_markers(actor: Sprite2D, status_component: StatusComponent, markers: Array, origin: Vector2, z_index: int, pixel_text: Callable) -> void:
+func _update_actor_status_markers(actor: Sprite2D, status_component: StatusComponent, markers: Array, origin: Vector2, pixel_text: Callable) -> void:
 	if actor == null or not is_instance_valid(actor):
 		return
 	_prune_status_markers(markers)
@@ -748,7 +748,7 @@ func _update_actor_status_markers(actor: Sprite2D, status_component: StatusCompo
 		marker.scale = Vector2.ONE * (1.25 if _consume_status_transmission_flash(actor, record.definition.id) else 1.0)
 		marker.global_scale = Vector2.ONE
 		marker.z_as_relative = false
-		marker.z_index = z_index
+		marker.z_index = actor.z_index - 1
 		marker.visible = true
 
 

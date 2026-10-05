@@ -26,7 +26,7 @@ palette, and impact particles. A low Chroma bar no longer swaps an elemental
 form to the neutral stub: it rejects the cast until the selected form's cost is
 available. Paying exactly that cost is allowed and can reduce Chroma to zero.
 Spell hits guarantee payload status while melee and the sword beam retain their
-chance-based proc. Shadow Hex also applies a separate visible damage mark.
+chance-based proc. Shadow's Hex projectile applies its one status, Poison.
 
 Verification: focused magic smokes (`imbue_spell_scene_smoke`,
 `chroma_projectile_scene_smoke`) plus in-editor MCP playtest per form. The
@@ -147,7 +147,7 @@ values have not yet been accepted through runtime playtesting.
 | Water | Tide Burst | `PROJECTILE_SPLASH` | 10 | 2.0 s | 0.85x direct | none | traveling bubble-pop AoE; secondary hits deal 50% of direct spell damage |
 | Electric | Skyfall | `INSTANT_TARGET` | 10 | 1.2 s | 1.15x | Shocked | priority target, tempo |
 | Grass | Leechvine | `BEAM` | 10 | 2.5 s | 0.40x per tick | none | sustain / drain |
-| Shadow | Hex | `PROJECTILE` | 12 | 2.5 s | 1.10x | Poison | hex-sigil curse projectile; debuff / amp |
+| Shadow | Hex | `PROJECTILE` | 12 | 2.5 s | 1.10x | Poison | hex-sigil curse projectile; Poison is its only status |
 | Ground | Quake | `RADIAL_SELF` | 12 | 2.5 s | 0.75x | none | panic / crowd reset |
 | Ice | Frostbite Shard | `PROJECTILE_SPLASH` | 10 | 2.2 s | 1.00x direct | Chill | contact AoE / kiting |
 
@@ -233,10 +233,9 @@ identity; it does not replace an elemental form when Chroma is low.
 ### 4.7 Shadow — Hex (`PROJECTILE`)
 
 - **Identity:** deception, curse, phase, lifesteal.
-- **Behavior:** a curse projectile that applies **Poison** and marks the target
-  (amplified damage taken for a short window).
-- **Source defaults:** the mark increases later damage by 25% for 3s; 12 Chroma,
-  2.5s cooldown, 1.10x projectile damage, and a 5px pixel-art hex sigil for
+- **Behavior:** a curse projectile that applies **Poison**.
+- **Source defaults:** 12 Chroma, 2.5s cooldown, 1.10x projectile damage, and a
+  5px pixel-art hex sigil for
   the curse projectile.
 - **Payload:** Shadow → Poison.
 - **Deferred:** a phase/blink movement component is out of scope for this pass.
@@ -311,7 +310,6 @@ projectile_shape   ORB | SHARD | DROPLET | HEX | BUBBLE
 projectile_size / projectile_speed / projectile_lifetime / minimum travel time
 delivery_radius / splash secondary damage ratio / delivery_angle_degrees / delivery_range / delivery_duration
 tick_interval / lifesteal_ratio / knockback_multiplier
-mark_duration / mark_damage_multiplier
 ```
 
 These are the typed fields used by the current source registry. Authored VFX and
@@ -387,7 +385,7 @@ Sequenced so the balance change (status on magic) and the structural change
 The input/cast path resolves the selected form and payload before Chroma is
 spent, then dispatches through the cast-frame timeline by delivery type. The
 shared hit resolver carries elemental damage, guaranteed payload statuses,
-knockback, Shadow's mark, and Grass lifesteal. Target-only Skyfall and Leechvine
+knockback and Grass lifesteal. Target-only Skyfall and Leechvine
 also resolve a valid target when a cast began in pointer-aim mode. Form-cost
 selection respects debug-unlimited Chroma; zero Chroma still rejects casting.
 

@@ -74,8 +74,6 @@ static func _ensure_forms() -> void:
 	shadow.chroma_cost = 20
 	shadow.projectile_shape = SpellFormDefinitionScript.ProjectileShape.HEX
 	shadow.projectile_size = 5
-	shadow.mark_duration = 3.0
-	shadow.mark_damage_multiplier = 1.25
 	_forms[ElementCatalogScript.Element.SHADOW] = shadow
 
 	var ground := _make(&"ground", ElementCatalogScript.Element.GROUND, 2.5, 0.75, SpellFormDefinitionScript.Delivery.RADIAL_SELF)

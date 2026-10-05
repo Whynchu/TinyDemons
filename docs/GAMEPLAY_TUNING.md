@@ -126,14 +126,33 @@ Freeze condition are referenced by `ElementCatalogData.status_effects` in
 balance; this file is the tuning index, while the catalog resource is the
 runtime registry.
 
+DoT coefficients are percentages of the affected actor's maximum HP per stack
+per tick, rounded to whole HP with a 1 HP minimum for any positive tick.
+
 | Status | Element | Proc chance | Duration | Effect | Particle style / interval |
 |---|---|---:|---:|---|---|
-| Burn | Fire | 20% per eligible hit | 2.5 s | 1 damage per stack every 1 s; cap 3 | Imbue-like rising ember trail / 0.08 s |
-| Poison | Shadow | 20% per eligible hit | 2.5 s | 1 damage per stack every 1 s; cap 3 | Rising poison motes / 0.16 s |
+| Burn | Fire | 20% per eligible hit | 3.0 s | 3% of target max HP per stack every 1 s (9% total per stack); cap 3 | Imbue-like rising ember trail / 0.08 s |
+| Poison | Shadow | 20% per eligible hit | 6.0 s | 2% of target max HP per stack every 2 s (6% total per stack); cap 3 | Rising poison motes / 0.16 s |
 | Chill | Ice | 20% per eligible hit | 2.0 s | 15% movement and attack-speed reduction per stack; cap 3; multiplier floor 0.55 | Drifting frost crystals / 0.16 s |
-| Shocked | Electric | 10% per eligible hit | 2.5 s | Immediate 0.2 s action lock on proc, then repeat every 1 s; each extra stack reduces repeat cadence by 0.05 s to a 0.5 s floor; cap 3 | Electric sparks every 0.12 s; sprite-only jolt for 0.2 s per lock |
-| Wet | Water | 25% per eligible hit | 3.0 s | Cap 2; each applied stack adds 35% Electric damage taken; divides Shocked cadence by 1.5 per stack (0.5 s interval floor); removes up to 3 applied Burn stacks | Slow-rising bubbles / 0.22 s |
-| Freeze | Water + Ice mixture | Guaranteed when Wet and Chill coexist | 3.0 s | Consumes applied Wet and Chill; locks movement; direct incoming damage +25%; does not slow attacks | Ice shards / 0.14 s |
+| Shocked | Electric | 10% per eligible hit | 12.0 s | 2% of target max HP per stack every 3 s (8% total per stack); immediate 0.2 s action lock on proc, then repeat every 1 s; each extra stack reduces repeat cadence by 0.05 s to a 0.5 s floor; cap 3 | Electric sparks every 0.12 s; sprite-only jolt for 0.2 s per lock |
+| Wet | Water | 25% per eligible hit | 3.0 s | Cap 2; each applied stack adds 35% Electric damage taken; divides Shocked cadence by 1.5 per stack (0.5 s interval floor); removes up to 3 applied Burn stacks when Wet is applied | Slow-rising bubbles / 0.22 s |
+| Freeze | Water + Ice mixture | Guaranteed when Wet and Chill coexist | 3.0 s | Consumes applied Wet and Chill; locks movement; enemy attacks pause until expiry; direct incoming damage +25%; Fire melts applied Freeze into Wet | Ice shards / 0.14 s |
+
+### Combat interaction coverage
+
+The full element damage matchup matrix and status-reaction coverage table live
+in [Combat and Dungeon Design Principles](combat-and-dungeon-design-principles.md#35-combat-matchup-and-status-interaction-table).
+That table labels implemented rules and intentional holes. Current authored
+matchup multipliers are documented there separately from status reactions.
+
+| Accepted interaction change | Intended behavior | Implementation status |
+|---|---|---|
+| Ice hit on applied Burn or innate Fire affinity | Melting Ice consumes applied Burn when present and applies Wet instead of Chill | Implemented |
+| Fire hit on applied Freeze | Melting Fire consumes Freeze and applies Wet instead of Burn | Implemented |
+| Burn periodic tick | 3% of target max HP per stack every 1 s for 3 s | Implemented |
+| Poison periodic tick | 2% of target max HP per stack every 2 s for 6 s | Implemented |
+| Shocked periodic tick | 2% of target max HP per stack every 3 s in addition to action locks; Wet conductivity does not amplify the tick | Implemented |
+| Actor status markers | Enemy health-bar status badges and world status outlines draw below their owning actor sprite | Implemented |
 
 Ordinary status procs require a successful, non-immune elemental hit with
 positive effectiveness. Contact transmission applies a carried transmissible
@@ -143,9 +162,9 @@ checks still apply. The unordered actor pair then has a three-second cooldown.
 elemental status is innate: it is harmless, suppressed by applied ailments, and
 does not provide its own mechanical modifier. Wet and Freeze use `W` and `F`
 badges; the world-space status outline is drawn below the actor sprite. Wet's
-numbers and Freeze's duration/vulnerability are provisional; the status and
-contact smoke checks are registered but unrun, and particle/outline readability
-remains open for runtime acceptance.
+values and Freeze's duration/vulnerability are current tuning values; status
+and contact smoke checks are registered but unrun, and particle/outline
+readability remains open for runtime acceptance.
 
 ### Run enemy element themes
 
@@ -178,7 +197,7 @@ readability.
 | Water Tide Burst | Traveling bubble / pop splash | 10 / 2.0s | 0.85x direct | 9px bubble at 54px/s; 1.25s lifetime; 0.16s minimum travel; `bubblesent.ogg` on launch and `bubbleburst.ogg` on confirmed impact; impact bursts fourteen 4–6px bubbles; 24px impact radius; secondary hits deal 50% of direct damage; 0.65x magic knockback |
 | Electric Skyfall | Instant target strike | 10 / 1.2s | 1.15x | Locked/nearest target; short stepped pixel bolt from above to rendered sprite top-center, with impact sparks |
 | Grass Leechvine | Target tether | 10 / 2.5s | 0.40x per tick | 64px range; 1.8s; 0.45s tick; heals 40% of dealt damage |
-| Shadow Hex | Hex-sigil curse projectile | 12 / 2.5s | 1.10x | 5px glyph; mark increases damage taken by 25% for 3s |
+| Shadow Hex | Hex-sigil curse projectile | 12 / 2.5s | 1.10x | 5px glyph; applies Shadow's single registered status, Poison |
 | Ground Quake | Self-centered ring | 12 / 2.5s | 0.75x | 24px radius; 0.70x magic knockback |
 | Ice Frostbite Shard | Contact shard burst | 10 / 2.2s | 1.00x direct | 5px shard at 90px/s; 24px impact radius; nearby hits deal 50%; thirteen faceted crystals fill an isometric horizontal oval and inherit the active palette |
 

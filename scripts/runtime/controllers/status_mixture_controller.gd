@@ -50,6 +50,43 @@ static func resolve_after_application(target: Node, applied_element: int, prior_
 	return true
 
 
+static func resolve_thermal_reaction(target: Node, incoming_element: int) -> bool:
+	if target == null or not is_instance_valid(target):
+		return false
+	var component := target.get_node_or_null("Status") as StatusComponent
+	if component == null:
+		return false
+	var wet := ElementCatalog.status_effect_for_id(&"wet")
+	if wet == null or component.status_immunities.has(wet.id):
+		return false
+	var consumed_ids: Array[StringName] = []
+	if incoming_element == ElementCatalog.Element.ICE:
+		var burn := ElementCatalog.status_effect_for_id(&"burn")
+		if burn != null and component.record_for(burn.id) != null and component.record_for(burn.id).origin == StatusRecord.Origin.APPLIED:
+			consumed_ids.append(burn.id)
+		elif component.innate_status_id != &"burn" and component.innate_status_id != &"fire":
+			return false
+	elif incoming_element == ElementCatalog.Element.FIRE:
+		var freeze := ElementCatalog.status_effect_for_id(&"freeze")
+		if freeze == null:
+			return false
+		var record := component.record_for(freeze.id)
+		if record == null or record.origin != StatusRecord.Origin.APPLIED:
+			return false
+		consumed_ids.append(freeze.id)
+	else:
+		return false
+	if not component.apply_effect(wet, ElementCatalog.Element.WATER):
+		return false
+	if incoming_element == ElementCatalog.Element.ICE and component.innate_status_id == &"fire":
+		var burn := ElementCatalog.status_effect_for_id(&"burn")
+		if burn != null and not consumed_ids.has(burn.id):
+			consumed_ids.append(burn.id)
+	if not consumed_ids.is_empty():
+		component.strip_statuses(consumed_ids)
+	return true
+
+
 static func _matching_reaction(component: StatusComponent, applied_element: int, prior_innate_suppression: Dictionary) -> Dictionary:
 	for resource in ElementCatalog.DATA.status_mixtures:
 		var mixture := resource as StatusMixtureDefinition

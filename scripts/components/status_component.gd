@@ -71,20 +71,6 @@ func apply_effect(definition: StatusEffectDefinition, source_element: int, arriv
 	return true
 
 
-func apply_damage_mark(duration: float, damage_multiplier: float, source_element: int) -> bool:
-	var mark := StatusEffectDefinition.new()
-	mark.id = &"hex_mark"
-	mark.element = source_element
-	mark.family = StatusEffectDefinition.Family.DAMAGE_AMPLIFICATION
-	mark.duration = maxf(duration, 0.05)
-	mark.maximum_stacks = 1
-	mark.magnitude_per_stack = maxf(damage_multiplier - 1.0, 0.0)
-	mark.badge_glyph = "X"
-	mark.particle_style = &"poison_mote"
-	mark.particle_interval = 0.18
-	return apply_effect(mark, source_element)
-
-
 func advance(delta: float) -> Array[StatusTickResult]:
 	var results: Array[StatusTickResult] = []
 	var step := maxf(delta, 0.0)
@@ -111,12 +97,20 @@ func advance(delta: float) -> Array[StatusTickResult]:
 			var interval := definition.tick_interval_for(record.stacks)
 			while record.tick_timer <= 0.0 and elapsed > 0.0:
 				var tick_result := StatusTickResultScript.new() as StatusTickResult
-				tick_result.configure(StatusTickResultScript.Kind.DAMAGE, status_id, record.source_element, record.stacks, definition.magnitude_per_stack * float(record.stacks))
+				tick_result.configure(StatusTickResultScript.Kind.DAMAGE, status_id, record.source_element, record.stacks, _max_health_tick_amount(definition.damage_percent_max_health_per_stack, record.stacks))
 				results.append(tick_result)
 				record.tick_timer += interval
 				changed = true
 		elif definition.family == StatusEffectDefinition.Family.PERIODIC_STUN:
 			record.cadence_timer -= elapsed
+			if definition.periodic_damage_percent_max_health_per_stack > 0.0:
+				record.damage_tick_timer -= elapsed
+				while record.damage_tick_timer <= 0.0 and elapsed > 0.0:
+					var damage_result := StatusTickResultScript.new() as StatusTickResult
+					damage_result.configure(StatusTickResultScript.Kind.DAMAGE, status_id, definition.element, record.stacks, _max_health_tick_amount(definition.periodic_damage_percent_max_health_per_stack, record.stacks))
+					results.append(damage_result)
+					record.damage_tick_timer += definition.periodic_damage_interval
+					changed = true
 			while record.cadence_timer <= 0.0 and elapsed > 0.0:
 				var tick_result := StatusTickResultScript.new() as StatusTickResult
 				tick_result.configure(StatusTickResultScript.Kind.STUN_PULSE, status_id, record.source_element, record.stacks, 0.0, definition.stun_lock_duration)
@@ -188,6 +182,15 @@ func strongest_active_definition() -> StatusEffectDefinition:
 
 func record_for(status_id: StringName) -> StatusRecord:
 	return _active.get(status_id) as StatusRecord
+
+
+func _max_health_tick_amount(percent_per_stack: float, stacks: int) -> float:
+	var actor := get_parent()
+	var health := actor.get_node_or_null("Health") as HealthComponent if actor != null else null
+	if health == null:
+		return 0.0
+	var raw_amount := maxf(health.maximum_health, 0.0) * maxf(percent_per_stack, 0.0) * float(maxi(stacks, 0)) / 100.0
+	return maxf(1.0, roundf(raw_amount)) if raw_amount > 0.0 else 0.0
 
 
 func stacks_for(status_id: StringName) -> int:
@@ -264,6 +267,14 @@ func movement_speed_multiplier() -> float:
 
 
 func is_movement_locked() -> bool:
+	return _has_applied_movement_lock()
+
+
+func is_attack_locked() -> bool:
+	return _has_applied_movement_lock()
+
+
+func _has_applied_movement_lock() -> bool:
 	for record_value: Variant in _active.values():
 		var record := record_value as StatusRecord
 		if record == null or record.origin != StatusRecord.Origin.APPLIED or record.definition == null:

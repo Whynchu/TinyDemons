@@ -11,6 +11,7 @@ var source_element := 0
 var tick_timer := 0.0
 var cadence_timer := 0.0
 var cadence_interval := 0.0
+var damage_tick_timer := 0.0
 var initial_stun_pulse_pending := false
 var suppressed_by: StringName = &""
 var arrived_by_transmission := false
@@ -33,4 +34,5 @@ func configure(
 	tick_timer = definition.tick_interval_for(stacks) if definition.family == StatusEffectDefinition.Family.DAMAGE_OVER_TIME else 0.0
 	cadence_timer = 0.0 if definition.family == StatusEffectDefinition.Family.PERIODIC_STUN else definition.stun_interval_for(stacks)
 	cadence_interval = definition.stun_interval_for(stacks) if definition.family == StatusEffectDefinition.Family.PERIODIC_STUN else 0.0
+	damage_tick_timer = definition.periodic_damage_interval if definition.periodic_damage_percent_max_health_per_stack > 0.0 else 0.0
 	initial_stun_pulse_pending = new_origin == Origin.APPLIED and definition.family == StatusEffectDefinition.Family.PERIODIC_STUN

@@ -484,10 +484,11 @@ count. Ordinary elemental hits retain the definition's proc chance; contact
 transmission does not roll it a second time.
 
 Explicitly set `transmissible = true` on Burn, Poison, Chill, Shocked and Wet.
-Auxiliary `hex_mark` remains false in this first pass; do not silently convert it
-to Poison through the element lookup. Successful transfer sets provenance on
-the receiving record. The badge ring remains until that record expires or is
-removed, even if a later ordinary hit refreshes it.
+Shadow has one element-owned status, Poison, which follows the same explicit
+transmission rule as the other registered statuses. The former auxiliary Hex
+damage mark was removed; Hex remains the Shadow projectile shape. Successful
+transfer sets provenance on the receiving record. The badge ring remains until
+that record expires or is removed, even if a later ordinary hit refreshes it.
 
 **Rule 6 — eligibility.** Skip dead, spawn-locked and non-visible actors; skip
 while the room is not engaged. Reuse the existing guards.
@@ -684,11 +685,11 @@ Fix the two broken tests in this slice:
 
 Acceptance: `script_check` clean on every changed script;
 `validate_composition.ps1` floor and `-RequireTargets` unchanged; a scene probe
-reads the complete five-status registry and
+reads the complete six-status registry and
 `ElementCatalog.DATA.validate().is_empty()`. At Wet activation, additionally
 require `ElementCatalog.status_effect_for_element(2).id == &"wet"` and both
 S3/S4 acceptance bars. Verify equal-stack presentation is independent of
-application order and the existing auxiliary `hex_mark` still works.
+application order and Shadow Poison transfer as its only Shadow status.
 
 ### S2 — Innate affinity and suppression
 

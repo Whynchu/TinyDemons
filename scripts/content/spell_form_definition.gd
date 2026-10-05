@@ -37,5 +37,3 @@ enum ProjectileShape {
 @export_range(0.05, 5.0, 0.05) var tick_interval := 0.45
 @export_range(0.0, 1.0, 0.01) var lifesteal_ratio := 0.0
 @export_range(0.0, 2.0, 0.01) var knockback_multiplier := 0.25
-@export_range(0.05, 30.0, 0.05) var mark_duration := 3.0
-@export_range(1.0, 3.0, 0.01) var mark_damage_multiplier := 1.0

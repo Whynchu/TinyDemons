@@ -100,9 +100,8 @@ what stops it re-triggering on its own and makes setting it up a real decision.
 
 Concretely this means:
 
-- `freeze` goes in `AUXILIARY_STATUS_IDS` (`status_effect_definition.gd:14`)
-  alongside `hex_mark`, the existing escape hatch for statuses that are not
-  element-owned.
+- `freeze` goes in `AUXILIARY_STATUS_IDS` (`status_effect_definition.gd:14`),
+  the escape hatch for conditions that are not element-owned.
 - The uniqueness check at `element_catalog_data.gd:33-35` is relaxed to apply
   only to non-auxiliary ids. A chill and a freeze may both be element 7; two
   passive element statuses still may not.
@@ -175,16 +174,18 @@ bound is 0.1, and its authored floor is 0.55), so Freeze does not overload the
 slow parameters. The lock affects player motor and slime navigation while
 leaving attack speed at normal, as recommended below.
 
-Decision: Freeze uses a **movement-only** lock, leaving attacking legal. It pins
-the target and opens a damage window without introducing action cancellation.
-Shocked remains the separate periodic action-lock status, with its existing
-boss resistance rules.
+The original movement-only decision is superseded by the 2026-10-05 combat
+update: Freeze still leaves `attack_speed_multiplier()` unchanged, but Slime
+actors pause attack updates while Freeze is active. The current and legacy
+Slime tick paths share this lock, and boss phases that resist movement locks
+also resist Freeze's attack lock. Player Freeze remains governed by the player
+control path; this update specifically prevents enemies from attacking.
 
 Runtime enforcement also stops movement already in progress: an active slime
 scoot is canceled, Skeleton's direct-walk path is guarded, and attack lunges,
-knockback, and actor-separation pushes cannot displace a locked target. Attack
-animation and hit resolution continue from the frozen position. Boss phases
-that resist movement locks continue to use the existing combat resistance
+knockback, and actor-separation pushes cannot displace a locked target. Enemy
+attack animation and hit resolution pause at their current frame and resume
+after Freeze expires. Boss phases that resist movement locks continue to use the existing combat resistance
 callback.
 
 ### Presentation
@@ -245,7 +246,6 @@ Decide and record:
 | `burn` | freeze **extinguishes** burn (reuse `extinguishes`, `:39`) |
 | `shocked` | unaffected; a frozen target is still conductive |
 | `poison` | unaffected |
-| `hex_mark` | unaffected |
 
 `freeze` being consumed-by-freeze is not an interaction; but a frozen actor must
 still be able to be *shattered* by a follow-up hit, which is a follow-up proposal,

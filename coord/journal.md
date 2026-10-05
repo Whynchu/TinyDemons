@@ -1077,3 +1077,30 @@ Reopen Fusion input after player reports quantity and confirmation both reject; 
 
 ## 2026-10-05 - codex - done
 Godot MCP reproduced a Demon Cloak with eight eligible materials and 810 Souls. The live plus button and touch-layer finger path each increased quantity; an in-memory profile clone fused two materials for 3 Souls, and the FUSE touch region showed NEED 6S with a zero-Souls clone. The original save retained 810 Souls and Fusion count zero. Fusion now resolves live target/material data and keeps its FUSE touch target active. Save-select reflow and version 0.3.47 are included.
+
+## 2026-10-05T22:00Z — codex — claim
+Document the elemental damage matchup matrix, implemented status interactions, intentional holes, and accepted pending additions in the combat design authority and tuning index.
+
+## 2026-10-05T22:10Z — codex — done
+Added the catalog-backed eight-element matchup matrix and current sparse status reaction table; recorded Fire-target + Ice-hit => Wet and the requested Shocked tick as pending tuning/implementation. Corrected Normal's 0.25x Shadow matchup and clarified that unlisted pairs still use ordinary damage/status rules. Documentation-only; no gameplay tests run.
+
+## 2026-10-05T22:12Z — codex — handoff
+Documentation slice complete; removed the active claim. Source implementation of Fire-affinity + Ice => Wet and the Shocked periodic damage tick remains future work.
+
+## 2026-10-05T22:30Z — codex — claim
+Prepare an implementation plan for the agreed elemental status tree and Shocked periodic damage, with Ground/Grass/Shadow excluded.
+
+## 2026-10-05T22:45Z — codex — done
+Added `elemental-status-interaction-plan.md` with runtime ownership, sequence, status semantics, acceptance criteria, and the Shocked tick tuning question. Linked it from DOCUMENTATION_MAP and ROADMAP. No runtime implementation or gameplay tests run.
+
+## 2026-10-05T23:00Z — codex — done
+Implemented Burn/Freeze/Fire-affinity thermal reactions to Wet, a 0.5 Electric damage per stack Shocked tick every second, and enemy status badge layering below the owning actor sprite. Added focused regression cases, updated manifest descriptions and tuning/design docs. Godot MCP script checks pass for all touched GDScript files; smoke execution remains pending under the active-editor restriction. `git diff --check` passes.
+
+## 2026-10-06T00:00Z — codex — done
+Implemented max-health-scaled Burn/Poison/Shocked damage cadences, Freeze attack pausing, and retained marker layering plus thermal interactions. Updated tuning and interaction docs and focused smoke coverage. Static diagnostics and diff checks pass; Godot smoke execution pending under active-editor restriction.
+
+## 2026-10-06T00:10Z — codex — claim
+Consolidate Shadow gameplay status to Poison and remove Hex's additional damage mark while retaining the Hex projectile identity.
+
+## 2026-10-06T00:25Z — codex — done
+Consolidated Shadow to its single Poison status. Removed the separate Hex damage mark and its form fields/runtime application while retaining Hex projectile presentation. Updated spell/status docs, tuning table, manifest and transmission smoke assertion for Shadow Poison plus Hex shape. MCP script diagnostics pass; smoke runtime pending under active-editor restriction.

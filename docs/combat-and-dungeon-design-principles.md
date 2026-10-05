@@ -153,6 +153,45 @@ These are directional identities, not final balance values:
 An element should first feel different in combat. Environmental interactions
 are a bonus expression of that identity, not the sole reason the element exists.
 
+### 3.5 Combat matchup and status interaction table
+
+Damage effectiveness and status reactions are separate rules. The matchup
+matrix below is the current authored damage multiplier (`attacker` row against
+`defender` column); `0.8x` is resisted, `1.25x` is effective, and `1.0x` is
+neutral. It does not imply a status reaction.
+
+| Attack \\ Target | Normal | Fire | Water | Electric | Grass | Shadow | Ground | Ice |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Normal | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 0.25 | 1.0 | 1.0 |
+| Fire | 1.0 | 0.8 | 0.8 | 1.0 | 1.25 | 1.0 | 1.0 | 1.25 |
+| Water | 1.0 | 1.25 | 0.8 | 1.0 | 0.8 | 1.0 | 1.25 | 1.0 |
+| Electric | 1.0 | 1.0 | 1.25 | 0.8 | 0.8 | 1.0 | 0.25 | 1.0 |
+| Grass | 1.0 | 0.8 | 1.25 | 1.0 | 0.8 | 1.0 | 1.25 | 1.0 |
+| Shadow | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.25 | 1.0 | 1.0 |
+| Ground | 1.0 | 1.25 | 1.0 | 1.25 | 0.8 | 1.0 | 0.8 | 1.0 |
+| Ice | 1.0 | 0.8 | 0.8 | 1.0 | 1.25 | 1.0 | 1.25 | 0.8 |
+
+Combat status interactions are intentionally sparse. These are the current
+runtime rules:
+
+| Interaction | Result | State |
+|---|---|---|
+| Wet applied while Burn is active | Wet removes up to three applied Burn stacks; Wet remains | Implemented |
+| Wet + Ice hit | Consumes applied Wet and Chill; applies Freeze | Implemented |
+| Applied Burn or Fire affinity + Ice hit | Ice melts applied Burn (consuming it) or against innate Fire affinity; applies Wet instead of Chill | Implemented |
+| Applied Freeze + Fire hit | Fire melts Freeze (consuming it); applies Wet instead of Burn | Implemented |
+| Wet + Electric hit | Electric damage is amplified by 35% per Wet stack; Shocked cadence is accelerated to its configured floor | Implemented |
+| Electric hit / Shocked | Immediate and periodic brief action locks plus 2% of target max HP per stack every 3 s | Implemented |
+| Status marker draw order | World status outlines and enemy health-bar badges render below their owning actor sprite | Implemented |
+
+An interaction not listed above has no special status reaction. It still uses
+the matchup multiplier and the attacker's ordinary status behavior. These
+unlisted pairings are intentional holes, not implied combinations waiting to
+be implemented. New rows should be added only when they create a readable
+combat choice and fit the bounded interaction model. Environmental reactions
+such as putting out a world flame remain authored-object behavior, separate
+from this actor-status table.
+
 ## 4. Enemy taxonomy
 
 Enemy definitions must distinguish combat role from movement. Aerial is a

@@ -1532,16 +1532,6 @@ func magic_hit_slime(
 	if damage_dealt > 0.0 or immune:
 		context.spawn_damage_number.call(slime, damage_dealt, was_critical, resolved_element, immune)
 	if form != null and not immune and damage_dealt > 0.0:
-		var mark_duration := float(form.get("mark_duration"))
-		if (
-			mark_duration > 0.0
-			and float(form.get("mark_damage_multiplier")) > 1.0
-			and is_instance_valid(slime)
-			and bool(context.is_slime_targetable.call(slime))
-		):
-			var status := slime.get_node_or_null("Status") as StatusComponent
-			if status != null:
-				status.apply_damage_mark(mark_duration, float(form.get("mark_damage_multiplier")), ElementCatalogScript.element_for_palette(palette))
 		var lifesteal_ratio := float(form.get("lifesteal_ratio"))
 		if lifesteal_ratio > 0.0 and context.apply_player_lifesteal.is_valid():
 			context.apply_player_lifesteal.call(damage_dealt, lifesteal_ratio)

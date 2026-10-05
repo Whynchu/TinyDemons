@@ -2,17 +2,20 @@ extends SceneTree
 
 const ElementCatalogScript = preload("res://scripts/content/element_catalog.gd")
 const ElementAuraComponentScript = preload("res://scripts/components/element_aura_component.gd")
+const SlimeActorScript = preload("res://scripts/actors/slime_actor.gd")
 
 var _finished := false
+var _attack_update_count := 0
 
 
 func _initialize() -> void:
 	call_deferred("_watchdog")
 	var failures: Array[String] = []
 	_expect(ElementCatalogScript.DATA.validate().is_empty(), "status and mixture registry validates", failures)
-	var wet := ElementCatalogScript.status_effect_for_id(&"wet")
 	var chill := ElementCatalogScript.status_effect_for_id(&"chill")
 	var freeze := ElementCatalogScript.status_effect_for_id(&"freeze")
+	var burn := ElementCatalogScript.status_effect_for_id(&"burn")
+	var wet := ElementCatalogScript.status_effect_for_id(&"wet")
 	_expect(wet != null and wet.badge_glyph == "W", "Wet uses its W badge", failures)
 	_expect(freeze != null and freeze.badge_glyph == "F", "Freeze uses its F badge", failures)
 	if wet == null or chill == null or freeze == null:
@@ -45,16 +48,49 @@ func _initialize() -> void:
 	_expect(is_equal_approx(innate_status.record_for(&"freeze").remaining, freeze_remaining), "suppressed innate Wet cannot refresh Freeze for free", failures)
 	innate_water.queue_free()
 
+	var burn_then_ice := _new_target()
+	var burn_status := burn_then_ice.get_node(^"Status") as StatusComponent
+	burn_status.apply_effect(burn, ElementCatalogScript.Element.FIRE)
+	_expect(_apply(burn_then_ice, ElementCatalogScript.Element.ICE, rng), "Ice melts applied Burn into Wet", failures)
+	_expect(burn_status.stacks_for(&"burn") == 0 and burn_status.stacks_for(&"wet") == 1, "melting Burn consumes it and applies one Wet stack", failures)
+	_expect(burn_status.stacks_for(&"chill") == 0, "Ice melting Burn does not also apply Chill", failures)
+	burn_then_ice.queue_free()
+
+	var freeze_then_fire := _new_target()
+	var freeze_then_fire_status := freeze_then_fire.get_node(^"Status") as StatusComponent
+	freeze_then_fire_status.apply_effect(freeze, ElementCatalogScript.Element.ICE)
+	_expect(_apply(freeze_then_fire, ElementCatalogScript.Element.FIRE, rng), "Fire melts applied Freeze into Wet", failures)
+	_expect(freeze_then_fire_status.stacks_for(&"freeze") == 0 and freeze_then_fire_status.stacks_for(&"wet") == 1, "melting Freeze consumes it and applies Wet", failures)
+	_expect(freeze_then_fire_status.stacks_for(&"burn") == 0, "Fire melting Freeze does not also apply Burn", failures)
+	freeze_then_fire.queue_free()
+
+	var innate_fire := _new_target()
+	var innate_fire_status := innate_fire.get_node(^"Status") as StatusComponent
+	innate_fire_status.configure_innate(&"burn")
+	_expect(_apply(innate_fire, ElementCatalogScript.Element.ICE, rng), "Ice melts an innately Fire-affinity target", failures)
+	_expect(innate_fire_status.stacks_for(&"wet") == 1 and innate_fire_status.stacks_for(&"chill") == 0, "innate Fire reaction applies Wet without Chill", failures)
+	innate_fire.queue_free()
+
 	var freeze_status := _new_target().get_node(^"Status") as StatusComponent
 	freeze_status.apply_effect(freeze, ElementCatalogScript.Element.ICE)
 	_expect(is_zero_approx(freeze_status.movement_speed_multiplier()), "Freeze locks movement completely", failures)
-	_expect(is_equal_approx(freeze_status.attack_speed_multiplier(), 1.0), "Freeze leaves attacking legal", failures)
+	_expect(is_equal_approx(freeze_status.attack_speed_multiplier(), 1.0), "Freeze does not apply an attack-speed slow", failures)
+	_expect(freeze_status.is_attack_locked(), "Freeze locks enemy attacks for the status duration", failures)
+	_assert_frozen_enemy_pauses_attack(freeze, failures)
 	_expect(is_equal_approx(freeze_status.incoming_damage_multiplier_for(ElementCatalogScript.Element.FIRE), 1.25), "Freeze increases direct incoming damage by 25 percent", failures)
 	_expect(is_equal_approx(freeze_status.incoming_damage_multiplier_for(ElementCatalogScript.Element.FIRE, false), 1.0), "Freeze vulnerability is excluded from status damage ticks", failures)
 	_expect(is_equal_approx(freeze_status.damage_taken_multiplier(), 1.0), "Freeze does not alter the DoT damage multiplier", failures)
 	freeze_status.advance(freeze.duration + 0.01)
 	_expect(freeze_status.record_for(&"freeze") == null, "Freeze expires cleanly", failures)
 	freeze_status.get_parent().queue_free()
+
+	var immune_target := _new_target()
+	var immune_status := immune_target.get_node(^"Status") as StatusComponent
+	immune_status.status_immunities.append(&"wet")
+	immune_status.apply_effect(burn, ElementCatalogScript.Element.FIRE)
+	_expect(_apply(immune_target, ElementCatalogScript.Element.ICE, rng), "Ice falls back to its ordinary status when Wet is immune", failures)
+	_expect(immune_status.stacks_for(&"burn") == 1 and immune_status.stacks_for(&"wet") == 0, "Wet immunity blocks the thermal reaction without consuming Burn", failures)
+	immune_target.queue_free()
 	_assert_boss_resistance(freeze, failures)
 	_assert_status_marker_draw_order(freeze, failures)
 	_finish(failures)
@@ -123,9 +159,55 @@ func _assert_boss_resistance(freeze: StatusEffectDefinition, failures: Array[Str
 	_expect(status.record_for(&"freeze") != null, "boss-resisted actors still receive Freeze", failures)
 	_expect(is_equal_approx(status.incoming_damage_multiplier_for(ElementCatalogScript.Element.FIRE), 1.25), "Freeze vulnerability applies during a boss resistance phase", failures)
 	_expect(is_equal_approx(status.movement_speed_multiplier(), 1.0), "boss resistance prevents Freeze movement lock during its protected phase", failures)
+	_expect(not status.is_attack_locked(), "boss movement-lock resistance also prevents Freeze from locking attacks", failures)
 	combat.boss_jump_phase_stun_resistant = false
 	_expect(is_zero_approx(status.movement_speed_multiplier()), "Freeze movement lock resumes when boss resistance ends", failures)
+	_expect(status.is_attack_locked(), "Freeze attack lock resumes when boss resistance ends", failures)
 	actor.queue_free()
+
+
+func _assert_frozen_enemy_pauses_attack(freeze: StatusEffectDefinition, failures: Array[String]) -> void:
+	var enemy := SlimeActorScript.new() as SlimeActor
+	get_root().add_child(enemy)
+	var status := StatusComponent.new()
+	status.name = "Status"
+	enemy.add_child(status)
+	var combat := SlimeCombatComponent.new()
+	combat.name = "Combat"
+	enemy.add_child(combat)
+	status.apply_effect(freeze, ElementCatalogScript.Element.ICE)
+	enemy.tick_runtime(
+		0.1,
+		Callable(self, "_never_dead"),
+		Callable(self, "_noop_update"),
+		Callable(self, "_count_attack_update"),
+		Callable(self, "_never_aggroed"),
+		Callable(self, "_no_target"),
+		Callable(self, "_noop_update")
+	)
+	_expect(_attack_update_count == 0, "a frozen enemy does not advance or start an attack", failures)
+	enemy.queue_free()
+
+
+func _never_dead(_actor: Node) -> bool:
+	return false
+
+
+func _never_aggroed(_actor: Node) -> bool:
+	return false
+
+
+func _no_target(_actor: Node) -> Node:
+	return null
+
+
+func _count_attack_update(_actor: Node, _delta: float) -> bool:
+	_attack_update_count += 1
+	return false
+
+
+func _noop_update(_actor: Node, _delta: float) -> bool:
+	return false
 
 
 func _watchdog() -> void:

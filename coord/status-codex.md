@@ -1201,3 +1201,18 @@ Fixed Fusion amount rendering/input ownership: amount confirm exits root preview
 
 ## Verified Fusion recovery (2026-10-05)
 Godot MCP main-scene playtest used the loaded Demon Cloak profile: eight eligible materials, 810 Souls. Direct plus button, coordinate click, and TouchControlsLayer finger down/up all incremented quantity. An in-memory cloned profile fused two materials for 3 Souls; a zero-Souls clone proved the FUSE region reaches the handler and displays NEED 6S. Restored original profile was 810 Souls, Fusion count zero; editor error buffer was empty. Version 0.3.47 prepared with the Fusion and save-select fixes.
+
+## Completed: elemental interaction coverage (2026-10-05)
+Documented the authored eight-element damage matrix and sparse status reaction coverage in the combat principles authority. Corrected Normal's 0.25x Shadow matchup from the catalog. Added the agreed Fire-target + Ice-hit => Wet rule and requested Shocked periodic damage tick to the gameplay tuning index as pending implementation, with explicit intentional-hole language. Documentation-only; no Godot checks or gameplay tests run.
+
+## Planned: elemental status interaction slice (2026-10-05)
+Accepted plan is in `docs/elemental-status-interaction-plan.md`, linked from the documentation map and roadmap. It covers Burn + Ice => Wet, Freeze + Fire => Wet, innate Fire affinity + Ice => Wet, preservation of Wet + Ice => Freeze and Wet + Electric conductivity, plus a small Shocked damage tick. Ground, Grass, and Shadow get no new reactions. No runtime behavior or tests changed in this planning turn.
+
+## Implemented: elemental reactions, Shocked tick, and status marker layering (2026-10-05)
+Applied Burn + Ice and applied Freeze + Fire now consume the triggering status and produce Wet; Ice against innate Fire affinity produces Wet without Chill. Wet immunity blocks the reaction without consuming inputs; ordinary status behavior remains the fallback. At the time, Shocked used a 0.5 damage tick each second; this value and cadence are superseded by the 2026-10-06 max-health-scaled 2% every 3 seconds for 12 seconds. Enemy overhead status badges render at owning actor z-index minus one. Focused smoke cases and manifest descriptions were updated. MCP script diagnostics pass for all changed GDScript files; no smoke `.gd` tests were run because the active editor/MCP workflow cannot run those tests. `git diff --check` passes.
+
+## Completed: elemental status cadence and Freeze attack lock (2026-10-05)
+Burn, Poison, and Shocked now use percentage-of-target-max-health ticks per stack: 3% every 1 s for 3 s, 2% every 2 s for 6 s, and 2% every 3 s for 12 s. Positive ticks round to whole HP with a 1 HP minimum. Freeze pauses enemy attack updates until expiry, respecting boss movement-lock resistance. Status markers remain below actor sprites. Earlier entries describing 0.5 Shocked damage per second are superseded. Smoke coverage updated; source diagnostics and diff checks pass, but smoke runtime execution is pending under the active-editor rule.
+
+## Completed: Shadow single-status rule (2026-10-06)
+Shadow now has one status: Poison. Removed the separate Hex damage-amplification mark from the Shadow projectile while retaining Hex as its projectile shape/form name. Updated transmission smoke coverage and current spell/tuning documentation. MCP script diagnostics pass; smoke runtime pending under active-editor restriction.

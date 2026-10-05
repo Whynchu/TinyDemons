@@ -85,6 +85,7 @@ For an external product/design review, use the curated [`review/00-astra-review-
 27. [`script-role-map-2026.md`](script-role-map-2026.md) — Current role-folder locations and the completed Stage 1 assignment for all 235 scripts.
 28. [`elemental-theme-progression-separation-design.md`](elemental-theme-progression-separation-design.md) — implemented contract separating campaign run content from difficulty pressure.
 29. [`freeze-status-design.md`](freeze-status-design.md) — implemented WATER + ICE mixture producing the Freeze status.
+30. [`elemental-status-interaction-plan.md`](elemental-status-interaction-plan.md) — accepted status-reaction tree and bounded implementation sequence for heat/cold producing Wet and the Shocked damage tick.
 
 ## Authority by question
 

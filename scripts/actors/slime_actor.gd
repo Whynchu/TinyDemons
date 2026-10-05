@@ -144,6 +144,8 @@ func tick_runtime(delta: float, is_dead: Callable, update_knockback: Callable, u
 		combat.status_stun_timer = maxf(combat.status_stun_timer - delta, 0.0)
 		combat.hitstun_timer = maxf(combat.hitstun_timer - delta, 0.0)
 		return
+	if status != null and status.is_attack_locked():
+		return
 	if not movement_locked and update_knockback.call(self, delta):
 		var support := get_node_or_null("Support") as Node
 		if support != null:
@@ -195,6 +197,8 @@ static func tick_legacy_runtime(actor: Sprite2D, delta: float, is_dead: Callable
 			brain.scoot_target = actor.position
 		update_scoot.call(actor, 0.0)
 	if not movement_locked and bool(update_knockback.call(actor, delta)):
+		return
+	if status != null and status.is_attack_locked():
 		return
 	combat.hitstun_timer = maxf(combat.hitstun_timer - delta, 0.0)
 	if combat.hitstun_timer > 0.0 or bool(update_attack.call(actor, action_delta)):

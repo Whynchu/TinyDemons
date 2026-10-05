@@ -13,7 +13,7 @@ enum Family {
 }
 
 const STATUS_IDS: Array[StringName] = [&"burn", &"poison", &"chill", &"shocked", &"wet"]
-const AUXILIARY_STATUS_IDS: Array[StringName] = [&"hex_mark", &"freeze"]
+const AUXILIARY_STATUS_IDS: Array[StringName] = [&"freeze"]
 const PARTICLE_STYLES: Array[StringName] = [&"ember", &"poison_mote", &"electric_spark", &"frost_crystal", &"bubble", &"ice_shard"]
 
 @export var id: StringName = &""
@@ -23,12 +23,16 @@ const PARTICLE_STYLES: Array[StringName] = [&"ember", &"poison_mote", &"electric
 @export_range(0.05, 30.0, 0.05) var duration := 2.5
 @export_range(1, 10, 1) var maximum_stacks := 3
 @export_range(0.0, 100.0, 0.1) var magnitude_per_stack := 1.0
+## DoT magnitude as a percent of the affected actor's maximum health per stack.
+@export_range(0.0, 100.0, 0.1) var damage_percent_max_health_per_stack := 0.0
 @export_range(0.1, 1.0, 0.01) var movement_multiplier_floor := 0.55
 @export_range(0.05, 10.0, 0.05) var tick_interval := 1.0
 @export_range(0.05, 10.0, 0.05) var stun_interval := 1.0
 @export_range(0.0, 2.0, 0.01) var stun_interval_reduction_per_extra_stack := 0.05
 @export_range(0.05, 10.0, 0.05) var stun_interval_floor := 0.5
 @export_range(0.01, 2.0, 0.01) var stun_lock_duration := 0.2
+@export_range(0.0, 100.0, 0.1) var periodic_damage_percent_max_health_per_stack := 0.0
+@export_range(0.05, 10.0, 0.05) var periodic_damage_interval := 1.0
 @export_range(0.0, 4.0, 0.05) var vulnerability_per_stack := 0.0
 @export var badge_glyph := "?"
 @export var particle_style: StringName = &"ember"
@@ -64,11 +68,23 @@ func validate() -> Array[String]:
 		problems.append("movement_multiplier_floor must be between 0 and 1")
 	if family == Family.DAMAGE_OVER_TIME and tick_interval <= 0.0:
 		problems.append("damage-over-time statuses need a positive tick_interval")
+	if family == Family.DAMAGE_OVER_TIME and damage_percent_max_health_per_stack <= 0.0:
+		problems.append("damage-over-time statuses need positive max-health damage per stack")
+	if damage_percent_max_health_per_stack < 0.0:
+		problems.append("damage_percent_max_health_per_stack must be non-negative")
+	if family != Family.DAMAGE_OVER_TIME and damage_percent_max_health_per_stack > 0.0:
+		problems.append("only damage-over-time statuses may define damage_percent_max_health_per_stack")
 	if family == Family.PERIODIC_STUN:
 		if stun_interval <= 0.0 or stun_interval_floor <= 0.0:
 			problems.append("periodic stun cadence and floor must be positive")
 		if stun_lock_duration <= 0.0:
 			problems.append("stun_lock_duration must be positive")
+	if periodic_damage_percent_max_health_per_stack < 0.0:
+		problems.append("periodic_damage_percent_max_health_per_stack must be non-negative")
+	if periodic_damage_percent_max_health_per_stack > 0.0 and periodic_damage_interval <= 0.0:
+		problems.append("periodic damage needs a positive interval")
+	if family != Family.PERIODIC_STUN and periodic_damage_percent_max_health_per_stack > 0.0:
+		problems.append("only periodic-stun statuses may define periodic damage")
 	if applies_damage_vulnerability() and vulnerability_per_stack <= 0.0:
 		problems.append("damage vulnerability statuses need a positive vulnerability_per_stack")
 	if family == Family.AMBIENT_MODIFIER:

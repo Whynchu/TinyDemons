@@ -52,6 +52,16 @@ Work should move through one narrow slice at a time:
 | 0.70 | Improve test and performance feedback | In progress | device-backed timing, memory, render-cost, and reproducible performance scenarios; shared-process fast suites are owned by Slice 5 of the authoring plan |
 | 0.80 | Establish long-term content composition | In progress — owned by [`authoring-system-plan.md`](authoring-system-plan.md) | enemies, gear, authored room prefabs, and maps can be composed without per-content central-runtime special cases; loaded room scenes preserve route and save-state contracts |
 
+## Accepted bounded gameplay slice — elemental status interactions
+
+Status: implemented in source; focused runtime verification pending. The
+accepted reaction tree and source ownership are in
+[`elemental-status-interaction-plan.md`](elemental-status-interaction-plan.md).
+
+| Slice | Work | Exit evidence |
+|---|---|---|
+| Elemental status reactions | Burn + Ice → Wet; Freeze + Fire → Wet; innate Fire affinity + Ice → Wet; preserve Wet + Ice → Freeze and Wet + Electric conductivity; add a small Shocked damage tick. No new Ground, Grass, or Shadow reactions. | Source implementation and focused coverage added; focused execution and manual combat acceptance remain. |
+
 The numeric labels are sequencing markers, not release versions. The project
 version remains governed by [`VERSIONING.md`](VERSIONING.md).
 

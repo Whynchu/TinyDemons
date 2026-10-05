@@ -1,6 +1,8 @@
 extends SceneTree
 
 const ElementCatalogScript = preload("res://scripts/content/element_catalog.gd")
+const SpellFormCatalogScript = preload("res://scripts/content/spell_form_catalog.gd")
+const SpellFormDefinitionScript = preload("res://scripts/content/spell_form_definition.gd")
 const StatusTransmissionControllerScript = preload("res://scripts/runtime/controllers/status_transmission_controller.gd")
 const StatusContactPairScript = preload("res://scripts/content/status_contact_pair.gd")
 
@@ -90,17 +92,21 @@ func _initialize() -> void:
 	_expect(suppressed_target_status.stacks_for(&"burn") == 0, "suppressed innate affinity does not transmit", failures)
 	_expect(suppressed_target_status.stacks_for(&"chill") == 0, "non-transmissible applied status does not transmit", failures)
 
-	var hex_source := _new_actor("HexSource")
-	var hex_target := _new_actor("HexTarget")
-	root.add_child(hex_source)
-	root.add_child(hex_target)
-	(hex_source.get_node("Status") as StatusComponent).apply_damage_mark(1.0, 1.25, ElementCatalogScript.Element.SHADOW)
-	var hex_pair: Array[StatusContactPair] = [_contact(hex_source, hex_target)]
-	controller.process_contacts(hex_pair, 0.016, &"room_d", rng)
-	var hex_target_status := hex_target.get_node("Status") as StatusComponent
-	_expect(hex_target_status.stacks_for(&"hex_mark") == 0 and is_equal_approx(hex_target_status.damage_taken_multiplier(), 1.0), "auxiliary Hex damage marks do not transmit", failures)
+	var shadow_source := _new_actor("ShadowSource")
+	var shadow_target := _new_actor("ShadowTarget")
+	root.add_child(shadow_source)
+	root.add_child(shadow_target)
+	var shadow_poison := ElementCatalogScript.status_effect_for_element(ElementCatalogScript.Element.SHADOW)
+	_expect(shadow_poison != null and shadow_poison.id == &"poison", "Shadow resolves to its single Poison status", failures)
+	var shadow_form := SpellFormCatalogScript.form_for_element(ElementCatalogScript.Element.SHADOW)
+	_expect(int(shadow_form.get("projectile_shape")) == SpellFormDefinitionScript.ProjectileShape.HEX, "Shadow keeps the Hex projectile shape", failures)
+	(shadow_source.get_node("Status") as StatusComponent).apply_effect(shadow_poison, ElementCatalogScript.Element.SHADOW)
+	var shadow_pair: Array[StatusContactPair] = [_contact(shadow_source, shadow_target)]
+	controller.process_contacts(shadow_pair, 0.016, &"room_d", rng)
+	var shadow_target_status := shadow_target.get_node("Status") as StatusComponent
+	_expect(shadow_target_status.stacks_for(&"poison") == 1, "Shadow Poison transmits as the only Shadow status", failures)
 
-	for actor in [source, middle, end_actor, zero_proc_source, immune_target, immune_source, generation_source, generation_target, suppressed_source, suppressed_target, hex_source, hex_target]:
+	for actor in [source, middle, end_actor, zero_proc_source, immune_target, immune_source, generation_source, generation_target, suppressed_source, suppressed_target, shadow_source, shadow_target]:
 		actor.queue_free()
 	await process_frame
 	_finish(failures)
