@@ -471,15 +471,14 @@ func _preserve_height_for_surface(surface_size: Vector2, content_size: Vector2i)
 
 func _visible_view_size_for_presentation() -> Vector2:
 	var content_size := Vector2(current_view_size)
-	if _content_scale_aspect != Window.CONTENT_SCALE_ASPECT_KEEP_HEIGHT:
-		return content_size
-	var visible_size := DisplayLayout.visible_size_for_window(_live_window_size(), content_size, true)
 	var viewport := get_viewport()
-	if viewport != null:
-		var viewport_size := viewport.get_visible_rect().size
-		if viewport_size.x >= content_size.x and viewport_size.y >= content_size.y:
-			visible_size.x = maxf(visible_size.x, viewport_size.x)
-	return visible_size
+	var viewport_size := viewport.get_visible_rect().size if viewport != null else Vector2.ZERO
+	return DisplayLayout.presentation_size_for_window(
+		_live_window_size(),
+		viewport_size,
+		content_size,
+		_content_scale_aspect == Window.CONTENT_SCALE_ASPECT_KEEP_HEIGHT,
+		DisplayLayout.is_full_aspect(_aspect_mode))
 
 
 func _live_window_size() -> Vector2:

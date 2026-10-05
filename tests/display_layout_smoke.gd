@@ -28,6 +28,8 @@ func _initialize() -> void:
 	var phone_visible := DisplayLayout.visible_size_for_window(phone_surface, wide, true)
 	var phone_origin := DisplayLayout.centered_origin(phone_visible, wide)
 	_expect(is_equal_approx(phone_origin.x + wide.x * 0.5, phone_visible.x * 0.5), "fixed-width landscape menus center on the full phone surface", failures)
+	var full_viewport_visible := DisplayLayout.presentation_size_for_window(Vector2(877, 720), Vector2(349, 196), native, false, true)
+	_expect(full_viewport_visible == Vector2(349, 160), "FULL follows a wider Godot viewport when the browser surface selects KEEP scaling", failures)
 	_expect(DisplayLayout.browser_surface_size(Vector2(844, 390), Vector2(422, 195), 2.0) == Vector2(844, 390), "mobile browser zoom does not shrink the layout surface", failures)
 	_expect(DisplayLayout.browser_surface_size(Vector2.ZERO, Vector2(900, 420), 1.0) == Vector2(900, 420), "visual viewport remains a fallback when layout dimensions are missing", failures)
 	_expect(DisplayLayout.visible_size_for_window(Vector2(390, 844), wide, true) == wide, "narrow surfaces do not crop a fixed frame", failures)

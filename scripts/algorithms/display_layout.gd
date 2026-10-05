@@ -59,6 +59,16 @@ static func visible_size_for_window(window_size: Vector2, content_size: Vector2,
 	return Vector2(maxf(content_size.x, roundf(expanded_width)), content_size.y)
 
 
+static func presentation_size_for_window(window_size: Vector2, viewport_size: Vector2, content_size: Vector2, preserve_height: bool, expand_full_viewport: bool) -> Vector2:
+	var visible_size := visible_size_for_window(window_size, content_size, preserve_height)
+	# FULL must account for the actual root viewport even when the browser/window
+	# measurement selected KEEP instead of KEEP_HEIGHT. Mobile web shells can
+	# report a narrower window surface than the adaptive Godot viewport.
+	if expand_full_viewport and viewport_size.x >= content_size.x and viewport_size.y >= content_size.y:
+		visible_size.x = maxf(visible_size.x, viewport_size.x)
+	return visible_size
+
+
 static func browser_surface_size(layout_size: Vector2, visual_size: Vector2, visual_scale: float) -> Vector2:
 	# The visual viewport shrinks under browser zoom. Godot's canvas follows the
 	# layout viewport, so compare against the visual dimensions restored to that
