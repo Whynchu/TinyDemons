@@ -8,6 +8,7 @@ var item_selected := false
 var scroll_fraction := 0.0
 var stat_comparison: Array[Dictionary] = []
 var owned_count := 0
+var material_count := 0
 var fusion_count := 1
 var fusion_count_max := 1
 var soul_cost := 0

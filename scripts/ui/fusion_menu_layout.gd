@@ -82,13 +82,17 @@ func render_fusion(model: FusionMenuModel) -> void:
 		if node != null: node.visible = false
 	var question := get_node_or_null("SellQuestionText") as Sprite2D
 	if question != null:
-		_set_text(question, model.message if not model.message.is_empty() else "FUSE?", Color8(255, 105, 105) if model.message.begins_with("NEED ") else STAT_TEXT_COLOR)
+		var amount_label := "FUSE?"
+		if model.state == FUSION_AMOUNT:
+			amount_label = "SALVAGE" if model.can_salvage else "MAT x%d" % model.material_count
+		if not model.message.is_empty():
+			amount_label = model.message
+		_set_text(question, amount_label, Color8(255, 105, 105) if model.message.begins_with("NEED ") else STAT_TEXT_COLOR)
 		question.visible = model.state == FUSION_AMOUNT
 	var owned := get_node_or_null("OwnedText") as Sprite2D
 	if owned != null:
-		# The inherited Shop renderer owns this visibility decision, but make the
-		# Fusion state contract explicit so a stale browse render can never leave
-		# OWNED underneath the amount prompt.
+		# The amount prompt replaces OWNED, while SellQuestionText above keeps the
+		# eligible material count visible through selection and confirmation.
 		owned.visible = model.state != FUSION_AMOUNT
 	var action := get_node_or_null("ItemActionButton") as Control
 	if action != null:

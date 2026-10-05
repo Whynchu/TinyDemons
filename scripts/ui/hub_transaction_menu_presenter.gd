@@ -72,6 +72,7 @@ func build_fusion_model(context: HubTransactionMenuContextScript) -> FusionMenuM
 	if not context.fusion_candidates.is_empty():
 		selected = context.fusion_candidates[clampi(context.selected_index, 0, context.fusion_candidates.size() - 1)]
 		model.owned_count = int(context.fusion_details.get("owned_count", 0))
+		model.material_count = material_count
 		model.fusion_count_max = maxi(material_count, 1)
 		model.fusion_count = clampi(context.fusion_count, 1, model.fusion_count_max)
 		model.soul_cost = context.profile.fusion_batch_cost(selected, model.fusion_count) if material_count > 0 else 0
