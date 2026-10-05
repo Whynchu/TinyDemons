@@ -21,6 +21,7 @@ var batch_value: Dictionary = {}
 var fusion_candidates: Array[ItemInstance] = []
 var fusion_state := 0
 var fusion_item_selected := false
+var fusion_target_instance_id := ""
 var fusion_count := 1
 var fusion_message := ""
 var fusion_details: Dictionary = {}

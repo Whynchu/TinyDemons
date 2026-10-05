@@ -66,11 +66,19 @@ func build_fusion_model(context: HubTransactionMenuContextScript) -> FusionMenuM
 			continue
 		var item := context.fusion_candidates[item_index]
 		model.rows.append({"label": fusion_item_label(context.catalog, context.profile, item), "slot": str(context.catalog.definition_slot(item.definition_id)), "color": context.catalog.rarity_color(item.rarity), "soul_cost": context.profile.fusion_batch_cost(item, 1), "equipped": context.profile.equipped_instance_ids.values().has(item.instance_id), "stat_total": context.catalog.stat_allocation_total(item)})
-	model.selected_row = clampi(context.selected_index - window_start, 0, model.rows.size() - 1) if not model.rows.is_empty() else -1
 	var selected: ItemInstance = null
+	var selected_index := clampi(context.selected_index, 0, maxi(context.fusion_candidates.size() - 1, 0))
+	if not context.fusion_target_instance_id.is_empty():
+		for candidate_index in context.fusion_candidates.size():
+			if context.fusion_candidates[candidate_index].instance_id == context.fusion_target_instance_id:
+				selected_index = candidate_index
+				selected = context.fusion_candidates[candidate_index]
+				break
+	else:
+		selected = context.fusion_candidates[selected_index] if not context.fusion_candidates.is_empty() else null
+	model.selected_row = clampi(selected_index - window_start, 0, model.rows.size() - 1) if not model.rows.is_empty() else -1
 	var material_count := int(context.fusion_details.get("material_count", 0))
-	if not context.fusion_candidates.is_empty():
-		selected = context.fusion_candidates[clampi(context.selected_index, 0, context.fusion_candidates.size() - 1)]
+	if selected != null:
 		model.owned_count = int(context.fusion_details.get("owned_count", 0))
 		model.material_count = material_count
 		model.fusion_count_max = maxi(material_count, 1)

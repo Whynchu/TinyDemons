@@ -194,15 +194,24 @@ func _render_fusion_menu(root: GameplayState, pixel_texture: Callable, profile: 
 	context.fusion_candidates = root._hub_fusion_candidates()
 	context.fusion_state = 0 if owner.hub_is_root else owner.hub_fusion_state
 	context.fusion_item_selected = owner.hub_fusion_item_selected
+	context.fusion_target_instance_id = str(owner.hub_fusion_target_instance_id)
 	context.selected_index = owner.hub_item_index
 	context.scroll = owner.hub_list_scroll
 	context.fusion_count = owner.hub_fusion_count
 	context.fusion_message = owner.hub_fusion_message
 	context.fusion_details.clear()
 	if not context.fusion_candidates.is_empty():
-		var selected := context.fusion_candidates[clampi(owner.hub_item_index, 0, context.fusion_candidates.size() - 1)]
-		var economy := root.hub_flow_controller.get("economy_controller") as RefCounted
-		context.fusion_details = economy.call("fusion_candidate_details", root, selected) as Dictionary
+		var selected: ItemInstance = null
+		if not context.fusion_target_instance_id.is_empty():
+			for candidate: ItemInstance in context.fusion_candidates:
+				if candidate.instance_id == context.fusion_target_instance_id:
+					selected = candidate
+					break
+		else:
+			selected = context.fusion_candidates[clampi(owner.hub_item_index, 0, context.fusion_candidates.size() - 1)]
+		if selected != null:
+			var economy := root.hub_flow_controller.get("economy_controller") as RefCounted
+			context.fusion_details = economy.call("fusion_candidate_details", root, selected) as Dictionary
 	var model := owner._hub_transaction_menu_presenter.build_fusion_model(context)
 	view.call("set_pixel_texture", pixel_texture)
 	view.call("render_fusion", model)
