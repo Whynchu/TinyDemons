@@ -59,6 +59,7 @@ func update_title_flow(root: GameplayState, delta: float) -> void:
 	var settings_button: Variant = screen.title_presenter.settings_button
 	var cloud_button: Variant = screen.title_presenter.cloud_button
 	var title_buttons: Array[Button] = [new_game, continue_button, cloud_button, settings_button]
+	var title_base_ys: Array[float] = [93.0, 109.0, 125.0, 141.0]
 	var visible_index := 0
 	for button in title_buttons:
 		if button == null or button.disabled or not button.visible: continue
@@ -69,7 +70,7 @@ func update_title_flow(root: GameplayState, delta: float) -> void:
 		visible_index += 1
 	var command_list: Variant = screen.title_presenter.command_list
 	if command_list != null:
-		command_list.configure(title_buttons, [93.0, 109.0, 125.0, 141.0])
+		command_list.configure(title_buttons, title_base_ys)
 		command_list.row = screen.title_presenter.menu_row
 		if command_list.available_rows().is_empty(): return
 		if not command_list.available_rows().has(screen.title_presenter.menu_row): screen.title_presenter.menu_row = command_list.available_rows()[0]; command_list.row = screen.title_presenter.menu_row

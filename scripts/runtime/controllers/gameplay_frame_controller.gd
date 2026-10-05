@@ -546,7 +546,7 @@ func tick(root: GameplayState, delta: float) -> void:
 	var ssc := root.screen_state_controller as ScreenStateController
 	if ssc.save_select_presenter.overlay != null and ssc.save_select_presenter.overlay.visible:
 		if ssc.save_select_presenter.footer_text != null:
-			ssc.save_select_presenter.footer_text.texture = ssc._pixel_prompt_texture(Callable(root, "_pixel_text_texture"), str(root._menu_back_prompt()), Color8(148, 220, 255)) as Texture2D
+			ssc.save_select_presenter.footer_text.texture = ssc._menu_prompt_texture_factory.pixel_prompt_texture(Callable(root, "_pixel_text_texture"), str(root._menu_back_prompt()), Color8(148, 220, 255)) as Texture2D
 		if root._is_menu_back_just_pressed():
 			if ssc.save_overwrite_prompt_active: root._cancel_overwrite()
 			else: root._close_save_select()

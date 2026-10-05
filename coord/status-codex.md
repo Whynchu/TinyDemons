@@ -5,6 +5,9 @@ _Only codex writes this file._
 **Focus:** Continue Stage 3.1 by extracting Hub construction and responsive layout
 **Updated:** 2026-10-04
 
+## Completed: Fusion candidate cache coherence
+Fusion candidate cache now keys on active PlayerProfile identity, inventory revision, and equipped-slot state, refreshing candidate rows and eligibility details when any changes. Script diagnostics pass. No playtest or suite run.
+
 ## Completed: Stage 3.1 Hub frame rendering and legacy inventory
 
 Moved Hub frame-to-view orchestration into `HubScreenRenderController` and the

@@ -57,7 +57,7 @@ func build_hub(parent: Node, pixel_texture: Callable, actions: HubScreenActions)
 		pixel_texture,
 		actions,
 		screen._menu_widget_factory,
-		Callable(screen, "make_archetype_arrow")
+		Callable(screen.archetype_presenter, "make_arrow")
 	)
 
 	screen.hub_summary_text = screen._hub_responsive_layout_presenter.build_shell_chrome(

@@ -35,6 +35,9 @@ var _shop_cache_items: Array[ItemInstance] = []
 var _shop_cache_groups: Array[Dictionary] = []
 var _shop_cache_group_by_key: Dictionary = {}
 var _fusion_details_by_root: Dictionary = {}
+var _fusion_profile_instance_by_root: Dictionary = {}
+var _fusion_inventory_revision_by_root: Dictionary = {}
+var _fusion_equipment_signature_by_root: Dictionary = {}
 
 
 # Hub return routing and current-element binding.
@@ -496,7 +499,13 @@ func refresh_hub_fusion_candidates(root: Object) -> void:
 	screen.hub_fusion_candidates_dirty = false
 	_fusion_details_by_root[root.get_instance_id()] = {}
 	if root.player_profile == null:
+		_fusion_profile_instance_by_root.erase(root.get_instance_id())
+		_fusion_inventory_revision_by_root.erase(root.get_instance_id())
+		_fusion_equipment_signature_by_root.erase(root.get_instance_id())
 		return
+	_fusion_profile_instance_by_root[root.get_instance_id()] = root.player_profile.get_instance_id()
+	_fusion_inventory_revision_by_root[root.get_instance_id()] = root.player_profile.inventory_revision
+	_fusion_equipment_signature_by_root[root.get_instance_id()] = _fusion_equipment_signature(root.player_profile)
 	var catalog := ItemCatalog.new()
 	var equipped_ids: Dictionary = {}
 	for equipped_id: Variant in root.player_profile.equipped_instance_ids.values():
@@ -548,6 +557,14 @@ func _fusion_material_key(item: ItemInstance) -> String:
 	return "%s::%s" % [String(item.definition_id), String(item.rarity)]
 
 
+func _fusion_equipment_signature(profile: PlayerProfile) -> String:
+	var slots: Array[String] = []
+	for slot: Variant in profile.equipped_instance_ids:
+		slots.append("%s=%s" % [str(slot), str(profile.equipped_instance_ids[slot])])
+	slots.sort()
+	return ";".join(slots)
+
+
 func _sort_fusion_candidates(candidates: Array[ItemInstance], catalog: ItemCatalog) -> void:
 	var sort_values: Dictionary = {}
 	for item: ItemInstance in candidates:
@@ -578,6 +595,9 @@ func _sort_fusion_candidates(candidates: Array[ItemInstance], catalog: ItemCatal
 func invalidate_hub_fusion_candidates(root: Object) -> void:
 	root.screen_state_controller.hub_fusion_candidates_dirty = true
 	_fusion_details_by_root.erase(root.get_instance_id())
+	_fusion_profile_instance_by_root.erase(root.get_instance_id())
+	_fusion_inventory_revision_by_root.erase(root.get_instance_id())
+	_fusion_equipment_signature_by_root.erase(root.get_instance_id())
 
 
 func sell_profile_item(root: Object, instance_id: String) -> bool:
@@ -655,7 +675,16 @@ func sell_profile_items(root: Object, selected: ItemInstance, quantity: int, sel
 
 
 func hub_fusion_candidates(root: Object) -> Array[ItemInstance]:
-	if root.screen_state_controller.hub_fusion_candidates_dirty:
+	var root_id := root.get_instance_id()
+	var profile := root.player_profile as PlayerProfile
+	var profile_changed := profile == null
+	if profile != null:
+		profile_changed = (
+			int(_fusion_profile_instance_by_root.get(root_id, -1)) != profile.get_instance_id()
+			or int(_fusion_inventory_revision_by_root.get(root_id, -1)) != profile.inventory_revision
+			or str(_fusion_equipment_signature_by_root.get(root_id, "")) != _fusion_equipment_signature(profile)
+		)
+	if root.screen_state_controller.hub_fusion_candidates_dirty or profile_changed:
 		refresh_hub_fusion_candidates(root)
 	return root.screen_state_controller.hub_fusion_candidates
 

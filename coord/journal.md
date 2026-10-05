@@ -1014,3 +1014,9 @@ Correction: ScreenStateController is 1,050 lines, down 145 from the 1,195-line c
 2026-10-04 claim codex: Stage 3.1 ScreenStateController 1,050 toward 900; migrate shared UI callers to widget/cursor owners, update docs and focused diagnostics.
 2026-10-04 done codex: ScreenStateController is 852 lines; shared widget/cursor/prompt/particle facades and dead Hub forwarding methods removed, callers use typed owners. Focused diagnostics pass except GameplayState known line-390 context diagnostic. Index and composition records refreshed; 800-line target remains open. No gameplay/smoke tests.
 2026-10-04 claim codex: prepare the 852-line ScreenStateController composition checkpoint for main with required patch version bump; exclude unrelated gameplay and MCP/config changes.
+
+## 2026-10-04 claim codex
+Fusion candidate-cache coherence. Updating the inventory revision guard in HubEconomyController.
+
+## 2026-10-04 done codex
+Fusion candidate caching now tracks profile identity and inventory revision so stale eligibility cannot reach the transaction UI. Godot offline diagnostics passed for four touched scripts; no playtest or suite run.
