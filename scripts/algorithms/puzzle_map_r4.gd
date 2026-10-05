@@ -8,7 +8,7 @@ class_name PuzzleMapR4
 ## loads it and assembles the runtime plan.
 
 const GRID_SCRIPT = preload("res://scripts/algorithms/puzzle_map_grid.gd")
-const DATA := preload("res://resources/definitions/puzzle_map_r4.tres") as PuzzlePlanData
+const DATA := preload("res://resources/definitions/puzzle_map_r4.tres")
 
 
 static func build() -> PuzzleMapGrid.MapPlan:

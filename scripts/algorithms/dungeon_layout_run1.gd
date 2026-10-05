@@ -9,7 +9,7 @@ class_name DungeonLayoutRun1
 ## exception policy as before.
 
 const LAYOUT_DEFINITION_SCRIPT = preload("res://scripts/algorithms/dungeon_layout_definition.gd")
-const DATA := preload("res://resources/definitions/dungeon_layout_run1.tres") as DungeonRunDefinition
+const DATA := preload("res://resources/definitions/dungeon_layout_run1.tres")
 
 
 static func build():

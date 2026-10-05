@@ -1127,3 +1127,9 @@ ScreenStateController is 852 lines. Shared widget, cursor, prompt-texture, and t
 
 ## Active focus - 0.3.36 composition checkpoint
 Reviewing and staging only the ScreenStateController composition slice and matching version/docs; unrelated gameplay/content/MCP changes remain out. Commit and push main as explicitly requested.
+
+Focus: preload constant parsing and composition baseline regression repair
+Done: 8 cast removals, refreshed measured baseline floors with ceilings/forward targets unchanged, version 0.3.40; script diagnostics + composition audit pass. Runtime smoke unavailable here because standalone Godot 4.7.1 is not installed.
+
+Focus: preload constant parsing and composition baseline regression repair
+Done: 8 cast removals, refreshed measured baseline floors with ceilings/forward targets unchanged, version 0.3.40; script diagnostics + composition audit pass. Runtime smoke unavailable here because standalone Godot 4.7.1 is not installed.

@@ -6,7 +6,7 @@ class_name SlimeVariantCatalog
 ## catalog sub-resources plus standalone one-file definitions. This class is
 ## the narrow runtime lookup API over both forms.
 
-const DATA := preload("res://resources/definitions/slime_variant_catalog.tres") as SlimeVariantCatalogData
+const DATA := preload("res://resources/definitions/slime_variant_catalog.tres")
 const CATALOG_RESOURCE_PATH := "res://resources/definitions/slime_variant_catalog.tres"
 const SLIME_GEOMETRY_PROFILE: Resource = preload("res://resources/definitions/geometry/slime.tres")
 const SKELETON_GEOMETRY_PROFILE: Resource = preload("res://resources/definitions/geometry/skeleton.tres")

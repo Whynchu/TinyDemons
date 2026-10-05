@@ -16,7 +16,7 @@ class_name DungeonLayoutRun2
 const MAP_SIZE := Vector2i(16, 23)
 const LAYOUT_DEFINITION_SCRIPT = preload("res://scripts/algorithms/dungeon_layout_definition.gd")
 const ASPECT_CATALOG_SCRIPT = preload("res://scripts/content/aspect_catalog.gd")
-const DATA := preload("res://resources/definitions/dungeon_layout_run2.tres") as DungeonRunDefinition
+const DATA := preload("res://resources/definitions/dungeon_layout_run2.tres")
 
 const STARTER_FLAME_TOKEN := &"<starter>"
 const ALTERNATE_FLAME_TOKEN := &"<alternate>"

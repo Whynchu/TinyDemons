@@ -1,8 +1,8 @@
 ﻿{
-    "root_accesses":  1851,
-    "gameplay_state_lines":  1709,
+    "root_accesses":  1854,
+    "gameplay_state_lines":  1714,
     "gameplay_state_fields":  282,
-    "room_controller_lines":  2175,
+    "room_controller_lines":  2180,
     "runtime_refs":  0,
     "legacy_total":  0,
     "legacy_pairs":  [
@@ -195,13 +195,13 @@
     "per_file":  {
                      "actor_collision_system.gd":  {
                                                        "path":  "scripts/actors/actor_collision_system.gd",
-                                                       "lines":  489,
+                                                       "lines":  523,
                                                        "dynamic_dispatch":  38,
                                                        "reach_through":  44,
                                                        "untyped_root_parameters":  16,
                                                        "live_context_twin_pairs":  0,
                                                        "runtime_refs":  0,
-                                                       "root_callable_strings":  10,
+                                                       "root_callable_strings":  14,
                                                        "string_signal_connects":  0
                                                    },
                      "actor_motor.gd":  {
@@ -294,7 +294,7 @@
                                            },
                      "slime_actor.gd":  {
                                             "path":  "scripts/actors/slime_actor.gd",
-                                            "lines":  465,
+                                            "lines":  493,
                                             "dynamic_dispatch":  64,
                                             "reach_through":  71,
                                             "untyped_root_parameters":  4,
@@ -811,7 +811,7 @@
                                                       },
                      "slime_brain.gd":  {
                                             "path":  "scripts/components/slime_brain.gd",
-                                            "lines":  334,
+                                            "lines":  341,
                                             "dynamic_dispatch":  12,
                                             "reach_through":  14,
                                             "untyped_root_parameters":  1,
@@ -822,7 +822,7 @@
                                         },
                      "slime_combat_component.gd":  {
                                                        "path":  "scripts/components/slime_combat_component.gd",
-                                                       "lines":  161,
+                                                       "lines":  174,
                                                        "dynamic_dispatch":  0,
                                                        "reach_through":  0,
                                                        "untyped_root_parameters":  0,
@@ -888,7 +888,7 @@
                                             },
                      "status_component.gd":  {
                                                  "path":  "scripts/components/status_component.gd",
-                                                 "lines":  320,
+                                                 "lines":  347,
                                                  "dynamic_dispatch":  0,
                                                  "reach_through":  0,
                                                  "untyped_root_parameters":  0,
@@ -1020,7 +1020,7 @@
                                            },
                      "element_catalog.gd":  {
                                                 "path":  "scripts/content/element_catalog.gd",
-                                                "lines":  149,
+                                                "lines":  157,
                                                 "dynamic_dispatch":  0,
                                                 "reach_through":  0,
                                                 "untyped_root_parameters":  0,
@@ -1031,7 +1031,7 @@
                                             },
                      "element_catalog_data.gd":  {
                                                      "path":  "scripts/content/element_catalog_data.gd",
-                                                     "lines":  42,
+                                                     "lines":  69,
                                                      "dynamic_dispatch":  0,
                                                      "reach_through":  0,
                                                      "untyped_root_parameters":  0,
@@ -1042,7 +1042,7 @@
                                                  },
                      "encounter_definition.gd":  {
                                                      "path":  "scripts/content/encounter_definition.gd",
-                                                     "lines":  686,
+                                                     "lines":  689,
                                                      "dynamic_dispatch":  0,
                                                      "reach_through":  0,
                                                      "untyped_root_parameters":  0,
@@ -1317,7 +1317,7 @@
                                                   },
                      "status_application.gd":  {
                                                    "path":  "scripts/content/status_application.gd",
-                                                   "lines":  33,
+                                                   "lines":  38,
                                                    "dynamic_dispatch":  0,
                                                    "reach_through":  0,
                                                    "untyped_root_parameters":  0,
@@ -1350,7 +1350,7 @@
                                                 },
                      "status_effect_definition.gd":  {
                                                          "path":  "scripts/content/status_effect_definition.gd",
-                                                         "lines":  99,
+                                                         "lines":  117,
                                                          "dynamic_dispatch":  0,
                                                          "reach_through":  0,
                                                          "untyped_root_parameters":  0,
@@ -1359,6 +1359,17 @@
                                                          "root_callable_strings":  0,
                                                          "string_signal_connects":  0
                                                      },
+                     "status_mixture_definition.gd":  {
+                                                          "path":  "scripts/content/status_mixture_definition.gd",
+                                                          "lines":  26,
+                                                          "dynamic_dispatch":  0,
+                                                          "reach_through":  0,
+                                                          "untyped_root_parameters":  0,
+                                                          "live_context_twin_pairs":  0,
+                                                          "runtime_refs":  0,
+                                                          "root_callable_strings":  0,
+                                                          "string_signal_connects":  0
+                                                      },
                      "status_record.gd":  {
                                               "path":  "scripts/content/status_record.gd",
                                               "lines":  36,
@@ -2032,7 +2043,7 @@
                                      },
                      "gameplay_bootstrap.gd":  {
                                                    "path":  "scripts/runtime/controllers/gameplay_bootstrap.gd",
-                                                   "lines":  615,
+                                                   "lines":  633,
                                                    "dynamic_dispatch":  107,
                                                    "reach_through":  340,
                                                    "untyped_root_parameters":  3,
@@ -2065,9 +2076,9 @@
                                                    },
                      "hub_economy_controller.gd":  {
                                                        "path":  "scripts/runtime/controllers/hub_economy_controller.gd",
-                                                       "lines":  1093,
-                                                       "dynamic_dispatch":  91,
-                                                       "reach_through":  462,
+                                                       "lines":  1126,
+                                                       "dynamic_dispatch":  94,
+                                                       "reach_through":  480,
                                                        "untyped_root_parameters":  43,
                                                        "live_context_twin_pairs":  0,
                                                        "runtime_refs":  0,
@@ -2142,8 +2153,8 @@
                                               },
                      "profile_runtime_controller.gd":  {
                                                            "path":  "scripts/runtime/controllers/profile_runtime_controller.gd",
-                                                           "lines":  108,
-                                                           "dynamic_dispatch":  20,
+                                                           "lines":  110,
+                                                           "dynamic_dispatch":  19,
                                                            "reach_through":  86,
                                                            "untyped_root_parameters":  8,
                                                            "live_context_twin_pairs":  0,
@@ -2175,7 +2186,7 @@
                                                  },
                      "room_controller.gd":  {
                                                 "path":  "scripts/runtime/controllers/room_controller.gd",
-                                                "lines":  2175,
+                                                "lines":  2180,
                                                 "dynamic_dispatch":  206,
                                                 "reach_through":  206,
                                                 "untyped_root_parameters":  41,
@@ -2208,9 +2219,9 @@
                                                    },
                      "run_flow_controller.gd":  {
                                                     "path":  "scripts/runtime/controllers/run_flow_controller.gd",
-                                                    "lines":  702,
+                                                    "lines":  706,
                                                     "dynamic_dispatch":  81,
-                                                    "reach_through":  272,
+                                                    "reach_through":  271,
                                                     "untyped_root_parameters":  27,
                                                     "live_context_twin_pairs":  0,
                                                     "runtime_refs":  0,
@@ -2252,7 +2263,7 @@
                                                    },
                      "slime_runtime_controller.gd":  {
                                                          "path":  "scripts/runtime/controllers/slime_runtime_controller.gd",
-                                                         "lines":  1220,
+                                                         "lines":  1225,
                                                          "dynamic_dispatch":  158,
                                                          "reach_through":  159,
                                                          "untyped_root_parameters":  55,
@@ -2272,6 +2283,17 @@
                                                        "root_callable_strings":  0,
                                                        "string_signal_connects":  0
                                                    },
+                     "status_mixture_controller.gd":  {
+                                                          "path":  "scripts/runtime/controllers/status_mixture_controller.gd",
+                                                          "lines":  81,
+                                                          "dynamic_dispatch":  0,
+                                                          "reach_through":  0,
+                                                          "untyped_root_parameters":  0,
+                                                          "live_context_twin_pairs":  0,
+                                                          "runtime_refs":  0,
+                                                          "root_callable_strings":  0,
+                                                          "string_signal_connects":  0
+                                                      },
                      "status_transmission_controller.gd":  {
                                                                "path":  "scripts/runtime/controllers/status_transmission_controller.gd",
                                                                "lines":  120,
@@ -2296,7 +2318,7 @@
                                                          },
                      "active_run_save_service.gd":  {
                                                         "path":  "scripts/runtime/services/active_run_save_service.gd",
-                                                        "lines":  158,
+                                                        "lines":  159,
                                                         "dynamic_dispatch":  0,
                                                         "reach_through":  0,
                                                         "untyped_root_parameters":  0,
@@ -2318,7 +2340,7 @@
                                            },
                      "effects_spawner.gd":  {
                                                 "path":  "scripts/runtime/services/effects_spawner.gd",
-                                                "lines":  1294,
+                                                "lines":  1295,
                                                 "dynamic_dispatch":  61,
                                                 "reach_through":  68,
                                                 "untyped_root_parameters":  18,
@@ -2395,7 +2417,7 @@
                                          },
                      "gameplay_state.gd":  {
                                                "path":  "scripts/runtime/state/gameplay_state.gd",
-                                               "lines":  1709,
+                                               "lines":  1714,
                                                "dynamic_dispatch":  2,
                                                "reach_through":  0,
                                                "untyped_root_parameters":  0,
@@ -2637,7 +2659,7 @@
                                             },
                      "archetype_screen_presenter.gd":  {
                                                            "path":  "scripts/ui/archetype_screen_presenter.gd",
-                                                           "lines":  86,
+                                                           "lines":  99,
                                                            "dynamic_dispatch":  0,
                                                            "reach_through":  0,
                                                            "untyped_root_parameters":  0,
@@ -2692,7 +2714,7 @@
                                                    },
                      "dungeon_minimap_controller.gd":  {
                                                            "path":  "scripts/ui/dungeon_minimap_controller.gd",
-                                                           "lines":  932,
+                                                           "lines":  931,
                                                            "dynamic_dispatch":  20,
                                                            "reach_through":  18,
                                                            "untyped_root_parameters":  7,
@@ -2714,7 +2736,7 @@
                                                   },
                      "fusion_menu_layout.gd":  {
                                                    "path":  "scripts/ui/fusion_menu_layout.gd",
-                                                   "lines":  139,
+                                                   "lines":  141,
                                                    "dynamic_dispatch":  0,
                                                    "reach_through":  0,
                                                    "untyped_root_parameters":  0,
@@ -2833,6 +2855,17 @@
                                                                    "root_callable_strings":  0,
                                                                    "string_signal_connects":  0
                                                                },
+                     "hub_legacy_widget_builder.gd":  {
+                                                          "path":  "scripts/ui/hub_legacy_widget_builder.gd",
+                                                          "lines":  165,
+                                                          "dynamic_dispatch":  0,
+                                                          "reach_through":  0,
+                                                          "untyped_root_parameters":  0,
+                                                          "live_context_twin_pairs":  0,
+                                                          "runtime_refs":  0,
+                                                          "root_callable_strings":  0,
+                                                          "string_signal_connects":  0
+                                                      },
                      "hub_legacy_widget_scroll_presenter.gd":  {
                                                                    "path":  "scripts/ui/hub_legacy_widget_scroll_presenter.gd",
                                                                    "lines":  19,
@@ -2855,6 +2888,17 @@
                                                                        "root_callable_strings":  0,
                                                                        "string_signal_connects":  0
                                                                    },
+                     "hub_list_scroll_controller.gd":  {
+                                                           "path":  "scripts/ui/hub_list_scroll_controller.gd",
+                                                           "lines":  110,
+                                                           "dynamic_dispatch":  6,
+                                                           "reach_through":  6,
+                                                           "untyped_root_parameters":  3,
+                                                           "live_context_twin_pairs":  0,
+                                                           "runtime_refs":  0,
+                                                           "root_callable_strings":  0,
+                                                           "string_signal_connects":  0
+                                                       },
                      "hub_menu_signal_binder.gd":  {
                                                        "path":  "scripts/ui/hub_menu_signal_binder.gd",
                                                        "lines":  81,
@@ -2901,7 +2945,7 @@
                                                           },
                      "hub_responsive_layout_presenter.gd":  {
                                                                 "path":  "scripts/ui/hub_responsive_layout_presenter.gd",
-                                                                "lines":  394,
+                                                                "lines":  395,
                                                                 "dynamic_dispatch":  0,
                                                                 "reach_through":  0,
                                                                 "untyped_root_parameters":  0,
@@ -2923,7 +2967,7 @@
                                                },
                      "hub_screen_render_controller.gd":  {
                                                              "path":  "scripts/ui/hub_screen_render_controller.gd",
-                                                             "lines":  428,
+                                                             "lines":  436,
                                                              "dynamic_dispatch":  2,
                                                              "reach_through":  17,
                                                              "untyped_root_parameters":  1,
@@ -2932,6 +2976,17 @@
                                                              "root_callable_strings":  0,
                                                              "string_signal_connects":  0
                                                          },
+                     "hub_screen_setup_controller.gd":  {
+                                                            "path":  "scripts/ui/hub_screen_setup_controller.gd",
+                                                            "lines":  160,
+                                                            "dynamic_dispatch":  0,
+                                                            "reach_through":  0,
+                                                            "untyped_root_parameters":  0,
+                                                            "live_context_twin_pairs":  0,
+                                                            "runtime_refs":  0,
+                                                            "root_callable_strings":  0,
+                                                            "string_signal_connects":  0
+                                                        },
                      "hub_stats_interaction_presenter.gd":  {
                                                                 "path":  "scripts/ui/hub_stats_interaction_presenter.gd",
                                                                 "lines":  82,
@@ -2967,7 +3022,7 @@
                                                          },
                      "hub_transaction_menu_presenter.gd":  {
                                                                "path":  "scripts/ui/hub_transaction_menu_presenter.gd",
-                                                               "lines":  106,
+                                                               "lines":  110,
                                                                "dynamic_dispatch":  0,
                                                                "reach_through":  0,
                                                                "untyped_root_parameters":  0,
@@ -3185,20 +3240,64 @@
                                                              "root_callable_strings":  0,
                                                              "string_signal_connects":  0
                                                          },
-                     "screen_state_controller.gd":  {
-                                                        "path":  "scripts/ui/screen_state_controller.gd",
-                                                        "lines":  2431,
-                                                        "dynamic_dispatch":  39,
-                                                        "reach_through":  168,
-                                                        "untyped_root_parameters":  25,
+                     "screen_assembly_controller.gd":  {
+                                                           "path":  "scripts/ui/screen_assembly_controller.gd",
+                                                           "lines":  57,
+                                                           "dynamic_dispatch":  0,
+                                                           "reach_through":  0,
+                                                           "untyped_root_parameters":  0,
+                                                           "live_context_twin_pairs":  0,
+                                                           "runtime_refs":  0,
+                                                           "root_callable_strings":  0,
+                                                           "string_signal_connects":  0
+                                                       },
+                     "screen_layout_controller.gd":  {
+                                                         "path":  "scripts/ui/screen_layout_controller.gd",
+                                                         "lines":  143,
+                                                         "dynamic_dispatch":  1,
+                                                         "reach_through":  3,
+                                                         "untyped_root_parameters":  1,
+                                                         "live_context_twin_pairs":  0,
+                                                         "runtime_refs":  0,
+                                                         "root_callable_strings":  0,
+                                                         "string_signal_connects":  0
+                                                     },
+                     "screen_route_controller.gd":  {
+                                                        "path":  "scripts/ui/screen_route_controller.gd",
+                                                        "lines":  327,
+                                                        "dynamic_dispatch":  25,
+                                                        "reach_through":  88,
+                                                        "untyped_root_parameters":  11,
                                                         "live_context_twin_pairs":  0,
                                                         "runtime_refs":  0,
-                                                        "root_callable_strings":  15,
+                                                        "root_callable_strings":  10,
                                                         "string_signal_connects":  0
                                                     },
+                     "screen_state_controller.gd":  {
+                                                        "path":  "scripts/ui/screen_state_controller.gd",
+                                                        "lines":  852,
+                                                        "dynamic_dispatch":  5,
+                                                        "reach_through":  9,
+                                                        "untyped_root_parameters":  11,
+                                                        "live_context_twin_pairs":  0,
+                                                        "runtime_refs":  0,
+                                                        "root_callable_strings":  1,
+                                                        "string_signal_connects":  0
+                                                    },
+                     "screen_state_flow_controller.gd":  {
+                                                             "path":  "scripts/ui/screen_state_flow_controller.gd",
+                                                             "lines":  355,
+                                                             "dynamic_dispatch":  3,
+                                                             "reach_through":  61,
+                                                             "untyped_root_parameters":  1,
+                                                             "live_context_twin_pairs":  0,
+                                                             "runtime_refs":  0,
+                                                             "root_callable_strings":  4,
+                                                             "string_signal_connects":  0
+                                                         },
                      "settings_screen_presenter.gd":  {
                                                           "path":  "scripts/ui/settings_screen_presenter.gd",
-                                                          "lines":  244,
+                                                          "lines":  246,
                                                           "dynamic_dispatch":  0,
                                                           "reach_through":  0,
                                                           "untyped_root_parameters":  0,
@@ -3242,7 +3341,7 @@
                                                       },
                      "title_screen_presenter.gd":  {
                                                        "path":  "scripts/ui/title_screen_presenter.gd",
-                                                       "lines":  103,
+                                                       "lines":  107,
                                                        "dynamic_dispatch":  0,
                                                        "reach_through":  0,
                                                        "untyped_root_parameters":  0,
@@ -3265,10 +3364,10 @@
                  },
     "metric_snapshot":  {
                             "gameplay_lines":  302,
-                            "total_reach_through":  4249,
-                            "untyped_root_parameters":  509,
+                            "total_reach_through":  4265,
+                            "untyped_root_parameters":  511,
                             "live_context_twin_pairs":  0,
-                            "root_callable_strings":  341,
+                            "root_callable_strings":  345,
                             "string_signal_connects":  0,
                             "script_subdirectories":  13,
                             "unclassified_scripts":  0
@@ -3278,22 +3377,22 @@
                                "component_blind":  23,
                                "component_configured":  22,
                                "component_both":  22,
-                               "definition_total":  24,
-                               "definition_editable":  24
+                               "definition_total":  25,
+                               "definition_editable":  25
                            },
     "forward_status":  {
                            "screen_state_controller_lines":  {
-                                                                 "current":  2431,
+                                                                 "current":  852,
                                                                  "status":  "open",
                                                                  "stage":  3
                                                              },
                            "hub_flow_controller_seams":  {
-                                                             "current":  109,
+                                                             "current":  112,
                                                              "status":  "met",
                                                              "stage":  2
                                                          },
                            "screen_state_controller_seams":  {
-                                                                 "current":  39,
+                                                                 "current":  5,
                                                                  "status":  "met",
                                                                  "stage":  3
                                                              },
@@ -3313,7 +3412,7 @@
                                                           "stage":  1
                                                       },
                            "untyped_root_parameters":  {
-                                                           "current":  509,
+                                                           "current":  511,
                                                            "status":  "open",
                                                            "stage":  2
                                                        },
@@ -3324,6 +3423,10 @@
                                                     }
                        },
     "floor_adjustments":  {
+                              "gameplay_state_lines":  "Refreshed to the measured 1,714 after the Stage 3 UI composition extractions; hard ceiling and forward targets unchanged.",
+                              "root_accesses":  "Refreshed to the measured 1,854 after the Stage 3 UI composition extractions; hard ceiling and forward targets unchanged.",
+                              "room_controller_lines":  "Refreshed to the measured 2,180 after the Stage 3 UI composition extractions; hard ceiling and forward targets unchanged.",
+                              "hub_economy_controller":  "Refreshed per-file dynamic dispatch and reach-through floors to the reviewed current counts (94 and 480) following the profile/equipment cache guards.",
                               "gameplay_state_fields_max":  "Raised from 286 to 287 to allow one field of headroom; forward seam, twin, and ownership metrics track architectural progress independently."
                           }
 }

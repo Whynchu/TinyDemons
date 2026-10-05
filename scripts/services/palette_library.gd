@@ -7,7 +7,7 @@ class_name PaletteLibrary
 ## const-style accessors are backed by that resource so there is one source of
 ## truth and the editor can inspect and retune presentation tones.
 
-const DATA := preload("res://resources/definitions/palette_library.tres") as PaletteLibraryData
+const DATA := preload("res://resources/definitions/palette_library.tres")
 
 static var PALETTE_NAMES: Array = DATA.palette_names
 static var SELECTABLE_PALETTES: Array = DATA.selectable_palettes

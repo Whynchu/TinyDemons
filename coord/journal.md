@@ -1020,3 +1020,8 @@ Fusion candidate-cache coherence. Updating the inventory revision guard in HubEc
 
 ## 2026-10-04 done codex
 Fusion candidate caching now tracks profile identity and inventory revision so stale eligibility cannot reach the transaction UI. Godot offline diagnostics passed for four touched scripts; no playtest or suite run.
+
+2026-10-04 claim codex: Remove non-constant preload casts for clean headless parsing; inspect the supplied composition guardrail failures.
+
+## 2026-10-04 done codex
+Removed GDScript casts from eight const preload assignments so bare headless parsing can load typed resources. Refreshed the composition regression baseline to audited current UI extraction metrics while preserving ceilings and forward targets. Version 0.3.40. Focused MCP script diagnostics and composition audit pass; runtime smoke awaits standalone Godot 4.7.1 availability.

@@ -10,7 +10,7 @@ class_name PuzzleMapR5
 ## resources/definitions/puzzle_map_r5.tres (editor-inspectable); this builder
 ## loads it and assembles the runtime plan.
 
-const DATA := preload("res://resources/definitions/puzzle_map_r5.tres") as PuzzlePlanData
+const DATA := preload("res://resources/definitions/puzzle_map_r5.tres")
 
 
 static func build() -> PuzzleMapGrid.MapPlan:

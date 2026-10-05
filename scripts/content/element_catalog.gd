@@ -7,7 +7,7 @@ class_name ElementCatalog
 ## tables and matchup policy are authored in resources/definitions/element_catalog.tres
 ## so the editor can inspect them; the enum and the static API stay in code.
 
-const DATA := preload("res://resources/definitions/element_catalog.tres") as ElementCatalogData
+const DATA := preload("res://resources/definitions/element_catalog.tres")
 
 enum Element {
 	NEUTRAL,
