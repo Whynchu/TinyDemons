@@ -78,14 +78,22 @@ func build_fusion_model(context: HubTransactionMenuContextScript) -> FusionMenuM
 		selected = context.fusion_candidates[selected_index] if not context.fusion_candidates.is_empty() else null
 	model.selected_row = clampi(selected_index - window_start, 0, model.rows.size() - 1) if not model.rows.is_empty() else -1
 	var material_count := int(context.fusion_details.get("material_count", 0))
+	var owned_count := int(context.fusion_details.get("owned_count", 0))
+	var can_salvage := bool(context.fusion_details.get("can_salvage", false))
 	if selected != null:
-		model.owned_count = int(context.fusion_details.get("owned_count", 0))
+		# Candidate details are a render cache. A listed fusion target cannot have
+		# zero owned items or zero materials (unless it is salvage-only), so repair
+		# an impossible zero snapshot from the selected target's live profile.
+		if owned_count <= 0 or (material_count <= 0 and not can_salvage):
+			owned_count = context.profile.fusion_owned_count(selected.instance_id, context.catalog)
+			material_count = context.profile.fusion_material_count(selected.instance_id, context.catalog)
+		model.owned_count = owned_count
 		model.material_count = material_count
 		model.fusion_count_max = maxi(material_count, 1)
 		model.fusion_count = clampi(context.fusion_count, 1, model.fusion_count_max)
 		model.soul_cost = context.profile.fusion_batch_cost(selected, model.fusion_count) if material_count > 0 else 0
 		model.can_fuse = selected != null and material_count > 0 and context.profile.souls >= model.soul_cost
-		model.can_salvage = bool(context.fusion_details.get("can_salvage", false))
+		model.can_salvage = can_salvage
 		model.stat_comparison = shop_stat_comparison(context.profile, context.catalog, selected)
 	model.message = context.fusion_message
 	if model.message.is_empty() and model.state == 2 and material_count > 0 and not model.can_fuse:
