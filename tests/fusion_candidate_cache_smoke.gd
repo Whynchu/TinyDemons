@@ -12,6 +12,7 @@ func _initialize() -> void:
 	var root := _MockRoot.new()
 	root.screen_state_controller = _MockScreenState.new()
 	root.player_profile = PlayerProfile.new()
+	root.player_profile.souls = 999
 	var catalog := ItemCatalog.new()
 	var target := ItemInstance.new()
 	target.instance_id = "cache-target"
@@ -33,7 +34,8 @@ func _initialize() -> void:
 	material2.definition_id = &"basic_sword"
 	material2.rarity = &"common"
 	root.player_profile.grant_item(material2)
-	_expect(controller.hub_fusion_candidates(root).is_empty(), "cached result stays stable until invalidated", failures)
+	var refreshed_candidates := controller.hub_fusion_candidates(root)
+	_expect(refreshed_candidates.size() == 1 and controller.fusion_candidate_details(root, target).get("material_count", 0) == 2, "inventory revision refreshes Fusion eligibility and quantities immediately", failures)
 	var high_target := ItemInstance.new()
 	high_target.instance_id = "cache-high-target"
 	high_target.definition_id = &"arcane_body"
@@ -62,6 +64,33 @@ func _initialize() -> void:
 	_expect(root.screen_state_controller.hub_fusion_candidates_dirty == false, "refreshed fusion cache is clean", failures)
 	_expect(root.player_profile.fusion_owned_count(target.instance_id, catalog) == 2, "collapsed FUSE row reports both unequipped copies as owned", failures)
 	_expect(root.player_profile.fusion_material_count(target.instance_id, catalog) == 2, "matching basic swords remain usable as materials", failures)
+	var inventory_size_before_selection := root.player_profile.inventory.size()
+	var inventory_revision_before_selection := root.player_profile.inventory_revision
+	controller.select_hub_item_row(root, 0)
+	_expect(root.screen_state_controller.hub_fusion_target_instance_id == candidates[0].instance_id and root.screen_state_controller.hub_fusion_state == 1, "touch row selects a stable Fusion target without entering the action state", failures)
+	_expect(root._hub_item_action_count == 0 and root.player_profile.inventory.size() == inventory_size_before_selection and root.player_profile.inventory_revision == inventory_revision_before_selection, "selecting a Fusion row never calls the transaction or changes inventory", failures)
+	controller.hub_item_action(root)
+	_expect(root.screen_state_controller.hub_fusion_state == 2 and root.player_profile.inventory.size() == inventory_size_before_selection and root.player_profile.inventory_revision == inventory_revision_before_selection, "first Fusion confirmation only enters amount selection", failures)
+	root.screen_state_controller.hub_fusion_count = 2
+	controller.hub_item_action(root)
+	_expect(root.player_profile.inventory.size() == inventory_size_before_selection - 2 and root.player_profile.inventory_revision == inventory_revision_before_selection + 1, "second Fusion confirmation consumes the requested materials as one transaction", failures)
+	_expect(root.player_profile.find_item(target.instance_id).fusion_count == 2, "completed Fusion applies both enhancement steps to the selected target", failures)
+	# A profile change while the amount prompt is open must never redirect the
+	# final confirmation to the item now occupying the old row.
+	root.screen_state_controller.hub_item_index = 1
+	root.screen_state_controller.hub_fusion_state = 1
+	root.screen_state_controller.hub_fusion_target_instance_id = ""
+	controller.hub_item_action(root)
+	var vanished_id := root.screen_state_controller.hub_fusion_target_instance_id
+	var remaining_inventory_before := root.player_profile.inventory.size()
+	var remaining_revision_before := root.player_profile.inventory_revision
+	root.player_profile.inventory = root.player_profile.inventory.filter(func(data: Dictionary) -> bool: return str(data.get("instance_id", "")) != vanished_id)
+	root.player_profile.inventory_revision += 1
+	remaining_inventory_before -= 1
+	remaining_revision_before += 1
+	controller.hub_item_action(root)
+	_expect(root.player_profile.inventory.size() == remaining_inventory_before and root.player_profile.inventory_revision == remaining_revision_before, "vanished Fusion target cannot consume another row's materials", failures)
+	_expect(root.screen_state_controller.hub_fusion_state == 1, "vanished Fusion target returns to browsing", failures)
 
 	var mismatch_profile := PlayerProfile.new()
 	mismatch_profile.souls = 999
@@ -185,14 +214,28 @@ func profile_steps_to_next_rank(item: ItemInstance) -> int:
 class _MockScreenState:
 	var hub_page := 0
 	var hub_item_index := 0
+	var hub_list_scroll := 0.0
+	var hub_is_root := true
+	var hub_content_focus := false
+	var hub_equipment_action_focus := false
 	var hub_gear_browsing := false
 	var hub_fusion_message := ""
 	var hub_binding_message := ""
 	var hub_fusion_count := 1
+	var hub_fusion_target_instance_id := ""
+	var hub_fusion_state := 1
+	var hub_fusion_item_selected := false
+	var hub_fusion_menu: Control = null
 	var hub_fusion_candidates: Array[ItemInstance] = []
 	var hub_fusion_candidates_dirty := true
 
 	func update_hub_ui(_root: Object, _pixel_text: Callable) -> void:
+		pass
+
+	func snap_hub_list_scroll_to_selection(_root: Object) -> void:
+		pass
+
+	func refresh_equipment_menu(_root: Object) -> void:
 		pass
 
 
@@ -200,6 +243,31 @@ class _MockRoot:
 	var screen_state_controller: _MockScreenState
 	var player_profile: PlayerProfile
 	var run_state: RunState = null
+	var _hub_item_action_count := 0
+	var player_equipment := _MockEquipment.new()
 
 	func _play_sound(_sound_name: String, _volume_db: float = 0.0, _pitch_scale: float = 1.0) -> void:
+		pass
+
+	func _hub_item_action() -> void:
+		_hub_item_action_count += 1
+
+	func _pixel_text_texture(_text: String, _color: Color = Color.WHITE) -> Texture2D:
+		return null
+
+	func _configure_equipment_transmutations() -> void:
+		pass
+
+	func _apply_player_level() -> void:
+		pass
+
+	func _save_player_profile() -> void:
+		pass
+
+	func _update_soul_indicator() -> void:
+		pass
+
+
+class _MockEquipment:
+	func configure_from_profile(_profile: PlayerProfile) -> void:
 		pass

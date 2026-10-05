@@ -31,7 +31,6 @@ const TAP_INTERACT_ACTION := &"tap_interact"
 const MENU_SCROLL_DRAG_PX := 6.0
 const MENU_TOUCH_HIT_SLOP := 8.0
 const MENU_ACCEPT_MAX_HOLD_MS := 800
-const FUSION_DOUBLE_TAP_MS := 350
 const MOUSE_INPUT_SNAPSHOT_SCRIPT = preload("res://scripts/runtime/contexts/mouse_input_snapshot.gd")
 ## Discrete gameplay buttons emit a short, subtle haptic pulse on press (never
 ## on release or stick drag). Use/interact still pulses through the world-tap
@@ -76,8 +75,6 @@ var _finger_actions: Dictionary = {}
 var _tap_interact_origins: Dictionary = {}
 var _menu_touch_buttons: Dictionary = {}
 var _menu_button_origins: Dictionary = {}
-var _last_menu_tap_button: BaseButton = null
-var _last_menu_tap_time := 0
 var _menu_accept_fingers: Dictionary = {}
 var _menu_accept_latch := false
 var _menu_scroll_fingers: Dictionary = {}
@@ -730,17 +727,7 @@ func _finger_up(finger_id: int, position: Vector2 = Vector2.ZERO, activate_menu_
 				var sound_host := get_parent()
 				if sound_host != null and sound_host.has_method("_play_sound"):
 					sound_host.call("_play_sound", "enemy_death", -6.0, 0.95)
-			var now := Time.get_ticks_msec()
-			var menu_host := get_parent()
-			var is_fusion_row: bool = _input_context == CONTEXT_HUB and menu_button.name.to_lower().begins_with("itembutton") and menu_host != null and menu_host.get("screen_state_controller") != null and menu_host.screen_state_controller.hub_page == 3
-			var is_second_fusion_tap: bool = is_fusion_row and menu_button == _last_menu_tap_button and now - _last_menu_tap_time <= FUSION_DOUBLE_TAP_MS
 			menu_button.pressed.emit()
-			if is_fusion_row:
-				_last_menu_tap_button = menu_button
-				_last_menu_tap_time = now
-				if is_second_fusion_tap:
-					if menu_host != null and menu_host.has_method("_hub_item_action"):
-						menu_host.call("_hub_item_action")
 		_update_touch_capture_filter()
 		return
 	if _menu_scroll_fingers.has(finger_id):

@@ -23,6 +23,39 @@ editor is active.
 Next: extract Hub construction and responsive layout ownership, then remap the
 remaining screen route and cross-screen state boundaries.
 
+## Completed: Fusion quantity loss and title HUD leak
+
+Fusion row taps now only select; the touch-only double-tap shortcut that
+implicitly invoked the action was removed. Fusion selection tracks a stable
+instance ID through candidate refresh/reordering, and both confirmation steps
+resolve that identity before acting. The profile transaction validates the
+target before consuming materials and now treats target disappearance during
+removal as an invariant assertion. Added focused regression assertions for
+selection, amount entry, and one batch transaction.
+
+The title boot path now hides PlayerHud through ScreenStateController, and
+entering gameplay shows it through the same owner. Added title-boot and
+responsive-aspect visibility assertions.
+
+All nine changed GDScript files pass MCP per-file diagnostics; composition
+self-test and `git diff --check` pass. The regression-floor audit still fails
+with reviewed seam increases in GameplayBootstrap, HubEconomyController, and
+SaveFlowController plus root-access count 1857 vs baseline 1854; baselines were
+not weakened. Godot gameplay/smoke execution is unavailable: the connected
+editor cannot start the main scene due existing GameplayState typed-self parse
+errors, and no standalone Godot executable is installed. Claim cleared.
+
+## Completed: Fusion and Shop transaction follow-up
+
+The final Fusion confirmation now requires the selected instance ID to survive
+candidate refresh and remain in amount state. Shop sell amount confirmation
+requires the original item stack identity, preventing a list change from
+selling the replacement row. The Fusion regression fixture now funds and
+exercises a successful two-item transaction and a vanished-target case.
+Version 0.3.41. Focused MCP diagnostics, composition regression audit, and
+`git diff --check` pass. Gameplay smoke remains blocked by the existing
+GameplayState parser issue in the connected editor.
+
 ## Completed: Stage 3.1 Pause view rendering
 
 Moved Pause player-card, resource, status-table, fallback equipment text, and

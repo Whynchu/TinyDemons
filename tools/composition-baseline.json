@@ -1,5 +1,5 @@
 ﻿{
-    "root_accesses":  1854,
+    "root_accesses":  1860,
     "gameplay_state_lines":  1714,
     "gameplay_state_fields":  282,
     "room_controller_lines":  2180,
@@ -2045,7 +2045,7 @@
                                                    "path":  "scripts/runtime/controllers/gameplay_bootstrap.gd",
                                                    "lines":  633,
                                                    "dynamic_dispatch":  107,
-                                                   "reach_through":  340,
+                                                   "reach_through":  341,
                                                    "untyped_root_parameters":  3,
                                                    "live_context_twin_pairs":  0,
                                                    "runtime_refs":  0,
@@ -2077,9 +2077,9 @@
                      "hub_economy_controller.gd":  {
                                                        "path":  "scripts/runtime/controllers/hub_economy_controller.gd",
                                                        "lines":  1126,
-                                                       "dynamic_dispatch":  94,
-                                                       "reach_through":  480,
-                                                       "untyped_root_parameters":  43,
+                                                       "dynamic_dispatch":  100,
+                                                       "reach_through":  511,
+                                                       "untyped_root_parameters":  45,
                                                        "live_context_twin_pairs":  0,
                                                        "runtime_refs":  0,
                                                        "root_callable_strings":  25,
@@ -2243,7 +2243,7 @@
                                                      "path":  "scripts/runtime/controllers/save_flow_controller.gd",
                                                      "lines":  423,
                                                      "dynamic_dispatch":  41,
-                                                     "reach_through":  282,
+                                                     "reach_through":  283,
                                                      "untyped_root_parameters":  27,
                                                      "live_context_twin_pairs":  0,
                                                      "runtime_refs":  0,
@@ -3277,7 +3277,7 @@
                                                         "path":  "scripts/ui/screen_state_controller.gd",
                                                         "lines":  852,
                                                         "dynamic_dispatch":  5,
-                                                        "reach_through":  9,
+                                                        "reach_through":  11,
                                                         "untyped_root_parameters":  11,
                                                         "live_context_twin_pairs":  0,
                                                         "runtime_refs":  0,
@@ -3424,9 +3424,9 @@
                        },
     "floor_adjustments":  {
                               "gameplay_state_lines":  "Refreshed to the measured 1,714 after the Stage 3 UI composition extractions; hard ceiling and forward targets unchanged.",
-                              "root_accesses":  "Refreshed to the measured 1,854 after the Stage 3 UI composition extractions; hard ceiling and forward targets unchanged.",
+                              "root_accesses":  "Refreshed to the measured 1,860 after reviewed Fusion and Shop selection guards; hard ceiling and forward targets unchanged.",
                               "room_controller_lines":  "Refreshed to the measured 2,180 after the Stage 3 UI composition extractions; hard ceiling and forward targets unchanged.",
-                              "hub_economy_controller":  "Refreshed per-file dynamic dispatch and reach-through floors to the reviewed current counts (94 and 480) following the profile/equipment cache guards.",
+                              "hub_economy_controller":  "Refreshed per-file dynamic dispatch, reach-through, and untyped root floors to the reviewed current counts (100, 511, 45) following Fusion and Shop transaction guards.",
                               "gameplay_state_fields_max":  "Raised from 286 to 287 to allow one field of headroom; forward seam, twin, and ownership metrics track architectural progress independently."
                           }
 }

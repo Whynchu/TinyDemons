@@ -486,6 +486,13 @@ func fuse_duplicates(target_instance_id: String, count: int, catalog: ItemCatalo
 			break
 	if material_indices.size() < amount:
 		return false
+	var target_index := -1
+	for index in inventory.size():
+		if str(inventory[index].get("instance_id", "")) == target_instance_id:
+			target_index = index
+			break
+	if target_index < 0:
+		return false
 	var working := target
 	working.fusion_count += amount
 	working.fusion_stat_points += amount
@@ -499,13 +506,15 @@ func fuse_duplicates(target_instance_id: String, count: int, catalog: ItemCatalo
 	material_indices.sort()
 	for index in range(material_indices.size() - 1, -1, -1):
 		inventory.remove_at(material_indices[index])
-	var target_index := -1
+	# Material entries are always distinct from the target, so removing them
+	# shifts its array position. Resolve again after removal; the preflight above
+	# guarantees this cannot fail after inventory mutation begins.
+	target_index = -1
 	for index in inventory.size():
 		if str(inventory[index].get("instance_id", "")) == target_instance_id:
 			target_index = index
 			break
-	if target_index < 0:
-		return false
+	assert(target_index >= 0, "Validated fusion target disappeared while removing materials")
 	inventory[target_index] = working.to_dictionary()
 	inventory_revision += 1
 	souls -= cost

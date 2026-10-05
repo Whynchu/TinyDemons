@@ -141,11 +141,9 @@ func _handle_fusion_input(root: GameplayState, state: HubMenuState, page: int, r
 			if fusion_candidates.is_empty():
 				root._play_sound("ui_no_input", 0.0, 1.0)
 				return true
-			if not state.hub_fusion_item_selected:
-				state.hub_fusion_item_selected = true
-				state.hub_fusion_state = 2
-			refresh_hub_ui.call(root, Callable(root, "_pixel_text_texture"))
-			root._play_sound("ui_confirm", 0.0, 1.0)
+			# Route through the transaction owner so the selected item identity and
+			# amount-state transition stay in one place for controller and touch.
+			root._hub_item_action()
 		return true
 	if state.hub_fusion_state == 2:
 		if bool(root._is_menu_direction_just_pressed(&"ui_left")):

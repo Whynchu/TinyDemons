@@ -164,6 +164,7 @@ func set_hub_page(root: Object, page: int) -> void:
 		HubMenuStateScript.set_property_if_available(screen, &"hub_list_scroll", 0.0)
 		HubMenuStateScript.set_property_if_available(screen, &"hub_choice_scroll", 0.0)
 		HubMenuStateScript.set_property_if_available(screen, &"hub_fusion_count", 1)
+		HubMenuStateScript.set_property_if_available(screen, &"hub_fusion_target_instance_id", "")
 		HubMenuStateScript.set_property_if_available(screen, &"hub_fusion_message", "")
 		HubMenuStateScript.set_property_if_available(screen, &"hub_binding_message", "")
 		HubMenuStateScript.set_property_if_available(screen, &"hub_shop_state", SHOP_STATE_MODE_SELECT)
@@ -196,6 +197,7 @@ func set_hub_page(root: Object, page: int) -> void:
 	# enters target browsing, where the footer becomes FUSE.
 	HubMenuStateScript.set_property_if_available(screen, &"hub_fusion_state", 1 if screen.hub_page == HUB_PAGE_FUSION else 0)
 	HubMenuStateScript.set_property_if_available(screen, &"hub_fusion_item_selected", false)
+	HubMenuStateScript.set_property_if_available(screen, &"hub_fusion_target_instance_id", "")
 	HubMenuStateScript.set_property_if_available(screen, &"hub_binding_state", 1 if screen.hub_page == HUB_PAGE_BIND else 0)
 	# Equipment has a deliberate three-step route. Entering the page always
 	# lands on its top command row; Equip then descends into slots and finally
@@ -223,6 +225,7 @@ func set_hub_page(root: Object, page: int) -> void:
 	HubMenuStateScript.set_property_if_available(screen, &"hub_fusion_message", "")
 	HubMenuStateScript.set_property_if_available(screen, &"hub_binding_message", "")
 	HubMenuStateScript.set_property_if_available(screen, &"hub_fusion_count", 1)
+	HubMenuStateScript.set_property_if_available(screen, &"hub_fusion_target_instance_id", "")
 	if screen.hub_page == HUB_PAGE_FUSION:
 		economy_controller.invalidate_hub_fusion_candidates(root)
 	if root.run_state != null and screen.hub_page == HUB_PAGE_SHOP:
@@ -245,6 +248,7 @@ func back_to_hub_root(root: Object) -> void:
 	screen.hub_list_scroll = 0.0
 	screen.hub_choice_scroll = 0.0
 	screen.hub_fusion_count = 1
+	screen.hub_fusion_target_instance_id = ""
 	screen.hub_fusion_state = 0
 	screen.hub_fusion_item_selected = false
 	screen.hub_binding_state = 0

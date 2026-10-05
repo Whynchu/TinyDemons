@@ -342,6 +342,7 @@ func enter_starting_room_from_menu(root: GameplayState) -> void:
 		root._begin_scene_transition()
 		return
 	root.actor_presentation_runtime_controller.set_title_world_visible(root, true)
+	root.screen_state_controller.set_hud_visibility(root, true)
 	if root.screen_state_controller.title_presenter.overlay != null: root.screen_state_controller.title_presenter.overlay.visible = false
 	if root.screen_state_controller.archetype_presenter.overlay != null: root.screen_state_controller.archetype_presenter.overlay.visible = false
 	if root.screen_state_controller.hub_overlay != null: root.screen_state_controller.hub_overlay.visible = false

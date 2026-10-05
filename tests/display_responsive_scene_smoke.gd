@@ -71,6 +71,7 @@ func _initialize() -> void:
 			var content_size := touch._content_size()
 			_expect(content_size == Vector2(expected), "%s touch layer reads the live logical size" % aspect, failures)
 			var player_hud := ui.get_node("PlayerHud") as Node2D
+			_expect(not player_hud.visible, "%s keeps gameplay HUD hidden on the title screen during display reflow" % aspect, failures)
 			var gold_display := player_hud.get_node("GoldDisplay") as Node2D
 			var player_status := player_hud.get_node("PlayerStatus") as Node2D
 			var cooldown_hud := (gameplay.get("hud_controller") as HudController).cooldown_hud
@@ -86,6 +87,8 @@ func _initialize() -> void:
 		gameplay.get_window().size = Vector2i(960, 720)
 		settings.set_setting(&"aspect", "FULL")
 		await process_frame
+		var full_title_hud := (gameplay.get_node("InterfaceCanvas/UI/PlayerHud") as Node2D)
+		_expect(not full_title_hud.visible, "FULL landscape keeps gameplay HUD hidden while title remains active", failures)
 		var live_window := gameplay.get_window().size
 		var expected_full := Vector2i(maxi(240, roundi(160.0 * float(live_window.x) / maxf(float(live_window.y), 1.0))), 160)
 		_expect(display.view_size_value() == expected_full, "FULL follows the live window aspect", failures)

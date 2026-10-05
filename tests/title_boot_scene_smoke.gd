@@ -17,6 +17,9 @@ func _initialize() -> void:
 	if screens != null:
 		_expect(screens.title_presenter.overlay != null, "title overlay is built during boot", failures)
 		_expect(screens.title_presenter.overlay != null and screens.title_presenter.overlay.visible, "title overlay is visible after boot", failures)
+		var ui := gameplay.get("ui") as Node
+		var player_hud := ui.get_node_or_null("PlayerHud") as CanvasItem if ui != null else null
+		_expect(player_hud != null and not player_hud.visible, "player HUD stays hidden while the title screen is active", failures)
 		_expect(screens.title_presenter.cloud_button != null, "title screen exposes the Cloud Save button", failures)
 		if screens.title_presenter.cloud_button != null:
 			screens.title_presenter.cloud_button.pressed.emit()

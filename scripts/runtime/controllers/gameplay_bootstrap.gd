@@ -467,6 +467,7 @@ func _show_title_after_boot(root: GameplayState, boot_loading: CanvasItem) -> vo
 		push_error("Title screen was not constructed before bootstrap completed.")
 		return
 	root.ui.visible = true
+	root.screen_state_controller.set_hud_visibility(root, false)
 	screens.title_presenter.overlay.visible = true
 	screens.title_presenter.overlay.modulate.a = 1.0
 	if screens.title_presenter.title_text != null: screens.title_presenter.title_text.visible = true

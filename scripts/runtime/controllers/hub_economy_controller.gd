@@ -199,6 +199,7 @@ func shop_mode_pressed(root: Object, mode_index: int) -> void:
 	screen.hub_shop_sell_confirm_pending = false
 	screen.hub_shop_sell_amount = 1
 	screen.hub_shop_sell_amount_max = 1
+	screen.hub_shop_sell_target_key = ""
 	screen.hub_shop_command_focus = false
 	screen.hub_content_focus = true
 	screen.hub_item_index = 0
@@ -231,6 +232,7 @@ func shop_amount_cancelled(root: Object) -> void:
 	if screen.hub_page != HUB_PAGE_SHOP or screen.hub_shop_state != SHOP_STATE_SELL_AMOUNT:
 		return
 	screen.hub_shop_state = SHOP_STATE_ITEM_BROWSE
+	screen.hub_shop_sell_target_key = ""
 	screen.hub_shop_sell_confirm_pending = false
 	screen.hub_shop_sell_amount = 1
 	screen.hub_shop_sell_amount_max = 1
@@ -247,6 +249,7 @@ func shop_back_pressed(root: Object) -> void:
 		return
 	if screen.hub_shop_state == SHOP_STATE_ITEM_BROWSE:
 		screen.hub_shop_state = SHOP_STATE_MODE_SELECT
+		screen.hub_shop_sell_target_key = ""
 		screen.hub_shop_sell_confirm_pending = false
 		screen.hub_shop_sell_amount = 1
 		screen.hub_shop_sell_amount_max = 1
@@ -279,6 +282,9 @@ func shift_hub_item(root: Object, direction: int) -> void:
 		if on_equipment_page and root.player_profile != null and ItemCatalog.SLOTS[target] == &"head" and root.player_profile._head_locked_by_body(ItemCatalog.new()):
 			target = posmod(target + (1 if direction >= 0 else -1), count)
 		root.screen_state_controller.hub_item_index = target
+		if root.screen_state_controller.hub_page == HUB_PAGE_FUSION:
+			var fusion_items := hub_fusion_candidates(root)
+			root.screen_state_controller.hub_fusion_target_instance_id = fusion_items[target].instance_id if target < fusion_items.size() else ""
 		if root.screen_state_controller.hub_page == 1 or root.screen_state_controller.is_pause_equipment_active():
 			HubMenuStateScript.clear_touch_candidate(root.screen_state_controller)
 	root.screen_state_controller.snap_hub_list_scroll_to_selection(root)
@@ -330,8 +336,7 @@ func select_hub_item_row(root: Object, row: int) -> void:
 	# pressing the controller action button. The first touch still only selects
 	# the row, including when entering from the SHOP root preview.
 	var shop_row_is_confirm: bool = page == HUB_PAGE_SHOP and not root.screen_state_controller.hub_is_root and root.screen_state_controller.hub_shop_state == SHOP_STATE_ITEM_BROWSE
-	var fusion_row_is_confirm: bool = page == HUB_PAGE_FUSION and not root.screen_state_controller.hub_is_root and root.screen_state_controller.hub_fusion_state == 1
-	if (shop_row_is_confirm or fusion_row_is_confirm) and target == root.screen_state_controller.hub_item_index:
+	if shop_row_is_confirm and target == root.screen_state_controller.hub_item_index:
 		root.call("_hub_item_action")
 		return
 	root.screen_state_controller.hub_item_index = target
@@ -342,10 +347,13 @@ func select_hub_item_row(root: Object, row: int) -> void:
 	root.screen_state_controller.hub_equipment_action_focus = false
 	if page == 2:
 		root.screen_state_controller.hub_shop_state = SHOP_STATE_ITEM_BROWSE
+		root.screen_state_controller.hub_shop_sell_target_key = ""
 		root.screen_state_controller.hub_shop_sell_confirm_pending = false
 		root.screen_state_controller.hub_shop_sell_amount = 1
 		root.screen_state_controller.hub_shop_sell_amount_max = 1
 	if page == 3:
+		var fusion_items := hub_fusion_candidates(root)
+		root.screen_state_controller.hub_fusion_target_instance_id = fusion_items[target].instance_id if target < fusion_items.size() else ""
 		root.screen_state_controller.hub_is_root = false
 		root.screen_state_controller.hub_fusion_state = 1
 		root.screen_state_controller.hub_fusion_item_selected = false
@@ -667,6 +675,7 @@ func sell_profile_items(root: Object, selected: ItemInstance, quantity: int, sel
 		restored_scroll = float(root.screen_state_controller.hub_item_index - ShopMenuLayoutScript.VISIBLE_ROWS + 1)
 	root.screen_state_controller.hub_list_scroll = clampf(restored_scroll, 0.0, max_scroll)
 	root.screen_state_controller.hub_shop_state = SHOP_STATE_ITEM_BROWSE
+	root.screen_state_controller.hub_shop_sell_target_key = ""
 	root.screen_state_controller.hub_shop_sell_amount = 1
 	root.screen_state_controller.hub_shop_sell_amount_max = 1
 	root.screen_state_controller.hub_shop_sell_confirm_pending = false
@@ -686,7 +695,35 @@ func hub_fusion_candidates(root: Object) -> Array[ItemInstance]:
 		)
 	if root.screen_state_controller.hub_fusion_candidates_dirty or profile_changed:
 		refresh_hub_fusion_candidates(root)
+	_reconcile_fusion_selection(root)
 	return root.screen_state_controller.hub_fusion_candidates
+
+
+func _reconcile_fusion_selection(root: Object) -> void:
+	var screen: Object = root.screen_state_controller
+	var selected_id := str(screen.hub_fusion_target_instance_id)
+	if selected_id.is_empty():
+		return
+	var candidates: Array[ItemInstance] = screen.hub_fusion_candidates
+	for index in candidates.size():
+		if candidates[index].instance_id != selected_id:
+			continue
+		screen.hub_item_index = index
+		var visible_rows := FusionMenuLayoutScript.FUSION_VISIBLE_ROWS if screen.hub_fusion_menu != null else HubResponsiveLayoutPresenterScript.LEGACY_ITEM_VISIBLE_ROWS
+		var max_scroll := maxi(0, candidates.size() - visible_rows)
+		var window_start := clampi(int(floor(float(screen.hub_list_scroll))), 0, max_scroll)
+		if index < window_start:
+			window_start = index
+		elif index >= window_start + visible_rows:
+			window_start = index - visible_rows + 1
+		screen.hub_list_scroll = float(clampi(window_start, 0, max_scroll))
+		return
+	screen.hub_fusion_target_instance_id = ""
+	screen.hub_fusion_count = 1
+	if screen.hub_fusion_state == 2:
+		screen.hub_fusion_state = 1
+		screen.hub_fusion_item_selected = false
+	screen.hub_item_index = clampi(screen.hub_item_index, 0, maxi(candidates.size() - 1, 0))
 
 
 func fusion_candidate_details(root: Object, item: ItemInstance) -> Dictionary:
@@ -719,7 +756,19 @@ func shift_hub_fusion_count(root: Object, direction: int) -> void:
 	if root.screen_state_controller.hub_page != 3: return
 	var candidates := hub_fusion_candidates(root)
 	if candidates.is_empty(): return
-	var index: int = clampi(root.screen_state_controller.hub_item_index, 0, candidates.size() - 1)
+	var selected_id := str(root.screen_state_controller.hub_fusion_target_instance_id)
+	if root.screen_state_controller.hub_fusion_state == 2 and selected_id.is_empty():
+		return
+	var index := -1
+	for candidate_index in candidates.size():
+		if candidates[candidate_index].instance_id == selected_id:
+			index = candidate_index
+			break
+	if index < 0 and root.screen_state_controller.hub_fusion_state == 2:
+		return
+	if index < 0:
+		index = clampi(root.screen_state_controller.hub_item_index, 0, candidates.size() - 1)
+		root.screen_state_controller.hub_fusion_target_instance_id = candidates[index].instance_id
 	var target: ItemInstance = candidates[index]
 	var target_details := fusion_candidate_details(root, target)
 	if bool(target_details.get("can_salvage", false)): return
@@ -810,11 +859,16 @@ func hub_item_action(root: Object) -> void:
 			var selected_sell := sellable[sell_index]
 			if root.screen_state_controller.hub_shop_state != SHOP_STATE_SELL_AMOUNT:
 				root.screen_state_controller.hub_shop_state = SHOP_STATE_SELL_AMOUNT
+				root.screen_state_controller.hub_shop_sell_target_key = selected_sell.inventory_stack_key()
 				root.screen_state_controller.hub_shop_sell_amount = 1
 				root.screen_state_controller.hub_shop_sell_amount_max = maxi(shop_owned_matching_count(root, selected_sell), 1)
 				root.screen_state_controller.hub_shop_sell_confirm_pending = false
 				root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 				root.call("_play_sound", "ui_confirm", 0.0, 1.0)
+				return
+			if root.screen_state_controller.hub_shop_sell_target_key != selected_sell.inventory_stack_key():
+				shop_amount_cancelled(root)
+				root.call("_play_sound", "ui_no_input", 0.0, 1.0)
 				return
 			if sell_profile_items(root, selected_sell, root.screen_state_controller.hub_shop_sell_amount, sell_index):
 				root.call("_play_sound", "ui_buy_sell", -16.0, 1.0)
@@ -853,17 +907,41 @@ func hub_item_action(root: Object) -> void:
 				root.call("_play_sound", "ui_no_input", 0.0, 1.0)
 	elif root.screen_state_controller.hub_page == 3:
 		if root.screen_state_controller.hub_fusion_state == 1:
+			var available_targets := hub_fusion_candidates(root)
+			if available_targets.is_empty():
+				root.call("_play_sound", "ui_no_input", 0.0, 1.0)
+				return
+			var selected_target := _selected_fusion_target(root, available_targets)
+			if selected_target == null:
+				root.call("_play_sound", "ui_no_input", 0.0, 1.0)
+				return
+			root.screen_state_controller.hub_fusion_target_instance_id = selected_target.instance_id
 			root.screen_state_controller.hub_fusion_item_selected = true
 			root.screen_state_controller.hub_fusion_state = 2
 			root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 			root.call("_play_sound", "ui_confirm", 0.0, 1.0)
 			return
+		var confirmed_target_id := str(root.screen_state_controller.hub_fusion_target_instance_id)
+		if confirmed_target_id.is_empty():
+			root.call("_play_sound", "ui_no_input", 0.0, 1.0)
+			return
 		var fusion_candidates := hub_fusion_candidates(root)
+		if root.screen_state_controller.hub_fusion_state != 2 or str(root.screen_state_controller.hub_fusion_target_instance_id) != confirmed_target_id:
+			root.call("_play_sound", "ui_no_input", 0.0, 1.0)
+			root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+			return
 		var fusion_changed := false
 		var fusion_feedback_played := false
 		if not fusion_candidates.is_empty():
-			var index: int = clampi(root.screen_state_controller.hub_item_index, 0, fusion_candidates.size() - 1)
-			var target: ItemInstance = fusion_candidates[index]
+			var target := _selected_fusion_target(root, fusion_candidates)
+			if target == null:
+				root.screen_state_controller.hub_fusion_state = 1
+				root.screen_state_controller.hub_fusion_item_selected = false
+				root.screen_state_controller.hub_fusion_count = 1
+				root.screen_state_controller.hub_fusion_target_instance_id = ""
+				root.call("_play_sound", "ui_no_input", 0.0, 1.0)
+				root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+				return
 			var target_details := fusion_candidate_details(root, target)
 			var material_count := int(target_details.get("material_count", 0))
 			if material_count > 0:
@@ -901,7 +979,22 @@ func hub_item_action(root: Object) -> void:
 		if not root.screen_state_controller.hub_fusion_message.is_empty():
 			invalidate_hub_fusion_candidates(root)
 			root.screen_state_controller.hub_item_index = clampi(root.screen_state_controller.hub_item_index, 0, maxi(hub_fusion_candidates(root).size() - 1, 0))
+			root.screen_state_controller.hub_fusion_target_instance_id = ""
+			root.screen_state_controller.hub_fusion_state = 1
+			root.screen_state_controller.hub_fusion_item_selected = false
+			root.screen_state_controller.hub_fusion_count = 1
 	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+
+
+func _selected_fusion_target(root: Object, candidates: Array[ItemInstance]) -> ItemInstance:
+	var selected_id := str(root.screen_state_controller.hub_fusion_target_instance_id)
+	if not selected_id.is_empty():
+		for candidate: ItemInstance in candidates:
+			if candidate.instance_id == selected_id:
+				return candidate
+		return null
+	var index := clampi(root.screen_state_controller.hub_item_index, 0, candidates.size() - 1)
+	return candidates[index] if not candidates.is_empty() else null
 
 
 # Equipment removal and confirmation.
@@ -1003,6 +1096,7 @@ func select_hub_menu_row(root: Object, row: int) -> void:
 	screen.hub_binding_message = ""
 	screen.hub_fusion_state = 1 if target_page == HUB_PAGE_FUSION else 0
 	screen.hub_fusion_item_selected = false
+	screen.hub_fusion_target_instance_id = ""
 	screen.hub_binding_state = 0
 	if target_page == HUB_PAGE_FUSION:
 		invalidate_hub_fusion_candidates(root)

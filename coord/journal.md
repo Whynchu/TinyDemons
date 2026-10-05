@@ -1025,3 +1025,9 @@ Fusion candidate caching now tracks profile identity and inventory revision so s
 
 ## 2026-10-04 done codex
 Removed GDScript casts from eight const preload assignments so bare headless parsing can load typed resources. Refreshed the composition regression baseline to audited current UI extraction metrics while preserving ceilings and forward targets. Version 0.3.40. Focused MCP script diagnostics and composition audit pass; runtime smoke awaits standalone Godot 4.7.1 availability.
+
+2026-10-05 claim codex: Investigate fusion selection causing inventory/quantity loss and title-screen player UI leaking after orientation changes.
+
+2026-10-05 done codex: Fusion selection is now read-only until explicit confirmation, the target is stable by instance ID across refreshes, and successful fusion is covered by focused source assertions. Title boot hides PlayerHud through ScreenStateController and gameplay entry restores it. MCP diagnostics, composition self-test, and diff checks pass; regression-floor audit has small attributable seam increases and runtime tests remain blocked by existing GameplayState parser errors / missing standalone Godot. Claim cleared; MCP config changes untouched.
+
+2026-10-05 done codex: Audited Fusion, Shop, and profile inventory flows; final Fusion confirmation now requires the original instance ID, Shop sell amount requires the original stack key, and focused Fusion coverage exercises the successful and stale-target paths. Composition floor reviewed and passing, version 0.3.41. Pushing scoped commit to main; MCP configuration files excluded.

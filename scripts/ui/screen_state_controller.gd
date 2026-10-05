@@ -56,7 +56,7 @@ const MENU_CIRCLE_TEXTURE: Texture2D = MenuPromptTextureFactoryScript.MENU_CIRCL
 const MENU_X_TEXTURE: Texture2D = MenuPromptTextureFactoryScript.MENU_X_TEXTURE
 const MENU_TRIANGLE_TEXTURE: Texture2D = MenuPromptTextureFactoryScript.MENU_TRIANGLE_TEXTURE
 const MENU_SQUARE_TEXTURE: Texture2D = MenuPromptTextureFactoryScript.MENU_SQUARE_TEXTURE
-const GAME_VERSION := "0.3.40"
+const GAME_VERSION := "0.3.41"
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const HUB_STAT_ADD_TEXTURE: Texture2D = HubStatsScreenPresenterScript.HUB_STAT_ADD_TEXTURE
 const HUB_STAT_SUBTRACT_TEXTURE: Texture2D = HubStatsScreenPresenterScript.HUB_STAT_SUBTRACT_TEXTURE
@@ -366,6 +366,9 @@ var hub_shop_sell_amount: int:
 var hub_shop_sell_amount_max: int:
 	get: return _hub_menu_state.hub_shop_sell_amount_max
 	set(value): _hub_menu_state.hub_shop_sell_amount_max = value
+var hub_shop_sell_target_key: String:
+	get: return _hub_menu_state.hub_shop_sell_target_key
+	set(value): _hub_menu_state.hub_shop_sell_target_key = value
 var hub_shop_cursor: Sprite2D:
 	get: return _hub_responsive_layout_presenter.hub_shop_cursor
 	set(value): _hub_responsive_layout_presenter.hub_shop_cursor = value
@@ -398,6 +401,9 @@ var hub_fusion_candidates_dirty := true
 var hub_fusion_count: int:
 	get: return _hub_menu_state.hub_fusion_count
 	set(value): _hub_menu_state.hub_fusion_count = value
+var hub_fusion_target_instance_id: String:
+	get: return _hub_menu_state.hub_fusion_target_instance_id
+	set(value): _hub_menu_state.hub_fusion_target_instance_id = value
 var hub_fusion_message: String:
 	get: return _hub_menu_state.hub_fusion_message
 	set(value): _hub_menu_state.hub_fusion_message = value
@@ -750,6 +756,14 @@ func update_hub_input(root: GameplayState) -> void:
 # --- Title screen construction and layout ---
 func refresh_title_menu_layout(has_profile: bool) -> void:
 	_title_screen_presenter.refresh_menu_layout(has_profile)
+
+
+func set_hud_visibility(root: GameplayState, is_visible: bool) -> void:
+	if root.ui == null:
+		return
+	var player_hud := root.ui.get_node_or_null("PlayerHud") as CanvasItem
+	if player_hud != null:
+		player_hud.visible = is_visible
 
 
 func _menu_uses_face_art(root: Object) -> bool:
