@@ -317,7 +317,7 @@ func incoming_damage_multiplier_for(element: int, include_vulnerability: bool = 
 		var definition := record.definition
 		if definition.family == StatusEffectDefinition.Family.AMBIENT_MODIFIER and definition.conducts_element == element:
 			result *= 1.0 + definition.conduct_damage_bonus_per_stack * float(record.stacks)
-		elif include_vulnerability and definition.family == StatusEffectDefinition.Family.DAMAGE_VULNERABILITY:
+		elif include_vulnerability and definition.applies_damage_vulnerability():
 			result *= 1.0 + definition.vulnerability_per_stack * float(record.stacks)
 	return result
 

@@ -12,6 +12,7 @@ duration = 3.0
 maximum_stacks = 1
 magnitude_per_stack = 0.0
 movement_multiplier_floor = 0.1
+vulnerability_per_stack = 0.25
 badge_glyph = "F"
 particle_style = &"ice_shard"
 particle_interval = 0.14

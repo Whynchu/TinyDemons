@@ -69,7 +69,7 @@ func validate() -> Array[String]:
 			problems.append("periodic stun cadence and floor must be positive")
 		if stun_lock_duration <= 0.0:
 			problems.append("stun_lock_duration must be positive")
-	if family == Family.DAMAGE_VULNERABILITY and vulnerability_per_stack <= 0.0:
+	if applies_damage_vulnerability() and vulnerability_per_stack <= 0.0:
 		problems.append("damage vulnerability statuses need a positive vulnerability_per_stack")
 	if family == Family.AMBIENT_MODIFIER:
 		if conducts_element < 0 or conducts_element > 7:
@@ -86,7 +86,7 @@ func validate() -> Array[String]:
 	else:
 		if conducts_element != 0 or not is_zero_approx(conduct_damage_bonus_per_stack) or not is_equal_approx(conduct_stun_cadence_divisor, 1.0):
 			problems.append("only ambient modifiers may define conductivity behavior")
-	if family != Family.DAMAGE_VULNERABILITY and not is_zero_approx(vulnerability_per_stack):
+	if not applies_damage_vulnerability() and not is_zero_approx(vulnerability_per_stack):
 		problems.append("only damage vulnerability statuses may define vulnerability_per_stack")
 	if not extinguishes.is_empty() and extinguish_stacks_per_application <= 0:
 		problems.append("extinguish stack count must be positive")
@@ -100,6 +100,12 @@ func validate() -> Array[String]:
 	if particle_interval <= 0.0:
 		problems.append("particle_interval must be positive")
 	return problems
+
+
+## Damage vulnerability applies to its own family and also to movement locks,
+## so a frozen target can be both rooted and easier to break.
+func applies_damage_vulnerability() -> bool:
+	return family == Family.DAMAGE_VULNERABILITY or family == Family.MOVEMENT_LOCK
 
 
 func tick_interval_for(_stacks: int) -> float:
