@@ -15,6 +15,5 @@ movement_multiplier_floor = 0.1
 badge_glyph = "F"
 particle_style = &"ice_shard"
 particle_interval = 0.14
-vulnerability_per_stack = 0.25
 extinguishes = Array[StringName]([&"burn"])
 extinguish_stacks_per_application = 3
