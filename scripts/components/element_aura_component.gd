@@ -4,6 +4,7 @@ class_name ElementAuraComponent
 const ElementCatalogScript = preload("res://scripts/content/element_catalog.gd")
 const IMBUE_EMISSION_TAG := &"imbue_element"
 const STATUS_OUTLINE_OFFSETS: Array[Vector2i] = [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]
+const MAX_SHARED_OUTLINE_TEXTURES := 192
 
 @export var actor_sprite: Sprite2D
 # Player attacks temporarily render through a separate sprite; include it in the aura source set.
@@ -13,11 +14,13 @@ const STATUS_OUTLINE_OFFSETS: Array[Vector2i] = [Vector2i.LEFT, Vector2i.RIGHT, 
 
 var health_component: HealthComponent = null
 static var _shared_outline_texture_cache: Dictionary = {}
+static var _shared_outline_texture_cache_order: Array[String] = []
 var _tint_texture_cache: Dictionary = {}
 var _imbue_outlines: Dictionary = {}
 var _imbue_flashes: Dictionary = {}
 var _imbue_emission_timers: Dictionary = {}
 var _status_outline: Sprite2D = null
+var _status_outline_source_key := ""
 var _status_particle_timers: Dictionary = {}
 var _pending_suppression_bursts: Array[Dictionary] = []
 var _stun_shake_remaining := 0.0
@@ -142,6 +145,7 @@ func refresh_status_aura() -> void:
 		var old_outline := _valid_sprite(_status_outline)
 		if old_outline != null:
 			old_outline.visible = false
+		_status_outline_source_key = ""
 		return
 	if _valid_sprite(_status_outline) == null or _status_outline.get_parent() != overlay_parent:
 		_queue_status_outline()
@@ -151,7 +155,12 @@ func refresh_status_aura() -> void:
 		_status_outline.top_level = true
 		_status_outline.z_as_relative = false
 		overlay_parent.add_child(_status_outline)
-	_status_outline.texture = _outline_texture(actor, ElementCatalogScript.damage_number_color(definition.element))
+	var outline_key := "%s:%s" % [_sprite_cache_key(actor, false), String(definition.id)]
+	if _status_outline_source_key != outline_key or _status_outline.texture == null:
+		var outline_texture := _outline_texture(actor, ElementCatalogScript.damage_number_color(definition.element), false)
+		if outline_texture != null:
+			_status_outline.texture = outline_texture
+			_status_outline_source_key = outline_key
 	sync_status_outline_transform()
 	_status_outline.visible = actor.visible and actor.is_visible_in_tree()
 
@@ -207,7 +216,8 @@ func advance_status_visuals(delta: float, effects: EffectsSpawner, rng: RandomNu
 		effects.spawn_actor_status_edge_burst(actor, overlay_parent, suppressor_definition, rng, pixel_texture)
 	_pending_suppression_bursts.clear()
 	var active_ids: Dictionary = {}
-	for definition in component.active_definitions():
+	for record in component.presentation_records():
+		var definition := record.definition
 		if definition == null:
 			continue
 		active_ids[definition.id] = true
@@ -271,6 +281,7 @@ func _queue_status_outline() -> void:
 		outline.visible = false
 		outline.queue_free()
 	_status_outline = null
+	_status_outline_source_key = ""
 
 
 func _exit_tree() -> void:
@@ -304,10 +315,14 @@ func _tint_texture(source_sprite: Sprite2D, color: Color) -> Texture2D:
 	return texture
 
 
-func _outline_texture(source_sprite: Sprite2D, color: Color) -> Texture2D:
+func _outline_texture(source_sprite: Sprite2D, color: Color, include_occlusion_revision: bool = true) -> Texture2D:
 	if source_sprite == null or not is_instance_valid(source_sprite) or source_sprite.texture == null:
 		return null
-	var key := "%s:%s:%s" % [_sprite_cache_key(source_sprite), "outline", color.to_html(false)]
+	# OcclusionRenderer updates the same ImageTexture in place and advances a
+	# revision every frame. Status outlines use the authored sprite/frame shape,
+	# so their caller omits that visual-only revision and avoids rebuilding the
+	# image scan and texture upload on every highlighted/occluded frame.
+	var key := "%s:%s:%s" % [_sprite_cache_key(source_sprite, include_occlusion_revision), "outline", color.to_html(false)]
 	if _shared_outline_texture_cache.has(key):
 		return _shared_outline_texture_cache[key] as Texture2D
 	var image := _sprite_source_image(source_sprite)
@@ -356,15 +371,25 @@ func _outline_texture(source_sprite: Sprite2D, color: Color) -> Texture2D:
 	# override. Keep the ailment outline in the sprite's displayed pixel size too;
 	# otherwise Sprite2D draws that high-resolution texture twice as large.
 	texture.set_size_override(frame_display_size + Vector2i(2, 2))
+	if _shared_outline_texture_cache.size() >= MAX_SHARED_OUTLINE_TEXTURES and _shared_outline_texture_cache_order.is_empty():
+		_shared_outline_texture_cache.clear()
+	while _shared_outline_texture_cache.size() >= MAX_SHARED_OUTLINE_TEXTURES and not _shared_outline_texture_cache_order.is_empty():
+		var expired_key: String = _shared_outline_texture_cache_order.pop_front()
+		_shared_outline_texture_cache.erase(expired_key)
+	if _shared_outline_texture_cache.size() >= MAX_SHARED_OUTLINE_TEXTURES:
+		_shared_outline_texture_cache.clear()
+		_shared_outline_texture_cache_order.clear()
 	_shared_outline_texture_cache[key] = texture
+	_shared_outline_texture_cache_order.append(key)
 	return texture
 
 
-func _sprite_cache_key(sprite: Sprite2D) -> String:
+func _sprite_cache_key(sprite: Sprite2D, include_occlusion_revision: bool = true) -> String:
 	var region_key := ""
 	if sprite.region_enabled:
 		region_key = ":%s:%s" % [sprite.region_rect.position, sprite.region_rect.size]
-	return "%s:%s:%s:%s:%s:%s%s" % [sprite.texture.get_rid(), int(sprite.get_meta("occlusion_texture_revision", 0)), sprite.hframes, sprite.vframes, sprite.frame, sprite.region_enabled, region_key]
+	var revision := int(sprite.get_meta("occlusion_texture_revision", 0)) if include_occlusion_revision else 0
+	return "%s:%s:%s:%s:%s:%s%s" % [sprite.texture.get_rid(), revision, sprite.hframes, sprite.vframes, sprite.frame, sprite.region_enabled, region_key]
 
 
 func _sprite_display_frame_size(sprite: Sprite2D) -> Vector2i:

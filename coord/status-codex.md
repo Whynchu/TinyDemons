@@ -2,8 +2,43 @@
 
 _Only codex writes this file._
 
-**Focus:** Web export content audit, pause equipment touch targets, guaranteed Cloaked Demon elemental sword stock
+**Focus:** None
 **Updated:** 2026-10-06
+
+## Completed: Chill/Wet bounds and status-outline cost
+
+Chill crystals and Wet bubbles now spawn along an inset sprite perimeter so
+their centered textures stay close to the affected actor. Status outlines no
+longer rebuild from every per-frame occlusion revision; they cache by sprite
+and animation frame, with a bounded shared texture cache. Both changed scripts
+pass MCP checks and `git diff --check` passes. No in-game profile or playtest
+was run, so runtime frame-time improvement remains unmeasured.
+
+## Reverted: Damage feedback font and POP
+
+The temporary 6x10 glyph set and overshoot animation were removed at the user's
+request. Combat damage, immune, and shield numbers use the previous 3x5 font,
+positioning, critical outline, and scale/fade animation again.
+
+## Completed: Status icons
+
+Connected the six new 7x7 textures to their authored status definitions and
+HUD badges. Poison's grayscale pixels map to the Shadow element's purple
+shadow, normal, and accent palette tones. Renamed the supplied `posion.png` to
+`poison.png`. Static diff check passes; no Godot tests were run.
+
+## Completed: Status badge backing
+
+Every status icon now uses a filled black circular backing composed in the same
+7x7 texture before the icon is layered on top. Removed the transmission-only
+white ring; transmission feedback keeps its brief scale pulse. Static diff
+check passes; no Godot tests were run.
+
+## Follow-up: Pickup cold hitch
+
+The authored `status.png` is connected and Freeze's regenerated `.import` file
+confirms reimport. The Chill/Wet aura and mote source paths are addressed above;
+the separate cold item-pickup hitch remains open.
 
 ## Completed: Web and touch usability sweep
 
@@ -1280,3 +1315,18 @@ Tracing the Hub/Pause Equipment hit targets and authored cursor layer after 0.3.
 
 ## Investigation note: Pause Equipment report
 Hub route confirmed separate from Pause's presenter. Pause source explicitly binds command/slot/candidate signals and renders the shared view writable; existing equipment smoke covers cursor visibility and preview/equip callbacks. No source change made because the shared game runtime stopped responding during Pause route entry; save files remain unchanged. Need a device/browser repro or screenshot to pinpoint touch hit-testing vs cursor presentation. Keep unrelated workspace edits untouched.
+
+## Completed: Status backing and pickup hitch follow-up
+
+HUD status badges now composite the authored `assets/artwork/status.png` behind each 7x7 icon. Freeze source was reimported by the active editor; its import sidecar and `.godot/imported` texture are present. Item pickup formatting/color no longer constructs an `ItemCatalog` per acquisition; item labels resolve from the authored catalog data and generated definition manifest. Code inspection still points to cold status-aura outline generation (texture read/crop, pixel scan, texture creation) as a likely room-entry hitch source; no runtime profiler capture was available to measure it. `git diff --check` passes; no tests were run.
+
+## Completed: Enemy/status crowd performance follow-up
+
+Status particle origins now use actor bounds and avoid animated texture readback/pixel scans; active status motes are capped at 16. Status presentation sorting is cached until a status mutation, with aura/HUD consumers sharing the cached records. Debug performance reports now separate `enemy_status_visuals` and `enemy_overhead_hud` scope totals. `git diff --check` passes. Runtime/device performance measurements remain open; no tests were run under the shared-editor rule.
+
+## Completed: 0.3.59 release preparation
+
+Prepared the pending non-MCP status visuals, performance, and damage-number
+rollback sweep for `main`; active version references now read 0.3.59. Local MCP
+configuration changes are excluded. Runtime frame-time and gameplay validation
+have not been measured.

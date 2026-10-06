@@ -68,6 +68,8 @@ const RETIRED_TRANSMUTATION_IDS: Array[StringName] = [
 ## baselines, sets, and their metadata. Standalone ItemDefinitions are discovered
 ## alongside those records; instance fields keep compatibility call sites working.
 const DATA_PATH := "res://resources/definitions/item_catalog.tres"
+const ITEM_CATALOG_DATA: ItemCatalogData = preload("res://resources/definitions/item_catalog.tres")
+const ITEM_DEFINITION_MANIFEST: Resource = preload("res://resources/generated/item_definition_manifest.tres")
 
 var live_base_ids: Array[StringName] = []
 var live_base_definitions: Dictionary = {}
@@ -106,6 +108,19 @@ static func canonical_slot(slot: Variant) -> StringName:
 		return &"body"
 	if normalized in ["weapon", "head", "body", "arm", "shield", "accessory"]:
 		return StringName(normalized)
+	return &""
+
+
+static func definition_slot_for(definition_id: StringName) -> StringName:
+	var record: Dictionary = ITEM_CATALOG_DATA.live_base_definitions.get(definition_id, {})
+	if record.is_empty():
+		record = ITEM_CATALOG_DATA.definitions.get(definition_id, {})
+	if not record.is_empty():
+		return canonical_slot(record.get("slot", &""))
+	for resource: Resource in ContentDefinitionManifestService.load_kind_entries(&"item", ITEM_DEFINITION_MANIFEST):
+		var definition := resource as ItemDefinition
+		if definition != null and definition.id == definition_id:
+			return canonical_slot(definition.slot)
 	return &""
 
 
@@ -671,6 +686,10 @@ func transmutation_effects(transmutation_id: StringName) -> Dictionary:
 
 
 func rarity_color(rarity: StringName) -> Color:
+	return rarity_color_for(rarity)
+
+
+static func rarity_color_for(rarity: StringName) -> Color:
 	return RARITY_COLORS.get(rarity, Color.WHITE)
 
 func rarity_stat_rate(_rarity: StringName) -> float:

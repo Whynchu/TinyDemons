@@ -9,7 +9,7 @@ gear and mastery back to the Demon Hub for the next dive.
 
 A full run takes minutes. The chase lasts a lot longer.
 
-*Version 0.3.58 — in active development.*
+*Version 0.3.59 — in active development.*
 
 ---
 
@@ -82,7 +82,7 @@ controls, with device-aware prompts.
 Published from `main` to GitHub Pages:
 **[Play Tiny Demons](https://whynchu.github.io/TinyDemons/) · [Design Wiki](https://whynchu.github.io/TinyDemons/wiki/)**
 
-Current web build: `0.3.58`.
+Current web build: `0.3.59`.
 
 ## Controls
 
@@ -137,5 +137,5 @@ and systems guide.
 
 ---
 
-Version `0.3.58`. Every push to `main` increments the patch version by at least
+Version `0.3.59`. Every push to `main` increments the patch version by at least
 `0.0.01`; the in-game title version and this README change in the same commit.

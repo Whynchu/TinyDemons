@@ -260,7 +260,9 @@ func move_slimes(root: Object, delta: float) -> void:
 		if slime_actor != null:
 			slime_actor.tick_components(delta)
 			if combat_runtime != null:
+				var status_started_usec := Time.get_ticks_usec()
 				combat_runtime.tick_actor_statuses(gameplay, slime_actor, delta, false)
+				root.call("_record_performance_scope", &"enemy_status_visuals", status_started_usec)
 			if slime_actor is SkeletonActor:
 				_tick_skeleton_notice_presentation(gameplay, slime_actor)
 			slime_actor.tick_runtime(delta, is_dead, update_knockback, update_attack, is_aggroed, aggro_target, update_scoot, allow_movement)

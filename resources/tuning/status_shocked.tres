@@ -1,6 +1,7 @@
-[gd_resource type="Resource" script_class="StatusEffectDefinition" format=3 uid="uid://dp7qwt6ubqrrm"]
+[gd_resource type="Resource" script_class="StatusEffectDefinition" load_steps=3 format=3 uid="uid://dp7qwt6ubqrrm"]
 
 [ext_resource type="Script" uid="uid://75h25dl2ihvv" path="res://scripts/content/status_effect_definition.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/artwork/shocked.png" id="2"]
 
 [resource]
 script = ExtResource("1")
@@ -13,5 +14,6 @@ magnitude_per_stack = 0.0
 periodic_damage_percent_max_health_per_stack = 2.0
 periodic_damage_interval = 3.0
 badge_glyph = "S"
+badge_icon = ExtResource("2")
 particle_style = &"electric_spark"
 transmissible = true

@@ -808,7 +808,7 @@ func collect_world_item_drop(root: Object) -> PickupAcquisitionResult:
 	result.source_position = sprite.global_position
 	result.presentation_texture = sprite.texture
 	result.display_text = item_acquired_text(item)
-	result.accent_color = ItemCatalog.new().rarity_color(item.rarity)
+	result.accent_color = ItemCatalog.rarity_color_for(item.rarity)
 	result.target_key = &"inventory_chest"
 	request_profile_save()
 	var acquired_text := result.display_text

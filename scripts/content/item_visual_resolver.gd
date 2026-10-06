@@ -39,5 +39,5 @@ static func item_drop_texture(item: ItemInstance, catalog: ItemCatalog = null) -
 static func item_type_label(item: ItemInstance, catalog: ItemCatalog = null) -> String:
 	if item == null:
 		return "ITEM"
-	var items: ItemCatalog = catalog if catalog != null else ItemCatalog.new()
-	return str(ITEM_TYPE_LABELS.get(items.definition_slot(item.definition_id), "ITEM"))
+	var slot := catalog.definition_slot(item.definition_id) if catalog != null else ItemCatalog.definition_slot_for(item.definition_id)
+	return str(ITEM_TYPE_LABELS.get(slot, "ITEM"))

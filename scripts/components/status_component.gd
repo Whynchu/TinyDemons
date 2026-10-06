@@ -12,6 +12,8 @@ signal transmission_received(status_id: StringName, from_actor: Node)
 @export var health_component: HealthComponent
 
 var _active: Dictionary[StringName, StatusRecord] = {}
+var _presentation_records_cache: Array[StatusRecord] = []
+var _presentation_records_dirty := true
 var innate_status_id: StringName = &""
 var _innate_definition: StatusEffectDefinition
 var movement_lock_resistance_check: Callable = Callable()
@@ -24,7 +26,7 @@ func configure_innate(status_id: StringName) -> void:
 	_innate_definition = ElementCatalog.status_effect_for_id(status_id) if not status_id.is_empty() else null
 	_install_innate_record()
 	_recompute_suppression(false)
-	status_changed.emit()
+	_emit_status_changed()
 
 
 func set_movement_lock_resistance_check(check: Callable) -> void:
@@ -35,7 +37,7 @@ func reset_for_spawn() -> void:
 	_active.clear()
 	_install_innate_record()
 	_recompute_suppression(false)
-	status_changed.emit()
+	_emit_status_changed()
 
 
 func _install_innate_record() -> void:
@@ -66,7 +68,7 @@ func apply_effect(definition: StatusEffectDefinition, source_element: int, arriv
 		_strip_statuses_without_notify(definition.extinguishes, definition.extinguish_stacks_per_application)
 	_refresh_stun_cadences()
 	_recompute_suppression()
-	status_changed.emit()
+	_emit_status_changed()
 	if arrived_by_transmission:
 		transmission_received.emit(definition.id, transmission_source)
 	return true
@@ -75,7 +77,7 @@ func apply_effect(definition: StatusEffectDefinition, source_element: int, arriv
 func advance(delta: float) -> Array[StatusTickResult]:
 	var results: Array[StatusTickResult] = []
 	var step := maxf(delta, 0.0)
-	if step <= 0.0:
+	if step <= 0.0 or _active.is_empty():
 		return results
 	var changed := false
 	var status_ids: Array[StringName] = []
@@ -133,7 +135,7 @@ func advance(delta: float) -> Array[StatusTickResult]:
 		_refresh_stun_cadences()
 	if changed:
 		_recompute_suppression()
-		status_changed.emit()
+		_emit_status_changed()
 	return results
 
 
@@ -141,7 +143,7 @@ func clear_all() -> void:
 	var had_records := not _active.is_empty()
 	_active.clear()
 	if had_records:
-		status_changed.emit()
+		_emit_status_changed()
 
 
 func active_definitions() -> Array[StatusEffectDefinition]:
@@ -149,6 +151,8 @@ func active_definitions() -> Array[StatusEffectDefinition]:
 
 
 func presentation_records() -> Array[StatusRecord]:
+	if not _presentation_records_dirty:
+		return _presentation_records_cache
 	var records: Array[StatusRecord] = []
 	for record_value: Variant in _active.values():
 		var record := record_value as StatusRecord
@@ -158,7 +162,9 @@ func presentation_records() -> Array[StatusRecord]:
 			continue
 		records.append(record)
 	records.sort_custom(_presentation_record_before)
-	return records
+	_presentation_records_cache = records
+	_presentation_records_dirty = false
+	return _presentation_records_cache
 
 
 func presentation_definitions() -> Array[StatusEffectDefinition]:
@@ -177,8 +183,13 @@ func _presentation_record_before(a: StatusRecord, b: StatusRecord) -> bool:
 
 
 func strongest_active_definition() -> StatusEffectDefinition:
-	var definitions := presentation_definitions()
-	return definitions[0] if not definitions.is_empty() else null
+	var records := presentation_records()
+	return records[0].definition if not records.is_empty() else null
+
+
+func _emit_status_changed() -> void:
+	_presentation_records_dirty = true
+	status_changed.emit()
 
 
 func record_for(status_id: StringName) -> StatusRecord:
@@ -239,7 +250,7 @@ func strip_statuses(ids: Array[StringName], stacks_per_application: int = 999) -
 	if removed > 0:
 		_refresh_stun_cadences()
 		_recompute_suppression()
-		status_changed.emit()
+		_emit_status_changed()
 	return removed
 
 

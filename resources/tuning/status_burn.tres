@@ -1,6 +1,7 @@
-[gd_resource type="Resource" script_class="StatusEffectDefinition" format=3 uid="uid://dv2wbp0wswerx"]
+[gd_resource type="Resource" script_class="StatusEffectDefinition" load_steps=3 format=3 uid="uid://dv2wbp0wswerx"]
 
 [ext_resource type="Script" uid="uid://75h25dl2ihvv" path="res://scripts/content/status_effect_definition.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/artwork/burn.png" id="2"]
 
 [resource]
 script = ExtResource("1")
@@ -9,5 +10,6 @@ duration = 3.0
 magnitude_per_stack = 0.0
 damage_percent_max_health_per_stack = 3.0
 badge_glyph = "B"
+badge_icon = ExtResource("2")
 particle_interval = 0.08
 transmissible = true

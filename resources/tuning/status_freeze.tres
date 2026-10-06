@@ -1,6 +1,7 @@
-[gd_resource type="Resource" script_class="StatusEffectDefinition" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="StatusEffectDefinition" load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/content/status_effect_definition.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/artwork/freeze.png" id="2"]
 
 [resource]
 script = ExtResource("1")
@@ -14,6 +15,7 @@ magnitude_per_stack = 0.0
 movement_multiplier_floor = 0.1
 vulnerability_per_stack = 0.25
 badge_glyph = "F"
+badge_icon = ExtResource("2")
 particle_style = &"ice_shard"
 particle_interval = 0.14
 extinguishes = Array[StringName]([&"burn"])

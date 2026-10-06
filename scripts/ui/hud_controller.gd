@@ -2,6 +2,8 @@ extends Node
 class_name HudController
 
 const ElementCatalogScript = preload("res://scripts/content/element_catalog.gd")
+const PaletteLibraryScript = preload("res://scripts/services/palette_library.gd")
+const STATUS_BADGE_BACKGROUND_TEXTURE: Texture2D = preload("res://assets/artwork/status.png")
 const SoulVisualsScript = preload("res://scripts/runtime/services/soul_visuals.gd")
 const ChromaComponentScript = preload("res://scripts/components/player_chroma_component.gd")
 const ChromaCostsScript = preload("res://scripts/content/chroma_costs.gd")
@@ -512,7 +514,9 @@ func update_player_status_marks(anchor: Sprite2D, status_component: StatusCompon
 			marker.visible = false
 			continue
 		var record := records[index]
-		marker.texture = status_badge_texture(record.definition, pixel_text, record.arrived_by_transmission)
+		var badge_texture := status_badge_texture(record.definition, pixel_text)
+		if marker.texture != badge_texture:
+			marker.texture = badge_texture
 		marker.top_level = true
 		marker.z_as_relative = false
 		marker.global_position = actor.global_position + Vector2(2.0 + float(index) * 8.0, -8.0)
@@ -526,53 +530,82 @@ func _new_status_marker(parent: Node, marker_name: String) -> Sprite2D:
 	marker.name = marker_name
 	marker.centered = false
 	marker.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	marker.z_as_relative = true
+	marker.z_as_relative = false
 	marker.visible = false
 	parent.add_child(marker)
 	return marker
 
 
-func status_badge_texture(definition: StatusEffectDefinition, pixel_text: Callable, arrived_by_transmission: bool = false) -> Texture2D:
-	if definition == null or not pixel_text.is_valid():
+func status_badge_texture(definition: StatusEffectDefinition, pixel_text: Callable) -> Texture2D:
+	if definition == null or (definition.badge_icon == null and not pixel_text.is_valid()):
 		return null
 	var element_color := ElementCatalogScript.damage_number_color(definition.element)
-	var cache_key := "%s:%s:%s" % [String(definition.id), element_color.to_html(false), arrived_by_transmission]
+	var icon_path := definition.badge_icon.resource_path if definition.badge_icon != null else ""
+	var palette_name := ElementCatalogScript.palette_key(definition.element)
+	var cache_key := "%s:%s:%s:%s:%s" % [String(definition.id), icon_path, element_color.to_html(false), palette_name, definition.badge_icon_uses_element_palette]
 	if status_badge_texture_cache.has(cache_key):
 		return status_badge_texture_cache[cache_key] as Texture2D
-	var image := Image.create(7, 7, false, Image.FORMAT_RGBA8)
-	image.fill(Color.TRANSPARENT)
-	for y in 7:
-		for x in 7:
-			var distance := Vector2(float(x) - 3.0, float(y) - 3.0).length_squared()
-			if distance <= 10.0:
-				image.set_pixel(x, y, Color.BLACK if distance <= 4.0 else element_color)
-	var glyph_texture := pixel_text.call(definition.badge_glyph, Color.WHITE) as Texture2D
-	if glyph_texture != null:
-		var glyph := glyph_texture.get_image()
-		var glyph_origin := Vector2i((7 - glyph.get_width()) / 2, (7 - glyph.get_height()) / 2)
-		for y in glyph.get_height():
-			for x in glyph.get_width():
-				if glyph.get_pixel(x, y).a > 0.0:
-					var target := glyph_origin + Vector2i(x, y)
-					if target.x >= 0 and target.y >= 0 and target.x < 7 and target.y < 7:
-						image.set_pixelv(target, Color.WHITE)
-	if arrived_by_transmission:
-		var ring := Image.create(9, 9, false, Image.FORMAT_RGBA8)
-		ring.fill(Color.TRANSPARENT)
-		for y in 9:
-			for x in 9:
-				var distance := Vector2(float(x) - 4.0, float(y) - 4.0).length_squared()
-				if distance >= 10.0 and distance <= 20.0:
-					ring.set_pixel(x, y, Color.WHITE)
-		for y in 7:
-			for x in 7:
-				var color := image.get_pixel(x, y)
-				if color.a > 0.0:
-					ring.set_pixel(x + 1, y + 1, color)
-		image = ring
+	var image: Image
+	if definition.badge_icon != null:
+		image = definition.badge_icon.get_image()
+		if image != null:
+			image = image.duplicate() as Image
+			if definition.badge_icon_uses_element_palette:
+				_apply_element_palette_to_grayscale_icon(image, ElementCatalogScript.palette_key(definition.element))
+	else:
+		image = _legacy_status_badge_image(definition, pixel_text)
+	if image == null:
+		return null
+	var badge := STATUS_BADGE_BACKGROUND_TEXTURE.get_image()
+	if badge == null or badge.is_empty():
+		return null
+	badge = badge.duplicate() as Image
+	var icon_origin := Vector2i((badge.get_width() - image.get_width()) / 2, (badge.get_height() - image.get_height()) / 2)
+	for y in image.get_height():
+		for x in image.get_width():
+			var color := image.get_pixel(x, y)
+			if color.a > 0.0:
+				badge.set_pixelv(icon_origin + Vector2i(x, y), color)
+	image = badge
 	var texture := ImageTexture.create_from_image(image)
 	status_badge_texture_cache[cache_key] = texture
 	return texture
+
+
+func _legacy_status_badge_image(definition: StatusEffectDefinition, pixel_text: Callable) -> Image:
+	var image := Image.create(7, 7, false, Image.FORMAT_RGBA8)
+	image.fill(Color.TRANSPARENT)
+	var glyph_texture := pixel_text.call(definition.badge_glyph, Color.WHITE) as Texture2D
+	if glyph_texture == null:
+		return image
+	var glyph := glyph_texture.get_image()
+	var glyph_origin := Vector2i((7 - glyph.get_width()) / 2, (7 - glyph.get_height()) / 2)
+	for y in glyph.get_height():
+		for x in glyph.get_width():
+			if glyph.get_pixel(x, y).a > 0.0:
+				var target := glyph_origin + Vector2i(x, y)
+				if target.x >= 0 and target.y >= 0 and target.x < 7 and target.y < 7:
+					image.set_pixelv(target, Color.WHITE)
+	return image
+
+
+func _apply_element_palette_to_grayscale_icon(image: Image, palette_name: String) -> void:
+	var dark := PaletteLibraryScript.shadow(palette_name)
+	var middle := PaletteLibraryScript.normal(palette_name)
+	var light := PaletteLibraryScript.accent(palette_name)
+	for y in image.get_height():
+		for x in image.get_width():
+			var source := image.get_pixel(x, y)
+			if source.a <= 0.0:
+				continue
+			var luminance := source.r * 0.299 + source.g * 0.587 + source.b * 0.114
+			var palette_color := light
+			if luminance < 0.5:
+				palette_color = dark
+			elif luminance < 0.86:
+				palette_color = middle
+			palette_color.a = source.a
+			image.set_pixel(x, y, palette_color)
 
 
 func _connect_status_transmission(actor: Sprite2D, status_component: StatusComponent) -> void:
@@ -747,12 +780,15 @@ func _update_actor_status_markers(actor: Sprite2D, status_component: StatusCompo
 			marker.visible = false
 			continue
 		var record := records[index]
-		marker.texture = status_badge_texture(record.definition, pixel_text, record.arrived_by_transmission)
-		marker.global_position = origin + Vector2(float(index) * 8.0 - (1.0 if record.arrived_by_transmission else 0.0), -1.0 if record.arrived_by_transmission else 0.0)
+		var badge_texture := status_badge_texture(record.definition, pixel_text)
+		if marker.texture != badge_texture:
+			marker.texture = badge_texture
+		marker.global_position = origin + Vector2(float(index) * 8.0, 0.0)
 		marker.scale = Vector2.ONE * (1.25 if _consume_status_transmission_flash(actor, record.definition.id) else 1.0)
 		marker.global_scale = Vector2.ONE
-		marker.z_as_relative = false
-		marker.z_index = actor.z_index - 1
+		var status_z := actor.z_index - 1
+		if marker.z_index != status_z:
+			marker.z_index = status_z
 		marker.visible = true
 
 
@@ -962,7 +998,9 @@ func update_overworld(root: Object, delta: float, ui_z: int) -> void:
 	update_combo_hud(root)
 	var timer := fmod(gold_animation_timer + delta, 0.48); gold_animation_timer = timer; _tick_gold_counter(root, delta); _tick_soul_counter(root, delta); update_gold_indicator(gold_indicator, gold_animation_frames, timer)
 	update_run_timer(root)
+	var enemy_overhead_started_usec := Time.get_ticks_usec()
 	update_overhead_bars(root.get("slimes"), Callable(root, "_enemy_max_health"), Callable(root, "_slime_current_health"), Callable(root, "_slime_display_health"), Callable(root, "_is_slime_dead"), Callable(root, "_is_slime_aggroed"), Callable(self, "set_health_bar_values"), ui_z, Callable(root, "_is_slime_hidden"), Callable(root, "_pixel_text_texture"))
+	root.call("_record_performance_scope", &"enemy_overhead_hud", enemy_overhead_started_usec)
 
 
 func update_combo_hud(root: Object) -> void:

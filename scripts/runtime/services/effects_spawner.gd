@@ -34,13 +34,10 @@ const CHARGE_AURA_TAG := &"charge_aura"
 const SUPPORT_HEAL_CHARGE_TAG := &"support_heal_charge"
 const SUPPORT_HEAL_BURST_TAG := &"support_heal_burst"
 const IMBUE_ELEMENT_TAG := &"imbue_element"
-const STATUS_EDGE_OFFSETS: Array[Vector2i] = [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]
 const SWORD_BEAM_CHROMA_COST := 20
 var pixel_text_texture_factory: PixelTextTextureFactory = PixelTextTextureFactoryScript.new() as PixelTextTextureFactory
 var pixel_particle_texture_cache: Dictionary = {}
 var status_particle_texture_cache: Dictionary = {}
-var status_edge_position_cache: Dictionary = {}
-var status_source_image_cache: Dictionary = {}
 var heal_plus_texture_cache: Texture2D = null
 var heal_spark_texture_cache: Texture2D = null
 var damage_numbers: Array[Dictionary] = []
@@ -53,6 +50,7 @@ var pixel_particles: Array[Dictionary] = []
 const MAX_DAMAGE_NUMBERS := 20
 const MAX_PIXEL_PARTICLES := 90
 const MAX_RESERVED_TAGGED_PARTICLES := 12
+const MAX_STATUS_PARTICLES := 16
 const MAX_PICKUP_FLIGHTS := 16
 const PICKUP_FLIGHT_DURATION := 0.28
 const PICKUP_FLIGHT_ARC_HEIGHT := 6.0
@@ -921,26 +919,44 @@ func spawn_actor_status_particle(actor: Sprite2D, effect_parent: Node2D, definit
 			return
 	elif pixel_particles.size() >= MAX_PIXEL_PARTICLES:
 		return
-	var edge_positions := _status_edge_positions(actor)
-	if edge_positions.is_empty():
+	var status_tag := effect_tag_override if not effect_tag_override.is_empty() else StringName("status_%s" % String(definition.id))
+	if _count_status_particles() >= MAX_STATUS_PARTICLES:
 		return
 	var source := random_source
 	if source == null or not is_instance_valid(source):
 		source = RandomNumberGenerator.new()
 		source.randomize()
-	var source_pixel: Vector2i = edge_positions[source.randi_range(0, edge_positions.size() - 1)]
-	var source_image := _status_source_image(actor)
-	if source_image == null or source_image.is_empty():
-		return
-	var pixel_x := source_image.get_width() - 1 - source_pixel.x if actor.flip_h else source_pixel.x
-	var pixel_y := source_image.get_height() - 1 - source_pixel.y if actor.flip_v else source_pixel.y
-	var sprite_rect := actor.get_rect()
-	var local_pixel := sprite_rect.position + Vector2(float(pixel_x) + 0.5, float(pixel_y) + 0.5)
-	var origin := actor.to_global(local_pixel)
 	var color := ElementCatalogScript.damage_number_color(definition.element)
 	var particle_texture := _status_particle_texture(definition.particle_style, color, pixel_texture)
 	if particle_texture == null:
 		return
+	var sprite_rect := actor.get_rect()
+	if sprite_rect.size.x <= 0.0 or sprite_rect.size.y <= 0.0:
+		return
+	# Status motes use the actor's local sprite bounds instead of reading the
+	# current animated texture back to the CPU and scanning every pixel for an
+	# opaque edge. That image work repeated for each distinct enemy frame and
+	# could add recurring CPU cost in status-heavy rooms.
+	var sample_rect := sprite_rect
+	if definition.particle_style == &"frost_crystal" or definition.particle_style == &"bubble":
+		# These centered 5x5/7x7 motes were being placed directly on the outer
+		# sprite rectangle, so most of each mote started outside the actor. Keep
+		# them on an inset perimeter while still avoiding source-image readbacks.
+		var particle_half_size := Vector2(particle_texture.get_size()) * 0.5
+		var inset := Vector2(
+			minf(maxf(particle_half_size.x + 1.0, sprite_rect.size.x * 0.22), sprite_rect.size.x * 0.40),
+			minf(maxf(particle_half_size.y + 1.0, sprite_rect.size.y * 0.22), sprite_rect.size.y * 0.40)
+		)
+		sample_rect = Rect2(sprite_rect.position + inset, sprite_rect.size - inset * 2.0)
+	var edge := source.randi_range(0, 3)
+	var along := source.randf_range(0.12, 0.88)
+	var local_pixel := Vector2.ZERO
+	match edge:
+		0: local_pixel = Vector2(lerpf(sample_rect.position.x, sample_rect.end.x, along), sample_rect.position.y)
+		1: local_pixel = Vector2(sample_rect.end.x, lerpf(sample_rect.position.y, sample_rect.end.y, along))
+		2: local_pixel = Vector2(lerpf(sample_rect.position.x, sample_rect.end.x, along), sample_rect.end.y)
+		_: local_pixel = Vector2(sample_rect.position.x, lerpf(sample_rect.position.y, sample_rect.end.y, along))
+	var origin := actor.to_global(local_pixel)
 	var particle := Sprite2D.new()
 	particle.name = "StatusParticle_%s" % String(definition.id)
 	particle.texture = particle_texture
@@ -959,13 +975,13 @@ func spawn_actor_status_particle(actor: Sprite2D, effect_parent: Node2D, definit
 		"timer": 0.5,
 		"lifetime": 0.5,
 		"gravity": 0.0,
-		"effect_tag": effect_tag_override if not effect_tag_override.is_empty() else StringName("status_%s" % String(definition.id)),
+		"effect_tag": status_tag,
 		"logical_position": origin,
 	}
 	match definition.particle_style:
 		&"ember":
 			status_particle_noise.frequency = 0.28
-			var noise_value := status_particle_noise.get_noise_2d(float(source_pixel.x), float(source_pixel.y) + float(Time.get_ticks_msec()) * 0.002)
+			var noise_value := status_particle_noise.get_noise_2d(local_pixel.x, local_pixel.y + float(Time.get_ticks_msec()) * 0.002)
 			lifetime = source.randf_range(0.45, 0.90)
 			velocity = Vector2(noise_value * 5.0, -(8.0 + (noise_value + 1.0) * 14.0))
 			particle_data["fire_spark"] = true
@@ -1026,97 +1042,6 @@ func _status_particle_texture(particle_style: StringName, color: Color, pixel_te
 	return texture
 
 
-func _status_edge_positions(sprite: Sprite2D) -> Array:
-	if sprite == null or not is_instance_valid(sprite) or sprite.texture == null:
-		return []
-	var key := _status_sprite_cache_key(sprite)
-	if status_edge_position_cache.has(key):
-		return status_edge_position_cache[key] as Array
-	var image := _status_source_image(sprite)
-	if image == null or image.is_empty():
-		return []
-	if image.get_format() != Image.FORMAT_RGBA8:
-		image = image.duplicate()
-		image.convert(Image.FORMAT_RGBA8)
-		status_source_image_cache[key] = image
-	var source_data := image.get_data()
-	var image_width := image.get_width()
-	var image_height := image.get_height()
-	var positions: Array[Vector2i] = []
-	for y in image_height:
-		for x in image_width:
-			var source_index := (y * image_width + x) * 4
-			if source_data[source_index + 3] == 0:
-				continue
-			var has_empty_neighbor := false
-			for offset in STATUS_EDGE_OFFSETS:
-				var neighbor: Vector2i = Vector2i(x, y) + offset
-				if neighbor.x < 0 or neighbor.y < 0 or neighbor.x >= image_width or neighbor.y >= image_height:
-					has_empty_neighbor = true
-					break
-				var neighbor_index := (neighbor.y * image_width + neighbor.x) * 4
-				if source_data[neighbor_index + 3] == 0:
-					has_empty_neighbor = true
-					break
-			if has_empty_neighbor:
-				positions.append(Vector2i(x, y))
-	status_edge_position_cache[key] = positions
-	return positions
-
-
-func _status_sprite_cache_key(sprite: Sprite2D) -> String:
-	var region_key := ""
-	if sprite.region_enabled:
-		region_key = ":%s:%s" % [sprite.region_rect.position, sprite.region_rect.size]
-	return "%s:%s:%s:%s:%s:%s%s" % [sprite.texture.get_rid(), int(sprite.get_meta("occlusion_texture_revision", 0)), sprite.hframes, sprite.vframes, sprite.frame, sprite.region_enabled, region_key]
-
-
-func _status_source_image(sprite: Sprite2D) -> Image:
-	if sprite == null or not is_instance_valid(sprite) or sprite.texture == null:
-		return null
-	var key := _status_sprite_cache_key(sprite)
-	if status_source_image_cache.has(key):
-		return status_source_image_cache[key] as Image
-	var image: Image = null
-	var source := sprite.texture
-	if source is AtlasTexture:
-		var atlas_texture := source as AtlasTexture
-		if atlas_texture.atlas == null:
-			return null
-		var atlas_image := atlas_texture.atlas.get_image()
-		if atlas_image == null or atlas_image.is_empty():
-			return null
-		var region := Rect2i(atlas_texture.region.position, atlas_texture.region.size)
-		if region.position.x < 0 or region.position.y < 0 or region.end.x > atlas_image.get_width() or region.end.y > atlas_image.get_height():
-			return null
-		image = atlas_image.get_region(region)
-	else:
-		image = source.get_image()
-	if image == null or image.is_empty():
-		return null
-	if image.is_compressed() and image.decompress() != OK:
-		return null
-	if sprite.region_enabled:
-		var sprite_region := Rect2i(sprite.region_rect.position, sprite.region_rect.size)
-		if sprite_region.size.x <= 0 or sprite_region.size.y <= 0 or sprite_region.position.x < 0 or sprite_region.position.y < 0 or sprite_region.end.x > image.get_width() or sprite_region.end.y > image.get_height():
-			return null
-		image = image.get_region(sprite_region)
-	var horizontal_frames := maxi(sprite.hframes, 1)
-	var vertical_frames := maxi(sprite.vframes, 1)
-	if horizontal_frames > 1 or vertical_frames > 1:
-		var frame_width := floori(float(image.get_width()) / float(horizontal_frames))
-		var frame_height := floori(float(image.get_height()) / float(vertical_frames))
-		var frame_index := clampi(sprite.frame, 0, horizontal_frames * vertical_frames - 1)
-		var frame_x := frame_index % horizontal_frames
-		var frame_y := floori(float(frame_index) / float(horizontal_frames))
-		var frame_region := Rect2i(frame_x * frame_width, frame_y * frame_height, frame_width, frame_height)
-		if frame_region.size.x <= 0 or frame_region.size.y <= 0:
-			return null
-		image = image.get_region(frame_region)
-	status_source_image_cache[key] = image
-	return image
-
-
 func request_effect(kind: StringName, position: Vector2) -> void:
 	effect_requested.emit(kind, position)
 
@@ -1140,6 +1065,15 @@ func _count_tagged_particles(effect_tag: StringName) -> int:
 	var count := 0
 	for particle_data: Dictionary in pixel_particles:
 		if particle_data.get("effect_tag", &"") == effect_tag:
+			count += 1
+	return count
+
+
+func _count_status_particles() -> int:
+	var count := 0
+	for particle_data: Dictionary in pixel_particles:
+		var effect_tag := StringName(str(particle_data.get("effect_tag", "")))
+		if String(effect_tag).begins_with("status_"):
 			count += 1
 	return count
 

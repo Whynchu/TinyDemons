@@ -919,6 +919,26 @@ also remain useful follow-up.
 
 ## Infrastructure findings
 
+### Enemy/status crowd performance — source optimization implemented, runtime profile open (2026-10-06)
+
+Status particles previously read back each animated actor texture and scanned its
+pixels to find opaque edge positions. Their frame-keyed image/edge caches caused
+repeat work as enemy animation frames changed; each status also emitted particles
+at short intervals, allowing many extra drawables to stay alive in crowded
+rooms. Status particles now sample the actor's sprite bounds without texture
+readback and have a separate 16-particle active cap. Status presentation records
+are sorted once per status change and reused by the aura and HUD paths. Performance
+capture now records `enemy_status_visuals` and `enemy_overhead_hud` scopes to
+separate those costs in a live capture. A second source hotspot was found in
+status outlines: the cache key included OcclusionRenderer's texture revision,
+which advances on every highlighted/occluded frame, so an active status could
+re-scan the image and upload an outline every frame. Status outlines now reuse a
+stable sprite/frame key and the shared cache is bounded. Chill crystals and Wet
+bubbles now emit from an inset sprite perimeter so their centered particles stay
+closer to the affected actor. `git diff --check` passes; Godot runtime and device
+measurements have not been run, so the frame-rate improvement remains
+unverified.
+
 | Finding | Impact | Next evidence or decision |
 |---|---|---|
 | Full smoke runner has 147 runnable manifest paths; the default gate selects 44 and launches one Godot process per selected path | Slow feedback and possible Windows renderer/memory failure avalanche | Use the default gate for release checks and `-TestGroup all` only as a supervised inventory; runner isolates each worker with temporary user data and Dummy audio |

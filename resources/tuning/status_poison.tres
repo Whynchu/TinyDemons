@@ -1,6 +1,7 @@
-[gd_resource type="Resource" script_class="StatusEffectDefinition" format=3 uid="uid://dxndamnfn35ac"]
+[gd_resource type="Resource" script_class="StatusEffectDefinition" load_steps=3 format=3 uid="uid://dxndamnfn35ac"]
 
 [ext_resource type="Script" uid="uid://75h25dl2ihvv" path="res://scripts/content/status_effect_definition.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/artwork/poison.png" id="2"]
 
 [resource]
 script = ExtResource("1")
@@ -11,6 +12,8 @@ magnitude_per_stack = 0.0
 damage_percent_max_health_per_stack = 2.0
 tick_interval = 2.0
 badge_glyph = "P"
+badge_icon = ExtResource("2")
+badge_icon_uses_element_palette = true
 particle_style = &"poison_mote"
 particle_interval = 0.16
 transmissible = true

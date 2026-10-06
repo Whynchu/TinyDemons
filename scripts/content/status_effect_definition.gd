@@ -35,6 +35,8 @@ const PARTICLE_STYLES: Array[StringName] = [&"ember", &"poison_mote", &"electric
 @export_range(0.05, 10.0, 0.05) var periodic_damage_interval := 1.0
 @export_range(0.0, 4.0, 0.05) var vulnerability_per_stack := 0.0
 @export var badge_glyph := "?"
+@export var badge_icon: Texture2D
+@export var badge_icon_uses_element_palette := false
 @export var particle_style: StringName = &"ember"
 @export_range(0.02, 1.0, 0.01) var particle_interval := 0.12
 @export_group("Ambient modifier")
@@ -111,6 +113,10 @@ func validate() -> Array[String]:
 			problems.append("extinguished id '%s' is not a registered status" % String(extinguished_id))
 	if badge_glyph.is_empty():
 		problems.append("badge_glyph must not be empty")
+	if badge_icon == null:
+		problems.append("badge_icon must be assigned")
+	elif badge_icon.get_width() != 7 or badge_icon.get_height() != 7:
+		problems.append("badge_icon must be 7x7 pixels")
 	if not PARTICLE_STYLES.has(particle_style):
 		problems.append("particle_style '%s' is not registered" % String(particle_style))
 	if particle_interval <= 0.0:
