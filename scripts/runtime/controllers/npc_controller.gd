@@ -345,7 +345,7 @@ func _update_allocation_choices(root: Object) -> void:
 		var label_size := selected_text.texture.get_size() if selected_text.texture != null else Vector2.ZERO
 		var cursor_size := dialogue_choice_cursor.texture.get_size() if dialogue_choice_cursor.texture != null else Vector2.ZERO
 		var cursor_position := selected_text.position + Vector2(-cursor_size.x + 1.0, (label_size.y - cursor_size.y) * 0.5)
-		dialogue_choice_cursor.position = root.call("_snap_half_pixel", cursor_position) as Vector2
+		dialogue_choice_cursor.position = Vector2(snappedf(cursor_position.x, 0.5), snappedf(cursor_position.y, 0.5))
 
 
 func _highlight_button_texture(source: Texture2D) -> Texture2D:

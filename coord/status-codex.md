@@ -1355,3 +1355,13 @@ Aligned the title menu, README, and versioning guide to 0.3.61 for the Cloaked
 Demon dialogue cursor fix. MCP configuration files remain excluded. Focused
 NPC script diagnostics and `git diff --check` pass; no gameplay test or
 playtest was run.
+
+## Completed: Dialogue cursor composition audit correction
+
+Snapped the dialogue cursor position locally to half pixels, removing the extra
+dynamic root dispatch. Kept the new cursor reference on the existing
+GameplayState wiring line, preserving its 1,714-line baseline. Composition
+audit passes: 1,859 root accesses; NpcController is at 50 dynamic calls / 51
+reach-throughs. Focused NPC diagnostics and `git diff --check` pass;
+GameplayState still reports its pre-existing line-390 diagnostic. No gameplay
+test or playtest was run. Prepared version 0.3.62 for main.
