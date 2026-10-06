@@ -1,10 +1,10 @@
 [gd_resource type="Resource" script_class="ElementCatalogData" format=3 uid="uid://4ajigh1ne1p7"]
 
 [ext_resource type="Script" uid="uid://el64kwlk2c7l" path="res://scripts/content/element_catalog_data.gd" id="1"]
-[ext_resource type="Resource" path="res://resources/tuning/status_burn.tres" id="2"]
-[ext_resource type="Resource" path="res://resources/tuning/status_poison.tres" id="3"]
+[ext_resource type="Resource" uid="uid://dv2wbp0wswerx" path="res://resources/tuning/status_burn.tres" id="2"]
+[ext_resource type="Resource" uid="uid://dxndamnfn35ac" path="res://resources/tuning/status_poison.tres" id="3"]
 [ext_resource type="Resource" path="res://resources/tuning/status_chill.tres" id="4"]
-[ext_resource type="Resource" path="res://resources/tuning/status_shocked.tres" id="5"]
+[ext_resource type="Resource" uid="uid://dp7qwt6ubqrrm" path="res://resources/tuning/status_shocked.tres" id="5"]
 [ext_resource type="Resource" path="res://resources/tuning/status_wet.tres" id="6"]
 [ext_resource type="Resource" path="res://resources/tuning/status_freeze.tres" id="7"]
 [ext_resource type="Script" uid="uid://dp1awiv5kxpmh" path="res://scripts/content/status_mixture_definition.gd" id="8"]

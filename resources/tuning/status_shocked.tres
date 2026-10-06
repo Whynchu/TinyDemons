@@ -1,6 +1,6 @@
-[gd_resource type="Resource" script_class="StatusEffectDefinition" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="StatusEffectDefinition" format=3 uid="uid://dp7qwt6ubqrrm"]
 
-[ext_resource type="Script" path="res://scripts/content/status_effect_definition.gd" id="1"]
+[ext_resource type="Script" uid="uid://75h25dl2ihvv" path="res://scripts/content/status_effect_definition.gd" id="1"]
 
 [resource]
 script = ExtResource("1")
@@ -9,15 +9,9 @@ element = 3
 family = 2
 proc_chance = 0.1
 duration = 6.0
-maximum_stacks = 3
 magnitude_per_stack = 0.0
-stun_interval = 1.0
-stun_interval_reduction_per_extra_stack = 0.05
-stun_interval_floor = 0.5
-stun_lock_duration = 0.2
 periodic_damage_percent_max_health_per_stack = 2.0
 periodic_damage_interval = 3.0
 badge_glyph = "S"
 particle_style = &"electric_spark"
-particle_interval = 0.12
 transmissible = true

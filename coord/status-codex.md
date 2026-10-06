@@ -26,8 +26,9 @@ package; shop refresh preserves its rolled points while the visible price stays
 
 Release preparation: shop refresh now adds the guaranteed sword only when
 generating new run stock, and regression fixtures restore the original run ID.
-Version 0.3.57 is staged for the authorized push. Gameplay smoke/export remains
-unrun while the shared editor is active.
+Version 0.3.57 was pushed. The follow-up elemental tuning resources are being
+released as 0.3.58 with Shocked held to the agreed six-second duration.
+Gameplay smoke/export remains unrun while the shared editor is active.
 
 ## Completed: Shocked duration and status load hitch
 
