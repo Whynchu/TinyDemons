@@ -17,7 +17,7 @@ func _initialize() -> void:
 	_expect(burn != null and poison != null and chill != null and shocked != null and wet != null, "catalog resolves Burn, Poison, Chill, Shocked, and Wet by stable id", failures)
 	_expect(burn != null and is_equal_approx(burn.duration, 3.0) and is_equal_approx(burn.damage_percent_max_health_per_stack, 3.0) and is_equal_approx(burn.tick_interval, 1.0), "Burn uses its 3%-by-1-second base cadence", failures)
 	_expect(poison != null and is_equal_approx(poison.duration, 6.0) and is_equal_approx(poison.damage_percent_max_health_per_stack, 2.0) and is_equal_approx(poison.tick_interval, 2.0), "Poison uses its 2%-by-2-second cadence over 6 seconds", failures)
-	_expect(shocked != null and is_equal_approx(shocked.duration, 12.0) and is_equal_approx(shocked.periodic_damage_percent_max_health_per_stack, 2.0) and is_equal_approx(shocked.periodic_damage_interval, 3.0), "Shocked uses its 2%-by-3-second cadence over 12 seconds", failures)
+	_expect(shocked != null and is_equal_approx(shocked.duration, 6.0) and is_equal_approx(shocked.periodic_damage_percent_max_health_per_stack, 2.0) and is_equal_approx(shocked.periodic_damage_interval, 3.0), "Shocked uses its 2%-by-3-second cadence over 6 seconds", failures)
 	if burn == null or poison == null or chill == null or shocked == null or wet == null:
 		_finish(failures)
 		return

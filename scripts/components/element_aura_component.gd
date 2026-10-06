@@ -3,6 +3,7 @@ class_name ElementAuraComponent
 
 const ElementCatalogScript = preload("res://scripts/content/element_catalog.gd")
 const IMBUE_EMISSION_TAG := &"imbue_element"
+const STATUS_OUTLINE_OFFSETS: Array[Vector2i] = [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]
 
 @export var actor_sprite: Sprite2D
 # Player attacks temporarily render through a separate sprite; include it in the aura source set.
@@ -312,26 +313,44 @@ func _outline_texture(source_sprite: Sprite2D, color: Color) -> Texture2D:
 	var image := _sprite_source_image(source_sprite)
 	if image == null or image.is_empty():
 		return null
+	if image.get_format() != Image.FORMAT_RGBA8:
+		image = image.duplicate()
+		image.convert(Image.FORMAT_RGBA8)
 	var frame_display_size := _sprite_display_frame_size(source_sprite)
 	var border_pixels := Vector2i(
 		maxi(roundi(float(image.get_width()) / float(frame_display_size.x)), 1),
 		maxi(roundi(float(image.get_height()) / float(frame_display_size.y)), 1)
 	)
-	var output := Image.create(
-		image.get_width() + border_pixels.x * 2,
-		image.get_height() + border_pixels.y * 2,
-		false,
-		Image.FORMAT_RGBA8
-	)
-	output.fill(Color.TRANSPARENT)
+	var output_width := image.get_width() + border_pixels.x * 2
+	var output_height := image.get_height() + border_pixels.y * 2
+	var output_data := PackedByteArray()
+	output_data.resize(output_width * output_height * 4)
+	output_data.fill(0)
+	var source_data := image.get_data()
+	var red := roundi(color.r * 255.0)
+	var green := roundi(color.g * 255.0)
+	var blue := roundi(color.b * 255.0)
+	var alpha := roundi(color.a * 255.0)
 	for y in image.get_height():
 		for x in image.get_width():
-			if image.get_pixel(x, y).a <= 0.0:
+			var source_index := (y * image.get_width() + x) * 4
+			if source_data[source_index + 3] == 0:
 				continue
-			for offset in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+			for offset in STATUS_OUTLINE_OFFSETS:
 				var neighbor: Vector2i = Vector2i(x, y) + offset
-				if neighbor.x < 0 or neighbor.y < 0 or neighbor.x >= image.get_width() or neighbor.y >= image.get_height() or image.get_pixelv(neighbor).a <= 0.0:
-					output.set_pixel(x + border_pixels.x + offset.x, y + border_pixels.y + offset.y, color)
+				var neighbor_empty := neighbor.x < 0 or neighbor.y < 0 or neighbor.x >= image.get_width() or neighbor.y >= image.get_height()
+				if not neighbor_empty:
+					var neighbor_index := (neighbor.y * image.get_width() + neighbor.x) * 4
+					neighbor_empty = source_data[neighbor_index + 3] == 0
+				if neighbor_empty:
+					var target_x := x + border_pixels.x + offset.x
+					var target_y := y + border_pixels.y + offset.y
+					var target_index := (target_y * output_width + target_x) * 4
+					output_data[target_index] = red
+					output_data[target_index + 1] = green
+					output_data[target_index + 2] = blue
+					output_data[target_index + 3] = alpha
+	var output := Image.create_from_data(output_width, output_height, false, Image.FORMAT_RGBA8, output_data)
 	var texture := ImageTexture.create_from_image(output)
 	# Target highlighting uses a two-times source image with a logical size
 	# override. Keep the ailment outline in the sprite's displayed pixel size too;

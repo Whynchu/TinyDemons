@@ -31,7 +31,7 @@ applied status or innate elemental affinity:
 | Innate Fire affinity | Ice | Ice melts; apply Wet instead of Chill | Implemented |
 | Wet + Chill coexist | Either ingredient was just applied | Consume applied Wet/Chill ingredients; apply Freeze | Implemented; preserve |
 | Wet | Electric | +35% Electric damage taken per Wet stack; Shocked cadence divided by 1.5 per Wet stack to the configured floor | Implemented; preserve |
-| Shocked | Time passes | Periodic action-lock pulses plus 2% of target max HP per stack every 3 s for a 12-second status duration | Implemented |
+| Shocked | Time passes | Periodic action-lock pulses plus 2% of target max HP per stack every 3 s for a 6-second status duration | Implemented |
 | Freeze | Enemy acts | Enemy attack update pauses until Freeze expires; it resumes from its current attack frame | Implemented |
 
 The three new heat/cold-to-Wet reactions consume their triggering status: Burn
@@ -48,15 +48,15 @@ status behavior continues to apply.
 The authored 3/2/2 values are percentages of the affected actor's maximum
 health per stack per tick, rather than literal HP. This keeps DoT strength
 relevant across different health pools. Per-second potency is Burn 3%, Poison
-1%, then Shocked about 0.67%; the longer Shocked duration changes total damage
-per application as shown below. Each tick is rounded to whole HP, with a 1 HP
+1%, then Shocked about 0.67%; Shocked's six-second duration yields 4% total
+damage per stack as shown below. Each tick is rounded to whole HP, with a 1 HP
 minimum for a positive tick.
 
 | Status | Per-stack damage | Tick interval | Duration | Total per stack |
 |---|---:|---:|---:|---:|
 | Burn | 3% max HP | 1 s | 3 s | 9% max HP |
 | Poison | 2% max HP | 2 s | 6 s | 6% max HP |
-| Shocked | 2% max HP | 3 s | 12 s | 8% max HP |
+| Shocked | 2% max HP | 3 s | 6 s | 4% max HP |
 
 ## Implementation sequence
 
@@ -87,7 +87,7 @@ minimum for a positive tick.
    avoid silently multiplying the DoT).
 5. **Tune and document — initial values recorded.** Burn, Poison, and Shocked
    tick for 3%, 2%, and 2% of target maximum health per stack, at 1, 2, and 3
-   second intervals; their durations are 3, 6, and 12 seconds. Wet does not
+    second intervals; their durations are 3, 6, and 6 seconds. Wet does not
    amplify Shocked ticks. Enemy attacks pause while Freeze is active. Tune
    further only with combat evidence. The tuning index and interaction tables
    now match source.
@@ -107,7 +107,7 @@ minimum for a positive tick.
 - Reaction outcomes respect target status immunity and current boss
   invulnerability/status restrictions.
 - Burn, Poison, and Shocked deal 3%, 2%, and 2% of target maximum HP per stack
-  per tick, with 1/2/3-second tick intervals and 3/6/12-second durations.
+  per tick, with 1/2/3-second tick intervals and 3/6/6-second durations.
 - Shocked retains its action-lock pulses; damage ticks do not proc statuses or
   add hitstop, and Wet does not amplify their damage.
 - Freeze pauses enemy attack updates for its full duration and resumes the
@@ -124,7 +124,7 @@ minimum for a positive tick.
 Status tick values are percentages of the affected actor's maximum health per
 stack, so they scale across health pools instead of representing literal HP.
 The current accepted starting values are Burn 3%/1s/3s, Poison 2%/2s/6s, and
-Shocked 2%/3s/12s. Confirm their total pressure at normal and boss health
+Shocked 2%/3s/6s. Confirm their total pressure at normal and boss health
 scales before treating them as final balance.
 
 ## Runtime ownership and current evidence

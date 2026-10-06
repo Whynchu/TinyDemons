@@ -1119,3 +1119,9 @@ Fixed save-select cursor spacing, Fusion's overlapping inherited quantity glyph,
 
 ## 2026-10-06T17:45Z - codex - done
 First-use status lag traced to repeated per-actor sprite outline generation; moved the outline texture cache to shared component state and added reuse coverage. Added to the 0.3.50 release candidate.
+
+## 2026-10-06T18:00Z - codex - claim
+Reduce Shocked duration to six seconds and trace the reported heavy hitch in rooms loading with Shocked enemies; prior shared outline cache did not address the player's repro.
+
+## 2026-10-06T18:30Z - codex - done
+Shortened Shocked duration from 12 to 6 seconds and optimized status outline and particle-edge scans with raw RGBA access and shared neighbor offsets. Focused test sources updated; editor diagnostics pass. Version 0.3.51 prepared for push.

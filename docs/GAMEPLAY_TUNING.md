@@ -134,7 +134,7 @@ per tick, rounded to whole HP with a 1 HP minimum for any positive tick.
 | Burn | Fire | 20% per eligible hit | 3.0 s | 3% of target max HP per stack every 1 s (9% total per stack); cap 3 | Imbue-like rising ember trail / 0.08 s |
 | Poison | Shadow | 20% per eligible hit | 6.0 s | 2% of target max HP per stack every 2 s (6% total per stack); cap 3 | Rising poison motes / 0.16 s |
 | Chill | Ice | 20% per eligible hit | 2.0 s | 15% movement and attack-speed reduction per stack; cap 3; multiplier floor 0.55 | Drifting frost crystals / 0.16 s |
-| Shocked | Electric | 10% per eligible hit | 12.0 s | 2% of target max HP per stack every 3 s (8% total per stack); immediate 0.2 s action lock on proc, then repeat every 1 s; each extra stack reduces repeat cadence by 0.05 s to a 0.5 s floor; cap 3 | Electric sparks every 0.12 s; sprite-only jolt for 0.2 s per lock |
+| Shocked | Electric | 10% per eligible hit | 6.0 s | 2% of target max HP per stack every 3 s (4% total per stack); immediate 0.2 s action lock on proc, then repeat every 1 s; each extra stack reduces repeat cadence by 0.05 s to a 0.5 s floor; cap 3 | Electric sparks every 0.12 s; sprite-only jolt for 0.2 s per lock |
 | Wet | Water | 25% per eligible hit | 3.0 s | Cap 2; each applied stack adds 35% Electric damage taken; divides Shocked cadence by 1.5 per stack (0.5 s interval floor); removes up to 3 applied Burn stacks when Wet is applied | Slow-rising bubbles / 0.22 s |
 | Freeze | Water + Ice mixture | Guaranteed when Wet and Chill coexist | 3.0 s | Consumes applied Wet and Chill; locks movement; enemy attacks pause until expiry; direct incoming damage +25%; Fire melts applied Freeze into Wet | Ice shards / 0.14 s |
 

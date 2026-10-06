@@ -4,6 +4,7 @@ const ElementCatalogScript = preload("res://scripts/content/element_catalog.gd")
 const ElementAuraComponentScript = preload("res://scripts/components/element_aura_component.gd")
 const SlimeActorScript = preload("res://scripts/actors/slime_actor.gd")
 const HudControllerScript = preload("res://scripts/ui/hud_controller.gd")
+const EffectsSpawnerScript = preload("res://scripts/runtime/services/effects_spawner.gd")
 
 var _finished := false
 var _attack_update_count := 0
@@ -143,6 +144,7 @@ func _assert_status_marker_draw_order(freeze: StatusEffectDefinition, failures: 
 	var marker := aura._status_outline as Sprite2D
 	_expect(marker != null and marker.top_level and not marker.z_as_relative, "status marker uses an absolute world-space draw layer", failures)
 	_expect(marker != null and marker.z_index < actor.z_index, "status marker renders underneath its character sprite", failures)
+	_expect(marker != null and marker.texture != null and marker.texture.get_size() == Vector2i(4, 4), "sprite outline byte scan preserves the one-pixel border", failures)
 	var second_actor := Sprite2D.new()
 	second_actor.texture = shared_texture
 	second_actor.z_index = 4
@@ -166,6 +168,10 @@ func _assert_status_marker_draw_order(freeze: StatusEffectDefinition, failures: 
 	var enemy_badge: Sprite2D = enemy_badges[0] as Sprite2D if not enemy_badges.is_empty() else null
 	_expect(enemy_badge != null and enemy_badge.top_level and not enemy_badge.z_as_relative and enemy_badge.z_index < actor.z_index, "enemy status badge renders behind its actor sprite", failures)
 	hud.free()
+	var effects := EffectsSpawnerScript.new() as EffectsSpawner
+	var edge_positions := effects._status_edge_positions(actor)
+	_expect(edge_positions.size() == 4, "status particle edge scan keeps the complete outline boundary", failures)
+	effects.free()
 	world.queue_free()
 
 

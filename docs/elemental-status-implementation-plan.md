@@ -121,7 +121,7 @@ call the ordinary damage entry point.
 | Fire Burn | 20% per eligible hit | 3.0 s | 3% of target max HP per stack every 1 s | 3 |
 | Shadow Poison | 20% per eligible hit | 6.0 s | 2% of target max HP per stack every 2 s | 3 |
 | Ice Chill | 20% per eligible hit | 2.0 s | 15% movement and attack-speed slow per stack | 3 |
-| Electric Shocked | 10% per eligible hit | 12.0 s | 2% of target max HP per stack every 3 s, plus immediate 0.2 s action lock and repeat locks every 1 s; each extra stack shortens lock cadence by 0.05 s, floor 0.5 s | 3 |
+| Electric Shocked | 10% per eligible hit | 6.0 s | 2% of target max HP per stack every 3 s, plus immediate 0.2 s action lock and repeat locks every 1 s; each extra stack shortens lock cadence by 0.05 s, floor 0.5 s | 3 |
 
 All values live on typed status definitions and remain tuneable. The numbers are
 starting values for playtesting, not a final balance sign-off.

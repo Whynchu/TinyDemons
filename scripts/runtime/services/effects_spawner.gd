@@ -34,6 +34,7 @@ const CHARGE_AURA_TAG := &"charge_aura"
 const SUPPORT_HEAL_CHARGE_TAG := &"support_heal_charge"
 const SUPPORT_HEAL_BURST_TAG := &"support_heal_burst"
 const IMBUE_ELEMENT_TAG := &"imbue_element"
+const STATUS_EDGE_OFFSETS: Array[Vector2i] = [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]
 const SWORD_BEAM_CHROMA_COST := 20
 var pixel_text_texture_factory: PixelTextTextureFactory = PixelTextTextureFactoryScript.new() as PixelTextTextureFactory
 var pixel_particle_texture_cache: Dictionary = {}
@@ -1034,16 +1035,31 @@ func _status_edge_positions(sprite: Sprite2D) -> Array:
 	var image := _status_source_image(sprite)
 	if image == null or image.is_empty():
 		return []
+	if image.get_format() != Image.FORMAT_RGBA8:
+		image = image.duplicate()
+		image.convert(Image.FORMAT_RGBA8)
+		status_source_image_cache[key] = image
+	var source_data := image.get_data()
+	var image_width := image.get_width()
+	var image_height := image.get_height()
 	var positions: Array[Vector2i] = []
-	for y in image.get_height():
-		for x in image.get_width():
-			if image.get_pixel(x, y).a <= 0.0:
+	for y in image_height:
+		for x in image_width:
+			var source_index := (y * image_width + x) * 4
+			if source_data[source_index + 3] == 0:
 				continue
-			for offset in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+			var has_empty_neighbor := false
+			for offset in STATUS_EDGE_OFFSETS:
 				var neighbor: Vector2i = Vector2i(x, y) + offset
-				if neighbor.x < 0 or neighbor.y < 0 or neighbor.x >= image.get_width() or neighbor.y >= image.get_height() or image.get_pixelv(neighbor).a <= 0.0:
-					positions.append(Vector2i(x, y))
+				if neighbor.x < 0 or neighbor.y < 0 or neighbor.x >= image_width or neighbor.y >= image_height:
+					has_empty_neighbor = true
 					break
+				var neighbor_index := (neighbor.y * image_width + neighbor.x) * 4
+				if source_data[neighbor_index + 3] == 0:
+					has_empty_neighbor = true
+					break
+			if has_empty_neighbor:
+				positions.append(Vector2i(x, y))
 	status_edge_position_cache[key] = positions
 	return positions
 
