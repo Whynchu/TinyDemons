@@ -974,7 +974,7 @@ func _update_cooldown_icon(root: Object, ability_key: StringName, remaining: flo
 			timer_shadow.texture = cooldown_timer_texture(shown, COOLDOWN_TIMER_SHADOW_COLOR)
 
 
-func update_overworld(root: Object, delta: float, ui_z: int) -> void:
+func update_overworld(root: GameplayState, delta: float, ui_z: int) -> void:
 	# Pause and Hub keep the overworld HUD node alive for the currency/status
 	# presentation, but the interactive gameplay HUD is covered by the menu.
 	# Rebuilding prompt textures, cooldown textures, and every enemy overhead bar
@@ -1000,7 +1000,8 @@ func update_overworld(root: Object, delta: float, ui_z: int) -> void:
 	update_run_timer(root)
 	var enemy_overhead_started_usec := Time.get_ticks_usec()
 	update_overhead_bars(root.get("slimes"), Callable(root, "_enemy_max_health"), Callable(root, "_slime_current_health"), Callable(root, "_slime_display_health"), Callable(root, "_is_slime_dead"), Callable(root, "_is_slime_aggroed"), Callable(self, "set_health_bar_values"), ui_z, Callable(root, "_is_slime_hidden"), Callable(root, "_pixel_text_texture"))
-	root.call("_record_performance_scope", &"enemy_overhead_hud", enemy_overhead_started_usec)
+	var gameplay := root
+	gameplay._record_performance_scope(&"enemy_overhead_hud", enemy_overhead_started_usec)
 
 
 func update_combo_hud(root: Object) -> void:

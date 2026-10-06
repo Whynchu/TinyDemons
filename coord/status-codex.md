@@ -1330,3 +1330,12 @@ Prepared the pending non-MCP status visuals, performance, and damage-number
 rollback sweep for `main`; active version references now read 0.3.59. Local MCP
 configuration changes are excluded. Runtime frame-time and gameplay validation
 have not been measured.
+
+## Completed: Composition audit regression follow-up
+
+Performance scopes call through typed `GameplayState` references instead of
+adding `root.call` seams. HUD's overworld entry point is typed accordingly. The
+composition regression-floor audit passes with 1,859 root accesses against the
+1,860 baseline; both affected scripts meet their per-file ceilings. Godot
+diagnostics and `git diff --check` pass. Preparing the correction as release
+0.3.60; runtime performance remains unmeasured.
