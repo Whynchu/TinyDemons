@@ -97,7 +97,7 @@ func _initialize() -> void:
 		demon_cloak.definition_id = &"demon_cloak"
 		demon_cloak.rarity = &"mythic"
 		demon_cloak.enhancement_level = PlayerProfile.MAX_ITEM_ENHANCEMENT
-		var cloak_bonus_lines := screens._equipment_bonus_lines(catalog, demon_cloak)
+		var cloak_bonus_lines: Array[String] = screens._equipment_bonus_lines(catalog, demon_cloak)
 		_expect(cloak_bonus_lines.size() == 3 and cloak_bonus_lines[0].count("\n") <= 1 and cloak_bonus_lines[1].count("\n") <= 1 and cloak_bonus_lines[2].count("\n") <= 1, "multi-stat equipment bonuses stay within the three-column two-row grid", failures)
 		view.set_pixel_texture(Callable(gameplay, "_pixel_text_texture"))
 		view.set_bonuses(cloak_bonus_lines)
@@ -141,7 +141,8 @@ func _initialize() -> void:
 		_expect(profile.get_equipped_instance_id(&"weapon") == expected_touch_equipped and screens.hub_equipment_mode == EquipmentMenuLayout.MODE_CANDIDATE and view.candidate_cursor.visible, "first touch previews the candidate without equipping it", failures)
 		if touch_candidates.size() > 1:
 			var selected_touch_index := int(screens.hub_gear_candidate_indices.get("weapon", 0))
-			var expected_cursor_y := float(view.candidate_buttons[touched_choice_row].position.y + 2.0)
+			var candidate_clip := view.get_node("CandidateClip") as Control
+			var expected_cursor_y := candidate_clip.position.y + view.candidate_buttons[touched_choice_row].position.y
 			_expect(touch_candidates[selected_touch_index].instance_id == touched_candidate_id and is_equal_approx(view.candidate_cursor.position.y, expected_cursor_y), "first touch moves the candidate cursor and stat preview to the tapped item", failures)
 			view.candidate_buttons[touched_choice_row].pressed.emit()
 			await process_frame

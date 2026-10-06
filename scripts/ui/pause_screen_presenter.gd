@@ -85,9 +85,7 @@ func build(
 				elif index == 2 and actions.equipment_remove_all.is_valid(): actions.equipment_remove_all.call())
 		if equipment_menu.has_signal("slot_pressed") and actions.select_gear_slot.is_valid():
 			equipment_menu.slot_pressed.connect(func(index: int): actions.select_gear_slot.call(index))
-		if equipment_menu.has_signal("candidate_pressed") and actions.tap_gear_candidate.is_valid():
-			equipment_menu.candidate_pressed.connect(func(index: int): actions.tap_gear_candidate.call(index))
-		elif equipment_menu.has_signal("candidate_pressed") and actions.select_gear_candidate.is_valid():
+		if equipment_menu.has_signal("candidate_pressed") and actions.select_gear_candidate.is_valid():
 			equipment_menu.candidate_pressed.connect(func(index: int): actions.select_gear_candidate.call(index))
 		if equipment_menu.has_signal("remove_all_confirmed"):
 			equipment_menu.remove_all_confirmed.connect(func(accepted: bool):

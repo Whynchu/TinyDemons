@@ -698,9 +698,6 @@ func _select_hub_gear_slot(slot_index: int) -> void:
 	_hub_economy_controller().call("select_hub_gear_slot", self, slot_index)
 func _select_hub_gear_candidate(choice_row: int) -> void:
 	_hub_economy_controller().call("select_hub_gear_candidate", self, choice_row)
-
-func _tap_hub_gear_candidate(choice_row: int) -> void:
-	_hub_economy_controller().call("tap_hub_gear_candidate", self, choice_row)
 func _close_hub_gear_browse() -> void:
 	_hub_economy_controller().call("close_hub_gear_browse", self)
 func _refresh_hub_fusion_candidates() -> void:

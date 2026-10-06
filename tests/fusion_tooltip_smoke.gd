@@ -96,7 +96,9 @@ func _initialize() -> void:
 	root.selected_equipped_instance_id = ""
 	controller_instance.hub_gear_candidate_indices = {"weapon": 0}
 	gear_flow.select_hub_gear_candidate(root, 1)
-	_expect(gear_candidates.size() > 1 and root.selected_equipped_instance_id == gear_candidates[1].instance_id, "touching a gear row equips that visible candidate", failures)
+	_expect(gear_candidates.size() > 1 and root.selected_equipped_instance_id.is_empty() and controller_instance.hub_gear_browsing and controller_instance.hub_gear_candidate_indices["weapon"] == 1, "first touch previews the visible candidate without equipping", failures)
+	gear_flow.select_hub_gear_candidate(root, 1)
+	_expect(root.selected_equipped_instance_id == gear_candidates[1].instance_id, "second touch on the selected gear row equips that candidate", failures)
 	_expect(not controller_instance.hub_gear_browsing, "touch gear selection closes the browse state", failures)
 	controller_instance.update_hub_ui(root, pixel)
 	_expect(equipment_view.get_node("SummaryPanel").visible and equipment_view.get_node("DescriptionPanel").visible, "equipment keeps its authored summary and description panels after selection", failures)
