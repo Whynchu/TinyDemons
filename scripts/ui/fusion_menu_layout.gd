@@ -76,6 +76,12 @@ func render_fusion(model: FusionMenuModel) -> void:
 		var quantity_value := get_node_or_null("SellQuantityValue") as Sprite2D
 		var quantity_text := "%d/%d" % [model.fusion_count, model.fusion_count_max]
 		_set_text(quantity_value, quantity_text, STAT_TEXT_COLOR)
+		# Shop uses this separate "x" before its quantity. Fusion already shows
+		# a fraction (current/maximum), so leaving the inherited glyph visible
+		# covers the first digit of the amount.
+		var quantity_x := get_node_or_null("SellQuantityX") as Sprite2D
+		if quantity_x != null:
+			quantity_x.visible = false
 		if quantity_value != null and quantity_value.texture != null:
 			var minus_icon := get_node_or_null("SellSubtractIcon") as Sprite2D
 			var plus_icon := get_node_or_null("SellAddIcon") as Sprite2D

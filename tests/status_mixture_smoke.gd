@@ -3,6 +3,7 @@ extends SceneTree
 const ElementCatalogScript = preload("res://scripts/content/element_catalog.gd")
 const ElementAuraComponentScript = preload("res://scripts/components/element_aura_component.gd")
 const SlimeActorScript = preload("res://scripts/actors/slime_actor.gd")
+const HudControllerScript = preload("res://scripts/ui/hud_controller.gd")
 
 var _finished := false
 var _attack_update_count := 0
@@ -128,7 +129,8 @@ func _assert_status_marker_draw_order(freeze: StatusEffectDefinition, failures: 
 	actor.z_index = 4
 	var image := Image.create(2, 2, false, Image.FORMAT_RGBA8)
 	image.fill(Color.WHITE)
-	actor.texture = ImageTexture.create_from_image(image)
+	var shared_texture := ImageTexture.create_from_image(image)
+	actor.texture = shared_texture
 	world.add_child(actor)
 	var status := StatusComponent.new()
 	status.name = "Status"
@@ -141,7 +143,36 @@ func _assert_status_marker_draw_order(freeze: StatusEffectDefinition, failures: 
 	var marker := aura._status_outline as Sprite2D
 	_expect(marker != null and marker.top_level and not marker.z_as_relative, "status marker uses an absolute world-space draw layer", failures)
 	_expect(marker != null and marker.z_index < actor.z_index, "status marker renders underneath its character sprite", failures)
+	var second_actor := Sprite2D.new()
+	second_actor.texture = shared_texture
+	second_actor.z_index = 4
+	world.add_child(second_actor)
+	var second_status := StatusComponent.new()
+	second_status.name = "Status"
+	second_actor.add_child(second_status)
+	var second_aura := ElementAuraComponentScript.new() as ElementAuraComponent
+	second_actor.add_child(second_aura)
+	second_aura.configure(second_actor, world, second_status)
+	second_status.apply_effect(freeze, ElementCatalogScript.Element.ICE)
+	_expect(marker != null and second_aura._status_outline != null and second_aura._status_outline.texture == marker.texture, "actors sharing a sprite frame reuse the generated status outline", failures)
+	var hud := HudControllerScript.new() as HudController
+	var actor_status := actor.get_node(^"Status") as StatusComponent
+	hud.update_player_status_marks(actor, actor_status, Callable(self, "_status_glyph_texture"))
+	var badge: Sprite2D = hud.player_status_markers[0] if not hud.player_status_markers.is_empty() else null
+	_expect(badge != null and badge.top_level and not badge.z_as_relative, "player status badge uses an absolute world-space draw layer", failures)
+	_expect(badge != null and badge.get_parent() == world and badge.z_index < actor.z_index, "player status badge renders behind the player sprite in the world", failures)
+	var enemy_badges: Array = []
+	hud._update_actor_status_markers(actor, actor_status, enemy_badges, Vector2.ZERO, Callable(self, "_status_glyph_texture"))
+	var enemy_badge: Sprite2D = enemy_badges[0] as Sprite2D if not enemy_badges.is_empty() else null
+	_expect(enemy_badge != null and enemy_badge.top_level and not enemy_badge.z_as_relative and enemy_badge.z_index < actor.z_index, "enemy status badge renders behind its actor sprite", failures)
+	hud.free()
 	world.queue_free()
+
+
+func _status_glyph_texture(_text: String, _color: Color) -> Texture2D:
+	var image := Image.create(1, 1, false, Image.FORMAT_RGBA8)
+	image.fill(Color.WHITE)
+	return ImageTexture.create_from_image(image)
 
 
 func _assert_boss_resistance(freeze: StatusEffectDefinition, failures: Array[String]) -> void:

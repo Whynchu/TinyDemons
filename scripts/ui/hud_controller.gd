@@ -497,9 +497,11 @@ func update_player_status_marks(anchor: Sprite2D, status_component: StatusCompon
 			marker.visible = false
 		return
 	var actor := status_component.get_parent() as Sprite2D
+	if actor == null:
+		return
 	_connect_status_transmission(actor, status_component)
 	var records := status_component.presentation_records()
-	var parent := anchor.get_node_or_null(^"../../..") as Node2D
+	var parent := actor.get_parent() as Node2D if actor != null else null
 	if parent == null:
 		return
 	while player_status_markers.size() < records.size():
@@ -511,9 +513,11 @@ func update_player_status_marks(anchor: Sprite2D, status_component: StatusCompon
 			continue
 		var record := records[index]
 		marker.texture = status_badge_texture(record.definition, pixel_text, record.arrived_by_transmission)
-		marker.position = Vector2(1.0 + float(index) * 8.0, 16.0) if record.arrived_by_transmission else Vector2(2.0 + float(index) * 8.0, 17.0)
+		marker.top_level = true
+		marker.z_as_relative = false
+		marker.global_position = actor.global_position + Vector2(2.0 + float(index) * 8.0, -8.0)
 		marker.scale = Vector2.ONE * (1.25 if _consume_status_transmission_flash(actor, record.definition.id) else 1.0)
-		marker.z_index = 5
+		marker.z_index = actor.z_index - 1
 		marker.visible = true
 
 

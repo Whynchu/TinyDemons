@@ -58,10 +58,7 @@ func update_save_select_cursor(root: Object) -> void:
 			(child as Button).release_focus()
 	var cursor := presenter.overlay.get_node_or_null("SaveSelectCursor") as Sprite2D
 	if cursor != null:
-		var display := root.get("display_controller") as DisplayController
-		var view_width := float(display.view_size_value().x) if display != null else 240.0
-		var slot_button: Button = presenter.slot_button(screen.save_select_index)
-		var cursor_target := Vector2(slot_button.position.x - screen.CURSOR_LEFT_GAP, slot_button.position.y + 5.0) if slot_button != null else Vector2((view_width - 130.0) * 0.5 - screen.CURSOR_LEFT_GAP, 70 + screen.save_select_index * 20)
+		var cursor_target: Vector2 = presenter.cursor_target(screen.save_select_index)
 		screen._menu_cursor_animator.move_menu_cursor(cursor, cursor_target, true, root)
 
 

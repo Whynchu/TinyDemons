@@ -1110,3 +1110,12 @@ Fix composition guard regressions reported after elemental status interactions; 
 
 ## 2026-10-06T16:30Z — codex — done
 Fixed all four composition audit regressions: StatusComponent receives typed HealthComponent, Shocked ticks share the regular damage route with elemental amplification disabled, and save/Fusion local aliases reduce root reach-through. Composition regression audit passes; changed-script MCP checks pass. Version set to 0.3.49.
+
+## 2026-10-06T17:00Z — codex — claim
+Fix the save-select cursor overlapping/being obscured by the profile portrait; centralize its target and add coverage.
+
+## 2026-10-06T17:30Z - codex - done
+Fixed save-select cursor spacing, Fusion's overlapping inherited quantity glyph, and player status badge layering; verified editor script diagnostics and diff cleanliness. Smoke execution remains pending.
+
+## 2026-10-06T17:45Z - codex - done
+First-use status lag traced to repeated per-actor sprite outline generation; moved the outline texture cache to shared component state and added reuse coverage. Added to the 0.3.50 release candidate.

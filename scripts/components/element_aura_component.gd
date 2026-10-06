@@ -11,7 +11,7 @@ const IMBUE_EMISSION_TAG := &"imbue_element"
 @export var status_component: StatusComponent
 
 var health_component: HealthComponent = null
-var _outline_texture_cache: Dictionary = {}
+static var _shared_outline_texture_cache: Dictionary = {}
 var _tint_texture_cache: Dictionary = {}
 var _imbue_outlines: Dictionary = {}
 var _imbue_flashes: Dictionary = {}
@@ -307,8 +307,8 @@ func _outline_texture(source_sprite: Sprite2D, color: Color) -> Texture2D:
 	if source_sprite == null or not is_instance_valid(source_sprite) or source_sprite.texture == null:
 		return null
 	var key := "%s:%s:%s" % [_sprite_cache_key(source_sprite), "outline", color.to_html(false)]
-	if _outline_texture_cache.has(key):
-		return _outline_texture_cache[key] as Texture2D
+	if _shared_outline_texture_cache.has(key):
+		return _shared_outline_texture_cache[key] as Texture2D
 	var image := _sprite_source_image(source_sprite)
 	if image == null or image.is_empty():
 		return null
@@ -337,7 +337,7 @@ func _outline_texture(source_sprite: Sprite2D, color: Color) -> Texture2D:
 	# override. Keep the ailment outline in the sprite's displayed pixel size too;
 	# otherwise Sprite2D draws that high-resolution texture twice as large.
 	texture.set_size_override(frame_display_size + Vector2i(2, 2))
-	_outline_texture_cache[key] = texture
+	_shared_outline_texture_cache[key] = texture
 	return texture
 
 

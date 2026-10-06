@@ -51,10 +51,12 @@ func _initialize() -> void:
 	var minus_button := fusion.get_node("SellMinusButton") as Button
 	var plus_button := fusion.get_node("SellPlusButton") as Button
 	var quantity_value := fusion.get_node("SellQuantityValue") as Sprite2D
+	var quantity_x := fusion.get_node("SellQuantityX") as Sprite2D
 	_expect(plus_button.visible and not plus_button.disabled and plus_button.mouse_filter == Control.MOUSE_FILTER_STOP, "Fusion plus touch target is enabled when additional materials are available", failures)
 	_expect(minus_button.visible and minus_button.disabled and minus_button.mouse_filter == Control.MOUSE_FILTER_IGNORE, "Fusion minus touch target is disabled at quantity one", failures)
 	_expect(fusion_button.mouse_filter == Control.MOUSE_FILTER_STOP, "Fusion FUSE footer remains touchable in amount state", failures)
 	_expect(quantity_value.texture != null and quantity_value.position.x > 52.0 and quantity_value.position.x + quantity_value.texture.get_width() < 85.0, "Fusion quantity is centered between the minus and plus glyphs", failures)
+	_expect(quantity_x != null and not quantity_x.visible, "Fusion fraction hides the inherited Shop quantity x glyph", failures)
 	layout.sell_amount_changed.connect(func(delta: int): _count_delta += delta)
 	plus_button.pressed.emit()
 	_expect(_count_delta == 1, "Fusion plus hitbox emits quantity increase", failures)

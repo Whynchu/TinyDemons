@@ -3,7 +3,21 @@
 _Only codex writes this file._
 
 **Focus:** Continue Stage 3.1 by extracting Hub construction and responsive layout
-**Updated:** 2026-10-04
+**Updated:** 2026-10-06
+
+## Completed: first-use status visual hitch
+
+Fixing the save-select cursor so its full bob animation stays left of slot
+portraits, hiding the Shop-only `x` glyph over Fusion's `current/maximum`
+quantity, and moving player status badges to the world layer behind the player
+sprite. Enemy overhead badges already use absolute world z-index below their
+actor; regression assertions now cover both player and enemy status marker
+ordering, plus the two menu overlaps. Status aura outline textures now use a
+shared cache keyed by source frame and tint, preventing repeated sprite pixel
+scans across actors using the same frame. The status smoke asserts reuse. MCP
+diagnostics pass for every changed GDScript file; `git diff --check` passes.
+Smoke execution was not run in the shared editor. The release candidate is
+version 0.3.50; MCP/client config edits are excluded from the push.
 
 ## Completed: Fusion candidate cache coherence
 Fusion candidate cache now keys on active PlayerProfile identity, inventory revision, and equipped-slot state, refreshing candidate rows and eligibility details when any changes. Script diagnostics pass. No playtest or suite run.

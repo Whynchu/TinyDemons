@@ -18,6 +18,16 @@ var _selected_slot := 0
 func slot_button(index: int) -> Button:
 	return _slot_buttons[index] if index >= 0 and index < _slot_buttons.size() else null
 
+
+func cursor_target(index: int) -> Vector2:
+	var selected := slot_button(index)
+	if selected == null:
+		return Vector2.ZERO
+	var cursor_width := MENU_CURSOR_TEXTURE.get_width()
+	# The cursor bobs three pixels right; leave a four-pixel rest gap so its
+	# entire animation stays outside the slot (and any portrait child).
+	return Vector2(selected.position.x - cursor_width - 4.0, selected.position.y + 5.0)
+
 func set_selected_slot(index: int) -> void:
 	if not _slot_buttons.is_empty():
 		_selected_slot = clampi(index, 0, _slot_buttons.size() - 1)
@@ -116,5 +126,4 @@ func position_controls(view_size: Vector2) -> void:
 func _update_cursor_anchor() -> void:
 	if _cursor_text == null or _slot_buttons.is_empty():
 		return
-	var selected := _slot_buttons[clampi(_selected_slot, 0, _slot_buttons.size() - 1)]
-	_cursor_text.position = Vector2(selected.position.x - 10.0, selected.position.y + 5.0)
+	_cursor_text.position = cursor_target(_selected_slot)
