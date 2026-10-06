@@ -149,9 +149,13 @@ func _initialize() -> void:
 		var portrait_expected := Vector2i(240, 160)
 		_expect(display.view_size_value() == portrait_expected, "portrait orientation clamps FULL to the native logical width", failures)
 		_expect(gameplay.get_window().content_scale_aspect == Window.CONTENT_SCALE_ASPECT_KEEP, "portrait orientation switches to crop-safe keep scaling", failures)
-		_expect(orientation_screens != null and (orientation_screens.settings_presenter.overlay as ColorRect).size == Vector2(portrait_expected), "portrait orientation resizes settings overlay", failures)
+		var portrait_visible_size := display.visible_view_size_value()
+		_expect(portrait_visible_size.y > float(portrait_expected.y), "portrait KEEP scaling exposes the taller visible logical surface", failures)
+		_expect(orientation_screens != null and (orientation_screens.settings_presenter.overlay as ColorRect).size == portrait_visible_size, "portrait orientation sizes settings overlay to the visible presentation surface", failures)
 		if orientation_screens != null:
-			_expect(orientation_screens.hub_overlay.visible and orientation_screens.hub_overlay.size == Vector2(portrait_expected), "portrait orientation keeps the active hub overlay sized to the native frame", failures)
+			_expect(orientation_screens.title_presenter.overlay.size == portrait_visible_size and orientation_screens.save_select_presenter.overlay.size == portrait_visible_size and orientation_screens.run_complete_presenter.overlay.size == portrait_visible_size, "portrait orientation keeps title, save, and result overlays on the visible presentation surface", failures)
+			_expect(orientation_screens.pause_overlay.size == portrait_visible_size, "portrait orientation keeps pause overlay on the visible presentation surface", failures)
+			_expect(orientation_screens.hub_overlay.visible and orientation_screens.hub_overlay.size == portrait_visible_size, "portrait orientation keeps the active hub overlay sized to the visible presentation surface", failures)
 			_expect(orientation_screens.hub_page == saved_hub_page and orientation_screens.hub_stat_row == saved_hub_row and orientation_screens.hub_content_focus == saved_hub_focus, "portrait orientation preserves hub route and selection state", failures)
 			var portrait_value := orientation_screens.hub_stat_value_texts[0] as Sprite2D
 			var portrait_value_aligned := portrait_value != null and portrait_value.texture != null and is_equal_approx(portrait_value.position.x + portrait_value.texture.get_width(), PauseMenuLayoutScript.left_field_x(93.0, display.view_size_as_vector().x))

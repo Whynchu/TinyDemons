@@ -14,7 +14,11 @@ func apply_display_layout(root: GameplayState) -> void:
 	# width when the browser viewport is wider than the configured content size.
 	# Menus are full-view overlays, so their frame and responsive anchors must
 	# use that visible width instead of the narrower content-scale width.
-	screen.display_view_size = display.visible_view_size_value() if display != null and DisplayLayout.is_full_aspect(display.aspect_mode()) else (Vector2(display.view_size_value()) if display != null else Vector2(DisplayLayout.NATIVE_SIZE))
+	# Every full-view menu shares one coordinate space: the visible logical
+	# presentation surface. Fixed aspect presets can letterbox in portrait, so
+	# sizing those overlays from their preset width leaves controls laid out for
+	# a different viewport than the one the player sees.
+	screen.display_view_size = display.visible_view_size_value() if display != null else Vector2(DisplayLayout.NATIVE_SIZE)
 	var game_over: Variant = root.get("game_over_overlay")
 	for overlay in [screen.title_presenter.overlay, screen.save_select_presenter.overlay, screen.name_entry_controller.widgets.overlay, screen.archetype_presenter.overlay, screen.run_complete_presenter.overlay, game_over] as Array:
 		if overlay != null and bool(overlay.get_meta("display_full_view", false)):
