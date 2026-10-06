@@ -484,12 +484,33 @@ func select_hub_gear_candidate(root: Object, choice_row: int) -> void:
 	if choice_row < 0 or choice_row >= visible_choice_count or candidate_index < 0 or candidate_index >= candidates.size():
 		return
 	root.screen_state_controller.hub_gear_candidate_indices[String(slot)] = candidate_index
-	# Authored Equipment buttons are direct touch targets. Controller/keyboard
-	# navigation still enters the same candidate mode and confirms separately,
-	# while a visible touch candidate commits through the shared transaction path
-	# in one tap instead of requiring controller-style preview nesting.
 	HubMenuStateScript.clear_touch_candidate(root.screen_state_controller)
 	hub_item_action(root)
+
+
+func tap_hub_gear_candidate(root: Object, choice_row: int) -> void:
+	if (root.screen_state_controller.hub_page != 1 and not root.screen_state_controller.is_pause_equipment_active()) or not root.screen_state_controller.hub_gear_browsing:
+		return
+	var selected_slot_index := clampi(root.screen_state_controller.hub_item_index, 0, ItemCatalog.SLOTS.size() - 1)
+	var slot: StringName = ItemCatalog.SLOTS[selected_slot_index]
+	var candidates := hub_gear_candidates(root, slot)
+	if candidates.is_empty():
+		return
+	var visible_choice_count := EquipmentMenuLayoutScript.CANDIDATE_VISIBLE_COUNT if root.screen_state_controller.hub_equipment_menu != null else HubResponsiveLayoutPresenterScript.LEGACY_GEAR_CHOICE_VISIBLE_ROWS
+	var window_start := int(floor(float(root.screen_state_controller.hub_choice_scroll) / 2.0)) * 2
+	var candidate_index := window_start + choice_row
+	if choice_row < 0 or choice_row >= visible_choice_count or candidate_index < 0 or candidate_index >= candidates.size():
+		return
+	var selected_by_slot: Dictionary = root.screen_state_controller.hub_gear_candidate_indices
+	var current_index := posmod(int(selected_by_slot.get(String(slot), 0)), candidates.size())
+	if current_index == candidate_index:
+		HubMenuStateScript.clear_touch_candidate(root.screen_state_controller)
+		hub_item_action(root)
+		return
+	selected_by_slot[String(slot)] = candidate_index
+	HubMenuStateScript.clear_touch_candidate(root.screen_state_controller)
+	root.screen_state_controller.refresh_equipment_menu(root)
+	root.call("_play_sound", "ui_hover", -6.0, 1.0)
 
 
 func close_hub_gear_browse(root: Object) -> void:

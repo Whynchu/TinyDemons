@@ -28,7 +28,9 @@ func _bind_equipment(menu: EquipmentMenuLayout, actions: HubScreenActions, set_a
 			actions.equipment_remove_all.call())
 	if actions.select_gear_slot.is_valid():
 		menu.slot_pressed.connect(actions.select_gear_slot)
-	if actions.select_gear_candidate.is_valid():
+	if actions.tap_gear_candidate.is_valid():
+		menu.candidate_pressed.connect(actions.tap_gear_candidate)
+	elif actions.select_gear_candidate.is_valid():
 		menu.candidate_pressed.connect(actions.select_gear_candidate)
 	menu.remove_all_confirmed.connect(func(accepted: bool):
 		if accepted and actions.equipment_remove_all.is_valid():

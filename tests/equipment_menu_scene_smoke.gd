@@ -118,11 +118,36 @@ func _initialize() -> void:
 		var input_tracker := gameplay.get("input_device_tracker") as InputDeviceTracker
 		var equipped_before_touch := profile.get_equipped_instance_id(&"weapon")
 		var touch_candidates := gameplay.call("_hub_gear_candidates", &"weapon") as Array[ItemInstance]
-		var expected_touch_equipped := equipped_before_touch if touch_candidates.is_empty() else touch_candidates[0].instance_id
+		var expected_touch_equipped := equipped_before_touch
+		var touched_candidate_id := ""
+		var touched_choice_row := 0
+		if not touch_candidates.is_empty():
+			var equipped_candidate_index := 0
+			for candidate_index in touch_candidates.size():
+				if touch_candidates[candidate_index].instance_id == equipped_before_touch:
+					equipped_candidate_index = candidate_index
+					break
+			var target_candidate_index := 0
+			for candidate_index in touch_candidates.size():
+				if candidate_index != equipped_candidate_index:
+					target_candidate_index = candidate_index
+					break
+			var window_start := int(floor(float(screens.hub_choice_scroll) / 2.0)) * 2
+			touched_choice_row = target_candidate_index - window_start
+			touched_candidate_id = touch_candidates[target_candidate_index].instance_id
 		if input_tracker != null: input_tracker.set_device(InputDeviceTracker.Device.TOUCH)
-		view.candidate_buttons[0].pressed.emit()
+		view.candidate_buttons[touched_choice_row].pressed.emit()
 		await process_frame
-		_expect(profile.get_equipped_instance_id(&"weapon") == expected_touch_equipped and screens.hub_touch_candidate_index == -1 and screens.hub_equipment_mode == EquipmentMenuLayout.MODE_SLOT_EQUIP, "one touch on a visible candidate commits the direct route and clears the legacy touch arm", failures)
+		_expect(profile.get_equipped_instance_id(&"weapon") == expected_touch_equipped and screens.hub_equipment_mode == EquipmentMenuLayout.MODE_CANDIDATE and view.candidate_cursor.visible, "first touch previews the candidate without equipping it", failures)
+		if touch_candidates.size() > 1:
+			var selected_touch_index := int(screens.hub_gear_candidate_indices.get("weapon", 0))
+			var expected_cursor_y := float(view.candidate_buttons[touched_choice_row].position.y + 2.0)
+			_expect(touch_candidates[selected_touch_index].instance_id == touched_candidate_id and is_equal_approx(view.candidate_cursor.position.y, expected_cursor_y), "first touch moves the candidate cursor and stat preview to the tapped item", failures)
+			view.candidate_buttons[touched_choice_row].pressed.emit()
+			await process_frame
+			_expect(profile.get_equipped_instance_id(&"weapon") == touched_candidate_id and screens.hub_equipment_mode == EquipmentMenuLayout.MODE_SLOT_EQUIP, "second touch on the selected candidate equips it", failures)
+		else:
+			_expect(screens.hub_equipment_mode == EquipmentMenuLayout.MODE_CANDIDATE, "single-candidate touch remains in preview until explicitly confirmed", failures)
 		gameplay.call("_close_hub_gear_browse")
 		await process_frame
 
@@ -173,6 +198,24 @@ func _initialize() -> void:
 		_expect(screens.pause_page == 2 and pause_view != null and pause_view.visible and not pause_view.read_only, "Pause reuses the shared interactive equipment presentation", failures)
 		if pause_view != null:
 			_expect((pause_view.get_node("SlotIcon0") as Sprite2D).texture != null and pause_view.navigation_text.texture != null and pause_view.navigation_back_button != null and pause_view.command_cursor.visible, "Pause keeps the six icons, select/back prompt, and live command cursor", failures)
+			var pause_equipped_before := profile.get_equipped_instance_id(&"weapon")
+			gameplay.call("_hub_item_action")
+			await process_frame
+			var pause_candidates := gameplay.call("_hub_gear_candidates", &"weapon") as Array[ItemInstance]
+			var pause_window_start := int(floor(float(screens.hub_choice_scroll) / 2.0)) * 2
+			var pause_target_index := 0
+			for candidate_index in pause_candidates.size():
+				if pause_candidates[candidate_index].instance_id != pause_equipped_before:
+					pause_target_index = candidate_index
+					break
+			var pause_choice_row := pause_target_index - pause_window_start
+			if pause_candidates.size() > 1 and pause_choice_row >= 0 and pause_choice_row < pause_view.candidate_buttons.size():
+				pause_view.candidate_buttons[pause_choice_row].pressed.emit()
+				await process_frame
+				_expect(profile.get_equipped_instance_id(&"weapon") == pause_equipped_before and screens.hub_equipment_mode == EquipmentMenuLayout.MODE_CANDIDATE, "Pause first touch previews without equipping", failures)
+				pause_view.candidate_buttons[pause_choice_row].pressed.emit()
+				await process_frame
+				_expect(profile.get_equipped_instance_id(&"weapon") == pause_candidates[pause_target_index].instance_id, "Pause second touch confirms the selected candidate", failures)
 			pause_view.navigation_back_button.pressed.emit()
 			await process_frame
 			_expect(screens.pause_page == 0, "the shared navigation-cell Back prompt returns Pause to its command page", failures)
