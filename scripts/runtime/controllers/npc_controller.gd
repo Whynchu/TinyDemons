@@ -16,6 +16,7 @@ var dialogue_button: Sprite2D = null
 var dialogue_button_shadow: Sprite2D = null
 var dialogue_yes_text: Sprite2D = null
 var dialogue_no_text: Sprite2D = null
+var dialogue_choice_cursor: Sprite2D = null
 var dialogue_yes_button: Button = null
 var dialogue_no_button: Button = null
 var dialogue_layer: CanvasLayer = null
@@ -39,6 +40,7 @@ var demon_visual_bounds := Rect2(12, 10, 12, 16)
 
 const DIALOGUE_MAX_WIDTH := 150
 const DIALOGUE_MAX_LINES := 4
+const DIALOGUE_CHOICE_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 
 
 func build_cloaked_demon_frames(library: SpriteFrameLibrary, actor: Sprite2D, frame_size: Vector2i, cached_image: Callable) -> Dictionary:
@@ -136,6 +138,7 @@ func hide_dialogue(_root: Object) -> void:
 	var shadow := dialogue_button_shadow; if shadow != null: shadow.visible = false
 	var yes_text := dialogue_yes_text; if yes_text != null: yes_text.visible = false
 	var no_text := dialogue_no_text; if no_text != null: no_text.visible = false
+	var choice_cursor := dialogue_choice_cursor; if choice_cursor != null: choice_cursor.visible = false
 	var yes_button := dialogue_yes_button; if yes_button != null: yes_button.visible = false
 	var no_button := dialogue_no_button; if no_button != null: no_button.visible = false
 	dialogue_input_was_down = false
@@ -278,9 +281,17 @@ func build_dialogue(parent: Node, continue_texture: Texture2D) -> Dictionary:
 	no_text.z_index = 2
 	no_text.visible = false
 	layer.add_child(no_text)
+	var choice_cursor := Sprite2D.new()
+	choice_cursor.name = "NpcDialogueChoiceCursor"
+	choice_cursor.texture = DIALOGUE_CHOICE_CURSOR_TEXTURE
+	choice_cursor.centered = false
+	choice_cursor.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	choice_cursor.z_index = 4
+	choice_cursor.visible = false
+	layer.add_child(choice_cursor)
 	var yes_button := _make_allocation_choice_button(layer, "NpcDialogueYesButton", 0)
 	var no_button := _make_allocation_choice_button(layer, "NpcDialogueNoButton", 1)
-	return {"layer": layer, "box": box, "text": text, "button": button, "shadow": shadow, "yes": yes_text, "no": no_text, "yes_button": yes_button, "no_button": no_button}
+	return {"layer": layer, "box": box, "text": text, "button": button, "shadow": shadow, "yes": yes_text, "no": no_text, "choice_cursor": choice_cursor, "yes_button": yes_button, "no_button": no_button}
 
 
 func _make_allocation_choice_button(parent: Node, button_name: String, choice: int) -> Button:
@@ -311,13 +322,13 @@ func _update_allocation_choices(root: Object) -> void:
 	var show_choices := allocation_prompt_active and dialogue_complete and box.visible
 	yes_text.visible = show_choices
 	no_text.visible = show_choices
+	if dialogue_choice_cursor != null: dialogue_choice_cursor.visible = show_choices
 	if dialogue_yes_button != null: dialogue_yes_button.visible = show_choices
 	if dialogue_no_button != null: dialogue_no_button.visible = show_choices
 	if not show_choices:
 		return
-	var selected_color := Color8(255, 205, 117)
-	yes_text.texture = root.call("_pixel_text_texture", "YES", selected_color if allocation_choice == 0 else Color.WHITE)
-	no_text.texture = root.call("_pixel_text_texture", "NO", selected_color if allocation_choice == 1 else Color.WHITE)
+	yes_text.texture = root.call("_pixel_text_texture", "YES", Color.WHITE)
+	no_text.texture = root.call("_pixel_text_texture", "NO", Color.WHITE)
 	if not bool(box.get_meta("choice_extension_applied", false)):
 		box.size.y += 12.0
 		box.set_meta("choice_extension_applied", true)
@@ -329,6 +340,12 @@ func _update_allocation_choices(root: Object) -> void:
 		dialogue_yes_button.position = root.call("_snap_half_pixel", box.position + Vector2(choice_group_x - 4.0, choice_y - 3.0))
 	if dialogue_no_button != null:
 		dialogue_no_button.position = root.call("_snap_half_pixel", box.position + Vector2(choice_group_x + 26.0, choice_y - 3.0))
+	if dialogue_choice_cursor != null:
+		var selected_text := yes_text if allocation_choice == 0 else no_text
+		var label_size := selected_text.texture.get_size() if selected_text.texture != null else Vector2.ZERO
+		var cursor_size := dialogue_choice_cursor.texture.get_size() if dialogue_choice_cursor.texture != null else Vector2.ZERO
+		var cursor_position := selected_text.position + Vector2(-cursor_size.x + 1.0, (label_size.y - cursor_size.y) * 0.5)
+		dialogue_choice_cursor.position = root.call("_snap_half_pixel", cursor_position) as Vector2
 
 
 func _highlight_button_texture(source: Texture2D) -> Texture2D:

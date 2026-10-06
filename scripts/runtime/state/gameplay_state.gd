@@ -1041,6 +1041,7 @@ func _build_npc_dialogue() -> void:
 	npc_controller.dialogue_button_shadow = dialogue["shadow"] as Sprite2D
 	npc_controller.dialogue_yes_text = dialogue["yes"] as Sprite2D
 	npc_controller.dialogue_no_text = dialogue["no"] as Sprite2D
+	npc_controller.dialogue_choice_cursor = dialogue["choice_cursor"] as Sprite2D
 	npc_controller.dialogue_yes_button = dialogue["yes_button"] as Button
 	npc_controller.dialogue_no_button = dialogue["no_button"] as Button
 func _build_room_number_indicator() -> void:

@@ -1339,3 +1339,19 @@ composition regression-floor audit passes with 1,859 root accesses against the
 1,860 baseline; both affected scripts meet their per-file ceilings. Godot
 diagnostics and `git diff --check` pass. Preparing the correction as release
 0.3.60; runtime performance remains unmeasured.
+
+## Completed: Cloaked Demon dialogue selection cursor
+
+The active YES/NO choice now has the finger cursor positioned immediately to
+its left, with the fingertip aligned to the label. Both choices stay white so
+selection is shown by cursor position instead of gold text. Existing touch
+targets remain unchanged. `NpcController` MCP diagnostics and `git diff
+--check` pass; `GameplayState` diagnostics still report the pre-existing line
+390 issue. No gameplay test or playtest was run.
+
+## Completed: 0.3.61 release preparation
+
+Aligned the title menu, README, and versioning guide to 0.3.61 for the Cloaked
+Demon dialogue cursor fix. MCP configuration files remain excluded. Focused
+NPC script diagnostics and `git diff --check` pass; no gameplay test or
+playtest was run.
