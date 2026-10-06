@@ -138,9 +138,13 @@ func _initialize() -> void:
 				var pause_touch_candidates := gameplay.call("_hub_gear_candidates", &"weapon") as Array[ItemInstance]
 				var expected_pause_equipped := pause_equipped_before_touch if pause_touch_candidates.is_empty() else pause_touch_candidates[0].instance_id
 				if pause_input_tracker != null: pause_input_tracker.set_device(InputDeviceTracker.Device.TOUCH)
-				authored_equipment.candidate_buttons[0].pressed.emit()
-				await process_frame
-				_expect(profile.get_equipped_instance_id(&"weapon") == expected_pause_equipped and screens.hub_touch_candidate_index == -1 and screens.hub_equipment_mode == EquipmentMenuLayout.MODE_SLOT_EQUIP, "pause Equipment commits a visible candidate on one touch and clears the legacy touch arm", failures)
+				if not pause_touch_candidates.is_empty():
+					authored_equipment.candidate_buttons[0].pressed.emit()
+					await process_frame
+					_expect(profile.get_equipped_instance_id(&"weapon") == expected_pause_equipped and screens.hub_equipment_mode == EquipmentMenuLayout.MODE_CANDIDATE and authored_equipment.candidate_cursor.visible, "pause Equipment first touch previews the selected candidate", failures)
+					authored_equipment.candidate_buttons[0].pressed.emit()
+					await process_frame
+					_expect(profile.get_equipped_instance_id(&"weapon") == pause_touch_candidates[0].instance_id and screens.hub_equipment_mode == EquipmentMenuLayout.MODE_SLOT_EQUIP, "pause Equipment second touch equips the previewed candidate", failures)
 				if pause_input_tracker != null: pause_input_tracker.set_device(InputDeviceTracker.Device.KEYBOARD_MOUSE)
 		if screens.pause_back_button != null:
 			screens.pause_back_button.pressed.emit()

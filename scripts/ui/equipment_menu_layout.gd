@@ -464,8 +464,12 @@ func _apply_candidate_scroll() -> void:
 	for index in candidate_buttons.size():
 		var button := candidate_buttons[index]
 		var native_rect := button.get_meta("equipment_native_rect", Rect2(button.position, button.size)) as Rect2
-		button.position.y = native_rect.position.y - offset_y
-		button.size.y = native_rect.size.y
+		var row := int(index / CANDIDATE_COLUMN_COUNT)
+		var row_top := 5.0 + float(row) * 9.0 - offset_y
+		# Candidate labels stay at their compact authored 9px pitch, while each
+		# invisible tap target spans its full column and most of the row gap.
+		button.position = Vector2(native_rect.position.x, row_top)
+		button.size = Vector2(native_rect.size.x, 14.0)
 
 
 func set_description(lines: Array[String], color: Color = Color.WHITE) -> void:

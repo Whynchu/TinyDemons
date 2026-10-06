@@ -129,6 +129,13 @@ runtime registry.
 DoT coefficients are percentages of the affected actor's maximum HP per stack
 per tick, rounded to whole HP with a 1 HP minimum for any positive tick.
 
+The Cloaked Demon offers one randomized elemental sword per newly generated
+shop: one of the seven authored elemental blades, Common rarity, +0, with the
+normal randomized bonus package, priced at 1500G. It is ordered immediately
+above Demon Cloak.
+The offer is a regular purchase and remains sold for the current run after
+purchase; other shop stock remains seeded and stable.
+
 | Status | Element | Proc chance | Duration | Effect | Particle style / interval |
 |---|---|---:|---:|---|---|
 | Burn | Fire | 20% per eligible hit | 3.0 s | 3% of target max HP per stack every 1 s (9% total per stack); cap 3 | Imbue-like rising ember trail / 0.08 s |

@@ -1145,3 +1145,10 @@ Fixed the Web Pages composition failure by folding two-tap Equipment touch behav
 2026-10-06 claim codex: Prepare elemental blade feature for web testing; align in-game and README version, review focused validation, commit and push scoped source/content/docs to main.
 
 2026-10-06 done codex: Prepared elemental blades release 0.3.55 for web testing. Composition self-test, regression floor, strict targets, test manifest, static resource-manifest comparison, MCP diagnostics for changed runtime scripts, and diff check pass. Godot definition validator and gameplay smoke were not run with shared editor active; unrelated MCP/config files remain excluded.
+
+2026-10-06 claim codex: Restore Equipment menu touch controls and cursor visibility; add focused regression coverage.
+
+2026-10-06 done codex: Scoped Equipment regression to Pause. Source and existing assertions show the Pause route is writable and cursor-rendered, but shared runtime stopped responding before the Pause Equipment view could be inspected; no speculative code change made. Profile files remained unchanged; retry with a device/browser capture.
+2026-10-06 done codex: Added one stable seeded Common +0 elemental sword offer at 1500G above Demon Cloak, expanded shared Equipment candidate touch targets, aligned Pause preview/confirm coverage, and added source manifest checks to web-export smoke. Static checks pass; Godot export/gameplay and browser acceptance remain open.
+2026-10-06 done codex: Guaranteed elemental blade now receives the existing seeded Common bonus-roll package; shop refresh preserves the rolls at the fixed 1500G price. Added multi-seed coverage. Static diff check passes; Godot smoke not run in shared-editor session.
+2026-10-06 done codex: Prepared scoped 0.3.57 release for web/touch/shop improvements. Fixed old-save shop refresh to avoid adding offers to existing stock and made regression fixtures retain run identity. Unrelated MCP/config and elemental status tuning edits remain excluded. Static checks only; Godot suite/export not run with shared editor active.

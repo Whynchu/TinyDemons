@@ -34,9 +34,92 @@ func _initialize() -> void:
 	for entry: Dictionary in shop.shop_stock:
 		var item := ItemInstance.from_dictionary(entry.get("item", {}) as Dictionary)
 		shop_slots[catalog.definition_slot(item.definition_id)] = true
-	_expect(shop.shop_stock.size() == ItemCatalog.SLOTS.size() * 2 + 2, "shop keeps one baseline and one specialized choice per slot plus a premium and the Demon Cloak", failures)
+	_expect(shop.shop_stock.size() == ItemCatalog.SLOTS.size() * 2 + 3, "shop keeps baseline and specialized choices plus premium, elemental sword, and Demon Cloak", failures)
 	_expect(shop_slots.size() == ItemCatalog.SLOTS.size(), "shop stock covers every approved slot", failures)
 	_expect(shop.shop_stock.all(func(entry: Dictionary) -> bool: return entry.get("source", "") == "shop" and not str(entry.get("role", "")).is_empty() and entry.has("primary_stat") and entry.has("description")), "shop entries carry source and authored presentation metadata", failures)
+	var elemental_sword_index := -1
+	var cloak_index := -1
+	var elemental_sword: ItemInstance = null
+	for index in shop.shop_stock.size():
+		var stock_entry := shop.shop_stock[index]
+		var stock_item := ItemInstance.from_dictionary(stock_entry.get("item", {}) as Dictionary)
+		if bool(stock_entry.get("guaranteed_elemental_sword", false)) and elemental_sword_index < 0:
+			elemental_sword_index = index
+			elemental_sword = stock_item
+			_expect(int(stock_entry.get("price", 0)) == 1500 and not bool(stock_entry.get("permanent", false)), "guaranteed elemental sword is a regular 1500G offer", failures)
+			_expect(stock_item.definition_id in RunState.ELEMENTAL_SHOP_SWORDS and stock_item.rarity == &"common" and stock_item.enhancement_level == 0 and catalog.random_plus_count(stock_item) <= 3, "guaranteed elemental sword is a random elemental Common +0 blade with a valid bonus package", failures)
+		if stock_item.definition_id == &"demon_cloak":
+			cloak_index = index
+	_expect(elemental_sword != null and elemental_sword.definition_id in RunState.ELEMENTAL_SHOP_SWORDS, "Cloaked Demon always stocks a randomized elemental sword", failures)
+	_expect(elemental_sword_index >= 0 and cloak_index == elemental_sword_index + 1, "elemental sword is listed immediately above Demon Cloak", failures)
+	var generated_stock_copy := shop.shop_stock.duplicate(true)
+	shop.ensure_shop_stock(shop_profile)
+	_expect(shop.shop_stock == generated_stock_copy, "opening the shop again preserves its randomized stock", failures)
+	var sold_stock := shop.shop_stock.duplicate(true)
+	for index in sold_stock.size():
+		var sold_item := ItemInstance.from_dictionary(sold_stock[index].get("item", {}) as Dictionary)
+		if bool(sold_stock[index].get("guaranteed_elemental_sword", false)):
+			var sold_entry: Dictionary = sold_stock[index]
+			sold_entry["sold"] = true
+			sold_stock[index] = sold_entry
+			break
+	var sold_run := RunState.new()
+	sold_run.restore_from_dictionary(shop.to_dictionary())
+	sold_run.shop_stock = sold_stock
+	sold_run.ensure_shop_stock(shop_profile)
+	_expect(sold_run.shop_stock.size() == sold_stock.size(), "sold elemental sword is not endlessly replenished during a run", failures)
+	var old_run := RunState.new()
+	old_run.restore_from_dictionary(shop.to_dictionary())
+	old_run.shop_stock = shop.shop_stock.duplicate(true)
+	for index in old_run.shop_stock.size():
+		if bool(old_run.shop_stock[index].get("guaranteed_elemental_sword", false)):
+			var old_entry: Dictionary = old_run.shop_stock[index]
+			old_entry.erase("guaranteed_run_id")
+			old_run.shop_stock[index] = old_entry
+			break
+	old_run.ensure_shop_stock(shop_profile)
+	var repaired_sword_index := -1
+	var repaired_cloak_index := -1
+	for index in old_run.shop_stock.size():
+		var repaired_item := ItemInstance.from_dictionary(old_run.shop_stock[index].get("item", {}) as Dictionary)
+		if bool(old_run.shop_stock[index].get("guaranteed_elemental_sword", false)) and not bool(old_run.shop_stock[index].get("sold", false)):
+			repaired_sword_index = index
+		if repaired_item.definition_id == &"demon_cloak":
+			repaired_cloak_index = index
+	_expect(repaired_sword_index >= 0 and repaired_cloak_index == repaired_sword_index + 1, "older saved stock retains the guaranteed sword directly above Demon Cloak", failures)
+	var distinct_swords: Dictionary = {}
+	for sword_seed in range(770, 790):
+		var seeded_shop := RunState.new()
+		seeded_shop.begin(sword_seed)
+		seeded_shop.ensure_shop_stock(shop_profile)
+		for stock_entry: Dictionary in seeded_shop.shop_stock:
+			if bool(stock_entry.get("guaranteed_elemental_sword", false)):
+				var seeded_item := ItemInstance.from_dictionary(stock_entry.get("item", {}) as Dictionary)
+				distinct_swords[seeded_item.definition_id] = true
+				break
+	_expect(distinct_swords.size() > 1, "different shop seeds randomize the elemental sword offer", failures)
+	var guaranteed_plus_offers := 0
+	for sword_seed in range(1000, 1200):
+		var seeded_shop := RunState.new()
+		seeded_shop.begin(sword_seed)
+		seeded_shop.ensure_shop_stock(shop_profile)
+		for stock_entry: Dictionary in seeded_shop.shop_stock:
+			if not bool(stock_entry.get("guaranteed_elemental_sword", false)):
+				continue
+			var seeded_item := ItemInstance.from_dictionary(stock_entry.get("item", {}) as Dictionary)
+			if catalog.random_plus_count(seeded_item) > 0:
+				guaranteed_plus_offers += 1
+			break
+	_expect(guaranteed_plus_offers > 0, "some guaranteed elemental blades roll a bonus package across run seeds", failures)
+	var sold_new_run := RunState.new()
+	sold_new_run.begin(778)
+	sold_new_run.ensure_shop_stock(shop_profile)
+	var next_run_sword_index := -1
+	for index in sold_new_run.shop_stock.size():
+		if bool(sold_new_run.shop_stock[index].get("guaranteed_elemental_sword", false)) and not bool(sold_new_run.shop_stock[index].get("sold", false)):
+			next_run_sword_index = index
+			break
+	_expect(next_run_sword_index >= 0, "next run can generate a fresh guaranteed sword after a prior-run purchase", failures)
 
 	# The Cloaked Demon's premium slot keeps + gear uncommon: sampled across seeds,
 	# a plain (no-plus) find must be the majority so ++/+++ reads as a luxury.

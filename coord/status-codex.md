@@ -2,8 +2,32 @@
 
 _Only codex writes this file._
 
-**Focus:** Continue Stage 3.1 by extracting Hub construction and responsive layout
+**Focus:** Web export content audit, pause equipment touch targets, guaranteed Cloaked Demon elemental sword stock
 **Updated:** 2026-10-06
+
+## Completed: Web and touch usability sweep
+
+The Cloaked Demon stock now receives one seeded elemental blade offer per run,
+Common +0 with the standard randomized bonus package, fixed at 1500G immediately
+above Demon Cloak. Reopening preserves its generated bonus package. The
+dedicated stock marker preserves sold state, run stability, and ordinary
+common/premium sword offers. Equipment candidate touch targets now span 14
+native pixels while the visible row pitch stays 9 pixels; Pause and Hub keep
+the existing preview-first, second-tap equip behavior and separate controller
+cursor flow. Web export preflight validates both generated definition manifests
+and all 24 authored resource references. Static PowerShell parsing, manifest
+path resolution, and `git diff --check` pass. Godot gameplay/export execution
+and browser acceptance remain unverified in this shared-editor session.
+
+Follow-up: the guaranteed elemental blade uses the regular seeded Common bonus
+package; shop refresh preserves its rolled points while the visible price stays
+1500G. Source-level regression samples 200 run seeds to ensure + offers occur.
+`git diff --check` passes; Godot execution remains unavailable in this session.
+
+Release preparation: shop refresh now adds the guaranteed sword only when
+generating new run stock, and regression fixtures restore the original run ID.
+Version 0.3.57 is staged for the authorized push. Gameplay smoke/export remains
+unrun while the shared editor is active.
 
 ## Completed: Shocked duration and status load hitch
 
@@ -1249,3 +1273,9 @@ Preparing the authorized patch-version bump, scoped preflight, commit, and push 
 
 ## Completed: Elemental blades 0.3.55 release preparation
 Prepared scoped source/content/docs and patch bump for main. Composition self-test, regression floor and strict audit, smoke-manifest validation, static generated-manifest path comparison, changed-script MCP checks, and diff check pass. Godot definition validation/gameplay smoke remain unrun with the shared editor active.
+
+## Active: Equipment touch and cursor regression
+Tracing the Hub/Pause Equipment hit targets and authored cursor layer after 0.3.55. Reproduce in the shared Godot runtime, then patch the owning presentation/input boundary and run only focused verification; no standalone Godot processes. Preserve unrelated MCP/config edits.
+
+## Investigation note: Pause Equipment report
+Hub route confirmed separate from Pause's presenter. Pause source explicitly binds command/slot/candidate signals and renders the shared view writable; existing equipment smoke covers cursor visibility and preview/equip callbacks. No source change made because the shared game runtime stopped responding during Pause route entry; save files remain unchanged. Need a device/browser repro or screenshot to pinpoint touch hit-testing vs cursor presentation. Keep unrelated workspace edits untouched.

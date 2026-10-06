@@ -49,11 +49,18 @@ Related docs:
 - [x] Audio payload/performance hardening
 - [x] Responsive landscape presentation frame and closed-entrance seam guards
 - [ ] Browser/device matrix and production Pages deployment verification
+- [x] Pages preflight validates generated item/enemy manifests and every authored resource path they reference before exporting.
 
 Fresh local evidence on 2026-09-15: `tests/web_export_smoke.ps1
 -RequireExport` produced `index.html`, one `.wasm`, and one `.pck` in a fresh
 temporary directory. An ignored `dist/` directory may be locked by an editor;
 the CI workflow still owns the clean `dist/` artifact path.
+
+The export smoke also checks that both generated runtime definition manifests
+exist, contain authored entries, and reference source `.tres` files that exist.
+This validates the registry inputs; it does not establish that the deployed
+PCK contains each referenced item or that a browser can load and play the full
+content. Browser/device and hosted Pages acceptance remains open.
 
 ## 1. Goal and non-goals
 

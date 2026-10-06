@@ -20,6 +20,24 @@ foreach ($requiredPresetValue in @('[preset.0]', 'platform="Web"', 'export_path=
 if (-not $projectText.Contains('renderer/rendering_method.web="gl_compatibility"')) {
 	throw "Web renderer override is missing from project.godot"
 }
+$manifestService = Join-Path $root "scripts/content/content_definition_manifest_service.gd"
+$manifestText = Get-Content -LiteralPath $manifestService -Raw
+$authoredContentResourceCount = 0
+foreach ($requiredContentPath in @("res://resources/generated/enemy_definition_manifest.tres", "res://resources/generated/item_definition_manifest.tres")) {
+	$manifestPath = Join-Path $root ($requiredContentPath.Replace("res://", "").Replace("/", [System.IO.Path]::DirectorySeparatorChar))
+	if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) { throw "Web content manifest dependency is missing: $requiredContentPath" }
+	if (-not $manifestText.Contains($requiredContentPath)) { throw "Web content manifest is not wired through the runtime manifest service: $requiredContentPath" }
+	$manifestFileText = Get-Content -LiteralPath $manifestPath -Raw
+	$resourceMatches = [regex]::Matches($manifestFileText, '"res://([^"]+\.tres)"')
+	if ($resourceMatches.Count -eq 0) { throw "Web content manifest has no authored resources: $requiredContentPath" }
+	$authoredContentResourceCount += $resourceMatches.Count
+	foreach ($match in $resourceMatches) {
+		$resourceRelativePath = $match.Groups[1].Value.Replace("/", [System.IO.Path]::DirectorySeparatorChar)
+		$resourcePath = Join-Path $root $resourceRelativePath
+		if (-not (Test-Path -LiteralPath $resourcePath -PathType Leaf)) { throw "Web content manifest points to a missing source resource: res://$resourceRelativePath" }
+	}
+}
+if ($authoredContentResourceCount -lt 24) { throw "Web authored-content manifests unexpectedly contain only $authoredContentResourceCount entries" }
 Write-Host "WEB_EXPORT_CONFIG_OK: single-threaded Compatibility preset and renderer override" -ForegroundColor Green
 $templateCandidates = @()
 if ($env:XDG_DATA_HOME) {
@@ -74,8 +92,11 @@ $wasm = @(Get-ChildItem -LiteralPath $outputDir -Recurse -File -Filter "*.wasm")
 $pck = @(Get-ChildItem -LiteralPath $outputDir -Recurse -File -Filter "*.pck")
 if ($wasm.Count -eq 0) { throw "Web export did not create a .wasm payload" }
 if ($pck.Count -eq 0) { throw "Web export did not create a .pck payload" }
+foreach ($payload in @($wasm) + @($pck)) {
+	if ($payload.Length -le 0) { throw "Web export payload is empty: $($payload.FullName)" }
+}
 $indexText = Get-Content -LiteralPath $exportPath -Raw
 if ($indexText -match '(?:src|href)="/') { throw "Web export contains a root-absolute asset reference; project-site paths must remain relative" }
 New-Item -ItemType File -Force -Path (Join-Path $outputDir ".nojekyll") | Out-Null
-Write-Host ("WEB_EXPORT_SMOKE_OK: {0}; wasm={1}; pck={2}" -f $exportPath, $wasm.Count, $pck.Count) -ForegroundColor Green
+Write-Host ("WEB_EXPORT_SMOKE_OK: {0}; wasm={1}; pck={2}; authored_content_refs={3}" -f $exportPath, $wasm.Count, $pck.Count, $authoredContentResourceCount) -ForegroundColor Green
 exit 0

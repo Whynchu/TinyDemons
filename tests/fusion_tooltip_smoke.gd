@@ -89,6 +89,7 @@ func _initialize() -> void:
 	_expect(equipment_view != null and equipment_view.visible and (equipment_view.get_node("VitText") as Sprite2D).texture != null and (equipment_view.get_node("MndText") as Sprite2D).texture != null, "gear browse keeps one authored six-stat summary without a duplicate SPD row", failures)
 	_expect(equipment_view.candidate_buttons.size() == 8 and equipment_view.candidate_buttons.all(func(b: Button) -> bool: return b.mouse_filter != Control.MOUSE_FILTER_IGNORE), "gear browse exposes authored touch candidate rows", failures)
 	_expect(equipment_view.candidate_buttons[0].visible and equipment_view.candidate_buttons[1].visible, "gear browse shows touch targets for visible candidates", failures)
+	_expect(equipment_view.candidate_buttons[0].size.y >= 14.0 and equipment_view.candidate_buttons[2].position.y - equipment_view.candidate_buttons[0].position.y == 9.0, "equipment candidate touch targets expand across row spacing while visuals keep their compact pitch", failures)
 	equipment_view.candidate_buttons[0].pressed.emit()
 	_expect(root.selected_gear_candidate_row == 0, "gear choice row forwards its selected candidate", failures)
 	var gear_flow := HubEconomyControllerScript.new()

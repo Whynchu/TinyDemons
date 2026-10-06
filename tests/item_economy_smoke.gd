@@ -83,7 +83,7 @@ func _initialize() -> void:
 	_expect(restored.souls == 7, "souls persist with the profile", failures)
 	var run := RunState.new(); run.begin(424242); run.ensure_shop_stock(restored)
 	var stock_copy := run.shop_stock.duplicate(true); run.ensure_shop_stock(restored)
-	_expect(run.shop_stock == stock_copy and run.shop_stock.size() == ItemCatalog.SLOTS.size() * 2 + 2, "shop stock stable within run", failures)
+	_expect(run.shop_stock == stock_copy and run.shop_stock.size() == ItemCatalog.SLOTS.size() * 2 + 3, "shop stock stable within run", failures)
 	var shop_ids: Dictionary = {}
 	for shop_entry: Dictionary in run.shop_stock:
 		var stock_item := ItemInstance.from_dictionary(shop_entry.get("item", {}) as Dictionary)

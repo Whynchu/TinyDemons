@@ -829,12 +829,19 @@ next priority; the earlier reports remain historical context rather than a
 request for immediate changes. This update is player feedback, not a measured
 performance result or a broad compatibility verification.
 
-Touch follow-up: the Equipment menu needs direct touch interaction across its
-routes. The first tap on an item should highlight it without activating it;
-touch should not require the controller's separate Equip confirmation, and
-tapping an item while Equip is highlighted should enter that item's equipment
-flow. Record and resolve this separately from the existing Pause Equipment
-scroll-clipping report.
+Touch follow-up: the Equipment menu exposes direct touch targets across its
+routes. Candidate row tap targets now span 14 native pixels while the visual
+rows keep their 9-pixel pitch; Pause and Hub share this authored layout.
+Touch activates visible targets directly, while the controller retains its
+focus/cursor route. Browser playtest is still needed to assess physical-device
+feel and responsive geometry.
+
+Web follow-up: export configuration includes all resources and Pages CI
+validates definition-manifest freshness, but prior export smoke only checked
+that index/WASM/PCK files existed. Source manifest entries are now checked for
+resolvable paths before export. Exact PCK membership and full browser gameplay
+parity remain open until verified through Godot export tooling and hosted
+device testing.
 
 ### 2026-09-26 gear-drop distribution correction
 

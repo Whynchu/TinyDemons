@@ -2,6 +2,8 @@ extends RefCounted
 class_name RunState
 
 const EncounterDefinitionScript = preload("res://scripts/content/encounter_definition.gd")
+const ELEMENTAL_SHOP_SWORDS: Array[StringName] = [&"cinder_blade", &"tide_blade", &"volt_blade", &"grove_blade", &"shade_blade", &"terra_blade", &"frost_blade"]
+const ELEMENTAL_SHOP_SWORD_PRICE := 1500
 
 var run_id := ""
 var dungeon_seed := 0
@@ -406,35 +408,110 @@ func ensure_shop_stock(profile: PlayerProfile) -> void:
 	var level := profile.level if profile != null else 1
 	var catalog := ItemCatalog.new()
 	var had_stock := not shop_stock.is_empty()
-	_ensure_basic_shop_stock(catalog)
-	_normalize_shop_stock_ids(profile)
-	if had_stock:
-		return
-	for slot_index in ItemCatalog.SLOTS.size():
-		var slot := ItemCatalog.SLOTS[slot_index]
-		# Basic entries are guaranteed above; the variable common roll should not
-		# duplicate them, so keep this additional stock on specialized alternatives.
-		var item := catalog.generate_item(slot, dungeon_seed + slot_index * 7919, level, &"common", true, &"shop", level)
-		if item.definition_id.is_empty():
-			continue
-		item.instance_id = "shop-%s-common-%d-%s" % [run_id, slot_index, String(slot)]
-		shop_stock.append(_shop_entry(catalog, item, slot, roundi(catalog.price(item) * 2.5)))
-	var premium_slot := ItemCatalog.SLOTS[posmod(dungeon_seed, ItemCatalog.SLOTS.size())]
-	# The Cloaked Demon's premium slot favors its rare floor but keeps + gear
-	# uncommon: a ++/+++ find here should be a memorable luxury, not a routine.
-	var premium := catalog.generate_item(premium_slot, dungeon_seed ^ 0x5A17, level, &"rare", true, &"shop", level, 0.35)
-	if not premium.definition_id.is_empty():
-		premium.instance_id = "shop-%s-premium" % run_id
-		shop_stock.append(_shop_entry(catalog, premium, premium_slot, roundi(catalog.price(premium) * 2.5)))
+	if not had_stock:
+		_ensure_basic_shop_stock(catalog)
+		_normalize_shop_stock_ids(profile)
+		for slot_index in ItemCatalog.SLOTS.size():
+			var slot := ItemCatalog.SLOTS[slot_index]
+			# Basic entries are guaranteed above; the variable common roll should not
+			# duplicate them, so keep this additional stock on specialized alternatives.
+			var item := catalog.generate_item(slot, dungeon_seed + slot_index * 7919, level, &"common", true, &"shop", level)
+			if item.definition_id.is_empty():
+				continue
+			item.instance_id = "shop-%s-common-%d-%s" % [run_id, slot_index, String(slot)]
+			shop_stock.append(_shop_entry(catalog, item, slot, roundi(catalog.price(item) * 2.5)))
+		var premium_slot := ItemCatalog.SLOTS[posmod(dungeon_seed, ItemCatalog.SLOTS.size())]
+		# The Cloaked Demon's premium slot favors its rare floor but keeps + gear
+		# uncommon: a ++/+++ find here should be a memorable luxury, not a routine.
+		var premium := catalog.generate_item(premium_slot, dungeon_seed ^ 0x5A17, level, &"rare", true, &"shop", level, 0.35)
+		if not premium.definition_id.is_empty():
+			premium.instance_id = "shop-%s-premium" % run_id
+			shop_stock.append(_shop_entry(catalog, premium, premium_slot, roundi(catalog.price(premium) * 2.5)))
 	if profile != null:
-		var cloak := ItemInstance.new()
-		cloak.instance_id = "shop-%s-cloak" % run_id
-		cloak.definition_id = &"demon_cloak"
-		cloak.rarity = &"common"
-		cloak.quality = 1.0
-		var cloak_entry := _shop_entry(catalog, cloak, &"body", profile.demon_cloak_price())
-		cloak_entry["permanent"] = true
-		shop_stock.append(cloak_entry)
+		var has_cloak := false
+		for entry: Dictionary in shop_stock:
+			var existing := ItemInstance.from_dictionary(entry.get("item", {}) as Dictionary)
+			if existing.definition_id == &"demon_cloak":
+				has_cloak = true
+				break
+		if not has_cloak:
+			var cloak := ItemInstance.new()
+			cloak.instance_id = "shop-%s-cloak" % run_id
+			cloak.definition_id = &"demon_cloak"
+			cloak.rarity = &"common"
+			cloak.quality = 1.0
+			var cloak_entry := _shop_entry(catalog, cloak, &"body", profile.demon_cloak_price())
+			cloak_entry["permanent"] = true
+			shop_stock.append(cloak_entry)
+	if had_stock:
+		_normalize_shop_stock_ids(profile)
+	_ensure_elemental_shop_sword(catalog, not had_stock)
+	_move_elemental_shop_sword_before_cloak()
+
+
+func _ensure_elemental_shop_sword(catalog: ItemCatalog, may_create_offer: bool) -> void:
+	var unsold_index := -1
+	var has_current_run_record := false
+	for index in shop_stock.size():
+		var entry := shop_stock[index]
+		if not bool(entry.get("guaranteed_elemental_sword", false)):
+			continue
+		if str(entry.get("guaranteed_run_id", "")) == run_id:
+			has_current_run_record = true
+		if unsold_index < 0 and not bool(entry.get("sold", false)):
+			unsold_index = index
+	if unsold_index >= 0:
+		var existing := shop_stock[unsold_index]
+		existing["price"] = ELEMENTAL_SHOP_SWORD_PRICE
+		existing["slot"] = "weapon"
+		existing["permanent"] = false
+		var item := ItemInstance.from_dictionary(existing.get("item", {}) as Dictionary)
+		item.rarity = &"common"
+		item.quality = 1.0
+		item.enhancement_level = 0
+		item.fusion_count = 0
+		item.fusion_stat_points = 0
+		item.affixes.clear()
+		item.transmutation_id = &""
+		existing["item"] = item.to_dictionary()
+		existing["guaranteed_run_id"] = run_id
+		shop_stock[unsold_index] = existing
+		# Reprice and normalize the guaranteed offer in older saved runs, while
+		# leaving ordinary common/premium elemental swords untouched.
+		return
+	if has_current_run_record or not may_create_offer:
+		return
+	var rng := RandomNumberGenerator.new()
+	rng.seed = dungeon_seed ^ 0xE1E
+	var chosen_id: StringName = ELEMENTAL_SHOP_SWORDS[rng.randi_range(0, ELEMENTAL_SHOP_SWORDS.size() - 1)]
+	var item := ItemInstance.new()
+	item.instance_id = "shop-%s-elemental-sword" % run_id
+	item.definition_id = chosen_id
+	item.rarity = &"common"
+	item.quality = 1.0
+	item.random_stat_points = catalog._roll_random_stat_points(item.rarity, rng)
+	var entry := _shop_entry(catalog, item, &"weapon", ELEMENTAL_SHOP_SWORD_PRICE)
+	entry["guaranteed_elemental_sword"] = true
+	entry["guaranteed_run_id"] = run_id
+	shop_stock.append(entry)
+
+
+func _move_elemental_shop_sword_before_cloak() -> void:
+	var sword_index := -1
+	var cloak_index := -1
+	for index in shop_stock.size():
+		var item := ItemInstance.from_dictionary(shop_stock[index].get("item", {}) as Dictionary)
+		if sword_index < 0 and bool(shop_stock[index].get("guaranteed_elemental_sword", false)) and not bool(shop_stock[index].get("sold", false)):
+			sword_index = index
+		if item.definition_id == &"demon_cloak":
+			cloak_index = index
+	if sword_index < 0 or cloak_index < 0 or sword_index == cloak_index:
+		return
+	var sword_entry: Dictionary = shop_stock[sword_index]
+	shop_stock.remove_at(sword_index)
+	if sword_index < cloak_index:
+		cloak_index -= 1
+	shop_stock.insert(cloak_index, sword_entry)
 
 
 func _ensure_basic_shop_stock(catalog: ItemCatalog) -> void:
