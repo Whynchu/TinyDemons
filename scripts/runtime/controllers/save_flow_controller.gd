@@ -49,18 +49,20 @@ func open_save_select_after_title_transition(root: Object) -> void:
 
 
 func update_save_select_cursor(root: Object) -> void:
-	if root.screen_state_controller.save_select_presenter.overlay == null: return
-	root.screen_state_controller.save_select_presenter.set_selected_slot(root.screen_state_controller.save_select_index)
-	for child in root.screen_state_controller.save_select_presenter.overlay.get_children():
-		if child is Button and child.has_meta("save_slot") and int(child.get_meta("save_slot")) == root.screen_state_controller.save_select_index:
+	var screen := root.screen_state_controller as ScreenStateController
+	var presenter := screen.save_select_presenter as SaveSelectScreenPresenter
+	if presenter.overlay == null: return
+	presenter.set_selected_slot(screen.save_select_index)
+	for child in presenter.overlay.get_children():
+		if child is Button and child.has_meta("save_slot") and int(child.get_meta("save_slot")) == screen.save_select_index:
 			(child as Button).release_focus()
-	var cursor := root.screen_state_controller.save_select_presenter.overlay.get_node_or_null("SaveSelectCursor") as Sprite2D
+	var cursor := presenter.overlay.get_node_or_null("SaveSelectCursor") as Sprite2D
 	if cursor != null:
 		var display := root.get("display_controller") as DisplayController
 		var view_width := float(display.view_size_value().x) if display != null else 240.0
-		var slot_button: Button = root.screen_state_controller.save_select_presenter.slot_button(root.screen_state_controller.save_select_index)
-		var cursor_target := Vector2(slot_button.position.x - root.screen_state_controller.CURSOR_LEFT_GAP, slot_button.position.y + 5.0) if slot_button != null else Vector2((view_width - 130.0) * 0.5 - root.screen_state_controller.CURSOR_LEFT_GAP, 70 + root.screen_state_controller.save_select_index * 20)
-		root.screen_state_controller._menu_cursor_animator.move_menu_cursor(cursor, cursor_target, true, root)
+		var slot_button: Button = presenter.slot_button(screen.save_select_index)
+		var cursor_target := Vector2(slot_button.position.x - screen.CURSOR_LEFT_GAP, slot_button.position.y + 5.0) if slot_button != null else Vector2((view_width - 130.0) * 0.5 - screen.CURSOR_LEFT_GAP, 70 + screen.save_select_index * 20)
+		screen._menu_cursor_animator.move_menu_cursor(cursor, cursor_target, true, root)
 
 
 func save_preview_texture(root: Object, palette_name: String) -> Texture2D:

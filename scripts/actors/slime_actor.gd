@@ -55,10 +55,11 @@ func _ready() -> void:
 
 
 func ensure_components() -> void:
-	_ensure_component("Health", HealthComponent)
+	var health := _ensure_component("Health", HealthComponent) as HealthComponent
 	_ensure_component("EnemyChroma", EnemyChromaComponentScript)
 	var combat := _ensure_component("Combat", SlimeCombatComponent) as SlimeCombatComponent
 	var status_component := _ensure_component("Status", StatusComponent) as StatusComponent
+	status_component.health_component = health
 	status_component.set_movement_lock_resistance_check(Callable(combat, "movement_lock_is_resisted"))
 	var aura := _ensure_component("ElementAura", ElementAuraComponent) as ElementAuraComponent
 	aura.configure(self, get_parent() as Node2D, status_component)

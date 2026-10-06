@@ -28,10 +28,7 @@ func tick_actor_statuses(root: GameplayState, actor: Sprite2D, delta: float, is_
 		return
 	for result in component.advance(delta):
 		if result.kind == StatusTickResult.Kind.DAMAGE:
-			if result.status_id == &"shocked":
-				_apply_periodic_status_damage_tick(root, actor, result, is_player)
-			else:
-				_apply_status_damage_tick(root, actor, result, is_player)
+			_apply_status_damage_tick(root, actor, result, is_player, result.status_id != &"shocked")
 		elif result.kind == StatusTickResult.Kind.STUN_PULSE:
 			_apply_status_stun_pulse(root, actor, result, is_player)
 	var aura := actor.get_node_or_null("ElementAura") as ElementAuraComponent
@@ -44,7 +41,7 @@ func tick_actor_statuses(root: GameplayState, actor: Sprite2D, delta: float, is_
 		)
 
 
-func _apply_status_damage_tick(root: GameplayState, actor: Sprite2D, result: StatusTickResult, is_player: bool) -> void:
+func _apply_status_damage_tick(root: GameplayState, actor: Sprite2D, result: StatusTickResult, is_player: bool, apply_elemental_multiplier: bool = true) -> void:
 	var health := actor.get_node_or_null("Health") as HealthComponent
 	if health == null or health.current_health <= 0.0:
 		return
@@ -52,7 +49,8 @@ func _apply_status_damage_tick(root: GameplayState, actor: Sprite2D, result: Sta
 	var status := actor.get_node_or_null("Status") as StatusComponent
 	if status != null:
 		amount *= status.damage_taken_multiplier()
-		amount *= status.incoming_damage_multiplier_for(result.element, false)
+		if apply_elemental_multiplier:
+			amount *= status.incoming_damage_multiplier_for(result.element, false)
 	if amount <= 0.0:
 		return
 	if not is_player and not _enemy_status_tick_may_kill(root, actor):
@@ -75,40 +73,6 @@ func _apply_status_damage_tick(root: GameplayState, actor: Sprite2D, result: Sta
 		root._spawn_damage_number(actor, amount, false, result.element, false)
 		if health.is_dead():
 			root._kill_slime(actor)
-
-
-func _apply_periodic_status_damage_tick(root: GameplayState, actor: Sprite2D, result: StatusTickResult, is_player: bool) -> void:
-	var health := actor.get_node_or_null("Health") as HealthComponent
-	if health == null or health.current_health <= 0.0 or (is_player and (root.player_dead or root.player_death_pending)):
-		return
-	var amount := maxf(result.amount, 0.0)
-	var status := actor.get_node_or_null("Status") as StatusComponent
-	if status != null:
-		amount *= status.damage_taken_multiplier()
-	if amount <= 0.0:
-		return
-	if not is_player and not _enemy_status_tick_may_kill(root, actor):
-		amount = minf(amount, maxf(health.current_health - 1.0, 0.0))
-	if amount <= 0.0:
-		return
-	health.apply_damage(amount)
-	var slime_tuning := root.slime_tuning
-	if not is_player and slime_tuning != null:
-		health.regen_delay_timer = slime_tuning.regen_delay
-		health.regen_accumulator = 0.0
-	if is_player:
-		root._spawn_player_damage_number(amount, result.element, false)
-		root._update_player_health_ui()
-		if health.is_dead():
-			root.player_death_pending = true
-			root._interrupt_player_attack()
-			root.player_is_rolling = false
-	else:
-		root._spawn_damage_number(actor, amount, false, result.element, false)
-		if health.is_dead():
-			root._kill_slime(actor)
-
-
 func _enemy_status_tick_may_kill(root: GameplayState, actor: Sprite2D) -> bool:
 	if not actor.visible or not actor.is_visible_in_tree():
 		return false

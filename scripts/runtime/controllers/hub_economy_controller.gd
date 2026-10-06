@@ -992,14 +992,15 @@ func hub_item_action(root: Object) -> void:
 
 
 func _selected_fusion_target(root: Object, candidates: Array[ItemInstance]) -> ItemInstance:
+	var profile := root.player_profile as PlayerProfile
 	var selected_id := str(root.screen_state_controller.hub_fusion_target_instance_id)
 	if not selected_id.is_empty():
 		for candidate: ItemInstance in candidates:
 			if candidate.instance_id == selected_id:
-				return root.player_profile.find_item(selected_id)
+				return profile.find_item(selected_id)
 		return null
 	var index := clampi(root.screen_state_controller.hub_item_index, 0, candidates.size() - 1)
-	return root.player_profile.find_item(candidates[index].instance_id) if not candidates.is_empty() else null
+	return profile.find_item(candidates[index].instance_id) if not candidates.is_empty() else null
 
 
 # Equipment removal and confirmation.

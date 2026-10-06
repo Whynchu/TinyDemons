@@ -1104,3 +1104,9 @@ Consolidate Shadow gameplay status to Poison and remove Hex's additional damage 
 
 ## 2026-10-06T00:25Z — codex — done
 Consolidated Shadow to its single Poison status. Removed the separate Hex damage mark and its form fields/runtime application while retaining Hex projectile presentation. Updated spell/status docs, tuning table, manifest and transmission smoke assertion for Shadow Poison plus Hex shape. MCP script diagnostics pass; smoke runtime pending under active-editor restriction.
+
+## 2026-10-06T16:00Z — codex — claim
+Fix composition guard regressions reported after elemental status interactions; preserve status behavior and the recently added Fusion/save-select behavior.
+
+## 2026-10-06T16:30Z — codex — done
+Fixed all four composition audit regressions: StatusComponent receives typed HealthComponent, Shocked ticks share the regular damage route with elemental amplification disabled, and save/Fusion local aliases reduce root reach-through. Composition regression audit passes; changed-script MCP checks pass. Version set to 0.3.49.

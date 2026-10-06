@@ -9,6 +9,7 @@ signal suppression_changed(innate_id: StringName, suppressor_id: StringName, is_
 signal transmission_received(status_id: StringName, from_actor: Node)
 
 @export var status_immunities: Array[StringName] = []
+@export var health_component: HealthComponent
 
 var _active: Dictionary[StringName, StatusRecord] = {}
 var innate_status_id: StringName = &""
@@ -185,11 +186,9 @@ func record_for(status_id: StringName) -> StatusRecord:
 
 
 func _max_health_tick_amount(percent_per_stack: float, stacks: int) -> float:
-	var actor := get_parent()
-	var health := actor.get_node_or_null("Health") as HealthComponent if actor != null else null
-	if health == null:
+	if health_component == null:
 		return 0.0
-	var raw_amount := maxf(health.maximum_health, 0.0) * maxf(percent_per_stack, 0.0) * float(maxi(stacks, 0)) / 100.0
+	var raw_amount := maxf(health_component.maximum_health, 0.0) * maxf(percent_per_stack, 0.0) * float(maxi(stacks, 0)) / 100.0
 	return maxf(1.0, roundf(raw_amount)) if raw_amount > 0.0 else 0.0
 
 

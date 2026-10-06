@@ -30,6 +30,7 @@ func _initialize() -> void:
 	status_health.reset(100.0)
 	var status := StatusComponent.new()
 	status.name = "Status"
+	status.health_component = status_health
 	status_actor.add_child(status)
 	_expect(status.apply_effect(burn, ElementCatalogScript.Element.FIRE), "first Burn applies", failures)
 	status.advance(0.4)

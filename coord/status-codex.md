@@ -1216,3 +1216,9 @@ Burn, Poison, and Shocked now use percentage-of-target-max-health ticks per stac
 
 ## Completed: Shadow single-status rule (2026-10-06)
 Shadow now has one status: Poison. Removed the separate Hex damage-amplification mark from the Shadow projectile while retaining Hex as its projectile shape/form name. Updated transmission smoke coverage and current spell/tuning documentation. MCP script diagnostics pass; smoke runtime pending under active-editor restriction.
+
+## In flight: composition audit regression repair (2026-10-06)
+Reproduced the composition gate failures after the elemental status commit. Replace StatusComponent's parent lookup for health with a typed injected reference, unify the Shocked tick damage route with the common status tick path, and reduce the latest Fusion/save-select direct root traversals. Run the composition validator and MCP script diagnostics after changes.
+
+## Completed: composition audit regression repair (2026-10-06)
+Injected a typed HealthComponent reference into StatusComponent and wired it for players and enemies, removing parent traversal. Unified Shocked and other periodic status damage through the common damage route with conductivity disabled for Shocked. Local aliases in save-select and Fusion handlers removed excess root-member traversals. 	ools/validate_composition.ps1 passes; MCP diagnostics pass for every changed script. No smoke tests were run with the shared editor active. Version bumped to 0.3.49 for the follow-up main push.

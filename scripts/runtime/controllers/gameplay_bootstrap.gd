@@ -538,6 +538,7 @@ func _initialize_player(root: GameplayState, player: Sprite2D) -> void:
 	var tuning := root.player_tuning
 	var health := _ensure_player_component(player, HealthComponent, "Health") as HealthComponent
 	var status_component := _ensure_player_component(player, StatusComponent, "Status") as StatusComponent
+	status_component.health_component = health
 	var element_aura := _ensure_player_component(player, ElementAuraComponent, "ElementAura") as ElementAuraComponent
 	element_aura.configure(player, player.get_parent() as Node2D, status_component, root.player_attack_visual)
 	health.set_process(false); health.regen_delay = tuning.regen_delay; health.regen_interval = tuning.regen_interval; health.regen_amount = tuning.regen_amount
