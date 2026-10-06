@@ -27,7 +27,7 @@ func _initialize() -> void:
 	_expect(catalog.definition_exists(&"cinder_blade"), "cinder_blade is the named authored weapon proof", failures)
 	var cinder := catalog.definition_data(&"cinder_blade")
 	_expect(cinder.get("slot", &"") == &"weapon", "cinder_blade owns the weapon slot", failures)
-	_expect(float(cinder.get("bonuses", {}).get("strength", 0.0)) == 3.0, "cinder_blade carries its authored strength bonus", failures)
+	_expect(float(cinder.get("bonuses", {}).get("strength", 0.0)) == 2.0, "cinder_blade matches the elemental blade strength bonus", failures)
 	_expect(catalog.definition_is_runtime_ready(&"cinder_blade"), "cinder_blade is runtime-ready", failures)
 	_finished = true
 	call_deferred("_finish", failures)

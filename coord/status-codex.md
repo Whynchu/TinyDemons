@@ -1237,3 +1237,15 @@ Reproduced the composition gate failures after the elemental status commit. Repl
 
 ## Completed: composition audit regression repair (2026-10-06)
 Injected a typed HealthComponent reference into StatusComponent and wired it for players and enemies, removing parent traversal. Unified Shocked and other periodic status damage through the common damage route with conductivity disabled for Shocked. Local aliases in save-select and Fusion handlers removed excess root-member traversals. 	ools/validate_composition.ps1 passes; MCP diagnostics pass for every changed script. No smoke tests were run with the shared editor active. Version bumped to 0.3.49 for the follow-up main push.
+
+## Completed: Elemental weapon blades
+
+Added always-on elemental blades for Fire, Water, Electric, Grass, Shadow, Ground, and Ice. Weapon element is typed authored data; hits use the existing composite damage contract and include weapon INT; temporary imbue overrides the damage element while applying its status alongside the blade status for registered reactions such as Wet + Chill = Freeze. Sword palette, highlight, and elemental particles follow the blade element. git diff --check passes. Godot runtime validation and playtest were not run with the shared editor active.
+
+
+## Current work: Elemental blades web release
+Preparing the authorized patch-version bump, scoped preflight, commit, and push to main. Excluding pre-existing MCP/config edits and respecting the active Godot editor rule.
+
+
+## Completed: Elemental blades 0.3.55 release preparation
+Prepared scoped source/content/docs and patch bump for main. Composition self-test, regression floor and strict audit, smoke-manifest validation, static generated-manifest path comparison, changed-script MCP checks, and diff check pass. Godot definition validation/gameplay smoke remain unrun with the shared editor active.

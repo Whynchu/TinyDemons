@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="ItemDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/content/item_definition.gd" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+id = &"grove_blade"
+display_name = "GROVE BLADE"
+slot = &"weapon"
+gear_tier = &"basic"
+tier_stat = &"strength"
+bonuses = {"strength": 2.0, "intelligence": 2.0}
+description = "A living edge that carries the Grass element."
+price = 42
+source_tags = Array[String](["shop", "chest", "clear_reward"])
+minimum_run_rank = 2
+minimum_player_level = 2
+rarity_floor = &"common"
+rarity_ceiling = &"mythic"
+shop_eligible = true
+live = true
+family = &"grove"
+role = &"elemental"
+role_tags = Array[String](["grass", "elemental"])
+fusion_group = &"grove"
+visual_id = &"grove_blade"
+weapon_element = 4

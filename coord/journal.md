@@ -1063,55 +1063,55 @@ Fusion menu count, affordability, and transaction target now share stable instan
 ## 2026-10-05T20:05Z â€” codex â€” done
 Fusion amount and owned counts now recover from an impossible zero candidate snapshot using the selected target's live profile. Version 0.3.46 prepared. git diff --check passes; Godot MCP diagnostics returned AUTH_FAILED, so no runtime test was run.
 
-## 2026-10-05T14:00Z — codex — claim
+## 2026-10-05T14:00Z ï¿½ codex ï¿½ claim
 Fix save-select menu reflow and Fusion quantity changes; touching the presenter, economy controller, and focused regression coverage.
 
-## 2026-10-05T14:30Z — codex — done
+## 2026-10-05T14:30Z ï¿½ codex ï¿½ done
 Save-select positioning now recenters the title, slot buttons, overwrite controls, navigation footer, and selected cursor on every display reflow. Fusion amount controls are gated to the confirmed amount state, update/clamp the batch count, and have direct method coverage in the candidate-cache regression. Added responsive centering assertions for save title and slot. git diff --check passes; Godot smoke diagnostics were not run under the shared-editor restriction.
 
-## 2026-10-05T15:00Z — codex — done
+## 2026-10-05T15:00Z ï¿½ codex ï¿½ done
 Fusion quantity step now exits root preview and retains content focus after target confirmation. The inherited Shop confirm hitbox ignores input in Fusion so it cannot cover +/- controls; plus/minus activate by the available quantity, the 1/x label centers between their glyphs, and controller boundary feedback distinguishes blocked input. Focused scene coverage presses the plus button and checks its signal, active hitboxes, and label lane. git diff --check passes; no standalone Godot CLI is available and shared editor policy prevents launching another process.
 
-## 2026-10-05 — codex — claim
+## 2026-10-05 ï¿½ codex ï¿½ claim
 Reopen Fusion input after player reports quantity and confirmation both reject; use the connected Godot MCP bridge and repair the runtime path.
 
 ## 2026-10-05 - codex - done
 Godot MCP reproduced a Demon Cloak with eight eligible materials and 810 Souls. The live plus button and touch-layer finger path each increased quantity; an in-memory profile clone fused two materials for 3 Souls, and the FUSE touch region showed NEED 6S with a zero-Souls clone. The original save retained 810 Souls and Fusion count zero. Fusion now resolves live target/material data and keeps its FUSE touch target active. Save-select reflow and version 0.3.47 are included.
 
-## 2026-10-05T22:00Z — codex — claim
+## 2026-10-05T22:00Z ï¿½ codex ï¿½ claim
 Document the elemental damage matchup matrix, implemented status interactions, intentional holes, and accepted pending additions in the combat design authority and tuning index.
 
-## 2026-10-05T22:10Z — codex — done
+## 2026-10-05T22:10Z ï¿½ codex ï¿½ done
 Added the catalog-backed eight-element matchup matrix and current sparse status reaction table; recorded Fire-target + Ice-hit => Wet and the requested Shocked tick as pending tuning/implementation. Corrected Normal's 0.25x Shadow matchup and clarified that unlisted pairs still use ordinary damage/status rules. Documentation-only; no gameplay tests run.
 
-## 2026-10-05T22:12Z — codex — handoff
+## 2026-10-05T22:12Z ï¿½ codex ï¿½ handoff
 Documentation slice complete; removed the active claim. Source implementation of Fire-affinity + Ice => Wet and the Shocked periodic damage tick remains future work.
 
-## 2026-10-05T22:30Z — codex — claim
+## 2026-10-05T22:30Z ï¿½ codex ï¿½ claim
 Prepare an implementation plan for the agreed elemental status tree and Shocked periodic damage, with Ground/Grass/Shadow excluded.
 
-## 2026-10-05T22:45Z — codex — done
+## 2026-10-05T22:45Z ï¿½ codex ï¿½ done
 Added `elemental-status-interaction-plan.md` with runtime ownership, sequence, status semantics, acceptance criteria, and the Shocked tick tuning question. Linked it from DOCUMENTATION_MAP and ROADMAP. No runtime implementation or gameplay tests run.
 
-## 2026-10-05T23:00Z — codex — done
+## 2026-10-05T23:00Z ï¿½ codex ï¿½ done
 Implemented Burn/Freeze/Fire-affinity thermal reactions to Wet, a 0.5 Electric damage per stack Shocked tick every second, and enemy status badge layering below the owning actor sprite. Added focused regression cases, updated manifest descriptions and tuning/design docs. Godot MCP script checks pass for all touched GDScript files; smoke execution remains pending under the active-editor restriction. `git diff --check` passes.
 
-## 2026-10-06T00:00Z — codex — done
+## 2026-10-06T00:00Z ï¿½ codex ï¿½ done
 Implemented max-health-scaled Burn/Poison/Shocked damage cadences, Freeze attack pausing, and retained marker layering plus thermal interactions. Updated tuning and interaction docs and focused smoke coverage. Static diagnostics and diff checks pass; Godot smoke execution pending under active-editor restriction.
 
-## 2026-10-06T00:10Z — codex — claim
+## 2026-10-06T00:10Z ï¿½ codex ï¿½ claim
 Consolidate Shadow gameplay status to Poison and remove Hex's additional damage mark while retaining the Hex projectile identity.
 
-## 2026-10-06T00:25Z — codex — done
+## 2026-10-06T00:25Z ï¿½ codex ï¿½ done
 Consolidated Shadow to its single Poison status. Removed the separate Hex damage mark and its form fields/runtime application while retaining Hex projectile presentation. Updated spell/status docs, tuning table, manifest and transmission smoke assertion for Shadow Poison plus Hex shape. MCP script diagnostics pass; smoke runtime pending under active-editor restriction.
 
-## 2026-10-06T16:00Z — codex — claim
+## 2026-10-06T16:00Z ï¿½ codex ï¿½ claim
 Fix composition guard regressions reported after elemental status interactions; preserve status behavior and the recently added Fusion/save-select behavior.
 
-## 2026-10-06T16:30Z — codex — done
+## 2026-10-06T16:30Z ï¿½ codex ï¿½ done
 Fixed all four composition audit regressions: StatusComponent receives typed HealthComponent, Shocked ticks share the regular damage route with elemental amplification disabled, and save/Fusion local aliases reduce root reach-through. Composition regression audit passes; changed-script MCP checks pass. Version set to 0.3.49.
 
-## 2026-10-06T17:00Z — codex — claim
+## 2026-10-06T17:00Z ï¿½ codex ï¿½ claim
 Fix the save-select cursor overlapping/being obscured by the profile portrait; centralize its target and add coverage.
 
 ## 2026-10-06T17:30Z - codex - done
@@ -1125,3 +1125,23 @@ Reduce Shocked duration to six seconds and trace the reported heavy hitch in roo
 
 ## 2026-10-06T18:30Z - codex - done
 Shortened Shocked duration from 12 to 6 seconds and optimized status outline and particle-edge scans with raw RGBA access and shared neighbor offsets. Focused test sources updated; editor diagnostics pass. Version 0.3.51 prepared for push.
+
+## 2026-10-06T23:45Z â€” codex â€” claim
+Change authored Equipment touch candidate behavior to preview on first tap and confirm on second, shared by Hub and Pause.
+
+## 2026-10-06T23:55Z â€” codex â€” done
+Equipment candidate touch now previews and moves the cursor on first tap; a second tap on the selected candidate runs the existing confirm/equip transaction. Hub and Pause share the behavior. Offline checks pass for new controller/presenter scripts; GameplayState and the test script report only the documented temporary-URI typed-self/inference limitations. Godot editor active, so no standalone smoke was launched.
+
+## 2026-10-06T23:58Z â€” codex â€” claim
+Fix composition regression discovered in Web Pages CI by folding Equipment touch preview into existing callback/state.
+
+## 2026-10-06T23:59Z â€” codex â€” done
+Fixed the Web Pages composition failure by folding two-tap Equipment touch behavior into the existing callback/state, removing GameplayState lines and root reach-through. Updated both equipment smoke assertions to preview first, equip second. Composition regression floor and self-test pass; changed controller and focused test scripts pass offline diagnostics. Bumped version to 0.3.54 for the patch push.
+
+2026-10-06 claim codex: Always-on elemental weapon slice; typed weapon metadata, cinder/frost/electric blades, INT-scaled elemental damage and reaction-aware hits, palette/highlight/animation, focused coverage.
+
+2026-10-06 done codex: Added always-on elemental blades for Fire, Water, Electric, Grass, Shadow, Ground, and Ice. Weapon element is typed authored data, equipment adds the configured INT bonus to the player snapshot, weapon hits use composite physical/magic damage, temporary imbue overrides damage and adds its status alongside the blade status, and the sword receives element palette recolor plus persistent animated highlight/particles. Diff check passes; Godot validation/playtest not run under shared-editor guidance.
+
+2026-10-06 claim codex: Prepare elemental blade feature for web testing; align in-game and README version, review focused validation, commit and push scoped source/content/docs to main.
+
+2026-10-06 done codex: Prepared elemental blades release 0.3.55 for web testing. Composition self-test, regression floor, strict targets, test manifest, static resource-manifest comparison, MCP diagnostics for changed runtime scripts, and diff check pass. Godot definition validator and gameplay smoke were not run with shared editor active; unrelated MCP/config files remain excluded.

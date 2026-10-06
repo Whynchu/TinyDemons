@@ -10,8 +10,9 @@ slot = &"weapon"
 gear_tier = &"basic"
 tier_stat = &"strength"
 bonuses = {
-"strength": 3.0,
-"agi": -1.0
+"strength": 2.0,
+"agi": -1.0,
+"intelligence": 2.0
 }
 description = "A warm blade that favors decisive strikes."
 price = 38
@@ -27,3 +28,4 @@ role = &"strength"
 role_tags = Array[String](["cinder", "strength"])
 fusion_group = &"cinder"
 visual_id = &"cinder_blade"
+weapon_element = 1

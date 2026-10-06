@@ -15,6 +15,8 @@ class DamageResult extends RefCounted:
 	var amount: float
 	var critical: bool
 	var element: int
+	var secondary_element: int = ElementCatalogScript.Element.NEUTRAL
+	var secondary_status_apply: Callable = Callable()
 	var effectiveness: float
 	var immune: bool
 	var category: int = CombatDamageRequestScript.DamageCategory.PHYSICAL

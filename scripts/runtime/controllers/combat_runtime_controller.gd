@@ -92,6 +92,13 @@ func damage_slime(root: Object, slime: Sprite2D, amount: float, was_critical: bo
 	damage_slime_with_number(root, slime, amount, was_critical, true, attack_element, immune, effectiveness)
 
 
+func apply_weapon_secondary_status(target: Node, element: int, root: GameplayState) -> void:
+	var actor := target as Sprite2D
+	if actor == null or not is_instance_valid(actor):
+		return
+	try_apply_status(root, actor, element, ElementCatalogScript.effectiveness(element, slime_element(actor)))
+
+
 func damage_slime_with_number(root: Object, slime: Sprite2D, amount: float, was_critical: bool, show_damage_number: bool, attack_element: int = ElementCatalogScript.Element.NEUTRAL, immune: bool = false, effectiveness: float = -1.0, guaranteed_status: bool = false) -> void:
 	# Projectile callbacks can survive one frame past a scene transition. Do not
 	# dereference a freed target while resolving late contact.
@@ -167,13 +174,25 @@ func player_weapon_damage_result_against(root: Object, slime: Sprite2D, attack_e
 	var slime_stats := root.call("_slime_stats", slime) as StatsComponent
 	var tuning := root.get("combat_tuning") as CombatTuning
 	var active_element_value: Variant = root.get("player_imbued_element")
-	var active_element := int(active_element_value) if active_element_value != null else ElementCatalogScript.Element.NEUTRAL
+	var active_element: int = int(active_element_value) if active_element_value != null else ElementCatalogScript.Element.NEUTRAL
+	var state := root as GameplayState
+	var equipment := state.player_equipment if state != null else null
+	var weapon_element: int = equipment.weapon_element if equipment != null else ElementCatalogScript.Element.NEUTRAL
+	var weapon_imbued: bool = weapon_element != ElementCatalogScript.Element.NEUTRAL
+	var temporary_imbue: bool = active_element != ElementCatalogScript.Element.NEUTRAL and ElementCatalogScript.normalize(attack_element) == active_element
 	var request: RefCounted
-	if active_element != ElementCatalogScript.Element.NEUTRAL and ElementCatalogScript.normalize(attack_element) == active_element:
-		request = CombatDamageRequestScript.imbued_weapon(tuning.damage_base, tuning.damage_per_strength, tuning.imbue_base, tuning.imbue_per_int, attack_element, slime_element(slime), true)
+	if weapon_imbued or temporary_imbue:
+		# An explicit temporary imbue overrides the blade's innate element for damage.
+		# The blade still applies its own element status separately at the hit boundary.
+		var damage_element: int = active_element if temporary_imbue else weapon_element
+		request = CombatDamageRequestScript.imbued_weapon(tuning.damage_base, tuning.damage_per_strength, tuning.imbue_base, tuning.imbue_per_int, damage_element, slime_element(slime), true)
 	else:
 		request = CombatDamageRequestScript.physical(tuning.damage_base, tuning.damage_per_strength, attack_element, slime_element(slime), true)
-	return combat_damage_request(root, player_stats, slime_stats, request)
+	var result := combat_damage_request(root, player_stats, slime_stats, request)
+	if weapon_imbued and weapon_element != ElementCatalogScript.normalize(attack_element):
+		result.secondary_element = weapon_element
+		result.secondary_status_apply = Callable(self, "apply_weapon_secondary_status").bind(root)
+	return result
 
 
 func player_magic_damage_result_against(root: Object, slime: Sprite2D, attack_element: int, magic_base_bonus: float = 0.0) -> CombatCalculator.DamageResult:

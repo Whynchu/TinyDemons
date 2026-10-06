@@ -16,6 +16,7 @@ signal attack_started(variant: int)
 signal attack_finished
 signal attack_hit_resolved(variant: int, targets: Array)
 
+
 var active := false
 ## Kept as 1/2 for the existing transmutation and run-grade hooks. Spin is a
 ## primary swing (1); a charged finisher is a finisher (2).
@@ -369,6 +370,8 @@ func apply_hitbox(root: GameplayState) -> void:
 			divided_damage = maxf(divided_damage, first_swing_share + 1.0)
 		damage_result.amount = 0.0 if damage_result.immune else maxf(divided_damage, 1.0)
 		root._damage_slime(slime, damage_result.amount, damage_result.critical, damage_result.element, damage_result.immune, damage_result.effectiveness)
+		if damage_result.secondary_element != ElementCatalogScript.Element.NEUTRAL and not damage_result.immune and damage_result.amount > 0.0 and damage_result.secondary_status_apply.is_valid():
+			damage_result.secondary_status_apply.call(slime, damage_result.secondary_element)
 		if imbued_contact:
 			root._play_sound_with_perlin_pitch("imbue_impact", 0.0, 1.0, 0.03)
 		if not damage_result.immune and damage_result.amount > 0.0:

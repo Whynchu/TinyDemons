@@ -51,6 +51,7 @@ var elemental_wards: Array[Dictionary] = []
 @export var default_accessory_name := "BASIC CHARM"
 
 var weapon_name := "BASIC SWORD"
+var weapon_element := 0
 var head_name := "BASIC HOOD"
 var body_name := "BASIC TUNIC"
 var arm_name := "BASIC WRAPS"
@@ -134,6 +135,7 @@ func _reset_runtime_state() -> void:
 	elemental_wards.clear()
 	equipped_transmutations.clear()
 	weapon_name = default_weapon_name
+	weapon_element = 0
 	head_name = default_head_name
 	body_name = default_body_name
 	arm_name = default_arm_name
@@ -167,6 +169,8 @@ func _apply_equipped_instance(slot: StringName, instance: ItemInstance, items: I
 		guard_durability_bonus += float(shield_bonuses.get("guard_durability", 0.0))
 		guard_damage_reduction_bonus += float(shield_bonuses.get("guard_reduction", 0.0)) * 0.01
 	_register_effects(slot, instance, items.definition_effects(instance.definition_id), items, "definition")
+	if slot == &"weapon":
+		weapon_element = int(items.definition_data(instance.definition_id).get("weapon_element", 0))
 	if items.transmutation_is_eligible(instance.definition_id, instance.transmutation_id, instance.rarity):
 		equipped_transmutations[String(slot)] = String(instance.transmutation_id)
 		var transmutation_effects := items.transmutation_effects(instance.transmutation_id)

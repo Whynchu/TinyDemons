@@ -30,6 +30,8 @@ class_name ItemDefinition
 @export var shield: Dictionary = {}
 @export var fusion_group: StringName = &""
 @export var visual_id: StringName = &""
+## Optional always-on weapon element. Neutral keeps the normal physical weapon contract.
+@export_enum("Neutral", "Fire", "Water", "Electric", "Grass", "Shadow", "Ground", "Ice") var weapon_element := 0
 @export var set_id: StringName = &""
 @export var set_name := ""
 @export var passive_id: StringName = &""
@@ -44,6 +46,8 @@ func validate() -> Array[String]:
 		problems.append("display_name must not be empty")
 	if slot not in [&"weapon", &"head", &"body", &"arm", &"shield", &"accessory"]:
 		problems.append("slot must be one of the six canonical equipment slots")
+	if weapon_element < 0 or weapon_element > 7:
+		problems.append("weapon_element must be a registered ElementCatalog value")
 	if gear_tier not in [&"plain", &"basic", &"set", &"legacy", &"expansion"]:
 		problems.append("unknown gear_tier '%s'" % gear_tier)
 	for stat: String in tier_stats:
@@ -88,6 +92,7 @@ func to_record() -> Dictionary:
 		"shield": shield.duplicate(true),
 		"fusion_group": fusion_group if not fusion_group.is_empty() else family,
 		"visual_id": visual_id if not visual_id.is_empty() else id,
+		"weapon_element": weapon_element,
 		"set_id": set_id,
 		"set_name": set_name,
 		"passive_id": passive_id,

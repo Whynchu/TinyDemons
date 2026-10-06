@@ -1017,8 +1017,11 @@ func cancel_magic_animation(context: MagicRuntimeContext) -> void:
 		animation.apply_frame(context.build_animation_context.call())
 
 
-func player_weapon_element(_context: MagicRuntimeContext) -> int:
-	return imbued_element if imbue_remaining > 0.0 else ElementCatalogScript.Element.NEUTRAL
+func player_weapon_element(context: MagicRuntimeContext) -> int:
+	if imbue_remaining > 0.0:
+		return imbued_element
+	var equipment_visual := context.player_equipment_visual_component if context != null else null
+	return equipment_visual.equipped_weapon_element() if equipment_visual != null else ElementCatalogScript.Element.NEUTRAL
 
 
 func reset_for_room(context: MagicRuntimeContext, reset_cooldown := false) -> void:

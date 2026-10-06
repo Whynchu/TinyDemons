@@ -114,6 +114,10 @@ func begin_imbue(new_context: PlayerEquipmentVisualContext, element: int, durati
 	_update_imbue_overlays(new_context)
 
 
+func equipped_weapon_element() -> int:
+	return context.player_equipment.weapon_element if context != null and context.player_equipment != null else ElementCatalogScript.Element.NEUTRAL
+
+
 func end_imbue(new_context: PlayerEquipmentVisualContext) -> void:
 	context = new_context
 	imbue_remaining = 0.0
@@ -930,14 +934,17 @@ func _clear_imbue_overlays() -> void:
 
 
 func _update_imbue_overlays(new_context: PlayerEquipmentVisualContext, delta: float = 0.0) -> void:
-	if imbue_remaining <= 0.0 or imbue_element == ElementCatalogScript.Element.NEUTRAL:
+	var equipment := new_context.player_equipment
+	var permanent_element: int = equipment.weapon_element if equipment != null else ElementCatalogScript.Element.NEUTRAL
+	var visual_element: int = imbue_element if imbue_remaining > 0.0 else permanent_element
+	if visual_element == ElementCatalogScript.Element.NEUTRAL:
 		last_imbue_visual_intensity = 1.0
 		_clear_imbue_overlays()
 		return
 	var aura := _element_aura_component(new_context)
 	if aura == null:
 		return
-	var status_definition := ElementCatalogScript.status_effect_for_element(imbue_element)
+	var status_definition := ElementCatalogScript.status_effect_for_element(visual_element)
 	if status_definition == null:
 		aura.clear_imbue_element_particles()
 	else:
@@ -946,9 +953,10 @@ func _update_imbue_overlays(new_context: PlayerEquipmentVisualContext, delta: fl
 			if layer != null and layer.visible and layer.texture != null:
 				aura.update_imbue_element_particles(delta, layer, status_definition, new_context.effects_spawner, new_context.rng, new_context.pixel_particle_texture)
 	last_imbue_visual_intensity = imbue_visual_intensity(new_context)
-	var outline_color := ElementCatalogScript.damage_number_color(imbue_element)
-	var flash_color := PaletteLibrary.accent(ElementCatalogScript.palette_key(imbue_element)).lerp(Color.WHITE, 0.20)
-	var outline_alpha := clampf(clampf(imbue_remaining / imbue_fade_time, 0.0, 1.0) * 0.9 * last_imbue_visual_intensity, 0.0, 1.0)
+	var outline_color := ElementCatalogScript.damage_number_color(visual_element)
+	var flash_color := PaletteLibrary.accent(ElementCatalogScript.palette_key(visual_element)).lerp(Color.WHITE, 0.20)
+	var permanent_pulse := 0.70 + 0.10 * (0.5 + 0.5 * sin(Time.get_ticks_msec() / 300.0))
+	var outline_alpha := clampf((clampf(imbue_remaining / imbue_fade_time, 0.0, 1.0) * 0.9 if imbue_remaining > 0.0 else permanent_pulse) * last_imbue_visual_intensity, 0.0, 1.0)
 	var flash_alpha := clampf(clampf(imbue_flash_timer / imbue_flash_time, 0.0, 1.0) * last_imbue_visual_intensity, 0.0, 1.0)
 	var visible_layers: Dictionary = {}
 	for layer_name in [&"EquipmentSwordBack", &"EquipmentSwordFront"]:
@@ -984,7 +992,16 @@ func _set_layer(layer_name: String, source: Variant, frame_index: int, opacity: 
 		layer.visible = false
 		return
 	var resolved_frame := mini(frame_index, texture_frames.size() - 1)
-	layer.texture = texture_frames[resolved_frame]
+	var selected_texture := texture_frames[resolved_frame] as Texture2D
+	var equipment := context.player_equipment if context != null else null
+	var blade_element: int = equipment.weapon_element if equipment != null else ElementCatalogScript.Element.NEUTRAL
+	if layer_name.begins_with("EquipmentSword") and blade_element != ElementCatalogScript.Element.NEUTRAL:
+		var blade_palette := ElementCatalogScript.palette_key(blade_element)
+		ensure_palette(context, blade_palette)
+		var elemental_frames := (frames_by_palette.get(blade_palette, {}) as Dictionary).get(grey_key, []) as Array
+		if resolved_frame < elemental_frames.size():
+			selected_texture = elemental_frames[resolved_frame] as Texture2D
+	layer.texture = selected_texture
 	layer.set_meta("mp_grey_key", grey_key)
 	layer.set_meta("mp_grey_frame", resolved_frame)
 	_apply_mp_material(layer)

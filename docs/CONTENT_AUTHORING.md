@@ -40,6 +40,7 @@ traps:
 | Former `resources/definitions/puzzle_map_r3.tres` path | Removed in Slice 0; the runtime and preview use `puzzle_map_r3_new.tres`. | resolved |
 | Retired `item_catalog.tres` expansion records | Removed in the schema-14 catalog cleanup; current baseline/set data and standalone `ItemDefinition` resources remain. | resolved |
 | Item `visual_id` | Written but never read; item art is slot-level only. | 2 |
+| Item `weapon_element` | Consumed by equipped weapon stats, composite damage, status application, and sword palette/highlight presentation. A non-neutral weapon element is always active; temporary IMBUE overrides damage and layers its own status onto the weapon status for authored reactions. | implemented for elemental blades |
 | `element_catalog.tres` and `palette_library.tres` | Both are included in recursive validation and read by their runtime catalogs; element identity still spans parallel enums/adapters, and typed consolidation remains Slice 2 work. | 2 |
 
 The definition validator is part of the release gate and web CI. The catalog

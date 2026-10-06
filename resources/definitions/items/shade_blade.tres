@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="ItemDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/content/item_definition.gd" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+id = &"shade_blade"
+display_name = "SHADE BLADE"
+slot = &"weapon"
+gear_tier = &"basic"
+tier_stat = &"strength"
+bonuses = {"strength": 2.0, "intelligence": 2.0}
+description = "A dusk-dark edge that carries the Shadow element."
+price = 42
+source_tags = Array[String](["shop", "chest", "clear_reward"])
+minimum_run_rank = 2
+minimum_player_level = 2
+rarity_floor = &"common"
+rarity_ceiling = &"mythic"
+shop_eligible = true
+live = true
+family = &"shade"
+role = &"elemental"
+role_tags = Array[String](["shadow", "elemental"])
+fusion_group = &"shade"
+visual_id = &"shade_blade"
+weapon_element = 5
