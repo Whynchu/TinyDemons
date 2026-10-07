@@ -4,7 +4,7 @@ Status: current release numbering rule
 
 Updated: 2026-10-07
 
-The current game version is `0.3.64`.
+The current game version is `0.3.65`.
 
 Every commit pushed to `main` must include a version update of at least
 `0.0.01`. The version must be updated in both locations below in the same

@@ -193,12 +193,15 @@ func _initialize() -> void:
 		gameplay.call("_close_hub_to_run")
 		gameplay.call("_open_pause_menu")
 		await process_frame
+		# A previous Equipment visit may leave its command selection on REMOVE ALL.
+		# Pause entry is a fresh route and must restore an active command cursor.
+		screens.hub_action_column = 2
 		screens.pause_equipment_button.pressed.emit()
 		await process_frame
 		var pause_view := screens.pause_equipment_menu as EquipmentMenuLayout
-		_expect(screens.pause_page == 2 and pause_view != null and pause_view.visible and not pause_view.read_only, "Pause reuses the shared interactive equipment presentation", failures)
+		_expect(screens.pause_page == 2 and screens.hub_action_column == 0 and pause_view != null and pause_view.visible and not pause_view.read_only, "Pause enters Equipment on its first command with the shared interactive presentation", failures)
 		if pause_view != null:
-			_expect((pause_view.get_node("SlotIcon0") as Sprite2D).texture != null and pause_view.navigation_text.texture != null and pause_view.navigation_back_button != null and pause_view.command_cursor.visible, "Pause keeps the six icons, select/back prompt, and live command cursor", failures)
+			_expect((pause_view.get_node("SlotIcon0") as Sprite2D).texture != null and pause_view.navigation_text.texture != null and pause_view.navigation_back_button != null and pause_view.command_cursor.visible and pause_view.command_cursor.modulate == Color.WHITE, "Pause keeps the six icons, select/back prompt, and active command cursor", failures)
 			var pause_equipped_before := profile.get_equipped_instance_id(&"weapon")
 			gameplay.call("_hub_item_action")
 			await process_frame

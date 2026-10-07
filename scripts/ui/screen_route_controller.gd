@@ -69,6 +69,9 @@ func set_pause_page(root: Object, page: int) -> void:
 		screen.hub_equipment_mode = EquipmentMenuLayout.MODE_COMMAND
 		screen.hub_equipment_action_focus = true
 		screen.hub_gear_browsing = false
+		# Pause Equipment is a fresh route entry. Do not inherit a stale Hub/Pause
+		# command selection that may now be disabled for the current loadout.
+		screen.hub_action_column = 0
 		root.call("_play_sound", "ui_confirm", 0.0, 1.0)
 	elif screen.pause_page == 1:
 		root.call("_play_sound", "ui_confirm", 0.0, 1.0)
