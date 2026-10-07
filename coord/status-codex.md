@@ -5,6 +5,15 @@ _Only codex writes this file._
 **Focus:** None
 **Updated:** 2026-10-07
 
+## Completed: Anchored stat allocation and Hub allocation bars
+
+Implemented the selected level-banded spread and 5× ratio policy, safe atomic
+profile and Hub allocation, AUTO fallback, legacy repair, debug-save isolation,
+and six policy-driven tick bars. The composition self-test, composition audit,
+test manifest, and Godot 4.7.1 definition validator pass. Web export verification
+is pending GitHub CI; no local 4.7.1 Web template is installed. Prepared release
+0.3.69.
+
 ## Completed: Full-aspect Pause panel reflow
 
 Pause's 8-piece root frame now has an explicit layout entry point, called by
@@ -1432,3 +1441,31 @@ Root cause: Pause route rendering did not refresh cached display_view_size or re
 ## Completed: Pause route live-size refresh (0.3.68)
 
 Pause rendering now refreshes from DisplayController.visible_view_size_value and repositions frame, panels, and cursor before rendering. Added stale-cache 16:9 Full regression assertions in pause_menu_scene_smoke.gd. Strict composition and self-test pass; MCP diagnostics returned AUTH_FAILED, and focused Godot smoke was not run because the shared editor process is active. Web Pages export verification pending.
+
+## Completed: Pause Equipment renderer owner binding
+
+Bound `HubScreenRenderController` during `ScreenStateController` initialization
+instead of lazily during Hub rendering. Pause Equipment can now use the shared
+equipment renderer as its first menu route without dereferencing a nil owner.
+Composition audit and `git diff --check` pass. Godot MCP calls returned
+`AUTH_FAILED` while the existing editor and runtime were active, so no live
+Pause Equipment retest or standalone Godot process was run.
+
+## Completed: Stat allocation and Idle Mode/equipment proposal review corrections
+
+Revised both proposals with tied-minimum legacy repair, atomic Apply rejection,
+AUTO fallback across all stats, runtime-sync/debug isolation, same-frame human
+takeover and poll scheduling, reload/route handling, and complete-loadout scoring
+with head/body and empty-slot alternatives. Starter-flame spending remains an
+explicit open decision. Delivery order is stat policy, equipment quality, then
+Idle Mode. Documentation only; whitespace checks are clean, with no gameplay
+changes or tests run for this task.
+
+## Completed: Allocation-bar proposal
+
+Added six ticked stat-color bars with black outlined capacity, distinct pending
+fill, banked-point and blocked-row feedback, tied-minimum unlocking, legacy
+overflow, and compact high-value ranges. Recommended recalculating the anchor
+after each point; documented Model C's early multi-tick unlock and deferred a
+separate tier rule. Named stat presenters and responsive/touch acceptance.
+Documentation only; whitespace checks clean, no gameplay changes or tests run.

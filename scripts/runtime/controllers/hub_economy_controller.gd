@@ -2,6 +2,7 @@ extends RefCounted
 class_name HubEconomyController
 
 const ProgressionControllerScript = preload("res://scripts/runtime/controllers/progression_controller.gd")
+const StatAllocationPolicyScript = preload("res://scripts/algorithms/stat_allocation_policy.gd")
 const AspectCatalogScript = preload("res://scripts/content/aspect_catalog.gd")
 const ShopMenuLayoutScript = preload("res://scripts/ui/shop_menu_layout.gd")
 const FusionMenuLayoutScript = preload("res://scripts/ui/fusion_menu_layout.gd")
@@ -1152,15 +1153,29 @@ func hub_adjust_stat(root: Object, stat_name: StringName, direction: int) -> voi
 
 
 func hub_allocate_stat(root: Object, stat_name: StringName) -> void:
-	if root.player_profile == null or hub_points_remaining(root) <= 0: return
-	match stat_name:
-		&"VIT": root.screen_state_controller.hub_pending_vit += 1
-		&"STR": root.screen_state_controller.hub_pending_str += 1
-		&"DEF": root.screen_state_controller.hub_pending_def += 1
-		&"AGI", &"SPD": root.screen_state_controller.hub_pending_agi += 1
-		&"INT": root.screen_state_controller.hub_pending_int += 1
-		&"MND": root.screen_state_controller.hub_pending_mnd += 1
-	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+	var profile: PlayerProfile = root.player_profile
+	var screen: ScreenStateController = root.screen_state_controller
+	if profile == null:
+		return
+	var stat_index: int = StatAllocationPolicyScript.STAT_NAMES.find(stat_name)
+	if stat_name == &"SPD":
+		stat_index = StatAllocationPolicyScript.STAT_NAMES.find(&"AGI")
+	var result: Dictionary = ProgressionControllerScript.try_add_to_draft(profile, hub_pending_values(screen), stat_index)
+	if not bool(result.get("accepted", false)):
+		screen.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+		return
+	var pending: Array[int] = result["pending_values"]
+	screen.hub_pending_vit = pending[0]
+	screen.hub_pending_str = pending[1]
+	screen.hub_pending_def = pending[2]
+	screen.hub_pending_agi = pending[3]
+	screen.hub_pending_int = pending[4]
+	screen.hub_pending_mnd = pending[5]
+	screen.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+
+
+func hub_pending_values(screen: ScreenStateController) -> Array[int]:
+	return [screen.hub_pending_vit, screen.hub_pending_str, screen.hub_pending_def, screen.hub_pending_agi, screen.hub_pending_int, screen.hub_pending_mnd]
 
 
 func hub_points_remaining(root: Object) -> int:
@@ -1168,15 +1183,19 @@ func hub_points_remaining(root: Object) -> int:
 
 
 func hub_confirm_stats(root: Object) -> void:
-	if root.player_profile == null:
+	var profile: PlayerProfile = root.player_profile
+	if profile == null:
 		root.call("_play_sound", "ui_no_input", 0.0, 1.0)
 		return
 	var pending_total: int = int(root.screen_state_controller.hub_pending_vit) + int(root.screen_state_controller.hub_pending_str) + int(root.screen_state_controller.hub_pending_def) + int(root.screen_state_controller.hub_pending_agi) + int(root.screen_state_controller.hub_pending_int) + int(root.screen_state_controller.hub_pending_mnd)
 	if pending_total <= 0:
 		root.call("_play_sound", "ui_no_input", 0.0, 1.0)
 		return
+	var allocation_result: Dictionary = ProgressionControllerScript.allocate_stats(profile, {"VIT": root.screen_state_controller.hub_pending_vit, "STR": root.screen_state_controller.hub_pending_str, "DEF": root.screen_state_controller.hub_pending_def, "AGI": root.screen_state_controller.hub_pending_agi, "INT": root.screen_state_controller.hub_pending_int, "MND": root.screen_state_controller.hub_pending_mnd})
+	if not bool(allocation_result.get("accepted", false)):
+		root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+		return
 	root.call("_play_sound", "ui_confirm", 0.0, 1.0)
-	ProgressionControllerScript.allocate_stats(root.player_profile, {"VIT": root.screen_state_controller.hub_pending_vit, "STR": root.screen_state_controller.hub_pending_str, "DEF": root.screen_state_controller.hub_pending_def, "AGI": root.screen_state_controller.hub_pending_agi, "INT": root.screen_state_controller.hub_pending_int, "MND": root.screen_state_controller.hub_pending_mnd})
 	root.screen_state_controller.hub_pending_vit = 0; root.screen_state_controller.hub_pending_str = 0; root.screen_state_controller.hub_pending_def = 0; root.screen_state_controller.hub_pending_agi = 0; root.screen_state_controller.hub_pending_int = 0; root.screen_state_controller.hub_pending_mnd = 0
 	root.call("_apply_profile_to_runtime"); root.call("_apply_player_level"); root.call("_sync_runtime_progression_to_profile")
 	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
@@ -1190,22 +1209,43 @@ func hub_cancel_stats(root: Object, play_feedback: bool = true) -> void:
 
 
 func hub_auto_allocate(root: Object) -> void:
-	if root.player_profile == null or hub_points_remaining(root) <= 0:
+	var profile: PlayerProfile = root.player_profile
+	var screen: ScreenStateController = root.screen_state_controller
+	if profile == null or hub_points_remaining(root) <= 0:
 		root.call("_play_sound", "ui_no_input", 0.0, 1.0)
 		return
 	var patterns: Array = [[&"VIT", &"STR", &"DEF", &"AGI", &"INT", &"MND"], [&"VIT", &"VIT", &"STR", &"VIT", &"DEF", &"AGI", &"MND"], [&"STR", &"STR", &"VIT", &"STR", &"DEF", &"AGI", &"INT"], [&"DEF", &"DEF", &"VIT", &"DEF", &"STR", &"MND", &"AGI"], [&"STR", &"DEF", &"STR", &"DEF", &"AGI", &"INT", &"MND"]]
-	var pattern: Array = patterns[clampi(root.player_profile.allocation_profile, 0, patterns.size() - 1)]
-	var index: int = 0
+	var pattern: Array = patterns[clampi(profile.allocation_profile, 0, patterns.size() - 1)]
+	var pending := hub_pending_values(screen)
+	var stat_names: Array[StringName] = StatAllocationPolicyScript.STAT_NAMES
+	var preference_cursor := 0
 	while hub_points_remaining(root) > 0:
-		match pattern[index % pattern.size()]:
-			&"VIT": root.screen_state_controller.hub_pending_vit += 1
-			&"STR": root.screen_state_controller.hub_pending_str += 1
-			&"DEF": root.screen_state_controller.hub_pending_def += 1
-			&"AGI", &"SPD": root.screen_state_controller.hub_pending_agi += 1
-			&"INT": root.screen_state_controller.hub_pending_int += 1
-			&"MND": root.screen_state_controller.hub_pending_mnd += 1
-		index += 1
-	root.screen_state_controller.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
+		var chosen_index := -1
+		for preference_offset in pattern.size():
+			var preference_index := posmod(preference_cursor + preference_offset, pattern.size())
+			var preferred_name := StringName(pattern[preference_index])
+			var candidate_index: int = stat_names.find(preferred_name)
+			if preferred_name == &"SPD":
+				candidate_index = stat_names.find(&"AGI")
+			if candidate_index >= 0 and bool(ProgressionControllerScript.try_add_to_draft(profile, pending, candidate_index).get("accepted", false)):
+				chosen_index = candidate_index
+				preference_cursor = (preference_index + 1) % pattern.size()
+				break
+		if chosen_index < 0:
+			for candidate_index in stat_names.size():
+				if bool(ProgressionControllerScript.try_add_to_draft(profile, pending, candidate_index).get("accepted", false)):
+					chosen_index = candidate_index
+					break
+		if chosen_index < 0:
+			break
+		pending[chosen_index] += 1
+	screen.hub_pending_vit = pending[0]
+	screen.hub_pending_str = pending[1]
+	screen.hub_pending_def = pending[2]
+	screen.hub_pending_agi = pending[3]
+	screen.hub_pending_int = pending[4]
+	screen.hub_pending_mnd = pending[5]
+	screen.update_hub_ui(root, Callable(root, "_pixel_text_texture"))
 
 
 func hub_respec(root: Object) -> void:

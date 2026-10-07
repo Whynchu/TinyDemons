@@ -56,7 +56,7 @@ const MENU_CIRCLE_TEXTURE: Texture2D = MenuPromptTextureFactoryScript.MENU_CIRCL
 const MENU_X_TEXTURE: Texture2D = MenuPromptTextureFactoryScript.MENU_X_TEXTURE
 const MENU_TRIANGLE_TEXTURE: Texture2D = MenuPromptTextureFactoryScript.MENU_TRIANGLE_TEXTURE
 const MENU_SQUARE_TEXTURE: Texture2D = MenuPromptTextureFactoryScript.MENU_SQUARE_TEXTURE
-const GAME_VERSION := "0.3.68"
+const GAME_VERSION := "0.3.69"
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const HUB_STAT_ADD_TEXTURE: Texture2D = HubStatsScreenPresenterScript.HUB_STAT_ADD_TEXTURE
 const HUB_STAT_SUBTRACT_TEXTURE: Texture2D = HubStatsScreenPresenterScript.HUB_STAT_SUBTRACT_TEXTURE
@@ -138,6 +138,7 @@ func _init() -> void:
 	_screen_layout_controller.bind(self)
 	_hub_screen_setup_controller.bind(self)
 	_screen_assembly_controller.bind(self)
+	_hub_screen_render_controller.bind(self)
 
 
 var state: StringName = &"gameplay"
@@ -740,7 +741,6 @@ func refresh_equipment_menu(root: Object) -> void:
 
 
 func update_hub_ui(root: GameplayState, pixel_texture: Callable) -> void:
-	_hub_screen_render_controller.bind(self as Node)
 	_hub_legacy_inventory_presenter.bind(self as Node)
 	_hub_screen_render_controller.update_hub_ui(root, pixel_texture)
 

@@ -98,6 +98,14 @@ and boss reward formulas (`combat_runtime_controller.gd:XP_REWARD_MULTIPLIER`).
 | `point_band_awards` | [1,2,3,4,5] | Points awarded per band |
 | `enemy_stat_growth_multiplier` | 0.5 | Enemies auto-distribute half the cumulative player level-up stat points |
 
+Permanent player-stat allocations use a level-banded maximum spread of 10
+through level 10, 12 through 20, 14 through 35, and 15 afterward, plus a 5×
+highest-to-lowest guardrail for profiles with six positive base stats. The Hub
+shows six ticked bars on a shared range: stat-color ticks show committed points,
+lighter ticks show pending points, and outlined black ticks show remaining room.
+Raising every tied lowest stat extends the shared ceiling. Non-positive legacy
+base stats keep the saved values and use spread-only compatibility.
+
 ### `scripts/effects_tuning.gd` — particles/numbers (9 exports, all `inspector`)
 
 `resolution_scale` 2 (web runtime uses 1 to cap the occlusion pixel workload),

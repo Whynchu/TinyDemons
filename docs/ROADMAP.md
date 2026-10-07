@@ -28,6 +28,14 @@ behavior and verification findings, and
 [`long-term-composition-and-performance-plan.md`](long-term-composition-and-performance-plan.md)
 for the post-cleanup content-composition and device-performance direction.
 Feature-specific plans provide detail only when they agree with those documents.
+The proposed Idle Mode and equipment quality work is documented in
+[`idle-mode-and-equipment-quality-plan.md`](idle-mode-and-equipment-quality-plan.md);
+it is an unevaluated feature proposal, not an active implementation commitment.
+The selected Model C stat-allocation guardrail and its ticked Hub bars are
+documented in
+[`anchored-stat-allocation-proposals.md`](anchored-stat-allocation-proposals.md);
+the first implementation slice is complete, with Web Pages export verification
+pending.
 
 Work should move through one narrow slice at a time:
 

@@ -2,6 +2,7 @@ extends RefCounted
 class_name PlayerProfile
 
 const AspectCatalogScript = preload("res://scripts/content/aspect_catalog.gd")
+const StatAllocationPolicyScript = preload("res://scripts/algorithms/stat_allocation_policy.gd")
 
 ## Schema 14 removes retired catalog-only gear from loaded inventories and
 ## equips current starter items in slots left empty by that migration.
@@ -594,17 +595,85 @@ func allocate_stat(stat_name: StringName, amount: int = 1) -> bool:
 	var points := mini(maxi(amount, 0), unspent_stat_points)
 	if points <= 0:
 		return false
-	match stat_name:
-		&"VIT": allocated_vit += points
-		&"STR": allocated_str += points
-		&"DEF": allocated_def += points
-		&"AGI", &"SPD": allocated_agi += points
-		&"INT": allocated_int += points
-		&"MND": allocated_mnd += points
-		_:
+	var stat_index := StatAllocationPolicyScript.STAT_NAMES.find(stat_name)
+	if stat_name == &"SPD":
+		stat_index = StatAllocationPolicyScript.STAT_NAMES.find(&"AGI")
+	if stat_index < 0:
+		return false
+	var base_values := base_stat_values()
+	var values := permanent_stat_values()
+	var candidate: Array[int] = values.duplicate()
+	var ratio_enabled := StatAllocationPolicyScript.profile_uses_ratio(base_values)
+	for _point in points:
+		candidate[stat_index] += 1
+		var policy_result: Dictionary = StatAllocationPolicyScript.evaluate_transition(values, candidate, level, ratio_enabled)
+		if not bool(policy_result.get("accepted", false)):
 			return false
+		values = candidate.duplicate()
+	_set_allocated_values_from_permanent(values)
 	unspent_stat_points -= points
 	return true
+
+
+func base_stat_values() -> Array[int]:
+	return [base_vit, base_str, base_def, base_agi, base_int, base_mnd]
+
+
+func allocated_stat_values() -> Array[int]:
+	return [allocated_vit, allocated_str, allocated_def, allocated_agi, allocated_int, allocated_mnd]
+
+
+func permanent_stat_values() -> Array[int]:
+	var base := base_stat_values()
+	var allocated := allocated_stat_values()
+	var values: Array[int] = []
+	for index in base.size():
+		values.append(base[index] + allocated[index])
+	return values
+
+
+func _set_allocated_values_from_permanent(values: Array[int]) -> void:
+	if values.size() != StatAllocationPolicyScript.STAT_NAMES.size():
+		return
+	var base := base_stat_values()
+	allocated_vit = maxi(values[0] - base[0], 0)
+	allocated_str = maxi(values[1] - base[1], 0)
+	allocated_def = maxi(values[2] - base[2], 0)
+	allocated_agi = maxi(values[3] - base[3], 0)
+	allocated_int = maxi(values[4] - base[4], 0)
+	allocated_mnd = maxi(values[5] - base[5], 0)
+
+
+func commit_stat_allocations_atomic(proposed_allocations: Array[int]) -> Dictionary:
+	var current_allocations := allocated_stat_values()
+	if proposed_allocations.size() != current_allocations.size():
+		return {"accepted": false, "reason": "INVALID ALLOCATION"}
+	var points_to_spend := 0
+	var proposed_values: Array[int] = []
+	var base := base_stat_values()
+	for index in current_allocations.size():
+		if proposed_allocations[index] < current_allocations[index]:
+			return {"accepted": false, "reason": "ALLOCATION CANNOT DECREASE"}
+		points_to_spend += proposed_allocations[index] - current_allocations[index]
+		proposed_values.append(base[index] + proposed_allocations[index])
+	if points_to_spend > unspent_stat_points:
+		return {"accepted": false, "reason": "NOT ENOUGH POINTS"}
+	var policy_result: Dictionary = StatAllocationPolicyScript.evaluate_transition(
+		permanent_stat_values(),
+		proposed_values,
+		level,
+		StatAllocationPolicyScript.profile_uses_ratio(base)
+	)
+	if not bool(policy_result.get("accepted", false)):
+		return policy_result
+	allocated_vit = proposed_allocations[0]
+	allocated_str = proposed_allocations[1]
+	allocated_def = proposed_allocations[2]
+	allocated_agi = proposed_allocations[3]
+	allocated_int = proposed_allocations[4]
+	allocated_mnd = proposed_allocations[5]
+	unspent_stat_points -= points_to_spend
+	return {"accepted": true, "spent": points_to_spend, "remaining": unspent_stat_points, "changed": points_to_spend > 0, "reason": ""}
 
 
 func respec_cost() -> int:

@@ -86,6 +86,8 @@ For an external product/design review, use the curated [`review/00-astra-review-
 28. [`elemental-theme-progression-separation-design.md`](elemental-theme-progression-separation-design.md) — implemented contract separating campaign run content from difficulty pressure.
 29. [`freeze-status-design.md`](freeze-status-design.md) — implemented WATER + ICE mixture producing the Freeze status.
 30. [`elemental-status-interaction-plan.md`](elemental-status-interaction-plan.md) — accepted status-reaction tree and bounded implementation sequence for heat/cold producing Wet and the Shocked damage tick.
+31. [`idle-mode-and-equipment-quality-plan.md`](idle-mode-and-equipment-quality-plan.md) — input-driven autoplay, human override, puzzle-free route policy, simple combat behavior, and numerical equipment sorting/best-stat-pool action. Lifecycle decisions settled 2026-10-07 (explicit Hub start, separate loop opt-in, puzzle-avoiding routing, equal six-lane scoring, best equip in Pause Equipment only, manual starter attunement); implementation has not started.
+32. [`anchored-stat-allocation-proposals.md`](anchored-stat-allocation-proposals.md) — selected Model C stat cap, legacy migration rules, and the Hub's ticked allocation-bar contract.
 
 ## Authority by question
 
@@ -126,6 +128,8 @@ For an external product/design review, use the curated [`review/00-astra-review-
 | How do innate element affinity, status suppression, contact transmission, and synergy room generation work? | [`elemental-affinity-and-transmission-plan.md`](elemental-affinity-and-transmission-plan.md) | [`elemental-status-implementation-plan.md`](elemental-status-implementation-plan.md) for the existing status pipeline |
 | Which elements spawn as the campaign advances? | [`elemental-theme-progression-separation-design.md`](elemental-theme-progression-separation-design.md) | difficulty rank controls pressure, while run number controls elemental content |
 | What happens when Wet and Chill are on the same actor? | [`freeze-status-design.md`](freeze-status-design.md) | the single authored WATER + ICE status mixture |
+| What is the proposed Idle Mode and equipment-quality feature? | [`idle-mode-and-equipment-quality-plan.md`](idle-mode-and-equipment-quality-plan.md) | source-backed feasibility, ownership, acceptance slices, and open design decisions |
+| What are the stat allocation limits and how do its bars work? | [`anchored-stat-allocation-proposals.md`](anchored-stat-allocation-proposals.md) | selected Model C, legacy repair, shared anchor feedback, and acceptance evidence |
 
 ## Document lifecycle
 

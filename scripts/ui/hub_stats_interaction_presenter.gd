@@ -39,6 +39,8 @@ func update_page_visibility(
 	stat_nodes.append(stats.points_text)
 	stat_nodes.append_array(stats.stat_texts)
 	stat_nodes.append_array(stats.stat_value_texts)
+	stat_nodes.append_array(stats.allocation_bars)
+	stat_nodes.append(stats.allocation_policy_text)
 	stat_nodes.append_array(stats.stat_row_buttons)
 	stat_nodes.append_array(stats.stat_buttons)
 	stat_nodes.append_array(stats.derived_texts)

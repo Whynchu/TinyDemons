@@ -248,6 +248,7 @@ func _position_player_card_and_prompts(context: HubResponsiveLayoutContext, widt
 		summary.texture = null
 		summary.visible = false
 	if context.stats.points_text != null: context.stats.points_text.position = Vector2(_left_field_x(14.0, width), 27)
+	if context.stats.allocation_policy_text != null: context.stats.allocation_policy_text.position = Vector2(_left_field_x(14.0, width), 36)
 	if hub_back_prompt_text != null: hub_back_prompt_text.position = Vector2(_left_field_x(136.0, width), 141)
 	if hub_context_text != null: hub_context_text.position = Vector2(_left_field_x(136.0, width), 151)
 	if hub_footer_select_glyph != null: hub_footer_select_glyph.position = Vector2(_left_field_x(107.0, width), 146)
@@ -274,6 +275,8 @@ func _position_stats(context: HubResponsiveLayoutContext, width: float) -> void:
 	for index in context.stats.stat_texts.size():
 		var y := STAT_LABEL_TOP + index * STAT_ROW_PITCH
 		context.stats.stat_texts[index].position = Vector2(_left_field_x(STAT_LABEL_X, width), y)
+		if index < context.stats.allocation_bars.size():
+			context.stats.allocation_bars[index].position = Vector2(_left_field_x(HubStatsScreenPresenterScript.STAT_BAR_LEFT, width), y + 1.0)
 		if index < context.stats.stat_value_texts.size():
 			var stat_texture_width: float = float(context.stats.stat_value_texts[index].texture.get_width()) if context.stats.stat_value_texts[index].texture != null else 4.0
 			context.stats.stat_value_texts[index].position = Vector2(_left_field_x(STAT_VALUE_RIGHT_ANCHOR, width) - stat_texture_width, y)

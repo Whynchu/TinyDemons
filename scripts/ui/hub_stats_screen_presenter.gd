@@ -1,30 +1,37 @@
 extends RefCounted
 class_name HubStatsScreenPresenter
 
+# Owner: Hub stat allocation and preview presentation.
+
 const PauseMenuLayoutScript = preload("res://scripts/ui/pause_menu_layout.gd")
 const MenuPromptTextureFactoryScript = preload("res://scripts/ui/menu_prompt_texture_factory.gd")
+const PaletteLibraryScript = preload("res://scripts/services/palette_library.gd")
+const ProgressionControllerScript = preload("res://scripts/runtime/controllers/progression_controller.gd")
+const StatAllocationPolicyScript = preload("res://scripts/algorithms/stat_allocation_policy.gd")
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const HUB_STAT_ADD_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEaddition.png")
 const HUB_STAT_SUBTRACT_TEXTURE: Texture2D = preload("res://assets/artwork/DEMON HUB REWORK_STATSALLOCATEsubtract.png")
 const STATUS_LEFT_ROW_COUNT := 10
-const STAT_VALUE_RIGHT_ANCHOR := 93.0
-const STAT_LABEL_X := 63.0
+const STAT_VALUE_RIGHT_ANCHOR := 45.0
+const STAT_LABEL_X := 24.0
 const STAT_LABEL_TOP := 44.0
 const STAT_ROW_PITCH := 10.0
-const STAT_ROW_LEFT_ARROW_X := 42.5
-const STAT_ROW_RIGHT_ARROW_X := 90.5
-const STAT_SUBTRACT_MARKER_X := 51.5
-const STAT_ADD_MARKER_X := 104.5
+const STAT_ROW_LEFT_ARROW_X := 47.0
+const STAT_ROW_RIGHT_ARROW_X := 121.0
+const STAT_SUBTRACT_MARKER_X := 56.0
+const STAT_ADD_MARKER_X := 121.0
+const STAT_BAR_LEFT := 66.0
 const DERIVED_LABEL_X := 143.0
 const DERIVED_LABEL_TOP := 47.0
 const DERIVED_ROW_PITCH := 8.0
 const DERIVED_VALUE_RIGHT_ANCHOR := 195.0
-const STAT_CURSOR_X := 30.0
+const STAT_CURSOR_X := 8.0
 const STAT_UTILITY_Y := 116.0
 
 var points_text: Sprite2D = null
 var stat_texts: Array[Sprite2D] = []
 var stat_value_texts: Array[Sprite2D] = []
+var allocation_bars: Array[StatAllocationBar] = []
 var derived_texts: Array[Sprite2D] = []
 var derived_value_texts: Array[Sprite2D] = []
 var stat_add_marker: Sprite2D = null
@@ -42,6 +49,7 @@ var allocate_preview_panel: Panel = null
 var allocate_preview_title: Sprite2D = null
 var allocate_preview_texts: Array[Sprite2D] = []
 var stat_cursor_text: Sprite2D = null
+var allocation_policy_text: Sprite2D = null
 var status_texts: Array[Sprite2D] = []
 
 
@@ -66,6 +74,7 @@ func build(
 	points_text.visible = false
 	stat_texts.clear()
 	stat_value_texts.clear()
+	allocation_bars.clear()
 	stat_buttons.clear()
 	stat_left_buttons.clear()
 	stat_right_buttons.clear()
@@ -76,6 +85,11 @@ func build(
 		var y := STAT_LABEL_TOP - 5.0 + index * STAT_ROW_PITCH
 		stat_texts.append(widget_factory.create_sprite(allocate_page, "HubStat%d" % index, null, Vector2(STAT_LABEL_X, y + 5), false))
 		stat_value_texts.append(widget_factory.create_sprite(allocate_page, "HubStatValue%d" % index, null, Vector2(STAT_VALUE_RIGHT_ANCHOR - 4.0, y + 5), false))
+		var allocation_bar := StatAllocationBar.new()
+		allocation_bar.name = "HubStatAllocationBar%d" % index
+		allocation_bar.position = Vector2(STAT_BAR_LEFT, STAT_LABEL_TOP + index * STAT_ROW_PITCH + 1.0)
+		allocate_page.add_child(allocation_bar)
+		allocation_bars.append(allocation_bar)
 		stat_row_buttons.append(widget_factory.make_transparent_touch_button(
 			allocate_page,
 			"HubStatRow%d" % index,
@@ -95,7 +109,7 @@ func build(
 		) as Button
 		var right := make_archetype_arrow.call(
 			allocate_page,
-			104,
+			1,
 			Vector2(STAT_ADD_MARKER_X - stat_arrow_size.x * 0.5, marker_y - stat_arrow_size.y * 0.5),
 			actions.adjust_stat.bind(stat_names[index], 1),
 			pixel_texture,
@@ -113,6 +127,7 @@ func build(
 	stat_subtract_marker = widget_factory.create_sprite(allocate_page, "HubStatSubtractMarker", HUB_STAT_SUBTRACT_TEXTURE, Vector2(STAT_SUBTRACT_MARKER_X, STAT_LABEL_TOP + 2.5), false)
 	stat_add_marker.visible = false
 	stat_subtract_marker.visible = false
+	allocation_policy_text = widget_factory.create_sprite(allocate_page, "HubStatAllocationPolicy", null, Vector2(14, 36), false)
 	derived_texts.clear()
 	derived_value_texts.clear()
 	for index in 7:
@@ -244,16 +259,47 @@ func update_allocation_page(
 		if pending_total > 0:
 			points_label += " > %d" % remaining
 		points_text.texture = pixel_texture.call(points_label, Color8(255, 205, 117)) as Texture2D
-	var player_stats := root.player_stats
-	var effective_values: Array[float] = []
-	if player_stats != null:
-		effective_values = [float(player_stats.vit) + pending[0], float(player_stats.strength) + pending[1], float(player_stats.def) + pending[2], float(player_stats.agi) + pending[3], float(player_stats.intelligence) + pending[4], float(player_stats.mnd) + pending[5]]
+	var allocation_policy: Dictionary = ProgressionControllerScript.draft_presentation(profile, pending)
+	var committed_values: Array[int] = allocation_policy.get("committed_values", profile.permanent_stat_values())
+	var current_values: Array[int] = allocation_policy.get("current_values", committed_values)
+	var add_available: Array[bool] = allocation_policy.get("can_add", [false, false, false, false, false, false])
+	var ceiling := int(allocation_policy.get("ceiling", 0))
+	var window_start := int(allocation_policy.get("window_start", 0))
+	var minimum_indices: Array[int] = StatAllocationPolicyScript.minimum_stat_indices(current_values)
+	var stat_colors: Array[Color] = [
+		PaletteLibraryScript.ACCENT["red"],
+		PaletteLibraryScript.ACCENT["orange"],
+		PaletteLibraryScript.ACCENT["blue"],
+		PaletteLibraryScript.ACCENT["yellow"],
+		PaletteLibraryScript.ACCENT["purple"],
+		PaletteLibraryScript.ACCENT["green"],
+	]
+	var minimum_labels: Array[String] = []
+	for minimum_index in minimum_indices:
+		minimum_labels.append(["VIT", "STR", "DEF", "AGI", "INT", "MND"][minimum_index])
+	var lowest_text := "ALL" if minimum_labels.size() == 6 else minimum_labels[0] if not minimum_labels.is_empty() else "NONE"
+	for label_index in range(1, mini(minimum_labels.size(), 3)):
+		lowest_text += "/" + minimum_labels[label_index]
+	if minimum_labels.size() > 3:
+		lowest_text += "/..."
+	var policy_text := "CAP %d | LOW: %s" % [int(allocation_policy.get("spread_cap", 0)), lowest_text]
+	if not bool(allocation_policy.get("ratio_enabled", true)):
+		policy_text = "SPREAD ONLY | LOW: %s" % lowest_text
+	if selected_row >= 0 and selected_row < add_available.size() and not add_available[selected_row] and remaining > 0:
+		policy_text = "RAISE LOW: %s" % lowest_text
+	var any_add_available := false
+	for add_is_available in add_available:
+		any_add_available = any_add_available or add_is_available
+	if remaining > 0 and not any_add_available:
+		policy_text = "NO LEGAL POINT | LOW: %s" % lowest_text
+	if allocation_policy_text != null:
+		allocation_policy_text.texture = pixel_texture.call(policy_text, Color8(255, 205, 117)) as Texture2D
 	for index in stat_texts.size():
-		var effective := effective_values[index] if index < effective_values.size() else 0.0
-		var before_pending := effective - float(pending[index])
-		var value_text := "%d" % roundi(effective if pending[index] != 0 else before_pending)
-		var stat_color := Color8(56, 183, 100) if pending[index] != 0 else Color.WHITE
+		var value_text := "%d" % current_values[index]
+		var stat_color := stat_colors[index]
 		stat_texts[index].texture = pixel_texture.call(["VIT", "STR", "DEF", "AGI", "INT", "MND"][index], Color.WHITE) as Texture2D
+		if index < allocation_bars.size():
+			allocation_bars[index].configure(window_start, committed_values[index], current_values[index], ceiling, stat_color)
 		if index < stat_value_texts.size():
 			var value_sprite := stat_value_texts[index]
 			value_sprite.texture = pixel_texture.call(value_text, stat_color) as Texture2D
@@ -265,7 +311,7 @@ func update_allocation_page(
 	for button in stat_buttons:
 		var direction := int(button.get_meta("hub_stat_direction", 1))
 		var stat_index := int(button.get_meta("hub_stat_index", 0))
-		button.disabled = remaining <= 0 if direction > 0 else pending[stat_index] <= 0
+		button.disabled = (remaining <= 0 or not add_available[stat_index]) if direction > 0 else pending[stat_index] <= 0
 		widget_factory.set_archetype_button_state(button, false, highlight_color)
 		button.modulate.a = 0.0
 	for derived_text in derived_texts:

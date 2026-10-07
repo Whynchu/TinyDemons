@@ -55,6 +55,7 @@ func update_pause_ui(root: Object, pixel_texture: Callable) -> void:
 	elif screen.pause_page == 2:
 		var pause_profile: PlayerProfile = menu_player_context.profile if menu_player_context != null else root.get("player_profile") as PlayerProfile
 		if pause_equipment_view_active:
+			screen._hub_screen_render_controller.bind(screen)
 			screen._hub_screen_render_controller._render_equipment_menu(root, pixel_texture, pause_profile, highlight, screen.pause_equipment_menu, false)
 			return
 		screen._pause_screen_presenter.update_equipment(pause_profile, pixel_texture)

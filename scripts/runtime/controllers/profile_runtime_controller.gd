@@ -87,14 +87,8 @@ func set_soul_value(root: Object, value: int) -> void:
 func sync_runtime_progression_to_profile(root: Object) -> void:
 	if root.player_profile == null:
 		return
-	if root.player_stats != null and root.player_stats.manual_allocation_enabled:
-		var allocation: Dictionary = root.player_stats.manual_allocation()
-		root.player_profile.allocated_vit = int(allocation["VIT"])
-		root.player_profile.allocated_str = int(allocation["STR"])
-		root.player_profile.allocated_def = int(allocation["DEF"])
-		root.player_profile.allocated_agi = int(allocation.get("AGI", allocation.get("SPD", 0)))
-		root.player_profile.allocated_int = int(allocation.get("INT", 0))
-		root.player_profile.allocated_mnd = int(allocation.get("MND", 0))
+	# PlayerProfile owns durable allocation. Runtime stats can carry temporary
+	# debug level/allocation overrides and must never write those into the save.
 	# Combat XP is awarded on the enemy-death path. Queue the durable write so
 	# serializing the full profile cannot stall the kill, its drops, and effects.
 	ProfileSaveService.request_save(root.player_profile)
