@@ -48,7 +48,53 @@ color = Color(0, 0, 0, 1)
 script = ExtResource("5_preview")
 
 [node name="PausePanel8Piece" parent="." unique_id=1147690274 instance=ExtResource("3_menu_panel")]
+visible = false
 anchors_preset = 0
+
+[node name="PauseLeftPanel" type="NinePatchRect" parent="."]
+texture_filter = 1
+layout_mode = 0
+offset_right = 176.0
+offset_bottom = 160.0
+mouse_filter = 2
+texture = ExtResource("6_frame")
+patch_margin_left = 3
+patch_margin_top = 3
+patch_margin_right = 3
+patch_margin_bottom = 3
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
+
+[node name="PauseRightPanel" type="NinePatchRect" parent="."]
+texture_filter = 1
+layout_mode = 0
+offset_left = 176.0
+offset_right = 240.0
+offset_bottom = 136.0
+mouse_filter = 2
+texture = ExtResource("6_frame")
+patch_margin_left = 3
+patch_margin_top = 3
+patch_margin_right = 3
+patch_margin_bottom = 3
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
+
+[node name="PauseResourcePanel" type="NinePatchRect" parent="."]
+texture_filter = 1
+layout_mode = 0
+offset_left = 176.0
+offset_top = 136.0
+offset_right = 240.0
+offset_bottom = 160.0
+mouse_filter = 2
+texture = ExtResource("6_frame")
+patch_margin_left = 3
+patch_margin_top = 3
+patch_margin_right = 3
+patch_margin_bottom = 3
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
 
 [node name="FrameOuter" type="Panel" parent="." unique_id=1295798358]
 visible = false

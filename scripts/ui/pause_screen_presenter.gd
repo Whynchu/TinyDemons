@@ -166,9 +166,7 @@ func position_controls(view_size: Vector2) -> void:
 		var page_title_rule := page_root.get_node_or_null("TitleRule") as ColorRect
 		if page_title_rule != null: page_title_rule.size.x = maxf(width - 16.0, 16.0)
 	var divider_x := PauseMenuLayoutScript.divider_x(width)
-	var panel_root := overlay.get_node_or_null("PausePanel8Piece") as Control
-	if panel_root != null:
-		PauseMenuLayoutScript.apply_panel_layout(panel_root, view_size)
+	PauseMenuLayoutScript.apply_panel_layout(overlay, view_size)
 	var command_divider := overlay.get_node_or_null("CommandDivider") as ColorRect
 	if command_divider != null:
 		command_divider.position = Vector2(divider_x - 1.0, 2.0)
@@ -221,7 +219,7 @@ func update_page_visibility(page: int, debug_menu_enabled: bool, pixel_texture: 
 				chrome.visible = not equipment_view_active
 	var root_panel := overlay.get_node_or_null("PausePanel8Piece") as Control
 	if root_panel != null:
-		root_panel.visible = showing_root
+		root_panel.visible = false
 	for index in menu_buttons.size():
 		var debug_command_hidden := index == 3 and not debug_menu_enabled
 		menu_buttons[index].visible = showing_root and not debug_command_hidden

@@ -118,14 +118,18 @@ func _initialize() -> void:
 		if orientation_screens != null:
 			var wide_pause_size := display.visible_view_size_value()
 			orientation_screens._pause_screen_presenter.position_controls(wide_pause_size)
-			var wide_pause_panel := orientation_screens.pause_overlay.get_node_or_null("PausePanel8Piece") as Control
-			var wide_pause_left := orientation_screens.pause_overlay.get_node_or_null("PausePanel8Piece/LeftPanel") as NinePatchRect
-			var wide_pause_right := orientation_screens.pause_overlay.get_node_or_null("PausePanel8Piece/RightPanel") as NinePatchRect
-			var wide_pause_gold_souls := orientation_screens.pause_overlay.get_node_or_null("PausePanel8Piece/GoldSoulsPanel") as NinePatchRect
+			var wide_pause_legacy_frame := orientation_screens.pause_overlay.get_node_or_null("PausePanel8Piece") as Control
+			var wide_pause_left := orientation_screens.pause_overlay.get_node_or_null("PauseLeftPanel") as NinePatchRect
+			var wide_pause_right := orientation_screens.pause_overlay.get_node_or_null("PauseRightPanel") as NinePatchRect
+			var wide_pause_gold_souls := orientation_screens.pause_overlay.get_node_or_null("PauseResourcePanel") as NinePatchRect
 			var wide_pause_status_page := orientation_screens.pause_page_roots.get(1) as Control
 			var wide_pause_status_background := wide_pause_status_page.get_node_or_null("Background") as NinePatchRect if wide_pause_status_page != null else null
 			var wide_pause_divider := maxf(wide_pause_size.x - 64.0, 176.0)
-			_expect(wide_pause_panel != null and wide_pause_panel.size == wide_pause_size and wide_pause_left != null and wide_pause_left.size == Vector2(wide_pause_divider, wide_pause_size.y) and wide_pause_right != null and wide_pause_right.position.x == wide_pause_divider and wide_pause_right.size.x == wide_pause_size.x - wide_pause_divider and wide_pause_gold_souls != null and wide_pause_gold_souls.position.y == wide_pause_size.y - 24.0, "wide Pause frame panels follow the same Full logical size as its command and resource rails", failures)
+			var pause_left_global := wide_pause_left.get_global_rect() if wide_pause_left != null else Rect2()
+			var pause_right_global := wide_pause_right.get_global_rect() if wide_pause_right != null else Rect2()
+			var pause_resource_global := wide_pause_gold_souls.get_global_rect() if wide_pause_gold_souls != null else Rect2()
+			_expect(wide_pause_legacy_frame != null and not wide_pause_legacy_frame.visible and wide_pause_left != null and wide_pause_left.visible and wide_pause_left.size == Vector2(wide_pause_divider, wide_pause_size.y) and wide_pause_right != null and wide_pause_right.visible and wide_pause_right.position.x == wide_pause_divider and wide_pause_right.size == Vector2(wide_pause_size.x - wide_pause_divider, wide_pause_size.y - 24.0) and wide_pause_gold_souls != null and wide_pause_gold_souls.visible and wide_pause_gold_souls.position == Vector2(wide_pause_divider, wide_pause_size.y - 24.0), "wide Pause visible frame uses Hub-style direct panels sized to the live logical view", failures)
+			_expect(is_equal_approx(pause_left_global.size.x + pause_right_global.size.x, wide_pause_size.x) and is_equal_approx(pause_resource_global.end.x, wide_pause_size.x) and is_equal_approx(pause_resource_global.end.y, wide_pause_size.y), "wide Pause panel rendered bounds reach the visible viewport edges", failures)
 			_expect(wide_pause_status_background != null and wide_pause_status_background.size == wide_pause_size and orientation_screens.pause_status_texts[10].position.x == PauseMenuLayoutScript.left_field_x(122.0, wide_pause_size.x), "wide Pause Status frame and second text column reflow with landscape Full mode", failures)
 		gameplay.call("_show_hub", true, false)
 		await process_frame

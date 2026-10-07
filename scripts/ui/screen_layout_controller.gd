@@ -48,7 +48,6 @@ func apply_display_layout(root: GameplayState) -> void:
 	if screen.pause_overlay != null:
 		screen.pause_overlay.position = Vector2.ZERO
 		screen.pause_overlay.size = screen.display_view_size
-		screen._menu_widget_factory.resize_menu_frame(screen.pause_overlay, screen.display_view_size)
 		screen._screen_layout_controller._position_pause_controls(false, true)
 	_refresh_active_menu_layout(root)
 	screen._game_over_screen_presenter.position_controls(screen.display_view_size, screen._menu_cursor_animator, screen, screen.CURSOR_LEFT_GAP)
@@ -130,7 +129,6 @@ func _position_pause_controls(animate_cursor: bool = false, preserve_cursor_moti
 	if screen.pause_overlay == null:
 		return
 	screen._pause_screen_presenter.position_controls(screen.display_view_size)
-	screen._menu_widget_factory.resize_menu_frame(screen.pause_overlay, screen.display_view_size)
 	if screen.pause_cursor_text != null and not screen.pause_menu_buttons.is_empty():
 		var cursor_index := clampi(screen.pause_menu_row, 0, screen.pause_menu_buttons.size() - 1)
 		screen._screen_layout_controller._position_menu_cursor(screen.pause_cursor_text, Vector2(screen.pause_menu_buttons[cursor_index].position.x - screen.CURSOR_LEFT_GAP, screen.pause_menu_buttons[cursor_index].position.y + 3.0), animate_cursor, preserve_cursor_motion)
