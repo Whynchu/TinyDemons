@@ -24,6 +24,17 @@ func bind(owner: Variant) -> void:
 func update_pause_ui(root: Object, pixel_texture: Callable) -> void:
 	if screen.pause_overlay == null or not screen.pause_overlay.visible:
 		return
+	# Pause can be opened from gameplay after the browser surface or orientation
+	# changed without the display callback reaching this cached screen size. Hub
+	# rendering repositions its controls on every route update; do the same here
+	# from the live visible surface so the overlay and its panels cannot stay at
+	# the native 240px width in Full landscape mode.
+	var display := (root as GameplayState).display_controller if root is GameplayState else null
+	if display != null:
+		screen.display_view_size = display.visible_view_size_value()
+	screen.pause_overlay.position = Vector2.ZERO
+	screen.pause_overlay.size = screen.display_view_size
+	screen._screen_layout_controller._position_pause_controls(false, true)
 	var highlight := PaletteLibrary.accent(screen.player_palette_name)
 	var menu_player_context: MenuPlayerContext = (root as GameplayState)._menu_player_context() if root is GameplayState else null
 	screen._pause_screen_presenter.update_player_info(menu_player_context, pixel_texture, screen.display_view_size)

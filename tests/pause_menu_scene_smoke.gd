@@ -30,6 +30,16 @@ func _initialize() -> void:
 	var original_profile: Dictionary = profile.to_dictionary() if profile != null else {}
 	_expect(screens != null and profile != null and router != null, "pause menu owners are composed", failures)
 	if screens != null and profile != null and router != null:
+		# Simulate the web/mobile case where the live canvas is already wide but
+		# the Pause route still holds the native logical size from an earlier
+		# screen. Opening Pause must recover from the display owner's live surface.
+		var display := gameplay.get("display_controller") as DisplayController
+		if display != null:
+			gameplay.get_window().size = Vector2i(960, 540)
+			settings.set_setting(&"aspect", DisplayLayout.FULL_ASPECT)
+			for _settle_frame in 4:
+				await process_frame
+		var live_pause_size := display.visible_view_size_value() if display != null else Vector2(240.0, 160.0)
 		screens.display_view_size = Vector2(240.0, 160.0)
 		screens.call("_position_pause_controls")
 		var menu_player_context := gameplay.call("_menu_player_context") as MenuPlayerContext
@@ -39,29 +49,31 @@ func _initialize() -> void:
 		gameplay.call("_open_pause_menu")
 		await process_frame
 		_expect(screens.pause_overlay != null and screens.pause_overlay.visible and not screens.hub_overlay.visible and screens.hub_pause_mode, "pause opens its own overlay", failures)
+		_expect(screens.display_view_size.is_equal_approx(live_pause_size) and screens.pause_overlay.size.is_equal_approx(live_pause_size), "Pause route refreshes stale cached size from the live visible display", failures)
 		_expect(screens.state == &"pause", "pause owns a distinct screen state", failures)
 		var pause_frame := screens.pause_overlay.get_node_or_null("FrameOuter") as Panel
 		var pause_inner_frame := screens.pause_overlay.get_node_or_null("FrameInner") as Panel
 		var pause_divider := screens.pause_overlay.get_node_or_null("CommandDivider") as ColorRect
 		var pause_resource_divider := screens.pause_overlay.get_node_or_null("ResourceDivider") as ColorRect
 		var pause_panel := screens.pause_overlay.get_node_or_null("PausePanel8Piece") as Control
-		var pause_left_panel := screens.pause_overlay.get_node_or_null("PausePanel8Piece/LeftPanel") as NinePatchRect
-		var pause_right_panel := screens.pause_overlay.get_node_or_null("PausePanel8Piece/RightPanel") as NinePatchRect
-		var pause_gold_souls_panel := screens.pause_overlay.get_node_or_null("PausePanel8Piece/GoldSoulsPanel") as NinePatchRect
+		var pause_left_panel := screens.pause_overlay.get_node_or_null("PauseLeftPanel") as NinePatchRect
+		var pause_right_panel := screens.pause_overlay.get_node_or_null("PauseRightPanel") as NinePatchRect
+		var pause_gold_souls_panel := screens.pause_overlay.get_node_or_null("PauseResourcePanel") as NinePatchRect
 		var pause_gold_icon := screens.pause_overlay.get_node_or_null("PauseGoldIcon") as Sprite2D
 		var pause_soul_icon := screens.pause_overlay.get_node_or_null("PauseResourceIcon") as Sprite2D
 		var pause_gold_text := screens.pause_overlay.get_node_or_null("PauseGoldText") as Sprite2D
 		var pause_soul_text := screens.pause_overlay.get_node_or_null("PauseSoulText") as Sprite2D
 		_expect(pause_frame != null and pause_inner_frame != null and pause_divider != null and pause_resource_divider != null and pause_panel != null, "pause scene owns its frame and rail geometry", failures)
-		_expect(pause_left_panel != null and pause_right_panel != null and pause_gold_souls_panel != null and pause_left_panel.texture != null and pause_right_panel.texture != null and pause_gold_souls_panel.texture != null, "pause uses the three authored panel layers", failures)
+		_expect(pause_panel != null and not pause_panel.visible and pause_left_panel != null and pause_right_panel != null and pause_gold_souls_panel != null and pause_left_panel.texture != null and pause_right_panel.texture != null and pause_gold_souls_panel.texture != null, "pause uses the three visible direct panel layers", failures)
 		_expect(pause_gold_icon != null and pause_gold_icon.texture != null and pause_gold_icon.region_enabled and pause_soul_icon != null and pause_soul_icon.texture != null, "pause shows separate gold and soul icons", failures)
 		_expect(pause_gold_text != null and pause_soul_text != null and pause_gold_text.texture != null and pause_soul_text.texture != null, "pause shows both resource counts", failures)
-		_expect(pause_frame != null and pause_frame.size == screens.display_view_size and pause_divider != null and pause_divider.position.x == screens.display_view_size.x - 65.0, "pause frame follows the logical viewport with a fixed command rail", failures)
+		_expect(pause_frame != null and pause_frame.size == screens.display_view_size and pause_divider != null and pause_divider.position.x == PauseMenuLayoutScript.divider_x(screens.display_view_size.x) - 1.0, "pause frame follows the live logical viewport and command rail", failures)
 		if pause_left_panel != null and pause_right_panel != null and pause_gold_souls_panel != null and pause_gold_icon != null and pause_soul_icon != null:
 			var expected_divider_x := maxf(screens.display_view_size.x - 64.0, 176.0)
 			_expect(pause_left_panel.position == Vector2.ZERO and pause_left_panel.size == Vector2(expected_divider_x, screens.display_view_size.y), "pause left panel keeps authored origin and expands from the divider", failures)
-			_expect(pause_right_panel.position == Vector2(expected_divider_x, 0.0) and pause_right_panel.size == Vector2(maxf(screens.display_view_size.x - expected_divider_x, 1.0), maxf(screens.display_view_size.y - 24.0, 1.0)), "pause right panel stays anchored to the fixed rail", failures)
-			_expect(pause_gold_souls_panel.position == Vector2(expected_divider_x, maxf(screens.display_view_size.y - 24.0, 0.0)) and pause_gold_souls_panel.size == Vector2(maxf(screens.display_view_size.x - expected_divider_x, 1.0), 24.0), "pause resource panel stays in the rail footer", failures)
+			_expect(pause_right_panel.position == Vector2(expected_divider_x, 0.0) and pause_right_panel.size == Vector2(screens.display_view_size.x - expected_divider_x, screens.display_view_size.y - 24.0), "pause right panel stays anchored to the fixed rail", failures)
+			_expect(pause_gold_souls_panel.position == Vector2(expected_divider_x, screens.display_view_size.y - 24.0) and pause_gold_souls_panel.size == Vector2(screens.display_view_size.x - expected_divider_x, 24.0), "pause resource panel stays in the rail footer", failures)
+			_expect(is_equal_approx(pause_left_panel.get_global_rect().size.x + pause_right_panel.get_global_rect().size.x, live_pause_size.x) and is_equal_approx(pause_gold_souls_panel.get_global_rect().end.x, live_pause_size.x), "Pause rendered panel bounds reach the live viewport edge after stale-size recovery", failures)
 			_expect(pause_gold_icon.position == Vector2(expected_divider_x + 6.0, screens.display_view_size.y - 18.0) and pause_soul_icon.position == Vector2(expected_divider_x + 6.0, screens.display_view_size.y - 11.0), "pause resource icons use the authored three-pixel inner margin", failures)
 			if pause_gold_text != null and pause_soul_text != null and pause_gold_text.texture != null and pause_soul_text.texture != null:
 				_expect(pause_gold_text.position == Vector2(screens.display_view_size.x - pause_gold_text.texture.get_width() - 6.0, screens.display_view_size.y - 18.0) and pause_soul_text.position == Vector2(screens.display_view_size.x - pause_soul_text.texture.get_width() - 6.0, screens.display_view_size.y - 11.0), "pause resource counts use the authored right margin", failures)

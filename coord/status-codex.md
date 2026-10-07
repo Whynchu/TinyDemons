@@ -1388,3 +1388,47 @@ dynamic `has_method()` / `call()` seam. The composition audit passes at 1,859
 root accesses; PauseScreenPresenter meets its zero dynamic-dispatch baseline.
 The focused script check and generated script index pass. No gameplay test or
 playtest was run. Prepared version 0.3.64 for main.
+
+## Completed: Full mode Pause menu reflow (0.3.66)
+
+Pause frame sizing resets the instanced child to top-left anchoring before
+applying the live Full viewport size and recalculating its panels. Added wide
+landscape regression coverage for the actual panel bounds. The gear cursor
+route fix and its assertion are also included. `git diff --check` and
+composition regression audit pass; Godot MCP diagnostics and playtest were
+unavailable because the bridge returned AUTH_FAILED. Portrait behavior was
+left unchanged per user direction.
+
+## Completed: Pause Equipment cursor visibility
+
+Fresh Pause Equipment entry resets the shared command selection to EQUIP, so a
+stale disabled REMOVE ALL selection cannot leave its cursor dimmed. Added
+focused scene assertions for selection and active cursor color. Static checks
+pass; runtime verification was unavailable in the shared-editor session.
+
+## In flight: Hub-style Pause frame
+
+Comparing rendered frame ownership and reflow against Hub's direct NinePatch
+panel layout. Pause's visible frame is being changed to direct overlay children
+that receive the live view bounds. The focused regression now checks those
+visible panels and global rendered rectangles. User reports 0.3.66 still fails;
+Godot MCP runtime verification remains unavailable because the bridge returned
+AUTH_FAILED.
+
+## Completed: Hub-style Pause Full landscape frame
+
+Replaced Pause's visible nested 8-piece frame with direct NinePatch overlay
+panels, laid out from the live visible view size like Hub's responsive frame.
+Removed the generic frame resize that ran after Pause-specific positioning.
+The display smoke now checks the visible direct panel sizes and global bounds.
+Composition strict targets and `git diff --check` pass. Web export smoke passes
+its static configuration check but skips export because the configured Godot
+executable is unavailable; runtime/browser validation remains unverified.
+
+## In flight: Pause route reflow
+
+Root cause: Pause route rendering did not refresh cached display_view_size or reposition controls, unlike Hub route rendering. Reflow Pause from DisplayController's current visible view before drawing route content; add stale-cache landscape regression; run composition and focused source checks. Preserve unrelated workspace edits. No Godot editor/API currently verified.
+
+## Completed: Pause route live-size refresh (0.3.68)
+
+Pause rendering now refreshes from DisplayController.visible_view_size_value and repositions frame, panels, and cursor before rendering. Added stale-cache 16:9 Full regression assertions in pause_menu_scene_smoke.gd. Strict composition and self-test pass; MCP diagnostics returned AUTH_FAILED, and focused Godot smoke was not run because the shared editor process is active. Web Pages export verification pending.
