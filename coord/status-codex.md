@@ -3,7 +3,7 @@
 _Only codex writes this file._
 
 **Focus:** None
-**Updated:** 2026-10-06
+**Updated:** 2026-10-07
 
 ## Completed: Full-aspect Pause panel reflow
 
@@ -1379,3 +1379,12 @@ audit passes: 1,859 root accesses; NpcController is at 50 dynamic calls / 51
 reach-throughs. Focused NPC diagnostics and `git diff --check` pass;
 GameplayState still reports its pre-existing line-390 diagnostic. No gameplay
 test or playtest was run. Prepared version 0.3.62 for main.
+
+## Completed: Pause menu composition audit correction
+
+PauseScreenPresenter now casts the authored frame node to its preloaded script
+type and calls `apply_layout()` directly, retaining landscape reflow without a
+dynamic `has_method()` / `call()` seam. The composition audit passes at 1,859
+root accesses; PauseScreenPresenter meets its zero dynamic-dispatch baseline.
+The focused script check and generated script index pass. No gameplay test or
+playtest was run. Prepared version 0.3.64 for main.
