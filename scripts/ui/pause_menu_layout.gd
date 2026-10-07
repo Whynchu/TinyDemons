@@ -61,6 +61,30 @@ static func rail_width(view_width: float) -> float:
 	return maxf(view_width - divider_x(view_width), 1.0)
 
 
+static func apply_panel_layout(panel_root: Control, view_size: Vector2) -> void:
+	if panel_root == null:
+		return
+	# Set the three patches from the same live bounds as the Pause command rail.
+	# Avoid relying on a script cast on an instanced @tool scene at runtime.
+	panel_root.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	panel_root.position = Vector2.ZERO
+	panel_root.size = view_size
+	var panel_divider_x := divider_x(view_size.x)
+	var panel_rail_width := maxf(view_size.x - panel_divider_x, 1.0)
+	var left_panel := panel_root.get_node_or_null("LeftPanel") as NinePatchRect
+	if left_panel != null:
+		left_panel.position = Vector2.ZERO
+		left_panel.size = Vector2(panel_divider_x, view_size.y)
+	var right_panel := panel_root.get_node_or_null("RightPanel") as NinePatchRect
+	if right_panel != null:
+		right_panel.position = Vector2(panel_divider_x, 0.0)
+		right_panel.size = Vector2(panel_rail_width, maxf(view_size.y - RESOURCE_PANEL_HEIGHT, 1.0))
+	var resource_panel := panel_root.get_node_or_null("GoldSoulsPanel") as NinePatchRect
+	if resource_panel != null:
+		resource_panel.position = Vector2(panel_divider_x, maxf(view_size.y - RESOURCE_PANEL_HEIGHT, 0.0))
+		resource_panel.size = Vector2(panel_rail_width, RESOURCE_PANEL_HEIGHT)
+
+
 static func upper_rail_height(view_height: float) -> float:
 	return maxf(view_height - RESOURCE_PANEL_HEIGHT, 1.0)
 

@@ -5,7 +5,6 @@ signal debug_page_requested
 signal debug_action_requested(action: StringName, amount: int)
 
 const PAUSE_MENU_SCENE: PackedScene = preload("res://scenes/menus/pause/pause_menu.tscn")
-const MenuPanel8PieceScript = preload("res://scripts/ui/menu_panel_8_piece.gd")
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const PauseMenuLayoutScript = preload("res://scripts/ui/pause_menu_layout.gd")
 const DebugMenuLayoutScript = preload("res://scripts/editor/debug_menu_layout.gd")
@@ -167,15 +166,9 @@ func position_controls(view_size: Vector2) -> void:
 		var page_title_rule := page_root.get_node_or_null("TitleRule") as ColorRect
 		if page_title_rule != null: page_title_rule.size.x = maxf(width - 16.0, 16.0)
 	var divider_x := PauseMenuLayoutScript.divider_x(width)
-	var panel_root := overlay.get_node_or_null("PausePanel8Piece") as MenuPanel8PieceScript
+	var panel_root := overlay.get_node_or_null("PausePanel8Piece") as Control
 	if panel_root != null:
-		# This is an instanced Control scene under a resizable ColorRect. Lock its
-		# origin to the overlay before assigning the live logical size so inherited
-		# anchors cannot keep the authored 240x160 child bounds during Full reflow.
-		panel_root.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
-		panel_root.position = Vector2.ZERO
-		panel_root.size = view_size
-		panel_root.apply_layout()
+		PauseMenuLayoutScript.apply_panel_layout(panel_root, view_size)
 	var command_divider := overlay.get_node_or_null("CommandDivider") as ColorRect
 	if command_divider != null:
 		command_divider.position = Vector2(divider_x - 1.0, 2.0)
