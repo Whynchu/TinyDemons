@@ -5,6 +5,20 @@ _Only codex writes this file._
 **Focus:** None
 **Updated:** 2026-10-06
 
+## Completed: Full-aspect Pause panel reflow
+
+Pause's 8-piece root frame now has an explicit layout entry point, called by
+the presenter after it applies the latest visible logical size. This guarantees
+the 3-part pause frame (root menu) recalculates its panel bounds on responsive
+reflow instead of depending only on resize notifications. `git diff --check`
+passes; no Godot diagnostics or runtime verification were run.
+
+## Completed: Version 0.3.63 release prep
+
+Updated the in-game title version and README version references together.
+Menu reflow code, version references, and coordination notes are staged for
+commit and push. No Godot tests or export validation were run.
+
 ## Completed: Chill/Wet bounds and status-outline cost
 
 Chill crystals and Wet bubbles now spawn along an inset sprite perimeter so

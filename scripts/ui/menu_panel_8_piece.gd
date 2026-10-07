@@ -17,7 +17,14 @@ func _ready() -> void:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED:
-		_apply_layout()
+		apply_layout()
+
+
+func apply_layout() -> void:
+	## Explicit reflow entry point for display-mode changes. A hidden menu can
+	## miss its resize notification while the viewport changes, so screen owners
+	## call this after assigning the latest visible logical size.
+	_apply_layout()
 
 
 func _apply_layout() -> void:

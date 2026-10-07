@@ -1176,3 +1176,9 @@ Fixed the Web Pages composition failure by folding two-tap Equipment touch behav
 2026-10-06 done codex: Prepared the Cloaked Demon dialogue cursor release as 0.3.61 with active version references updated; local MCP configurations remain excluded. `git diff --check` and the focused NpcController script check pass. No gameplay test or playtest was run.
 2026-10-06 claim codex: Remove the dialogue cursor root.call regression and keep the existing GameplayState line baseline before preparing release 0.3.62.
 2026-10-06 done codex: Removed the cursor's additional root dispatch and preserved GameplayState's 1,714-line baseline. Composition audit passes at 1,859 root accesses; NpcController meets its baseline limits. Focused NPC diagnostics and diff check pass. Prepared version 0.3.62; gameplay tests/playtest were not run, and local MCP configuration edits remain excluded.
+
+## 2026-10-06T18:00Z — codex — done
+Pause 8-piece frame now explicitly recalculates after responsive sizing in PauseScreenPresenter. Static diff check passed; runtime verification not run.
+
+## 2026-10-07T14:00Z — codex — done
+Prepared release 0.3.63 with landscape menu reflow and synchronized in-game/README version references. Local MCP configuration changes excluded; no Godot verification run.

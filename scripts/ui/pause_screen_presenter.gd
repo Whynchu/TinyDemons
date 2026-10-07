@@ -170,6 +170,8 @@ func position_controls(view_size: Vector2) -> void:
 	if panel_root != null:
 		panel_root.position = Vector2.ZERO
 		panel_root.size = view_size
+		if panel_root.has_method("apply_layout"):
+			panel_root.call("apply_layout")
 	var command_divider := overlay.get_node_or_null("CommandDivider") as ColorRect
 	if command_divider != null:
 		command_divider.position = Vector2(divider_x - 1.0, 2.0)
