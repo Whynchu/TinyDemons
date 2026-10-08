@@ -129,7 +129,7 @@ static func _new_light(owner: Node2D, light_name: StringName) -> PointLight2D:
 static func _configure_light(light: PointLight2D, color: Color, energy: float, texture_scale: float) -> void:
 	light.texture = LIGHT_TEXTURE
 	light.color = color
-	light.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	light.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	light.energy = maxf(energy, 0.0)
 	light.texture_scale = maxf(texture_scale, 0.01)
 	light.scale = Vector2.ONE

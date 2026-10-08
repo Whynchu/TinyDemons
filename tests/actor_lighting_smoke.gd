@@ -159,8 +159,8 @@ func _check_coverage(sprite: Sprite2D, light: PointLight2D, drawn_rect: Rect2) -
 
 func _check_spell_lights(world: Node2D, effects: EffectsSpawner) -> void:
 	var texture := Lighting.LIGHT_TEXTURE as GradientTexture2D
-	_expect(texture.gradient.interpolation_mode == Gradient.GRADIENT_INTERPOLATE_CUBIC, "point lights use smooth gradient interpolation")
-	_expect(not is_equal_approx(texture.gradient.sample(0.1).a, texture.gradient.sample(0.2).a), "radial falloff has no constant brightness rings")
+	_expect(texture.gradient.interpolation_mode == Gradient.GRADIENT_INTERPOLATE_CONSTANT, "point lights use stepped pixel falloff")
+	_expect(is_equal_approx(texture.gradient.sample(0.1).a, texture.gradient.sample(0.2).a), "radial falloff preserves discrete brightness bands")
 	var magic := MagicRuntimeController.new()
 	world.add_child(magic)
 	var context := MagicRuntimeContext.new()
@@ -178,7 +178,7 @@ func _check_spell_lights(world: Node2D, effects: EffectsSpawner) -> void:
 	var light := anchor.get_node("ElementalLight") as PointLight2D
 	_expect(effects.pixel_particles.size() == 14, "ice field uses one light for all thirteen spikes")
 	_expect(light.color.is_equal_approx(PaletteLibrary.accent("aquamarine")), "ice field emits an elemental colored light")
-	_expect(light.texture_filter == CanvasItem.TEXTURE_FILTER_LINEAR, "point light edges use linear filtering independently of sprite art")
+	_expect(light.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST, "point light edges use nearest filtering to preserve pixel steps")
 	var diameter := _light_size(light).x
 	for data in effects.pixel_particles:
 		var spike := data["sprite"] as Sprite2D

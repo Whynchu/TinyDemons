@@ -1231,3 +1231,5 @@ Release 0.3.72 lighting and bounded-effect changes are ready. Composition self-t
 2026-10-08 | codex | done | Registered passing actor lighting owner smoke; TEST_MANIFEST_OK. Prepared release 0.3.74 for Web export retry.
 2026-10-08 | codex | claim | Smooth radial light falloff, dim elemental pickups, and add art-sized spell impact lights.
 2026-10-08 | codex | done | Release 0.3.75: smooth cubic/linear point light falloff; pickup energy 0.14; art-sized fading spell impact lights. Focused actor lighting smoke, strict composition and manifest validation pass. Prepared for push and Pages verification.
+2026-10-08 | codex | claim | Restore stepped pixel lighting per visual feedback; preserve pickup dimming and impact light sizing.
+2026-10-08 | codex | done | Restored stepped pixel light falloff and nearest filtering. Focused lighting and strict composition pass; release 0.3.76 prepared for Pages verification.
