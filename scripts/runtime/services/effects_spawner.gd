@@ -1338,6 +1338,10 @@ func update_pixel_particles(delta: float, snap_position: Callable, default_lifet
 			var fire_color := fire_tones[0].lerp(fire_tones[2], clampf(progress / 0.35, 0.0, 1.0))
 			color = Color(fire_color.r, fire_color.g, fire_color.b, clampf(1.0 - progress, 0.0, 1.0))
 		particle.modulate = color
+		if particle_data.has("light_energy"):
+			var light := particle.get_node_or_null("ElementalLight") as PointLight2D
+			if light != null:
+				light.energy = float(particle_data["light_energy"]) * clampf(timer / lifetime, 0.0, 1.0)
 		particle_data["velocity"] = velocity
 		particle_data["timer"] = timer
 

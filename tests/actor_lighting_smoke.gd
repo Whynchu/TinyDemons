@@ -19,6 +19,7 @@ func _run() -> void:
 	_check_frame_bounds(world, effects)
 	_check_actor_coverage(world, effects)
 	_check_weapon_centers(world, effects)
+	_check_spell_lights(world, effects)
 	_check_world_ui(world, effects)
 	for failure in failures:
 		push_error(failure)
@@ -154,6 +155,56 @@ func _check_coverage(sprite: Sprite2D, light: PointLight2D, drawn_rect: Rect2) -
 	for corner in [drawn_rect.position, drawn_rect.end, Vector2(drawn_rect.position.x, drawn_rect.end.y), Vector2(drawn_rect.end.x, drawn_rect.position.y)]:
 		var source_point := light.to_local(sprite.to_global(corner)) / (Vector2(light.texture.get_size()) * 0.5)
 		_expect(source_point.length() < 0.6, "every authored actor corner stays inside the glow before the outer fade")
+
+
+func _check_spell_lights(world: Node2D, effects: EffectsSpawner) -> void:
+	var texture := Lighting.LIGHT_TEXTURE as GradientTexture2D
+	_expect(texture.gradient.interpolation_mode == Gradient.GRADIENT_INTERPOLATE_CUBIC, "point lights use smooth gradient interpolation")
+	_expect(not is_equal_approx(texture.gradient.sample(0.1).a, texture.gradient.sample(0.2).a), "radial falloff has no constant brightness rings")
+	var magic := MagicRuntimeController.new()
+	world.add_child(magic)
+	var context := MagicRuntimeContext.new()
+	context.player = _sprite(world, _texture(Vector2i(16, 16), Rect2i(0, 0, 16, 16)))
+	context.effects_spawner = effects
+	context.rng = RandomNumberGenerator.new()
+	context.rng.seed = 12345
+	context.pixel_particle_texture = func(color: Color, size: int) -> Texture2D:
+		var image := Image.create(size, size, false, Image.FORMAT_RGBA8)
+		image.fill(color)
+		return ImageTexture.create_from_image(image)
+	var origin := Vector2(120.0, 70.0)
+	magic.spawn_ice_ground_spikes(context, null, origin, 24.0, "aquamarine")
+	var anchor := effects.pixel_particles.back()["sprite"] as Sprite2D
+	var light := anchor.get_node("ElementalLight") as PointLight2D
+	_expect(effects.pixel_particles.size() == 14, "ice field uses one light for all thirteen spikes")
+	_expect(light.color.is_equal_approx(PaletteLibrary.accent("aquamarine")), "ice field emits an elemental colored light")
+	_expect(light.texture_filter == CanvasItem.TEXTURE_FILTER_LINEAR, "point light edges use linear filtering independently of sprite art")
+	var diameter := _light_size(light).x
+	for data in effects.pixel_particles:
+		var spike := data["sprite"] as Sprite2D
+		if spike == anchor:
+			continue
+		var rect := spike.get_rect()
+		for corner in [rect.position, rect.end, rect.position + Vector2(rect.size.x, 0), rect.position + Vector2(0, rect.size.y)]:
+			_expect(spike.to_global(corner).distance_to(light.global_position) < diameter * 0.5, "ice light surrounds full grown spike art")
+	effects.update_pixel_particles(0.24, func(position: Vector2) -> Vector2: return position, 0.5)
+	_expect(is_equal_approx(light.energy, 0.16), "impact light fades with the effect lifetime")
+	effects.update_pixel_particles(0.5, func(position: Vector2) -> Vector2: return position, 0.5)
+	_expect(effects.pixel_particles.is_empty() and anchor.is_queued_for_deletion(), "impact light is removed with the spell art")
+	magic.spawn_magic_impact(context, origin, "orange")
+	anchor = effects.pixel_particles.back()["sprite"] as Sprite2D
+	light = anchor.get_node("ElementalLight") as PointLight2D
+	_expect(_light_size(light).x > 8.0 and light.color.is_equal_approx(PaletteLibrary.accent("orange")), "general spell hits illuminate their burst art")
+	effects.update_pixel_particles(1.0, func(position: Vector2) -> Vector2: return position, 0.5)
+	magic.spawn_magic_bubble_pop(context, origin, "blue")
+	anchor = effects.pixel_particles.back()["sprite"] as Sprite2D
+	_expect(anchor.get_node_or_null("ElementalLight") != null and effects.pixel_particles.size() == 16, "water burst gets one light sized from its bubble spread")
+	effects.update_pixel_particles(1.0, func(position: Vector2) -> Vector2: return position, 0.5)
+	magic.spawn_sky_strike(context, context.player, origin, "blue")
+	var bolt := effects.pixel_particles[0]["sprite"] as Sprite2D
+	_expect(bolt.get_node_or_null("ElementalLight") != null, "skyfall bolt gets a light fitted to its art")
+	effects.update_pixel_particles(1.0, func(position: Vector2) -> Vector2: return position, 0.5)
+	_expect(PickupRuntimeController.CHROMA_LIGHT_ENERGY < Lighting.ELEMENTAL_LIGHT_ENERGY * 0.5, "pickup glow stays dimmer than spell lighting")
 
 
 func _check_unshaded(item: CanvasItem, message: String) -> void:

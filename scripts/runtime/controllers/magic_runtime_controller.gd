@@ -8,6 +8,7 @@ const ElementCatalogScript = preload("res://scripts/content/element_catalog.gd")
 const SpellFormCatalogScript = preload("res://scripts/content/spell_form_catalog.gd")
 const SpellFormDefinitionScript = preload("res://scripts/content/spell_form_definition.gd")
 const SpriteFrameLibraryScript = preload("res://scripts/services/sprite_frame_library.gd")
+const ACTOR_LIGHTING_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/actor_lighting_controller.gd")
 
 const GREY_MAGIC_DAMAGE_MULTIPLIER := 1.10
 const ELEMENTAL_MAGIC_DAMAGE_MULTIPLIER := 1.15
@@ -629,9 +630,11 @@ func spawn_cone_effect(context: MagicRuntimeContext, origin: Vector2, direction:
 	fan.z_as_relative = false
 	fan.z_index = player.z_index + 1
 	_add_child_to_runtime(context, fan, origin)
+	ACTOR_LIGHTING_CONTROLLER_SCRIPT.attach_impact_light(fan, PaletteLibrary.accent(fire_palette), fan.get_rect())
 	var fan_lifetime := FIRE_CONE_EFFECT_DURATION
 	var fan_particle := {
 		"sprite": fan,
+		"light_energy": 0.32,
 		"velocity": Vector2.ZERO,
 		"timer": fan_lifetime,
 		"lifetime": fan_lifetime,
@@ -817,6 +820,8 @@ func spawn_magic_bubble_pop(context: MagicRuntimeContext, origin: Vector2, palet
 	pop.z_index = player.z_index + 1
 	_add_child_to_runtime(context, pop, origin)
 	var pop_lifetime := 0.13
+	var pop_rect := pop.get_rect()
+	var burst_bounds := Rect2(pop_rect.position * pop.scale, pop_rect.size * pop.scale)
 	effects.pixel_particles.append({
 		"sprite": pop,
 		"velocity": Vector2.ZERO,
@@ -839,6 +844,8 @@ func spawn_magic_bubble_pop(context: MagicRuntimeContext, origin: Vector2, palet
 		_add_child_to_runtime(context, particle, origin + start_offset)
 		var lifetime := rng.randf_range(0.28, 0.46)
 		var velocity := Vector2.from_angle(spread_angle) * rng.randf_range(17.0, 33.0)
+		var end_offset := start_offset + velocity * lifetime + Vector2(0.0, 19.0 * lifetime * lifetime * 0.5)
+		burst_bounds = burst_bounds.merge(Rect2(start_offset + particle.get_rect().position, particle.get_rect().size)).merge(Rect2(end_offset + particle.get_rect().position, particle.get_rect().size))
 		effects.pixel_particles.append({
 			"sprite": particle,
 			"velocity": velocity,
@@ -847,6 +854,7 @@ func spawn_magic_bubble_pop(context: MagicRuntimeContext, origin: Vector2, palet
 			"gravity": 19.0,
 			"alpha_scale": 0.96,
 		})
+	_spawn_spell_impact_light(context, origin, burst_bounds, palette, 0.46)
 
 
 func spawn_sky_strike(context: MagicRuntimeContext, target: Sprite2D, world_position: Vector2, palette: String) -> void:
@@ -863,8 +871,10 @@ func spawn_sky_strike(context: MagicRuntimeContext, target: Sprite2D, world_posi
 	bolt.z_as_relative = false
 	bolt.z_index = target.z_index + 1
 	_add_child_to_runtime(context, bolt, world_position - Vector2(float(SKYFALL_BOLT_SIZE.x >> 1), float(SKYFALL_BOLT_SIZE.y - 1)))
+	ACTOR_LIGHTING_CONTROLLER_SCRIPT.attach_impact_light(bolt, PaletteLibrary.accent(bolt_palette), bolt.get_rect())
 	effects.pixel_particles.append({
 		"sprite": bolt,
+		"light_energy": 0.32,
 		"velocity": Vector2.ZERO,
 		"timer": SKYFALL_BOLT_DURATION,
 		"lifetime": SKYFALL_BOLT_DURATION,
@@ -1144,6 +1154,7 @@ func spawn_ice_ground_spikes(context: MagicRuntimeContext, target: Sprite2D, imp
 		{"x": 0.0, "y": 0.0, "ring": 0.0, "width": 9, "height": 25, "layer": 1},
 	]
 	var depth_index := target.z_index if target != null and is_instance_valid(target) else context.player.z_index
+	var field_bounds := Rect2()
 	for index in spike_specs.size():
 		var spec := spike_specs[index]
 		var width := int(spec["width"])
@@ -1161,6 +1172,8 @@ func spawn_ice_ground_spikes(context: MagicRuntimeContext, target: Sprite2D, imp
 		spike.z_index = depth_index + int(spec["layer"])
 		spike.rotation = signf(direction.x) * 0.12
 		_add_child_to_runtime(context, spike, Vector2(impact_position.x + floor_oval_offset.x, impact_position.y + floor_oval_offset.y - float(height) * 0.5))
+		var spike_bounds := Transform2D(spike.global_rotation, spike.global_position - impact_position) * spike.get_rect()
+		field_bounds = field_bounds.merge(spike_bounds) if field_bounds.has_area() else spike_bounds
 		var lifetime := 0.48
 		var growth_frame_time := 0.025 + float(index % 3) * 0.012
 		effects.pixel_particles.append({
@@ -1174,6 +1187,7 @@ func spawn_ice_ground_spikes(context: MagicRuntimeContext, target: Sprite2D, imp
 			"animation_frame_time": growth_frame_time,
 			"animation_loop": false,
 		})
+	_spawn_spell_impact_light(context, impact_position, field_bounds, palette, 0.48)
 
 
 func _ice_spike_growth_frames(width: int, height: int, palette: String) -> Array[Texture2D]:
@@ -1592,6 +1606,7 @@ func spawn_magic_impact(context: MagicRuntimeContext, world_position: Vector2, p
 	var lifetime_min := float(profile.get("lifetime_min", 0.3))
 	var lifetime_max := float(profile.get("lifetime_max", 0.5))
 	var alpha_scale := float(profile.get("alpha", 1.0))
+	var burst_bounds := Rect2()
 	for index in count:
 		var particle := Sprite2D.new()
 		particle.texture = texture
@@ -1604,6 +1619,10 @@ func spawn_magic_impact(context: MagicRuntimeContext, world_position: Vector2, p
 		var speed := rng.randf_range(speed_min, speed_max)
 		var velocity := _magic_impact_velocity(motion, speed, rng)
 		var lifetime := rng.randf_range(lifetime_min, lifetime_max)
+		var start_bounds := particle.get_rect()
+		var end_offset := velocity * lifetime + Vector2(0.0, gravity * lifetime * lifetime * 0.5)
+		var particle_bounds := start_bounds.merge(Rect2(start_bounds.position + end_offset, start_bounds.size))
+		burst_bounds = burst_bounds.merge(particle_bounds) if burst_bounds.has_area() else particle_bounds
 		effects.pixel_particles.append({
 			"sprite": particle,
 			"velocity": velocity,
@@ -1612,6 +1631,15 @@ func spawn_magic_impact(context: MagicRuntimeContext, world_position: Vector2, p
 			"gravity": gravity,
 			"alpha_scale": alpha_scale,
 		})
+	_spawn_spell_impact_light(context, world_position, burst_bounds, palette, lifetime_max)
+
+
+func _spawn_spell_impact_light(context: MagicRuntimeContext, world_position: Vector2, drawn_rect: Rect2, palette: String, lifetime: float) -> void:
+	var anchor := Sprite2D.new()
+	anchor.name = "SpellImpactLight"
+	_add_child_to_runtime(context, anchor, world_position)
+	ACTOR_LIGHTING_CONTROLLER_SCRIPT.attach_impact_light(anchor, PaletteLibrary.accent(palette), drawn_rect)
+	context.effects_spawner.pixel_particles.append({"sprite": anchor, "velocity": Vector2.ZERO, "gravity": 0.0, "timer": lifetime, "lifetime": lifetime, "light_energy": 0.32})
 
 
 func _magic_impact_profile(element: int) -> Dictionary:

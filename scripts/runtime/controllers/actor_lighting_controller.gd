@@ -59,6 +59,13 @@ static func attach_weapon_light(weapon: Sprite2D, color: Color, drawn_rect: Rect
 	return light
 
 
+static func attach_impact_light(owner: Sprite2D, color: Color, drawn_rect: Rect2) -> PointLight2D:
+	var light := attach_elemental_light(owner, color, 0.32)
+	if light != null:
+		_fit_light_to_drawn_rect(light, drawn_rect, 1.25, 4.0)
+	return light
+
+
 static func _fit_light_to_drawn_rect(light: PointLight2D, drawn_rect: Rect2, coverage: float, padding: float) -> void:
 	light.visible = drawn_rect.has_area()
 	if not light.visible:
@@ -122,6 +129,7 @@ static func _new_light(owner: Node2D, light_name: StringName) -> PointLight2D:
 static func _configure_light(light: PointLight2D, color: Color, energy: float, texture_scale: float) -> void:
 	light.texture = LIGHT_TEXTURE
 	light.color = color
+	light.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	light.energy = maxf(energy, 0.0)
 	light.texture_scale = maxf(texture_scale, 0.01)
 	light.scale = Vector2.ONE

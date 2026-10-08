@@ -2,8 +2,12 @@
 
 _Only codex writes this file._
 
-**Focus:** Full-sprite actor light coverage, weapon light placement, and unshaded world UI
+**Focus:** Smooth actor lighting, dimmer pickups, and spell impact lighting
 **Updated:** 2026-10-08
+
+## Completed: 0.3.75 smooth falloff and spell impact lighting
+
+Dimmed elemental pickup energy from 0.30 to 0.14; replaced constant gradient interpolation with smooth cubic radial falloff and linear light filtering; fitted colored ice field, water burst, skyfall, fire cone, and general hit lights to effect art and faded them through the particle scheduler. Focused ACTOR_LIGHTING_SMOKE_OK, strict COMPOSITION_AUDIT_OK, and TEST_MANIFEST_OK passed. Release 0.3.75 is prepared for push and remote Web verification. Release 0.3.74 Web export and Pages deployment passed (run 37800904475).
 
 ## Completed: 0.3.73 lighting coverage and world UI correction
 

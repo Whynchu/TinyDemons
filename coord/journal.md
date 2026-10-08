@@ -1229,3 +1229,5 @@ Release 0.3.72 lighting and bounded-effect changes are ready. Composition self-t
 2026-10-08 | codex | done | Lighting coverage and world UI correction: authored sprite bounds drive circular actor lights and blade light centers; attack-pose coverage and unshaded combat UI verified by ACTOR_LIGHTING_SMOKE_OK; strict composition passed. Release 0.3.73 prepared for push and remote Web export verification.
 2026-10-08 | codex | claim | Register actor_lighting_smoke in the required test inventory after Web preflight rejected the missing row; bump 0.3.74 and verify Pages.
 2026-10-08 | codex | done | Registered passing actor lighting owner smoke; TEST_MANIFEST_OK. Prepared release 0.3.74 for Web export retry.
+2026-10-08 | codex | claim | Smooth radial light falloff, dim elemental pickups, and add art-sized spell impact lights.
+2026-10-08 | codex | done | Release 0.3.75: smooth cubic/linear point light falloff; pickup energy 0.14; art-sized fading spell impact lights. Focused actor lighting smoke, strict composition and manifest validation pass. Prepared for push and Pages verification.
