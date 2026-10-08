@@ -1,4 +1,5 @@
 "script","role","state","owner","target","load","notes"
+"actor_lighting_smoke","owner","verified","actor presentation","authored sprite light coverage, weapon placement, and unshaded world UI","pure","2026-10-08 focused Godot 4.7.1 pass; padded frames, facing, regions, atlas, occlusion source, attack pose, status tint, numbers and overhead HUD"
 "active_run_recovery_contract_smoke","gate","verified","save & profile","active-run snapshot recovery contract","pure","2026-09-13 focused evidence"
 "authoring_placement_catalog_smoke","owner","verified","Hub authoring","shared discovery of editor placement roots and stable IDs","pure","focused run 2026-09-22; editor-neutral catalog covers validation, prefab creation, nested re-keying, Environment, Props, Collectables, and Characters roots"
 "boss_exit_path_scene_smoke","gate","unverified","dungeon topology","boss room exit path via debug scene","fixture",""

@@ -7,7 +7,7 @@ _Only codex writes this file._
 
 ## Completed: 0.3.73 lighting coverage and world UI correction
 
-Replace fixed actor light sizes with coverage derived from authored visible sprite pixels, including the separate player attack sprite. Place weapon light centers on the visible blade rather than the padded frame. Exempt damage/healing/shield numbers, their outlines and shadows, notices, and enemy overhead HUD from ambient and point lighting. Focused actor-lighting smoke and strict composition audit passed. Prepared release 0.3.73 for push; Web export will be verified by the Pages workflow after push because local Web templates are unavailable. Unrelated configuration edits remain excluded.
+Replace fixed actor light sizes with coverage derived from authored visible sprite pixels, including the separate player attack sprite. Place weapon light centers on the visible blade rather than the padded frame. Exempt damage/healing/shield numbers, their outlines and shadows, notices, and enemy overhead HUD from ambient and point lighting. Focused actor-lighting smoke and strict composition audit passed. Release 0.3.73 was pushed, but Pages preflight rejected the unregistered new test. Registered the passing owner smoke in tests/manifest.csv and validated the manifest; prepared 0.3.74 to repeat Web export through Pages because local templates are unavailable. Unrelated configuration edits remain excluded.
 
 ## Completed: 0.3.72 release and Web export verification
 
