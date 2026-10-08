@@ -89,6 +89,7 @@ func apply_chest_map_tint(root: Object) -> void:
 	# Grey chest art is intentionally the map-colored presentation; the Orb and
 	# room surfaces use authored grey artwork without this extra tint.
 	chest.self_modulate = _lightened_artwork_tint(_chest_environment_tint(root)) if is_gray_chest else Color.WHITE
+	preload("res://scripts/runtime/world/map_lighting_controller.gd").set_chest_collectible(chest, not is_gray_chest)
 	var unlock_overlay := root.get("chest_unlock_overlay") as Sprite2D
 	if unlock_overlay != null:
 		# The overlay is the saturated chest artwork, so its alpha may animate

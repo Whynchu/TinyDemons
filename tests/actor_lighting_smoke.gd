@@ -19,6 +19,7 @@ func _run() -> void:
 	world.add_child(effects)
 	_check_frame_bounds(world, effects)
 	_check_actor_coverage(world, effects)
+	_check_fixed_player_light(world, effects)
 	_check_sprite_lighting(world)
 	_check_weapon_centers(world, effects)
 	_check_spell_lights(world, effects)
@@ -103,6 +104,39 @@ func _check_actor_coverage(world: Node2D, effects: EffectsSpawner) -> void:
 	actors.append(enemy)
 	Lighting.refresh_actor_lights(actors, player, attack, null, effects, renderer)
 	_check_coverage(enemy, enemy.get_node("ActorLight") as PointLight2D, Rect2(2, 2, 60, 44))
+
+
+func _check_fixed_player_light(world: Node2D, effects: EffectsSpawner) -> void:
+	var idle := _texture(Vector2i(36, 36), Rect2i(12, 5, 12, 25))
+	var player := _sprite(world, idle)
+	var attack := _sprite(world, _texture(Vector2i(36, 36), Rect2i(2, 3, 30, 28)))
+	player.offset = Vector2(-10, -10)
+	attack.offset = player.offset
+	attack.visible = false
+	Lighting.configure_player_reference(player, attack, [idle])
+	var actors: Array[Sprite2D] = [player]
+	Lighting.refresh_actor_lights(actors, player, attack, null, effects, null)
+	var reference := player.get_node("ActorLight") as PointLight2D
+	var size := _light_size(reference)
+	var center := reference.position
+	var old_diameter := Vector2(12, 50).length() * Lighting.ACTOR_LIGHT_COVERAGE + Lighting.ACTOR_LIGHT_PADDING
+	_expect(is_equal_approx(size.x, old_diameter * 0.75), "stable player light is 25 percent smaller than the previous footprint")
+	for frame in [_texture(Vector2i(36, 36), Rect2i(16, 16, 4, 4)), attack.texture]:
+		player.texture = frame
+		player.flip_h = not player.flip_h
+		Lighting.refresh_actor_lights(actors, player, attack, null, effects, null)
+		_expect(_light_size(reference).is_equal_approx(size) and reference.position.is_equal_approx(center), "player light size and center stay fixed across animation and facing")
+	player.visible = false
+	attack.visible = true
+	Lighting.refresh_actor_lights(actors, player, attack, null, effects, null)
+	_expect(_light_size(attack.get_node("ActorLight") as PointLight2D).is_equal_approx(size), "attack pose keeps the idle reference footprint")
+	var fire := Node2D.new()
+	world.add_child(fire)
+	var flame := Lighting.attach_elemental_light(fire, Color.ORANGE)
+	for flicker in [0.97, 1.0, 1.03]:
+		Lighting.fit_rest_fire_light(flame, player, flicker)
+		_expect(_light_size(flame).is_equal_approx(size * 1.5 * flicker), "flame stays 1.5x the stable player footprint with subtle size flicker")
+		_expect(_light_size(flame).x > size.x and _light_size(flame).y > size.y, "flame remains larger than player in both dimensions")
 
 
 func _check_sprite_lighting(world: Node2D) -> void:
@@ -255,14 +289,22 @@ func _check_map_field(world: Node2D) -> void:
 	var texture := _texture(Vector2i(16, 16), Rect2i(0, 0, 16, 16))
 	var floor_art := _sprite(map, texture)
 	var foreground := _sprite(fixture, texture)
+	var chest := _sprite(fixture, texture)
+	chest.name = "Chest"
 	var ambience := CanvasModulate.new()
 	ambience.name = "RoomAmbience"
 	ambience.color = Color(0.6, 0.6, 0.6)
 	fixture.add_child(ambience)
 	var field := MapLighting.new()
+	field.chest_path = ^"../Chest"
 	fixture.add_child(field)
 	_expect(floor_art.material == field.field_material, "map artwork receives the shared light field")
 	_expect(foreground.material == null and ambience.color == Color.WHITE, "foreground art and UI remain outside map darkness")
+	_expect(chest.material == field.field_material, "locked chest follows map darkness")
+	MapLighting.set_chest_collectible(chest, true)
+	_check_unshaded(chest, "collectible chest keeps its normal brightness")
+	MapLighting.set_chest_collectible(chest, false)
+	_expect(chest.material == field.field_material, "reused chest returns to map darkness when locked")
 	var later_floor := _sprite(map, texture)
 	_expect(later_floor.material == field.field_material, "generated scenery receives the same field")
 	var owner := _sprite(fixture, texture)

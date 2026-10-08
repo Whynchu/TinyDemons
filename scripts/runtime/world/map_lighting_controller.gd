@@ -10,6 +10,15 @@ const INNER_RADIUS := 0.58
 const INNER_LEVEL := 0.78
 const OUTER_LEVEL := 0.40
 const AMBIENT := 0.60
+const FOREGROUND_MATERIAL = preload("res://resources/materials/gameplay_sprite_unshaded.tres")
+const CHEST_MAP_MATERIAL := &"chest_map_light_material"
+
+
+static func set_chest_collectible(chest: Sprite2D, collectible: bool) -> void:
+	if chest == null or not chest.has_meta(CHEST_MAP_MATERIAL):
+		return
+	chest.material = FOREGROUND_MATERIAL if collectible else chest.get_meta(CHEST_MAP_MATERIAL) as Material
+	chest.use_parent_material = false
 
 @export var environment_path: NodePath = ^"../Map"
 @export var ambience_path: NodePath = ^"../RoomAmbience"
@@ -147,6 +156,8 @@ func _enroll_item(node: Node) -> void:
 	if item.material == null or item.material == field_material:
 		item.use_parent_material = false
 		item.material = field_material
+		if node == _chest:
+			node.set_meta(CHEST_MAP_MATERIAL, field_material)
 
 
 func _is_map_artwork(node: Node) -> bool:

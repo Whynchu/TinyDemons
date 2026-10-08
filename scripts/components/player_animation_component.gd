@@ -17,6 +17,7 @@ const BAKED_ROOT := "res://assets/baked/player"
 const CLOAKED_BAKED_ROOT := "res://assets/baked/player_cloaked"
 const BASE_DEFEND_SHEET_PATH := "res://assets/artwork/TinyDemon-Defend.png"
 const ActorPaletteMaterialScript = preload("res://scripts/actors/actor_palette_material.gd")
+const ActorLighting = preload("res://scripts/runtime/controllers/actor_lighting_controller.gd")
 const BASE_FULL_SHEET_PATH := "res://assets/artwork/TinyDemon_fullsheet.png"
 const CLOAKED_SHEET_PATH := "res://assets/artwork/TinyDemon_fullsheet_cloaked.png"
 const CLOAKED_DEFEND_SHEET_PATH := "res://assets/artwork/TinyDemon-Defend-Cloaked.png"
@@ -145,6 +146,7 @@ func _slice_shader_sources(sheet_path: String, defend_path: String, size: Vector
 	spin_left_frames = library.flip_frames(spin_frames)
 	base_idle_frames = idle_frames.duplicate(); base_walk_frames = walk_frames.duplicate(); base_run_frames = run_frames.duplicate(); base_backflip_frames = backflip_frames.duplicate(); base_defend_frames = defend_frames.duplicate(); base_roll_frames = roll_frames.duplicate(); base_attack_frames = attack_frames.duplicate(); base_attack2_frames = attack2_frames.duplicate(); base_attack_left_frames = attack_left_frames.duplicate(); base_attack2_left_frames = attack2_left_frames.duplicate(); base_spin_frames = spin_frames.duplicate(); base_spin_left_frames = spin_left_frames.duplicate(); base_magic_frames = magic_frames.duplicate()
 	base_between_attack_texture = between_attack_texture; base_after_attack2_texture = after_attack2_texture
+	ActorLighting.configure_player_reference(context.player, context.player_attack_visual, idle_frames)
 
 
 ## Requests the cloaked art variant. Before the frames are built this only

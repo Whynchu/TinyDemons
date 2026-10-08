@@ -2,10 +2,20 @@
 
 _Only codex writes this file._
 
-**Focus:** Implement two-band map lighting with strongest-source overlap and isometric actor coverage
+**Focus:** Stable player light reference and larger rest-flame footprint
 **Updated:** 2026-10-08
 
-## In flight: 0.3.79 two-band map lighting
+## Completed implementation: 0.3.80 stable player and chest lighting
+
+Player idle bounds are captured when its authored frames are built, shared with
+the attack visual, and held fixed across animation and facing changes. Player
+coverage is 25% smaller; rest-fire coverage stays 1.5x that reference with +/-3%
+size flicker. Collectible normal chest artwork is unshaded; grey locked chest
+art restores the shared map material. Focused lighting and strict composition
+checks pass, including frame/facing/attack stability, flame ratio, locked/ready
+chest materials and map field regression. Releasing 0.3.80 for Web export testing.
+
+## Completed: 0.3.79 two-band map lighting
 
 Implemented the plan in docs/lighting-composition-plan.md: two illuminated
 bands, smaller flame footprint, world-aligned 2:1 actor ovals, and strongest-source

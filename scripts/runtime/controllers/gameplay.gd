@@ -4,6 +4,7 @@ const ProgressionControllerScript = preload("res://scripts/runtime/controllers/p
 const WebRunDiagnosticsScript = preload("res://scripts/services/web_run_diagnostics.gd")
 const PreviewSessionScript = preload("res://scripts/editor/preview_session.gd")
 const PreviewSessionRuntimeScript = preload("res://scripts/editor/preview_session_runtime.gd")
+const ActorLighting = preload("res://scripts/runtime/controllers/actor_lighting_controller.gd")
 func _add_runtime_node(script: Script, node_name: StringName, parent: Node = self) -> Node:
 	var node := script.new() as Node; node.name = node_name; parent.add_child(node); return node
 func _ready() -> void:
@@ -183,11 +184,11 @@ func _update_rest_fire_animation(delta: float) -> void:
 	rest_fire_controller.update_animation(rest_fire, rest_fire_frames, delta, FIRE_FRAME_TIME, Callable(self, "_refresh_rest_fire_image"))
 	var light_step := posmod(floori(rest_fire_controller.frame_index * 0.65), 6)
 	var energy_steps := [0.34, 0.42, 0.56, 0.48, 0.38, 0.44]
-	var scale_steps := [0.36, 0.38, 0.42, 0.40, 0.37, 0.39]
+	var scale_steps := [0.97, 0.99, 1.03, 1.01, 0.98, 1.0]
 	var fire_light := rest_fire.get_node_or_null("FireLight") as PointLight2D
 	if fire_light != null and rest_fire.visible:
 		fire_light.energy = energy_steps[light_step]
-		fire_light.texture_scale = scale_steps[light_step]
+		ActorLighting.fit_rest_fire_light(fire_light, player, scale_steps[light_step])
 func _refresh_rest_fire_image(fire: Sprite2D) -> void: occlusion_renderer.sprite_images[fire] = occlusion_renderer.cached_texture_image(fire.texture)
 func _set_rest_fire_frame(frame_index: int) -> void:
 	if rest_fire_frames.is_empty(): return

@@ -13,6 +13,41 @@ const WEAPON_LIGHT_COVERAGE := 1.3
 const WEAPON_LIGHT_PADDING := 4.0
 const ELEMENTAL_LIGHT_ENERGY := 0.38
 const ELEMENTAL_LIGHT_SCALE := 0.44
+const PLAYER_REFERENCE_BOUNDS := &"player_light_reference_bounds"
+const FIRE_PLAYER_SIZE_RATIO := 1.5
+const PLAYER_LIGHT_COVERAGE := 1.35
+const PLAYER_LIGHT_PADDING := 6.0
+
+
+static func configure_player_reference(player: Sprite2D, attack_visual: Sprite2D, idle_frames: Array[Texture2D]) -> void:
+	if player == null or idle_frames.is_empty():
+		return
+	var bounds := Rect2()
+	for texture in idle_frames:
+		if texture == null:
+			continue
+		var image := texture.get_image()
+		if image == null or image.is_empty():
+			continue
+		var frame_bounds := Rect2(image.get_used_rect())
+		if frame_bounds.has_area():
+			bounds = bounds.merge(frame_bounds) if bounds.has_area() else frame_bounds
+	if not bounds.has_area():
+		return
+	player.set_meta(PLAYER_REFERENCE_BOUNDS, bounds)
+	if attack_visual != null:
+		attack_visual.set_meta(PLAYER_REFERENCE_BOUNDS, bounds)
+
+
+static func fit_rest_fire_light(light: PointLight2D, player: Sprite2D, flicker: float) -> void:
+	if light == null or player == null:
+		return
+	var reference := player.get_node_or_null(NodePath(ACTOR_LIGHT_NAME)) as PointLight2D
+	if reference == null:
+		return
+	var size := Vector2(reference.texture.get_size()) * reference.global_scale.abs() * reference.texture_scale * FIRE_PLAYER_SIZE_RATIO * clampf(flicker, 0.95, 1.05)
+	light.texture_scale = 1.0
+	light.global_scale = size / Vector2(light.texture.get_size())
 
 
 static func preserve_sprite_colors(sprite: CanvasItem) -> void:
@@ -88,11 +123,17 @@ static func attach_impact_light(owner: Sprite2D, color: Color, drawn_rect: Rect2
 
 
 static func _fit_actor_light(actor: Sprite2D, light: PointLight2D, drawn_rect: Rect2) -> void:
+	if actor.has_meta(PLAYER_REFERENCE_BOUNDS):
+		drawn_rect = actor.get_meta(PLAYER_REFERENCE_BOUNDS) as Rect2
+		drawn_rect.position += actor.get_rect().position
 	light.visible = drawn_rect.has_area()
 	if not light.visible:
 		return
 	var world_rect := actor.global_transform * drawn_rect
-	var diameter := Vector2(world_rect.size.x, world_rect.size.y * 2.0).length() * ACTOR_LIGHT_COVERAGE + ACTOR_LIGHT_PADDING
+	var fixed_player := actor.has_meta(PLAYER_REFERENCE_BOUNDS)
+	var coverage := PLAYER_LIGHT_COVERAGE if fixed_player else ACTOR_LIGHT_COVERAGE
+	var padding := PLAYER_LIGHT_PADDING if fixed_player else ACTOR_LIGHT_PADDING
+	var diameter := Vector2(world_rect.size.x, world_rect.size.y * 2.0).length() * coverage + padding
 	light.texture_scale = 1.0
 	light.global_transform = Transform2D(0.0, Vector2(diameter, diameter * 0.5) / Vector2(LIGHT_TEXTURE.get_size()), 0.0, world_rect.get_center())
 

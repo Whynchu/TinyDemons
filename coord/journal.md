@@ -1240,3 +1240,6 @@ Release 0.3.72 lighting and bounded-effect changes are ready. Composition self-t
 2026-10-08 | codex | done | User requested push with version bump. Release 0.3.78 contains verified unshaded characters, equipment and loot. Broader rejected foreground effects/prompts patch remains unapplied. Unrelated MCP/config changes excluded.
 2026-10-08 | codex | claim | Plan and implement strongest-contribution map lighting, two bands, compact flame and full-art isometric actor light footprints.
 2026-10-08 | codex | done | Implemented two-band strongest-source map lighting, compact flame and isometric actor lights; focused CPU/OpenGL pixel checks, strict composition and manifest pass; release 0.3.79 prepared for push and Web CI.
+2026-10-08 | codex | claim | Stable authored idle reference for player/attack lights and 1.5x rest-flame footprint.
+2026-10-08 | codex | claim | Extend lighting correction to active chest brightness at existing chest-art tint boundary.
+2026-10-08 | codex | done | Stable player light at 75% former size, flame at 1.5x reference, locked/collectible chest brightness switch; focused lighting smoke, strict composition and manifest pass. Release 0.3.80.
