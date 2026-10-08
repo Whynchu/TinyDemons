@@ -2,8 +2,12 @@
 
 _Only codex writes this file._
 
-**Focus:** Restore stepped pixel lighting
+**Focus:** Bright elemental pickup art with dim surrounding light
 **Updated:** 2026-10-08
+
+## Completed: 0.3.77 bright elemental pickup art
+
+Elemental Chroma pickup sprites use a dedicated unshaded material, preserving full authored palette brightness independently of ambient darkness and point lights. The halo remains at energy 0.14; nearest filtering and stepped falloff remain. Strict composition and focused ACTOR_LIGHTING_SMOKE_OK passed. Release 0.3.77 prepared for push and Pages export verification.
 
 ## Completed: 0.3.76 stepped pixel lighting
 

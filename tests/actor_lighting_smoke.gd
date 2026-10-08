@@ -205,6 +205,7 @@ func _check_spell_lights(world: Node2D, effects: EffectsSpawner) -> void:
 	_expect(bolt.get_node_or_null("ElementalLight") != null, "skyfall bolt gets a light fitted to its art")
 	effects.update_pixel_particles(1.0, func(position: Vector2) -> Vector2: return position, 0.5)
 	_expect(PickupRuntimeController.CHROMA_LIGHT_ENERGY < Lighting.ELEMENTAL_LIGHT_ENERGY * 0.5, "pickup glow stays dimmer than spell lighting")
+	_expect(PickupRuntimeController.ELEMENTAL_PICKUP_MATERIAL.light_mode == CanvasItemMaterial.LIGHT_MODE_UNSHADED, "pickup art keeps its full brightness above the dim colored halo")
 
 
 func _check_unshaded(item: CanvasItem, message: String) -> void:

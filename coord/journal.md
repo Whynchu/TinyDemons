@@ -1233,3 +1233,5 @@ Release 0.3.72 lighting and bounded-effect changes are ready. Composition self-t
 2026-10-08 | codex | done | Release 0.3.75: smooth cubic/linear point light falloff; pickup energy 0.14; art-sized fading spell impact lights. Focused actor lighting smoke, strict composition and manifest validation pass. Prepared for push and Pages verification.
 2026-10-08 | codex | claim | Restore stepped pixel lighting per visual feedback; preserve pickup dimming and impact light sizing.
 2026-10-08 | codex | done | Restored stepped pixel light falloff and nearest filtering. Focused lighting and strict composition pass; release 0.3.76 prepared for Pages verification.
+2026-10-08 | codex | claim | Make elemental pickup art unshaded so room lighting cannot dim it below its colored halo.
+2026-10-08 | codex | done | Release 0.3.77: elemental pickup art stays unshaded at full palette brightness, halo energy remains 0.14. Focused lighting smoke and strict composition pass; prepared for Pages verification.

@@ -4,6 +4,7 @@ class_name PickupRuntimeController
 const SoulVisualsScript = preload("res://scripts/runtime/services/soul_visuals.gd")
 const ACTOR_LIGHTING_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/actor_lighting_controller.gd")
 const GOLD_PICKUP_TEXTURE: Texture2D = preload("res://assets/artwork/GoldFresh2.png")
+const ELEMENTAL_PICKUP_MATERIAL: CanvasItemMaterial = preload("res://resources/materials/elemental_pickup_unshaded.tres")
 
 const CHEST_INTERACT_DISTANCE := 16.0
 const DEPTH_Z_SCALE := 10.0
@@ -821,6 +822,8 @@ func spawn_chroma_pickup(root: Object, position: Vector2, value: int = CHROMA_PI
 	launch_rng.seed = launch_seed if launch_seed != 0 else root_rng.randi() if root_rng != null else Time.get_ticks_msec()
 	var sprite := Sprite2D.new()
 	sprite.name = "ChromaPickup"
+	sprite.use_parent_material = false
+	sprite.material = ELEMENTAL_PICKUP_MATERIAL
 	var chroma_color := _chroma_color(root)
 	sprite.texture = root.call("_pixel_particle_texture", chroma_color, 3) as Texture2D
 	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
