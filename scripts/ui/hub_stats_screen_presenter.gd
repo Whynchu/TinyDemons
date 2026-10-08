@@ -5,7 +5,6 @@ class_name HubStatsScreenPresenter
 
 const PauseMenuLayoutScript = preload("res://scripts/ui/pause_menu_layout.gd")
 const MenuPromptTextureFactoryScript = preload("res://scripts/ui/menu_prompt_texture_factory.gd")
-const PaletteLibraryScript = preload("res://scripts/services/palette_library.gd")
 const ProgressionControllerScript = preload("res://scripts/runtime/controllers/progression_controller.gd")
 const StatAllocationPolicyScript = preload("res://scripts/algorithms/stat_allocation_policy.gd")
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
@@ -265,15 +264,13 @@ func update_allocation_page(
 	var add_available: Array[bool] = allocation_policy.get("can_add", [false, false, false, false, false, false])
 	var ceiling := int(allocation_policy.get("ceiling", 0))
 	var window_start := int(allocation_policy.get("window_start", 0))
+	var committed_metrics: Dictionary = StatAllocationPolicyScript.summarize(
+		committed_values,
+		profile.level,
+		bool(allocation_policy.get("ratio_enabled", true))
+	)
+	var committed_build_needs_repair := not bool(committed_metrics.get("legal", true))
 	var minimum_indices: Array[int] = StatAllocationPolicyScript.minimum_stat_indices(current_values)
-	var stat_colors: Array[Color] = [
-		PaletteLibraryScript.ACCENT["red"],
-		PaletteLibraryScript.ACCENT["orange"],
-		PaletteLibraryScript.ACCENT["blue"],
-		PaletteLibraryScript.ACCENT["yellow"],
-		PaletteLibraryScript.ACCENT["purple"],
-		PaletteLibraryScript.ACCENT["green"],
-	]
 	var minimum_labels: Array[String] = []
 	for minimum_index in minimum_indices:
 		minimum_labels.append(["VIT", "STR", "DEF", "AGI", "INT", "MND"][minimum_index])
@@ -290,19 +287,24 @@ func update_allocation_page(
 	var any_add_available := false
 	for add_is_available in add_available:
 		any_add_available = any_add_available or add_is_available
+	if committed_build_needs_repair:
+		policy_text = "REPAIR | LOW: %s" % lowest_text
+	var selected_stat_is_blocked := selected_row >= 0 and selected_row < add_available.size() and not add_available[selected_row]
+	if selected_stat_is_blocked and remaining > 0:
+		policy_text = "RAISE LOW: %s" % lowest_text
 	if remaining > 0 and not any_add_available:
 		policy_text = "NO LEGAL POINT | LOW: %s" % lowest_text
 	if allocation_policy_text != null:
 		allocation_policy_text.texture = pixel_texture.call(policy_text, Color8(255, 205, 117)) as Texture2D
 	for index in stat_texts.size():
 		var value_text := "%d" % current_values[index]
-		var stat_color := stat_colors[index]
-		stat_texts[index].texture = pixel_texture.call(["VIT", "STR", "DEF", "AGI", "INT", "MND"][index], Color.WHITE) as Texture2D
+		stat_texts[index].texture = pixel_texture.call(["VIT", "STR", "DEF", "AGI", "INT", "MND"][index], highlight_color) as Texture2D
 		if index < allocation_bars.size():
-			allocation_bars[index].configure(window_start, committed_values[index], current_values[index], ceiling, stat_color)
+			allocation_bars[index].configure(window_start, committed_values[index], current_values[index], ceiling, highlight_color)
 		if index < stat_value_texts.size():
 			var value_sprite := stat_value_texts[index]
-			value_sprite.texture = pixel_texture.call(value_text, stat_color) as Texture2D
+			var value_color := Color8(255, 105, 105) if current_values[index] >= ceiling else Color.WHITE
+			value_sprite.texture = pixel_texture.call(value_text, value_color) as Texture2D
 			if value_sprite.texture != null:
 				value_sprite.position = Vector2(_left_field_x(STAT_VALUE_RIGHT_ANCHOR, view_size) - float(value_sprite.texture.get_width()), STAT_LABEL_TOP + index * STAT_ROW_PITCH)
 	var marker_visible := content_focused and selected_row >= 0 and selected_row < stat_texts.size()

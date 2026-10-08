@@ -5,6 +5,22 @@ _Only codex writes this file._
 **Focus:** None
 **Updated:** 2026-10-08
 
+## Completed: Release 0.3.71 preparation
+
+Updated the in-game title, README, versioning authority, and contributor guide
+to 0.3.71. The stat-feedback commit is prepared as the only unpublished commit
+on `main`; user MCP configuration changes remain unstaged. The push is the
+remaining release action.
+
+## Completed: Hub stat allocation feedback
+
+Stat labels and all allocation bars now use the player's current element
+highlight. Values stay white below the shared ceiling and turn red at or above
+it. Over-limit saved builds keep their allocation values, remain playable, and
+show the tied-lowest repair direction; the allocation policy remains derived
+from existing save fields. Updated both allocation references. `git diff
+--check` passes; no tests were requested or run.
+
 ## Completed: Version 0.3.70 release preparation
 
 Bumped the in-game title, README, and versioning authority to 0.3.70. The two

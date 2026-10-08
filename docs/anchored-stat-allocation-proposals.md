@@ -1,8 +1,8 @@
 # Anchored Stat Allocation Proposals
 
-Status: Model C implemented; local definition validation passes, and Web Pages export verification is pending
+Status: Model C implemented; Hub stat colors follow the player's current element, and Web Pages export verification is pending
 
-Updated: 2026-10-07
+Updated: 2026-10-08
 
 Scope: constrain the spread between the player's six manually allocated
 attributes while preserving a meaningful choice about which stats to favor
@@ -97,14 +97,17 @@ pool grows.
 ## Allocation bars and anchor movement
 
 Add a segmented allocation bar beside each of the six stat rows. Use the
-stat's highlight color for filled ticks and a black interior with a visible
-outline/dividers for empty ticks. A tick represents one permanent stat point
-in the displayed range; gear bonuses never fill or extend this bar.
+player's current element highlight for stat labels and filled ticks, with a
+black interior and visible outline/dividers for empty ticks. Show stat values
+in white until they reach the current shared ceiling; show capped or
+over-ceiling legacy values in red. Pending ticks use a lighter tint of the same
+element color. A tick represents one permanent stat point in the displayed
+range; gear bonuses never fill or extend this bar.
 
 | Tick/row state | Meaning and feedback |
 |---|---|
-| Solid stat-color tick | Base or committed permanent value; cannot be removed by clearing the draft |
-| Stat-color tick with a distinct outline/pattern | Pending allocation; immediately updates preview and can be cleared before Apply |
+| Solid element-color tick | Base or committed permanent value; cannot be removed by clearing the draft |
+| Lighter element-color tick | Pending allocation; immediately updates preview and can be cleared before Apply |
 | Black outlined tick | Unfilled room within the current policy window; spending still requires banked points and an accepted policy result |
 | Full leading-stat bar | Current anchor ceiling reached; show which lowest rows must rise to unlock further room |
 | Lowest-stat row | Mark the row and relevant empty ticks as the way to raise the shared anchor; preserve black interiors |
@@ -224,9 +227,11 @@ targets. Preserve controller navigation and direct touch allocation.
 - Draft checks where the highest stat is blocked, then raising a lowest stat
   permits a later favored-stat point; Cancel preserves the profile and Apply
   changes all six allocations atomically.
-- Six ticked bars use stat highlight colors, black outlined capacity, and a
-  distinguishable pending fill. Numeric values/ceilings and banked points agree
-  with the policy; gear changes never alter allocation capacity.
+- Six ticked bars and stat labels use the player's current element highlight;
+  numbers stay white below the shared ceiling and turn red at or above it.
+  Empty capacity remains black and outlined, and pending fill is a lighter tint
+  of the element color. Numeric values/ceilings and banked points agree with the
+  policy; gear changes never alter allocation capacity.
 - Cover a full leading bar, one lowest row, multiple tied-lowest rows, Model C's
   early multi-tick unlock, level-band expansion, no banked points, legacy repair
   overflow, and draft Clear/Apply. Block feedback identifies the low rows needed
@@ -240,8 +245,10 @@ targets. Preserve controller navigation and direct touch allocation.
   possible; otherwise they retain points with a visible explanation.
 - Direct profile allocation cannot bypass the policy; profile save/load keeps
   existing legal and over-limit allocations unchanged.
-- Existing over-limit saves remain playable and can spend toward a legal
-  allocation; no data is silently discarded. Respec remains compatible.
+- Existing over-limit saves remain playable with their values intact and can
+  spend toward a legal allocation; no data is silently discarded. The Hub
+  identifies the repair path and marks capped legacy values in red. Respec
+  remains compatible.
 - A legacy vector with multiple tied minima accepts successive repair steps;
   neither limit worsens and the total floor deficit falls. Cover manual, AUTO,
   insufficient-bank partial repair, Apply, and save/load paths.

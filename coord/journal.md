@@ -1206,3 +1206,7 @@ Prepared release 0.3.63 with landscape menu reflow and synchronized in-game/READ
 2026-10-08 done codex: Kept GameplayState at its recorded 1,714-line baseline; composition self-test, regression audit, and strict target audit all pass.
 2026-10-08 claim codex: Prepare version 0.3.70 and consolidate the title rotation fix into one versioned commit for push to main.
 2026-10-08 done codex: Prepared the 0.3.70 release with title reflow in one versioned commit; unrelated user MCP configuration changes are excluded.
+2026-10-08 claim codex: Adjust Hub stat allocation colors to the player's current element, keep values white except at cap, and document the existing legacy-save repair path.
+2026-10-08 done codex: Hub stat labels and bars use the player's current element highlight; values remain white below the shared cap and turn red at cap. Existing over-limit saves remain intact and repairable, with the Hub showing the repair direction. Updated the allocation references; git diff --check passes. No tests requested or run.
+2026-10-08 claim codex: Bump the in-game title and current version references to 0.3.71, amend the unpublished stat-feedback commit to meet the per-push version rule, and push `main`; exclude user MCP configuration edits.
+2026-10-08 done codex: Prepared release 0.3.71 across the title, README, VERSIONING.md, and contributor guide; amending the single unpublished stat-feedback commit before push. User MCP configuration edits remain excluded.
