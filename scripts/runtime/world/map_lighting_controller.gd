@@ -9,7 +9,7 @@ const MAX_LIGHTS := 64
 const INNER_RADIUS := 0.58
 const INNER_LEVEL := 0.78
 const OUTER_LEVEL := 0.40
-const AMBIENT := 0.60
+const AMBIENT := 0.64
 const FOREGROUND_MATERIAL = preload("res://resources/materials/gameplay_sprite_unshaded.tres")
 const CHEST_MAP_MATERIAL := &"chest_map_light_material"
 

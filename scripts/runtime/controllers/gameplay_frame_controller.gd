@@ -1,7 +1,7 @@
 extends Node
 class_name GameplayFrameController
 
-const ACTOR_LIGHTING_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/actor_lighting_controller.gd")
+const MAP_LIGHTING_CONTROLLER_SCRIPT = preload("res://scripts/runtime/world/map_lighting_controller.gd")
 
 const PHASE_INPUT := &"input"
 const PHASE_SIMULATION := &"simulation"
@@ -686,7 +686,13 @@ func tick(root: GameplayState, delta: float) -> void:
 		if root.feedback_animation_registry != null: root.feedback_animation_registry.tick(delta)
 		root.effects_spawner.update_pixel_particles_from_root(root, delta); root._update_player_death(delta); equipment_visual.tick_death(equipment_visual_context(root)); root._update_damage_numbers(delta)
 		root._update_enemy_hit_flashes(delta)
-		root._update_depth_sorting(); root._update_actor_occlusion(delta); _stabilize(root); _refresh_actor_lights(root); root._update_overworld_ui(); root._update_game_over_input(); return
+		root._update_depth_sorting()
+		root._update_actor_occlusion(delta)
+		_stabilize(root)
+		MAP_LIGHTING_CONTROLLER_SCRIPT.refresh_for_actor(root.player)
+		root._update_overworld_ui()
+		root._update_game_over_input()
+		return
 	if root._is_pause_input_just_pressed():
 		root._open_pause_menu()
 		return
@@ -793,14 +799,10 @@ func tick(root: GameplayState, delta: float) -> void:
 				root.player_anim_timer = 0.0
 				anim.apply_frame(animation_context(root))
 	root._update_player_shadow(); root._update_cloaked_demon_shadow(); root._update_overworld_ui(); root._tick_focus_combo(delta); root._update_focus_indicator(delta)
-	_refresh_actor_lights(root)
+	MAP_LIGHTING_CONTROLLER_SCRIPT.refresh_for_actor(root.player)
 
 
 func _stabilize(root: GameplayState) -> void:
 	root.actor_collision_system.stabilize_guides(root.actor_sprites, Callable(root, "_update_slime_attack_guides"))
 	var geometry_debug := root.actor_geometry_debug_drawer
 	if geometry_debug != null: geometry_debug.refresh()
-
-
-func _refresh_actor_lights(root: GameplayState) -> void:
-	ACTOR_LIGHTING_CONTROLLER_SCRIPT.refresh_actor_lights(root.actor_sprites, root.player, root.player_attack_visual, root.cloaked_demon, root.effects_spawner, root.occlusion_renderer)

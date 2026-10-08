@@ -1243,3 +1243,9 @@ Release 0.3.72 lighting and bounded-effect changes are ready. Composition self-t
 2026-10-08 | codex | claim | Stable authored idle reference for player/attack lights and 1.5x rest-flame footprint.
 2026-10-08 | codex | claim | Extend lighting correction to active chest brightness at existing chest-art tint boundary.
 2026-10-08 | codex | done | Stable player light at 75% former size, flame at 1.5x reference, locked/collectible chest brightness switch; focused lighting smoke, strict composition and manifest pass. Release 0.3.80.
+2026-10-08 claim codex: Fix the name-entry responsive reflow call to use the current NameEntryScreenController API.
+2026-10-08 done codex: Routed name-entry display reflow through NameEntryScreenController.position_controls. git diff --check passes; MCP diagnostics unavailable because the editor registry had no token.
+2026-10-08 | codex | claim | Remove actor map-light sources and make the room ambient slightly brighter while preserving fire, pickup and spell lighting.
+2026-10-08 | codex | done | Removed runtime actor map-light creation, kept fire/effect field refresh and rest-fire reference sizing, and raised map ambient from 0.60 to 0.64. `git diff --check` passes; visual review remains pending.
+2026-10-08 | codex | claim | Bump product version to 0.3.81 and push the pending gameplay/layout release, excluding MCP-only config.
+2026-10-08 | codex | done | Curated the 0.3.81 product release payload and confirmed version references and whitespace; publishing to main next.

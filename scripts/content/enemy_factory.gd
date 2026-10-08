@@ -10,7 +10,6 @@ class_name EnemyFactory
 const SLIME_VARIANT_CATALOG_SCRIPT = preload("res://scripts/content/slime_variant_catalog.gd")
 const SLIME_SUPPORT_COMPONENT_SCRIPT = preload("res://scripts/components/slime_support_component.gd")
 const EDITOR_COLLISION_GUIDE_SCRIPT = preload("res://scripts/editor/editor_collision_guide.gd")
-const ACTOR_LIGHTING_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/actor_lighting_controller.gd")
 const TYPE_SLIME: StringName = &"slime"
 const TYPE_SKELETON: StringName = &"skeleton"
 
@@ -27,7 +26,6 @@ static func assemble(definition: EnemyDefinition) -> SlimeActor:
 		actor.offset = SkeletonActor.FRAME_OFFSET
 	actor.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	configure_actor(actor, definition)
-	ACTOR_LIGHTING_CONTROLLER_SCRIPT.attach_actor_light(actor)
 	return actor
 
 

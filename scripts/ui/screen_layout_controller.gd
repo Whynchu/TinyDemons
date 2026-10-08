@@ -44,7 +44,9 @@ func apply_display_layout(root: GameplayState) -> void:
 	if cloud_panel != null: cloud_panel.apply_layout(screen.display_view_size)
 	if screen.name_entry_controller.widgets.overlay != null:
 		screen.name_entry_controller.widgets.overlay.size = screen.display_view_size
-		screen._position_name_entry_controls()
+		screen.name_entry_controller.position_controls(
+			screen.display_view_size, screen._menu_cursor_animator, screen
+		)
 	if screen.pause_overlay != null:
 		screen.pause_overlay.position = Vector2.ZERO
 		screen.pause_overlay.size = screen.display_view_size

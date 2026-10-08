@@ -2,8 +2,29 @@
 
 _Only codex writes this file._
 
-**Focus:** Stable player light reference and larger rest-flame footprint
+**Focus:** None
 **Updated:** 2026-10-08
+
+## Completed: Actor-light removal and ambient lift
+
+Gameplay no longer creates actor map-light sources or refreshes actor footprints.
+The frame schedule still updates the map field for fire and effect lights, and
+rest-fire sizing now reads the player's stored idle bounds directly. Ambient
+rose from 0.60 to 0.64. `git diff --check` passes; no tests or in-editor visual
+review were run.
+
+## Prepared: 0.3.81 release
+
+Updated the in-game version and current version references in both READMEs and
+`docs/VERSIONING.md`. The release payload excludes MCP-only settings; product
+diff whitespace validation passes. Push is authorized and in progress.
+
+## Completed: Name-entry responsive layout call
+
+Display reflow now positions name-entry controls through the current
+NameEntryScreenController API instead of calling a removed ScreenStateController
+method. `git diff --check` passes. MCP script diagnostics could not connect because
+the editor registry had no token; no second Godot editor was opened.
 
 ## Completed implementation: 0.3.80 stable player and chest lighting
 

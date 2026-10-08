@@ -16,9 +16,10 @@ the "where does my feature go" guide.
 ### Map illumination ownership
 
 `ActorLightingController` owns typed `PointLight2D` source records and sprite-bound
-fitting. `MapLightingController` owns map-only material enrollment and the shared
-two-band field shader. The frame schedule refreshes the field after actor light
-geometry; sources use a named group and native additive rendering is disabled.
+fitting for fire and effect lights; player, enemy and NPC sprites do not register
+map-light sources. `MapLightingController` owns map-only material enrollment and
+the shared two-band field shader. The frame schedule refreshes the field after
+effect updates; sources use a named group and native additive rendering is disabled.
 This boundary accepts existing source transforms, energy and color rather than
 adding light-source state to GameplayState. See
 [`lighting-composition-plan.md`](lighting-composition-plan.md) for acceptance.

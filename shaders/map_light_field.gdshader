@@ -7,7 +7,7 @@ uniform int light_count = 0;
 uniform vec4 light_centers[MAX_LIGHTS]; // world center xy, energy z
 uniform vec4 light_inverse_axes[MAX_LIGHTS]; // normalized inverse 2x2
 uniform vec4 light_colors[MAX_LIGHTS];
-uniform float ambient = 0.60;
+uniform float ambient = 0.64;
 uniform float inner_radius = 0.58;
 uniform float inner_level = 0.78;
 uniform float outer_level = 0.40;

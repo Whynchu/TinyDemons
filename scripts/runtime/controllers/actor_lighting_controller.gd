@@ -40,12 +40,17 @@ static func configure_player_reference(player: Sprite2D, attack_visual: Sprite2D
 
 
 static func fit_rest_fire_light(light: PointLight2D, player: Sprite2D, flicker: float) -> void:
-	if light == null or player == null:
+	if light == null or player == null or light.texture == null:
 		return
-	var reference := player.get_node_or_null(NodePath(ACTOR_LIGHT_NAME)) as PointLight2D
-	if reference == null:
+	var drawn_rect := player.get_rect() if player.texture != null else Rect2(Vector2.ZERO, Vector2(16.0, 16.0))
+	if player.has_meta(PLAYER_REFERENCE_BOUNDS):
+		drawn_rect = player.get_meta(PLAYER_REFERENCE_BOUNDS) as Rect2
+		drawn_rect.position += player.get_rect().position
+	var world_rect := player.global_transform * drawn_rect
+	if not world_rect.has_area():
 		return
-	var size := Vector2(reference.texture.get_size()) * reference.global_scale.abs() * reference.texture_scale * FIRE_PLAYER_SIZE_RATIO * clampf(flicker, 0.95, 1.05)
+	var diameter := Vector2(world_rect.size.x, world_rect.size.y * 2.0).length() * PLAYER_LIGHT_COVERAGE + PLAYER_LIGHT_PADDING
+	var size := Vector2(diameter, diameter * 0.5) * FIRE_PLAYER_SIZE_RATIO * clampf(flicker, 0.95, 1.05)
 	light.texture_scale = 1.0
 	light.global_scale = size / Vector2(light.texture.get_size())
 
