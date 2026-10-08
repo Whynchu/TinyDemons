@@ -1,6 +1,8 @@
 extends Node
 class_name GameplayFrameController
 
+const ACTOR_LIGHTING_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/actor_lighting_controller.gd")
+
 const PHASE_INPUT := &"input"
 const PHASE_SIMULATION := &"simulation"
 const PHASE_CONTACT := &"contact_resolution"
@@ -544,6 +546,7 @@ func tick(root: GameplayState, delta: float) -> void:
 		root._update_loading_screen(delta)
 		return
 	var ssc := root.screen_state_controller as ScreenStateController
+	var equipment_visual := root.player_equipment_visual_component
 	if ssc.save_select_presenter.overlay != null and ssc.save_select_presenter.overlay.visible:
 		if ssc.save_select_presenter.footer_text != null:
 			ssc.save_select_presenter.footer_text.texture = ssc._menu_prompt_texture_factory.pixel_prompt_texture(Callable(root, "_pixel_text_texture"), str(root._menu_back_prompt()), Color8(148, 220, 255)) as Texture2D
@@ -664,7 +667,7 @@ func tick(root: GameplayState, delta: float) -> void:
 			combat_runtime.tick_actor_statuses(root, root.player, delta, true)
 	if root.player_death_pending and not root.player_dead:
 		if root.player_motor != null: root.player_motor.update_player_hit_reaction(root, delta)
-		root.player_equipment_visual_component.tick_death_pending(root.gameplay_frame_controller.equipment_visual_context(root))
+		equipment_visual.tick_death_pending(equipment_visual_context(root))
 		if root.player_guard_component != null:
 			root.player_guard_component.clear_for_death(_guard_context(root))
 		if root.player_animation_component != null:
@@ -681,9 +684,9 @@ func tick(root: GameplayState, delta: float) -> void:
 		root._update_player_health_ui(delta)
 		root._update_enemy_health(delta)
 		if root.feedback_animation_registry != null: root.feedback_animation_registry.tick(delta)
-		root.effects_spawner.update_pixel_particles_from_root(root, delta); root._update_player_death(delta); root.player_equipment_visual_component.tick_death(root.gameplay_frame_controller.equipment_visual_context(root)); root._update_damage_numbers(delta)
+		root.effects_spawner.update_pixel_particles_from_root(root, delta); root._update_player_death(delta); equipment_visual.tick_death(equipment_visual_context(root)); root._update_damage_numbers(delta)
 		root._update_enemy_hit_flashes(delta)
-		root._update_depth_sorting(); root._update_actor_occlusion(delta); _stabilize(root); root._update_overworld_ui(); root._update_game_over_input(); return
+		root._update_depth_sorting(); root._update_actor_occlusion(delta); _stabilize(root); _refresh_actor_lights(root); root._update_overworld_ui(); root._update_game_over_input(); return
 	if root._is_pause_input_just_pressed():
 		root._open_pause_menu()
 		return
@@ -742,7 +745,7 @@ func tick(root: GameplayState, delta: float) -> void:
 	if root.feedback_animation_registry != null:
 		root.feedback_animation_registry.tick(delta)
 	root.effects_spawner.update_pixel_particles_from_root(root, delta)
-	root.player_equipment_visual_component.tick(root.gameplay_frame_controller.equipment_visual_context(root), delta)
+	equipment_visual.tick(equipment_visual_context(root), delta)
 	if not dialogue_was_active:
 		var chest_controller := root.chest_controller; chest_controller.update_interaction(root, root._is_interact_input_pressed(), root.interact_input_was_down, GameplayState.CHEST_REWARD_GOLD, GameplayState.CHEST_COLLECT_FLASH_TIME, delta); chest_controller.update_visuals_from_root(root, delta); root._update_world_item_drops(delta); root._update_chroma_pickups(delta); root._update_soul_pickups(delta); root.pickup_runtime_controller.update_gold_pickups(root, delta); root.pickup_runtime_controller.flush_pending_profile_save(root); root._update_rest_fire_animation(delta); root._update_cloaked_demon_animation(delta)
 		# A door crossing is the one place a whole room is mounted, laid out, and
@@ -788,11 +791,16 @@ func tick(root: GameplayState, delta: float) -> void:
 				root.player_anim_name = anim.movement_anim_name(animation_context(root))
 				root.player_anim_frame = 0
 				root.player_anim_timer = 0.0
-				anim.apply_frame(root.gameplay_frame_controller.animation_context(root))
+				anim.apply_frame(animation_context(root))
 	root._update_player_shadow(); root._update_cloaked_demon_shadow(); root._update_overworld_ui(); root._tick_focus_combo(delta); root._update_focus_indicator(delta)
+	_refresh_actor_lights(root)
 
 
 func _stabilize(root: GameplayState) -> void:
 	root.actor_collision_system.stabilize_guides(root.actor_sprites, Callable(root, "_update_slime_attack_guides"))
 	var geometry_debug := root.actor_geometry_debug_drawer
 	if geometry_debug != null: geometry_debug.refresh()
+
+
+func _refresh_actor_lights(root: GameplayState) -> void:
+	ACTOR_LIGHTING_CONTROLLER_SCRIPT.refresh_actor_lights(root.actor_sprites, root.player, root.player_attack_visual, root.cloaked_demon, root.effects_spawner, root.occlusion_renderer)

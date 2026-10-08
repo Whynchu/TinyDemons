@@ -4,6 +4,7 @@ class_name EffectsSpawner
 const ActorPaletteMaterialScript = preload("res://scripts/actors/actor_palette_material.gd")
 const ElementCatalogScript = preload("res://scripts/content/element_catalog.gd")
 const PixelTextTextureFactoryScript = preload("res://scripts/runtime/services/pixel_text_texture_factory.gd")
+const WORLD_UI_MATERIAL: CanvasItemMaterial = preload("res://resources/materials/world_ui_unshaded.tres")
 const HEAL_PLUS_PIXELS := [
 	"....d....",
 	"...dGd...",
@@ -612,6 +613,7 @@ func charge_ready_flash_complete() -> bool:
 
 func spawn_slime_notice(root: Object, slime: Sprite2D, duration: float) -> void:
 	var marker := Sprite2D.new()
+	marker.material = WORLD_UI_MATERIAL
 	marker.name = "SlimeNotice"
 	marker.texture = root.call("_pixel_text_texture", "!", Color8(255, 205, 117)) as Texture2D
 	marker.centered = true
@@ -868,6 +870,7 @@ func spawn_health_number(parent: Node, world_position: Vector2, value: int, velo
 	# numbers, such as the light-blue damage absorbed by the shield.
 	var color := healing_color if is_healing or not healing_color.is_equal_approx(Color.WHITE) else Color.WHITE
 	var shadow := Sprite2D.new()
+	shadow.material = WORLD_UI_MATERIAL
 	shadow.texture = pixel_number.call(number_text, Color8(0, 0, 0, 76)) as Texture2D
 	shadow.centered = false
 	shadow.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -881,6 +884,7 @@ func spawn_health_number(parent: Node, world_position: Vector2, value: int, velo
 	if was_critical:
 		var outline_color := Color.WHITE if color.is_equal_approx(Color.WHITE) or color.is_equal_approx(Color.BLACK) else Color.BLACK
 		outline = Sprite2D.new()
+		outline.material = WORLD_UI_MATERIAL
 		outline.name = "CriticalDamageOutline"
 		outline.texture = critical_outline_texture(number_text, pixel_number, outline_color)
 		outline.centered = false
@@ -891,6 +895,7 @@ func spawn_health_number(parent: Node, world_position: Vector2, value: int, velo
 		outline.global_position = snap_position.call(world_position - Vector2.ONE)
 		outline.scale = Vector2.ONE * pop_scale
 	var sprite := Sprite2D.new()
+	sprite.material = WORLD_UI_MATERIAL
 	sprite.texture = pixel_number.call(number_text, color) as Texture2D
 	sprite.centered = false
 	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -1016,8 +1021,14 @@ func spawn_actor_status_particle(actor: Sprite2D, effect_parent: Node2D, definit
 	pixel_particles.append(particle_data)
 
 
-func _status_particle_visible_rect(sprite: Sprite2D, sprite_rect: Rect2) -> Rect2:
-	var alpha_bounds := _status_particle_alpha_bounds(sprite)
+func sprite_drawn_rect(sprite: Sprite2D, source_texture: Texture2D = null) -> Rect2:
+	if sprite == null or not is_instance_valid(sprite) or sprite.texture == null:
+		return Rect2()
+	return _status_particle_visible_rect(sprite, sprite.get_rect(), source_texture)
+
+
+func _status_particle_visible_rect(sprite: Sprite2D, sprite_rect: Rect2, source_texture: Texture2D = null) -> Rect2:
+	var alpha_bounds := _status_particle_alpha_bounds(sprite, source_texture)
 	var visible_rect := Rect2(
 		sprite_rect.position + alpha_bounds.position * sprite_rect.size,
 		alpha_bounds.size * sprite_rect.size
@@ -1029,17 +1040,18 @@ func _status_particle_visible_rect(sprite: Sprite2D, sprite_rect: Rect2) -> Rect
 	return visible_rect
 
 
-func _status_particle_alpha_bounds(sprite: Sprite2D) -> Rect2:
+func _status_particle_alpha_bounds(sprite: Sprite2D, source_texture: Texture2D = null) -> Rect2:
 	if sprite == null or sprite.texture == null:
 		return Rect2()
+	var source := source_texture if source_texture != null else sprite.texture
 	var region_key := str(sprite.region_rect) if sprite.region_enabled else ""
 	var cache_key := "%s:%s:%s:%d:%d:%d" % [
-		sprite.texture.get_rid(), sprite.region_enabled, region_key,
+		source.get_rid(), sprite.region_enabled, region_key,
 		sprite.hframes, sprite.vframes, sprite.frame,
 	]
 	if status_particle_bounds_cache.has(cache_key):
 		return status_particle_bounds_cache[cache_key] as Rect2
-	var image := _status_particle_frame_image(sprite)
+	var image := _status_particle_frame_image(sprite, source)
 	var alpha_bounds := Rect2()
 	if image != null and not image.is_empty():
 		if image.get_format() != Image.FORMAT_RGBA8:
@@ -1076,8 +1088,8 @@ func _status_particle_alpha_bounds(sprite: Sprite2D) -> Rect2:
 	return alpha_bounds
 
 
-func _status_particle_frame_image(sprite: Sprite2D) -> Image:
-	var source := sprite.texture
+func _status_particle_frame_image(sprite: Sprite2D, source_texture: Texture2D = null) -> Image:
+	var source := source_texture if source_texture != null else sprite.texture
 	var image: Image = null
 	if source is AtlasTexture:
 		var atlas_texture := source as AtlasTexture

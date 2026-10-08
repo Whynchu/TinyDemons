@@ -11,6 +11,7 @@ const ABILITY_COOLDOWN_SHADER: Shader = preload("res://shaders/ability_cooldown_
 const ELITE_OVERHEAD_SYMBOL_TEXTURE: Texture2D = preload("res://assets/artwork/eliteslimeoverheadsymbol.png")
 const TARGET_HEALTH_BAR_TEXTURE: Texture2D = preload("res://assets/artwork/EnemyHpRedBar.png")
 const TARGET_OVERHEAD_BAR_TEXTURE: Texture2D = preload("res://assets/artwork/HpOverheadRedBar.png")
+const WORLD_UI_MATERIAL: CanvasItemMaterial = preload("res://resources/materials/world_ui_unshaded.tres")
 const INVENTORY_CHEST_IDLE_TEXTURE: Texture2D = preload("res://assets/artwork/ChestGrey.png")
 const INVENTORY_CHEST_RECEIVING_TEXTURE: Texture2D = preload("res://assets/artwork/Chest.png")
 
@@ -527,6 +528,7 @@ func update_player_status_marks(anchor: Sprite2D, status_component: StatusCompon
 
 func _new_status_marker(parent: Node, marker_name: String) -> Sprite2D:
 	var marker := Sprite2D.new()
+	marker.material = WORLD_UI_MATERIAL
 	marker.name = marker_name
 	marker.centered = false
 	marker.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -1585,6 +1587,9 @@ func register_overhead_bar(slime: Sprite2D, frame: Sprite2D, fill: Sprite2D, off
 	elite_symbol.z_as_relative = false
 	elite_symbol.top_level = true
 	elite_symbol.visible = false
+	for ui_sprite: Sprite2D in [frame, damage_fill, fill, aggro_marker, elite_symbol]:
+		ui_sprite.use_parent_material = false
+		ui_sprite.material = WORLD_UI_MATERIAL
 	var status_markers: Array = target_overhead_status_markers.get(slime, [])
 	if status_markers == null:
 		status_markers = []

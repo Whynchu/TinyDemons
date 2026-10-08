@@ -2,12 +2,16 @@
 
 _Only codex writes this file._
 
-**Focus:** Elemental, spell, and status-tinted actor lighting for 0.3.72
+**Focus:** Full-sprite actor light coverage, weapon light placement, and unshaded world UI
 **Updated:** 2026-10-08
 
-## In flight: 0.3.72 release and remote Web export verification
+## Completed: 0.3.73 lighting coverage and world UI correction
 
-Added a 0.60 CanvasModulate to darken the gameplay world while leaving HUD CanvasLayers untouched. Player, factory-built enemies (including family replacements), and the hub NPC receive compact neutral lights; active applied statuses tint actor lights. Spells, beams, tethers, imbued weapons, pickups, and palette-driven fire use brighter colored lights. Status and weapon particles stay within cached visible-pixel bounds plus a two-pixel margin. Version references are 0.3.72. Composition self-test, regression audit, strict audit, and `git diff --check` pass. Local web export config passes, but the export cannot run because the 4.7.1 Web release template is not installed. Push is authorized and the remote Pages workflow will verify export.
+Replace fixed actor light sizes with coverage derived from authored visible sprite pixels, including the separate player attack sprite. Place weapon light centers on the visible blade rather than the padded frame. Exempt damage/healing/shield numbers, their outlines and shadows, notices, and enemy overhead HUD from ambient and point lighting. Focused actor-lighting smoke and strict composition audit passed. Prepared release 0.3.73 for push; Web export will be verified by the Pages workflow after push because local Web templates are unavailable. Unrelated configuration edits remain excluded.
+
+## Completed: 0.3.72 release and Web export verification
+
+Release ec4f92b (0.3.72) was pushed to origin/main. Composition self-test and strict/regression audits passed. GitHub Actions run 37797420916 successfully exported, validated, and deployed the Web build. Local export configuration passed; the local 4.7.1 Web release template was unavailable.
 
 ## Completed: Constrained elemental and status effects
 

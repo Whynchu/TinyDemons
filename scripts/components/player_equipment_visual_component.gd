@@ -942,8 +942,6 @@ func _update_imbue_overlays(new_context: PlayerEquipmentVisualContext, delta: fl
 	var visual_element: int = imbue_element if imbue_remaining > 0.0 else permanent_element
 	if visual_element == ElementCatalogScript.Element.NEUTRAL:
 		last_imbue_visual_intensity = 1.0
-		for layer_name in [&"EquipmentSwordBack", &"EquipmentSwordFront"]:
-			ACTOR_LIGHTING_CONTROLLER_SCRIPT.hide_elemental_light(layers.get(layer_name) as Sprite2D)
 		_clear_imbue_overlays()
 		return
 	var aura := _element_aura_component(new_context)
@@ -969,7 +967,8 @@ func _update_imbue_overlays(new_context: PlayerEquipmentVisualContext, delta: fl
 		if layer == null or not layer.visible or layer.texture == null:
 			continue
 		visible_layers[layer] = true
-		ACTOR_LIGHTING_CONTROLLER_SCRIPT.attach_elemental_light(layer, flash_color, 0.34, 0.30)
+		var drawn_rect := new_context.effects_spawner.sprite_drawn_rect(layer) if new_context.effects_spawner != null else Rect2()
+		ACTOR_LIGHTING_CONTROLLER_SCRIPT.attach_weapon_light(layer, flash_color, drawn_rect)
 		aura.update_imbue_layer(layer, outline_color, outline_alpha, flash_color, flash_alpha)
 	aura.hide_unused_imbue_layers(visible_layers)
 
