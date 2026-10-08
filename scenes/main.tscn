@@ -34,6 +34,7 @@
 [ext_resource type="PackedScene" path="res://scenes/authoring/templates/player_placement.tscn" id="43_player_placement"]
 [ext_resource type="Script" uid="uid://dlh4xpjy51hyn" path="res://scripts/editor/placement_root_2d.gd" id="44_placement_root"]
 [ext_resource type="Texture2D" path="res://resources/lighting/point_light_falloff.tres" id="45_point_light_falloff"]
+[ext_resource type="Script" path="res://scripts/runtime/world/map_lighting_controller.gd" id="46_map_lighting"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_2wyq8"]
 texture = ExtResource("29_tile_floor")
@@ -92,7 +93,10 @@ texture_filter = 1
 script = ExtResource("17_gameplay")
 
 [node name="RoomAmbience" type="CanvasModulate" parent="." unique_id=1429916002]
-color = Color(0.6, 0.6, 0.6, 1)
+color = Color(1, 1, 1, 1)
+
+[node name="MapLighting" type="Node" parent="."]
+script = ExtResource("46_map_lighting")
 
 [node name="BackgroundCanvas" type="CanvasLayer" parent="." unique_id=1409530408]
 layer = -10
@@ -310,11 +314,13 @@ texture = ExtResource("39_firepit")
 color = Color(1, 1, 1, 0.40784314)
 polygon = PackedVector2Array(-8, 0.9749985, -3, -2.0250015, -1, -3.0250015, 1, -3.0250015, 3, -2.0250015, 8, 0.9749985, 8, 3.9749985, 3, 6.9749985, 1, 7.9749985, -1, 7.9749985, -3, 6.9749985, -8, 3.9749985)
 
-[node name="FireLight" type="PointLight2D" parent="Actors/Props/RestFire" unique_id=739137859]
-energy = 0.12
+[node name="FireLight" type="PointLight2D" parent="Actors/Props/RestFire" unique_id=739137859 groups=["map_light_sources"]]
+enabled = false
+energy = 0.34
 texture = ExtResource("45_point_light_falloff")
 offset = Vector2(0, 4)
-texture_scale = 0.7
+texture_scale = 0.4
+metadata/map_light_priority = 4
 
 [node name="DepthMarker" type="Marker2D" parent="Actors/Props/RestFire" unique_id=377784978]
 position = Vector2(0, 8)

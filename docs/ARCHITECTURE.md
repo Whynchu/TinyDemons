@@ -13,6 +13,16 @@ the "where does my feature go" guide.
 
 ## Runtime topology
 
+### Map illumination ownership
+
+`ActorLightingController` owns typed `PointLight2D` source records and sprite-bound
+fitting. `MapLightingController` owns map-only material enrollment and the shared
+two-band field shader. The frame schedule refreshes the field after actor light
+geometry; sources use a named group and native additive rendering is disabled.
+This boundary accepts existing source transforms, energy and color rather than
+adding light-source state to GameplayState. See
+[`lighting-composition-plan.md`](lighting-composition-plan.md) for acceptance.
+
 ```
 main.tscn (GameplayState, extends Node2D)
  └── Map/FloorTiles            isometric room grid (isometric_room_layer)

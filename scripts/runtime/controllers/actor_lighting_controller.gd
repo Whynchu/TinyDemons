@@ -2,6 +2,7 @@ extends RefCounted
 class_name ActorLightingController
 
 const LIGHT_TEXTURE: Texture2D = preload("res://resources/lighting/point_light_falloff.tres")
+const MAP_LIGHTING = preload("res://scripts/runtime/world/map_lighting_controller.gd")
 const UNSHADED_SPRITE_MATERIAL: CanvasItemMaterial = preload("res://resources/materials/gameplay_sprite_unshaded.tres")
 const ACTOR_LIGHT_NAME := &"ActorLight"
 const ELEMENTAL_LIGHT_NAME := &"ElementalLight"
@@ -39,7 +40,7 @@ static func attach_actor_light(actor: Sprite2D) -> PointLight2D:
 		light = _new_light(actor, ACTOR_LIGHT_NAME)
 	_configure_light(light, Color.WHITE, LIGHT_ENERGY, 1.0)
 	var drawn_rect := actor.get_rect() if actor.texture != null else Rect2(Vector2.ZERO, Vector2(16.0, 16.0))
-	_fit_light_to_drawn_rect(light, drawn_rect, ACTOR_LIGHT_COVERAGE, ACTOR_LIGHT_PADDING)
+	_fit_actor_light(actor, light, drawn_rect)
 	return light
 
 
@@ -54,6 +55,7 @@ static func refresh_actor_lights(actors: Array[Sprite2D], player: Sprite2D, atta
 	_refresh_actor_light(attack_visual, effects, renderer)
 	if player != null and attack_visual != null and attack_visual.visible:
 		refresh_actor_status_tint(attack_visual, player.get_node_or_null("Status") as StatusComponent)
+	MAP_LIGHTING.refresh_for_actor(player)
 
 
 static func _refresh_actor_light(actor: Sprite2D, effects: EffectsSpawner, renderer: OcclusionRenderer) -> void:
@@ -67,7 +69,7 @@ static func _refresh_actor_light(actor: Sprite2D, effects: EffectsSpawner, rende
 	var light := actor.get_node_or_null(NodePath(ACTOR_LIGHT_NAME)) as PointLight2D
 	if light == null:
 		light = attach_actor_light(actor)
-	_fit_light_to_drawn_rect(light, drawn_rect, ACTOR_LIGHT_COVERAGE, ACTOR_LIGHT_PADDING)
+	_fit_actor_light(actor, light, drawn_rect)
 	refresh_actor_status_tint(actor, actor.get_node_or_null("Status") as StatusComponent)
 
 
@@ -83,6 +85,16 @@ static func attach_impact_light(owner: Sprite2D, color: Color, drawn_rect: Rect2
 	if light != null:
 		_fit_light_to_drawn_rect(light, drawn_rect, 1.25, 4.0)
 	return light
+
+
+static func _fit_actor_light(actor: Sprite2D, light: PointLight2D, drawn_rect: Rect2) -> void:
+	light.visible = drawn_rect.has_area()
+	if not light.visible:
+		return
+	var world_rect := actor.global_transform * drawn_rect
+	var diameter := Vector2(world_rect.size.x, world_rect.size.y * 2.0).length() * ACTOR_LIGHT_COVERAGE + ACTOR_LIGHT_PADDING
+	light.texture_scale = 1.0
+	light.global_transform = Transform2D(0.0, Vector2(diameter, diameter * 0.5) / Vector2(LIGHT_TEXTURE.get_size()), 0.0, world_rect.get_center())
 
 
 static func _fit_light_to_drawn_rect(light: PointLight2D, drawn_rect: Rect2, coverage: float, padding: float) -> void:
@@ -147,6 +159,10 @@ static func _new_light(owner: Node2D, light_name: StringName) -> PointLight2D:
 
 
 static func _configure_light(light: PointLight2D, color: Color, energy: float, texture_scale: float) -> void:
+	light.enabled = false
+	if not light.is_in_group(MAP_LIGHTING.SOURCE_GROUP):
+		light.add_to_group(MAP_LIGHTING.SOURCE_GROUP)
+	light.set_meta("map_light_priority", 2 if light.name == ACTOR_LIGHT_NAME else (1 if light.name == &"ChromaLight" else 3))
 	light.texture = LIGHT_TEXTURE
 	light.color = color
 	light.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST

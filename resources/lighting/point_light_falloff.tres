@@ -2,8 +2,8 @@
 
 [sub_resource type="Gradient" id="Gradient_point_light_falloff"]
 interpolation_mode = 1
-offsets = PackedFloat32Array(0, 0.32, 0.58, 0.78, 1)
-colors = PackedColorArray(1, 1, 1, 0.78, 1, 1, 1, 0.62, 1, 1, 1, 0.4, 1, 1, 1, 0.18, 1, 1, 1, 0)
+offsets = PackedFloat32Array(0, 0.58, 1)
+colors = PackedColorArray(1, 1, 1, 0.78, 1, 1, 1, 0.4, 1, 1, 1, 0)
 
 [resource]
 gradient = SubResource("Gradient_point_light_falloff")

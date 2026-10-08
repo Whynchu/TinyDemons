@@ -1,6 +1,7 @@
 extends SceneTree
 
 const Lighting = preload("res://scripts/runtime/controllers/actor_lighting_controller.gd")
+const MapLighting = preload("res://scripts/runtime/world/map_lighting_controller.gd")
 const Effects = preload("res://scripts/runtime/services/effects_spawner.gd")
 const Hud = preload("res://scripts/ui/hud_controller.gd")
 
@@ -22,6 +23,9 @@ func _run() -> void:
 	_check_weapon_centers(world, effects)
 	_check_spell_lights(world, effects)
 	_check_world_ui(world, effects)
+	_check_map_field(world)
+	if "--render-lighting" in OS.get_cmdline_user_args():
+		await _check_rendered_field()
 	for failure in failures:
 		push_error(failure)
 	print("ACTOR_LIGHTING_SMOKE_OK" if failures.is_empty() else "ACTOR_LIGHTING_SMOKE_FAILED: %d" % failures.size())
@@ -182,7 +186,8 @@ func _check_world_ui(world: Node2D, effects: EffectsSpawner) -> void:
 
 func _check_coverage(sprite: Sprite2D, light: PointLight2D, drawn_rect: Rect2) -> void:
 	var size := _light_size(light)
-	_expect(is_equal_approx(size.x, size.y), "actor glow normalizes the elliptical fire texture to a circle")
+	_expect(is_equal_approx(size.x, size.y * 2.0), "actor glow has a floor-aligned 2:1 isometric footprint")
+	_expect(is_zero_approx(light.global_rotation), "actor glow stays floor-aligned when its actor rotates")
 	_expect(light.position.is_equal_approx(drawn_rect.get_center()), "actor glow centers on its full drawn silhouette")
 	for corner in [drawn_rect.position, drawn_rect.end, Vector2(drawn_rect.position.x, drawn_rect.end.y), Vector2(drawn_rect.end.x, drawn_rect.position.y)]:
 		var source_point := light.to_local(sprite.to_global(corner)) / (Vector2(light.texture.get_size()) * 0.5)
@@ -193,6 +198,7 @@ func _check_spell_lights(world: Node2D, effects: EffectsSpawner) -> void:
 	var texture := Lighting.LIGHT_TEXTURE as GradientTexture2D
 	_expect(texture.gradient.interpolation_mode == Gradient.GRADIENT_INTERPOLATE_CONSTANT, "point lights use stepped pixel falloff")
 	_expect(is_equal_approx(texture.gradient.sample(0.1).a, texture.gradient.sample(0.2).a), "radial falloff preserves discrete brightness bands")
+	_expect(texture.gradient.get_point_count() == 3, "falloff has exactly two illuminated tiers and a dark exterior")
 	var magic := MagicRuntimeController.new()
 	world.add_child(magic)
 	var context := MagicRuntimeContext.new()
@@ -240,13 +246,132 @@ func _check_spell_lights(world: Node2D, effects: EffectsSpawner) -> void:
 	_expect(PickupRuntimeController.ELEMENTAL_PICKUP_MATERIAL.light_mode == CanvasItemMaterial.LIGHT_MODE_UNSHADED, "pickup art keeps its full brightness above the dim colored halo")
 
 
+func _check_map_field(world: Node2D) -> void:
+	var fixture := Node2D.new()
+	world.add_child(fixture)
+	var map := Node2D.new()
+	map.name = "Map"
+	fixture.add_child(map)
+	var texture := _texture(Vector2i(16, 16), Rect2i(0, 0, 16, 16))
+	var floor_art := _sprite(map, texture)
+	var foreground := _sprite(fixture, texture)
+	var ambience := CanvasModulate.new()
+	ambience.name = "RoomAmbience"
+	ambience.color = Color(0.6, 0.6, 0.6)
+	fixture.add_child(ambience)
+	var field := MapLighting.new()
+	fixture.add_child(field)
+	_expect(floor_art.material == field.field_material, "map artwork receives the shared light field")
+	_expect(foreground.material == null and ambience.color == Color.WHITE, "foreground art and UI remain outside map darkness")
+	var later_floor := _sprite(map, texture)
+	_expect(later_floor.material == field.field_material, "generated scenery receives the same field")
+	var owner := _sprite(fixture, texture)
+	owner.position = Vector2(100.5, 100.5)
+	var first := Lighting.attach_elemental_light(owner, Color.WHITE, 0.12, 1.0)
+	var other := _sprite(fixture, texture)
+	other.position = owner.position
+	var second := Lighting.attach_elemental_light(other, Color.WHITE, 0.12, 1.0)
+	first.position = Vector2.ZERO
+	second.position = Vector2.ZERO
+	_expect(not first.enabled and first.is_in_group(MapLighting.SOURCE_GROUP), "sources disable native additive lighting and enroll in map field")
+	field.capture_sources([first])
+	var alone := field.sample_at(Vector2(100, 100))
+	field.capture_sources([first, second])
+	_expect(field.sample_at(Vector2(100, 100)).is_equal_approx(alone), "coincident lights never add brightness")
+	other.position.x += 10.0
+	field.capture_sources([first, second])
+	_expect(field.sample_at(Vector2(105, 100)).is_equal_approx(alone), "touching actor highlights keep their solo brightness")
+	field.capture_sources([second, first])
+	_expect(field.sample_at(Vector2(105, 100)).is_equal_approx(alone), "overlap brightness does not depend on source order")
+	field.capture_sources([first])
+	_expect(is_equal_approx(field.sample_at(Vector2(135, 100)).r, MapLighting.AMBIENT + 0.12 * MapLighting.OUTER_LEVEL), "outer tier has one fixed brightness")
+	_expect(is_equal_approx(field.sample_at(Vector2(150, 100)).r, MapLighting.AMBIENT), "outside the source returns to map ambient")
+	second.color = Color(1, 0, 0)
+	other.position = owner.position
+	field.capture_sources([first, second])
+	var mixed := field.sample_at(Vector2(100, 100))
+	_expect(mixed.r <= alone.r and mixed.g <= alone.g and mixed.b <= alone.b, "mixed tints cannot brighten overlap")
+	second.visible = false
+	field.capture_sources([second])
+	_expect(field.source_count == 0, "hidden effects stop illuminating scenery")
+	second.visible = true
+	second.energy = 0.0
+	field.capture_sources([second])
+	_expect(field.source_count == 0, "zero-energy sources are excluded")
+	second.energy = 0.12
+	field.capture_sources([first, second], Rect2(1000, 1000, 16, 16))
+	_expect(field.source_count == 0, "off-screen lights do not consume the source budget")
+	second.queue_free()
+	field.capture_sources([second])
+	_expect(field.source_count == 0, "removed effects stop illuminating in their deletion frame")
+	var sources: Array[PointLight2D] = [first]
+	for index in MapLighting.MAX_LIGHTS + 4:
+		var extra := Lighting.attach_elemental_light(_sprite(fixture, texture), Color.WHITE)
+		sources.append(extra)
+	field.capture_sources(sources)
+	_expect(field.source_count == MapLighting.MAX_LIGHTS, "light field has a bounded source budget")
+	first.set_meta("map_light_priority", 10)
+	field.capture_sources(sources)
+	_expect(is_equal_approx(field.centers[0].x, first.global_position.x), "high-priority sources survive the budget limit")
+	var scene := load("res://scenes/main.tscn") as PackedScene
+	var state := scene.get_state()
+	var checked_fire := false
+	for index in state.get_node_count():
+		if state.get_node_name(index) != &"FireLight":
+			continue
+		for property in state.get_node_property_count(index):
+			if state.get_node_property_name(index, property) == &"texture_scale":
+				_expect(is_equal_approx(float(state.get_node_property_value(index, property)), 0.4), "authored flame footprint starts compact")
+				checked_fire = true
+	_expect(checked_fire, "main scene carries the compact fire source")
+	fixture.free()
+
+
+func _check_rendered_field() -> void:
+	var viewport := SubViewport.new()
+	viewport.size = Vector2i(128, 64)
+	viewport.disable_3d = true
+	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	root.add_child(viewport)
+	var fixture := Node2D.new()
+	viewport.add_child(fixture)
+	var map := Node2D.new()
+	map.name = "Map"
+	fixture.add_child(map)
+	_sprite(map, _texture(Vector2i(128, 64), Rect2i(0, 0, 128, 64)))
+	var foreground := _sprite(fixture, _texture(Vector2i(4, 4), Rect2i(0, 0, 4, 4)))
+	foreground.position = Vector2(120, 56)
+	var field := MapLighting.new()
+	fixture.add_child(field)
+	var owner := Node2D.new()
+	fixture.add_child(owner)
+	var source := Lighting.attach_elemental_light(owner, Color.WHITE, 0.12, 1.0)
+	source.position = Vector2(50.5, 30.5)
+	field.capture_sources([source])
+	await process_frame
+	await RenderingServer.frame_post_draw
+	var image := viewport.get_texture().get_image()
+	_expect(absf(image.get_pixel(50, 30).r - field.sample_at(Vector2(50, 30)).r) < 0.015, "rendered core matches the field calculation")
+	_expect(absf(image.get_pixel(85, 30).r - field.sample_at(Vector2(85, 30)).r) < 0.015, "rendered outer tier matches the field calculation")
+	_expect(absf(image.get_pixel(110, 30).r - MapLighting.AMBIENT) < 0.015, "rendered map exterior stays dark")
+	_expect(image.get_pixel(121, 57).r > 0.98, "rendered foreground sprite stays bright")
+	var alone := image.get_pixel(50, 30)
+	field.capture_sources([source, source])
+	await process_frame
+	await RenderingServer.frame_post_draw
+	image = viewport.get_texture().get_image()
+	_expect(image.get_pixel(50, 30).is_equal_approx(alone), "rendered duplicate sources do not add brightness")
+	viewport.free()
+	print("MAP_LIGHTING_RENDER_CHECK_COMPLETE")
+
+
 func _check_unshaded(item: CanvasItem, message: String) -> void:
 	var material := item.material as CanvasItemMaterial
 	_expect(material != null and material.light_mode == CanvasItemMaterial.LIGHT_MODE_UNSHADED and not item.use_parent_material, message)
 
 
 func _light_size(light: PointLight2D) -> Vector2:
-	return Vector2(light.texture.get_size()) * light.scale * light.texture_scale
+	return Vector2(light.texture.get_size()) * light.global_scale * light.texture_scale
 
 
 func _sprite(parent: Node, texture: Texture2D) -> Sprite2D:

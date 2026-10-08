@@ -2,6 +2,13 @@
 
 Status: canonical source audit for the `0.2.x` cycle after the composition refactor
 
+Current presentation slice (2026-10-08): implement the accepted
+[`two-band map-lighting plan`](lighting-composition-plan.md). Existing source
+owners remain; a scheduled map component replaces additive accumulation with
+the strongest contribution and isolates ambient darkness to scenery. Focused
+overlap/geometry tests, OpenGL rendered pixel checks and strict composition pass.
+Web export verification follows the 0.3.79 release workflow.
+
 Audit date: 2026-09-26
 
 Baseline commit: `8b162a2410ebea45bfea2e846b427838663ad61d` (the `0.2.23` tree that

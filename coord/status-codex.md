@@ -2,8 +2,18 @@
 
 _Only codex writes this file._
 
-**Focus:** Preserve foreground sprite colors while lighting map scenery
+**Focus:** Implement two-band map lighting with strongest-source overlap and isometric actor coverage
 **Updated:** 2026-10-08
+
+## In flight: 0.3.79 two-band map lighting
+
+Implemented the plan in docs/lighting-composition-plan.md: two illuminated
+bands, smaller flame footprint, world-aligned 2:1 actor ovals, and strongest-source
+overlap through a shared map-only shader. Global ambience is neutral, so
+foreground characters, loot, spell art and UI keep their colors. Focused smoke,
+OpenGL rendered pixel checks, strict composition and manifest validation pass.
+MCP diagnostics remain unavailable (AUTH_FAILED/no registry entry). Preparing
+the version bump and authorized push, then verifying Web export through Pages.
 
 ## Completed: 0.3.78 character and loot lighting release
 
