@@ -2,8 +2,12 @@
 
 _Only codex writes this file._
 
-**Focus:** Bright elemental pickup art with dim surrounding light
+**Focus:** Preserve foreground sprite colors while lighting map scenery
 **Updated:** 2026-10-08
+
+## Completed: 0.3.78 character and loot lighting release
+
+Character palette and MP shaders now declare unshaded; plain actor/NPC sprites retain an unshaded material while keeping tint/alpha and attached map lights. Equipment fallback/occlusion materials, item drops, gold and souls are unshaded. Focused ACTOR_LIGHTING_SMOKE_OK and strict COMPOSITION_AUDIT_OK pass. Automatic approval review rejected broad construction changes across gameplay owners due to render-regression risk; broader foreground effects/prompts coverage remains unimplemented. Proposed material-assignment patch is saved in the task visualization workspace. User requested a version bump and push of the current changes; releasing 0.3.78 with the implemented character/equipment/loot fixes.
 
 ## Completed: 0.3.77 bright elemental pickup art
 

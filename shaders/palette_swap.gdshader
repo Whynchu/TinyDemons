@@ -1,4 +1,5 @@
 shader_type canvas_item;
+render_mode unshaded;
 
 // GPU palette swap for pixel-art actors. Replaces up to four exact source
 // colors with target colors, reproducing SpriteFrameLibrary's CPU recolor

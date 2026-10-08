@@ -373,6 +373,7 @@ func spawn_chest_item_drops(root: Object, items: Array[ItemInstance]) -> void:
 		var rarity_color := catalog.rarity_color(item.rarity)
 		var sprite := Sprite2D.new()
 		sprite.name = "ChestItemDrop%d" % (index + 1)
+		sprite.material = preload("res://resources/materials/gameplay_sprite_unshaded.tres")
 		sprite.texture = item_drop_texture(item)
 		sprite.centered = true
 		sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -563,6 +564,7 @@ func _gold_presentation_texture(root: GameplayState) -> Texture2D:
 func _create_gold_pickup(root: GameplayState, value: int, position: Vector2, launch_seed: int) -> Sprite2D:
 	var sprite := Sprite2D.new()
 	sprite.name = "GoldPickup"
+	sprite.material = preload("res://resources/materials/gameplay_sprite_unshaded.tres")
 	sprite.texture = GOLD_PICKUP_TEXTURE
 	sprite.hframes = 4
 	sprite.vframes = 1
@@ -979,6 +981,7 @@ func spawn_soul_pickup(root: Object, position: Vector2, value: int = 1, launch_s
 	launch_rng.seed = launch_seed if launch_seed != 0 else root_rng.randi() if root_rng != null else Time.get_ticks_msec()
 	var sprite := Sprite2D.new()
 	sprite.name = "SoulPickup"
+	sprite.material = preload("res://resources/materials/gameplay_sprite_unshaded.tres")
 	sprite.texture = soul_pickup_texture()
 	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	sprite.z_as_relative = false

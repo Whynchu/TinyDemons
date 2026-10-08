@@ -2,6 +2,7 @@ extends RefCounted
 class_name ActorLightingController
 
 const LIGHT_TEXTURE: Texture2D = preload("res://resources/lighting/point_light_falloff.tres")
+const UNSHADED_SPRITE_MATERIAL: CanvasItemMaterial = preload("res://resources/materials/gameplay_sprite_unshaded.tres")
 const ACTOR_LIGHT_NAME := &"ActorLight"
 const ELEMENTAL_LIGHT_NAME := &"ElementalLight"
 const LIGHT_ENERGY := 0.12
@@ -13,9 +14,26 @@ const ELEMENTAL_LIGHT_ENERGY := 0.38
 const ELEMENTAL_LIGHT_SCALE := 0.44
 
 
+static func preserve_sprite_colors(sprite: CanvasItem) -> void:
+	if sprite == null or not is_instance_valid(sprite):
+		return
+	# Palette/desaturation shaders own their slot and declare unshaded themselves.
+	# Plain foreground art keeps its authored tint and alpha, independent of the map.
+	sprite.use_parent_material = false
+	if sprite.material == null:
+		sprite.material = UNSHADED_SPRITE_MATERIAL
+	elif sprite.material is CanvasItemMaterial:
+		var material := sprite.material as CanvasItemMaterial
+		if material.light_mode != CanvasItemMaterial.LIGHT_MODE_UNSHADED:
+			material = material.duplicate() as CanvasItemMaterial
+			material.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
+			sprite.material = material
+
+
 static func attach_actor_light(actor: Sprite2D) -> PointLight2D:
 	if actor == null or not is_instance_valid(actor):
 		return null
+	preserve_sprite_colors(actor)
 	var light := actor.get_node_or_null(NodePath(ACTOR_LIGHT_NAME)) as PointLight2D
 	if light == null:
 		light = _new_light(actor, ACTOR_LIGHT_NAME)
@@ -39,6 +57,7 @@ static func refresh_actor_lights(actors: Array[Sprite2D], player: Sprite2D, atta
 
 
 static func _refresh_actor_light(actor: Sprite2D, effects: EffectsSpawner, renderer: OcclusionRenderer) -> void:
+	preserve_sprite_colors(actor)
 	if actor == null or not is_instance_valid(actor) or not actor.visible or actor.texture == null:
 		return
 	var source_texture := actor.texture
@@ -87,6 +106,7 @@ static func attach_elemental_light(
 ) -> PointLight2D:
 	if owner == null or not is_instance_valid(owner):
 		return null
+	preserve_sprite_colors(owner)
 	var light := owner.get_node_or_null(NodePath(light_name)) as PointLight2D
 	if light == null:
 		light = _new_light(owner, light_name)

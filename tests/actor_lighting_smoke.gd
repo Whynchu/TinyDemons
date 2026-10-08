@@ -18,6 +18,7 @@ func _run() -> void:
 	world.add_child(effects)
 	_check_frame_bounds(world, effects)
 	_check_actor_coverage(world, effects)
+	_check_sprite_lighting(world)
 	_check_weapon_centers(world, effects)
 	_check_spell_lights(world, effects)
 	_check_world_ui(world, effects)
@@ -98,6 +99,37 @@ func _check_actor_coverage(world: Node2D, effects: EffectsSpawner) -> void:
 	actors.append(enemy)
 	Lighting.refresh_actor_lights(actors, player, attack, null, effects, renderer)
 	_check_coverage(enemy, enemy.get_node("ActorLight") as PointLight2D, Rect2(2, 2, 60, 44))
+
+
+func _check_sprite_lighting(world: Node2D) -> void:
+	var texture := _texture(Vector2i(16, 16), Rect2i(0, 0, 16, 16))
+	for actor_name in ["Player", "Enemy", "NPC"]:
+		var actor := _sprite(world, texture)
+		actor.name = actor_name
+		actor.modulate = Color(0.8, 0.9, 1.0, 0.6)
+		Lighting.attach_actor_light(actor)
+		_check_unshaded(actor, "%s keeps its sprite colors independent of map lighting" % actor_name)
+		_expect(actor.modulate.is_equal_approx(Color(0.8, 0.9, 1.0, 0.6)), "unshading preserves intentional tint and alpha")
+	var palette_actor := _sprite(world, texture)
+	var palette_material := ActorPaletteMaterial.for_slime_palette("red")
+	palette_actor.material = palette_material
+	Lighting.attach_actor_light(palette_actor)
+	_expect(palette_actor.material == palette_material and palette_material.shader.code.contains("render_mode unshaded;"), "enemy palette shader remains active and ignores world lighting")
+	var equipment := PlayerEquipmentVisualComponent.new()
+	world.add_child(equipment)
+	var sword := _sprite(world, texture)
+	equipment.layers[&"EquipmentSwordFront"] = sword
+	equipment._apply_mp_material(sword)
+	_check_unshaded(sword, "full-Chroma equipment keeps unshaded material")
+	equipment.mp_saturation = 0.4
+	equipment._apply_mp_material(sword)
+	_check_unshaded(sword, "missing grey equipment frames keep unshaded fallback")
+	equipment._set_occlusion_enabled(true)
+	_check_unshaded(sword, "equipment occlusion keeps unshaded material")
+	var player_shader := load("res://shaders/mp_desaturation.gdshader") as Shader
+	_expect(player_shader.code.contains("render_mode unshaded;"), "player MP desaturation stays independent of room lighting")
+	var scenery := _sprite(world, texture)
+	_expect(scenery.material == null, "map scenery retains its normal lit material")
 
 
 func _check_weapon_centers(world: Node2D, effects: EffectsSpawner) -> void:

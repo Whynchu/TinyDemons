@@ -1,4 +1,5 @@
 shader_type canvas_item;
+render_mode unshaded;
 
 // Player/attack material: GPU palette swap folded into the MP-desaturation
 // blend so a single material still owns the sprite slot.

@@ -147,14 +147,14 @@ func _refresh_mp_materials() -> void:
 func _apply_mp_material(layer: Sprite2D) -> void:
 	if layer == null or occlusion_active or mp_saturation >= 0.999:
 		if not occlusion_active and layer != null:
-			layer.material = null
+			layer.material = ACTOR_LIGHTING_CONTROLLER_SCRIPT.UNSHADED_SPRITE_MATERIAL
 		return
 	var grey_key := String(layer.get_meta("mp_grey_key", ""))
 	var grey_frame := int(layer.get_meta("mp_grey_frame", 0))
 	var grey_set: Dictionary = frames_by_palette.get("grey", {}) as Dictionary
 	var grey_frames: Array = grey_set.get(grey_key, [])
 	if grey_frames.is_empty():
-		layer.material = null
+		layer.material = ACTOR_LIGHTING_CONTROLLER_SCRIPT.UNSHADED_SPRITE_MATERIAL
 		return
 	var material := mp_desaturation_materials.get(layer) as ShaderMaterial
 	if material == null:
@@ -263,7 +263,7 @@ func _set_occlusion_enabled(enabled: bool) -> void:
 		var equipment_layer := layer as Sprite2D
 		if equipment_layer == null:
 			continue
-		equipment_layer.material = null
+		equipment_layer.material = ACTOR_LIGHTING_CONTROLLER_SCRIPT.UNSHADED_SPRITE_MATERIAL
 	if enabled:
 		_hide_equipment_shadows()
 	else:
@@ -373,6 +373,7 @@ func _recolor_frame(source: Texture2D, main_color: Color, highlight_color: Color
 func _create_layer(parent: Sprite2D, layer_name: String, z_offset: int) -> void:
 	var layer := Sprite2D.new()
 	layer.name = layer_name
+	layer.material = ACTOR_LIGHTING_CONTROLLER_SCRIPT.UNSHADED_SPRITE_MATERIAL
 	layer.centered = parent.centered
 	layer.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	layer.z_as_relative = false
