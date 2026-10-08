@@ -2,6 +2,7 @@ extends Node
 class_name PickupRuntimeController
 
 const SoulVisualsScript = preload("res://scripts/runtime/services/soul_visuals.gd")
+const ACTOR_LIGHTING_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/actor_lighting_controller.gd")
 const GOLD_PICKUP_TEXTURE: Texture2D = preload("res://assets/artwork/GoldFresh2.png")
 
 const CHEST_INTERACT_DISTANCE := 16.0
@@ -13,9 +14,8 @@ const ITEM_DROP_ARC_HEIGHT := 8.0
 const ITEM_DROP_FOOTPRINT_PADDING := Vector2(4.0, 2.0)
 const CHROMA_BOB_SPEED := 4.5
 const CHROMA_BOB_AMPLITUDE := 1.5
-const CHROMA_LIGHT_SIZE := 32
-const CHROMA_LIGHT_ENERGY := 0.12
-const CHROMA_LIGHT_TEXTURE_SCALE := 0.70
+const CHROMA_LIGHT_ENERGY := 0.30
+const CHROMA_LIGHT_TEXTURE_SCALE := 0.46
 const SOUL_COLOR := Color8(167, 59, 167)
 const RESOURCE_PICKUP_GRAVITY := 72.0
 const RESOURCE_PICKUP_AIR_DRAG := 1.8
@@ -43,7 +43,6 @@ const GOLD_TIER_COLORS := {
 	1: Color8(171, 82, 54),
 }
 
-var chroma_light_texture: Texture2D = null
 var soul_pickup_texture_cache: Texture2D = null
 var gold_pickup_controller: GoldPickupController = null
 var acquisition_presentation_handler: Callable
@@ -351,21 +350,6 @@ func _chest_drop_landing_position(root: Object, chest_rect: Rect2, index: int, c
 	# generated chests find a nearby point in the radial search above.
 	var fallback := _safe_drop_position(root, anchor + Vector2(0.0, 8.0))
 	return fallback
-
-
-func _chroma_light_texture() -> Texture2D:
-	if chroma_light_texture != null:
-		return chroma_light_texture
-	var image := Image.create(CHROMA_LIGHT_SIZE, CHROMA_LIGHT_SIZE, false, Image.FORMAT_RGBA8)
-	var center := Vector2(CHROMA_LIGHT_SIZE - 1, CHROMA_LIGHT_SIZE - 1) * 0.5
-	var radius := float(CHROMA_LIGHT_SIZE) * 0.5
-	for y in CHROMA_LIGHT_SIZE:
-		for x in CHROMA_LIGHT_SIZE:
-			var distance := Vector2(x, y).distance_to(center) / radius
-			var alpha := pow(clampf(1.0 - distance, 0.0, 1.0), 2.0) * 0.9
-			image.set_pixel(x, y, Color(1.0, 1.0, 1.0, alpha))
-	chroma_light_texture = ImageTexture.create_from_image(image)
-	return chroma_light_texture
 
 
 func spawn_chest_item_drop(root: Object, item: ItemInstance) -> void:
@@ -850,15 +834,7 @@ func spawn_chroma_pickup(root: Object, position: Vector2, value: int = CHROMA_PI
 	sprite.set_meta("chroma_last_valid_position", spawn_position)
 	sprite.set_meta("chroma_palette", _chroma_palette_name(root))
 	if with_light:
-		var light := PointLight2D.new()
-		light.name = "ChromaLight"
-		light.texture = _chroma_light_texture()
-		light.color = chroma_color
-		light.energy = CHROMA_LIGHT_ENERGY
-		light.texture_scale = CHROMA_LIGHT_TEXTURE_SCALE
-		light.shadow_enabled = false
-		light.z_index = -1
-		sprite.add_child(light)
+		ACTOR_LIGHTING_CONTROLLER_SCRIPT.attach_elemental_light(sprite, chroma_color, CHROMA_LIGHT_ENERGY, CHROMA_LIGHT_TEXTURE_SCALE, &"ChromaLight")
 	root.add_child(sprite)
 	var tuning: ChromaTuning = root.chroma_tuning
 	var velocity := Vector2(launch_rng.randf_range(-tuning.pickup_launch_spread, tuning.pickup_launch_spread), -tuning.pickup_launch_speed)

@@ -644,8 +644,10 @@ error has a source fix; runtime confirmation remains open.
 The user also reported status outlines appearing offset or oversized. The
 outline now lives beside the actor sprite, copies its global transform, and
 crops AtlasTexture regions, Sprite2D regions, and the current animation-sheet
-frame before generating the border. Status particles use those same visible
-pixels.
+frame before generating the border. Status particles now sample cached
+opaque-pixel bounds for the current texture/frame and remain within those bounds
+plus a two-pixel world-space margin. This also keeps elemental weapon motes on
+the weapon's visible area instead of around its transparent frame padding.
 
 The imbue overlay now copies the same full transform and only offsets
 uncentered sprites. Focused offline MCP diagnostics pass for the changed HUD,
@@ -925,11 +927,14 @@ Status particles previously read back each animated actor texture and scanned it
 pixels to find opaque edge positions. Their frame-keyed image/edge caches caused
 repeat work as enemy animation frames changed; each status also emitted particles
 at short intervals, allowing many extra drawables to stay alive in crowded
-rooms. Status particles now sample the actor's sprite bounds without texture
-readback and have a separate 16-particle active cap. Status presentation records
-are sorted once per status change and reused by the aura and HUD paths. Performance
-capture now records `enemy_status_visuals` and `enemy_overhead_hud` scopes to
-separate those costs in a live capture. A second source hotspot was found in
+rooms. Status particles now sample a bounded cache of opaque-pixel bounds per
+texture/frame and clamp particle sprites to a two-pixel world-space margin;
+transparent frame padding no longer spreads particles around the full actor
+canvas. The cached source scan runs once per encountered frame and status
+particles have a separate 16-particle active cap. Status presentation records
+are sorted once per status change and reused by the aura and HUD paths.
+Performance capture now records `enemy_status_visuals` and `enemy_overhead_hud`
+scopes to separate those costs in a live capture. A second source hotspot was found in
 status outlines: the cache key included OcclusionRenderer's texture revision,
 which advances on every highlighted/occluded frame, so an active status could
 re-scan the image and upload an outline every frame. Status outlines now reuse a

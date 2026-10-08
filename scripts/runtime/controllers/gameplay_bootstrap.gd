@@ -23,6 +23,7 @@ const DUNGEON_MINIMAP_CONTROLLER_SCRIPT = preload("res://scripts/ui/dungeon_mini
 const INPUT_DEVICE_TRACKER_SCRIPT = preload("res://scripts/services/input_device_tracker.gd")
 const TOUCH_CONTROLS_LAYER_SCRIPT = preload("res://scripts/ui/touch_controls_layer.gd")
 const PERFORMANCE_CAPTURE_SERVICE_SCRIPT = preload("res://scripts/services/performance_capture_service.gd")
+const ACTOR_LIGHTING_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/actor_lighting_controller.gd")
 const DEBUG_SESSION_CONTROLLER_SCRIPT = preload("res://scripts/editor/debug_session_controller.gd")
 const CLOUD_SAVE_SERVICE_SCRIPT = preload("res://scripts/services/cloud_save_service.gd")
 const CLOUD_SAVE_PANEL_SCRIPT = preload("res://scripts/ui/cloud_save_panel.gd")
@@ -316,6 +317,9 @@ func initialize(root: GameplayState, preview_session: RefCounted = null) -> void
 		pass
 	else:
 		await root.actor_presentation_runtime_controller.ensure_slime_visuals_ready(root)
+	for actor in actors:
+		ACTOR_LIGHTING_CONTROLLER_SCRIPT.attach_actor_light(actor)
+	ACTOR_LIGHTING_CONTROLLER_SCRIPT.attach_actor_light(demon)
 	_phase(&"build_ui_enemy_health")
 	root.call("_build_enemy_health_ui")
 	await root.get_tree().process_frame

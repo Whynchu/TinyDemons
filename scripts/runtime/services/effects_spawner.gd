@@ -38,6 +38,7 @@ const SWORD_BEAM_CHROMA_COST := 20
 var pixel_text_texture_factory: PixelTextTextureFactory = PixelTextTextureFactoryScript.new() as PixelTextTextureFactory
 var pixel_particle_texture_cache: Dictionary = {}
 var status_particle_texture_cache: Dictionary = {}
+var status_particle_bounds_cache: Dictionary = {}
 var heal_plus_texture_cache: Texture2D = null
 var heal_spark_texture_cache: Texture2D = null
 var damage_numbers: Array[Dictionary] = []
@@ -51,6 +52,8 @@ const MAX_DAMAGE_NUMBERS := 20
 const MAX_PIXEL_PARTICLES := 90
 const MAX_RESERVED_TAGGED_PARTICLES := 12
 const MAX_STATUS_PARTICLES := 16
+const MAX_STATUS_PARTICLE_BOUNDS_CACHE_ENTRIES := 192
+const STATUS_PARTICLE_BOUND_MARGIN := 2.0
 const MAX_PICKUP_FLIGHTS := 16
 const PICKUP_FLIGHT_DURATION := 0.28
 const PICKUP_FLIGHT_ARC_HEIGHT := 6.0
@@ -933,21 +936,23 @@ func spawn_actor_status_particle(actor: Sprite2D, effect_parent: Node2D, definit
 	var sprite_rect := actor.get_rect()
 	if sprite_rect.size.x <= 0.0 or sprite_rect.size.y <= 0.0:
 		return
-	# Status motes use the actor's local sprite bounds instead of reading the
-	# current animated texture back to the CPU and scanning every pixel for an
-	# opaque edge. That image work repeated for each distinct enemy frame and
-	# could add recurring CPU cost in status-heavy rooms.
-	var sample_rect := sprite_rect
-	if definition.particle_style == &"frost_crystal" or definition.particle_style == &"bubble":
-		# These centered 5x5/7x7 motes were being placed directly on the outer
-		# sprite rectangle, so most of each mote started outside the actor. Keep
-		# them on an inset perimeter while still avoiding source-image readbacks.
+	# Effect layers share the actor's frame-sized canvas, which can have a lot of
+	# transparent padding. Sample visible pixels so weapon motes stay around the
+	# weapon and enemy status particles stay close to the affected silhouette.
+	var visible_rect := _status_particle_visible_rect(actor, sprite_rect)
+	if visible_rect.size.x <= 0.0 or visible_rect.size.y <= 0.0:
+		return
+	var sample_rect := visible_rect
+	if (definition.particle_style == &"frost_crystal" or definition.particle_style == &"bubble") and effect_tag_override != IMBUE_ELEMENT_TAG:
+		# Keep centered crystals and bubbles just inside the visible edge.
 		var particle_half_size := Vector2(particle_texture.get_size()) * 0.5
 		var inset := Vector2(
-			minf(maxf(particle_half_size.x + 1.0, sprite_rect.size.x * 0.22), sprite_rect.size.x * 0.40),
-			minf(maxf(particle_half_size.y + 1.0, sprite_rect.size.y * 0.22), sprite_rect.size.y * 0.40)
+			minf(maxf(particle_half_size.x + 1.0, visible_rect.size.x * 0.16), visible_rect.size.x * 0.35),
+			minf(maxf(particle_half_size.y + 1.0, visible_rect.size.y * 0.16), visible_rect.size.y * 0.35)
 		)
-		sample_rect = Rect2(sprite_rect.position + inset, sprite_rect.size - inset * 2.0)
+		sample_rect = Rect2(visible_rect.position + inset, visible_rect.size - inset * 2.0)
+		if sample_rect.size.x <= 0.0 or sample_rect.size.y <= 0.0:
+			sample_rect = visible_rect
 	var edge := source.randi_range(0, 3)
 	var along := source.randf_range(0.12, 0.88)
 	var local_pixel := Vector2.ZERO
@@ -977,7 +982,11 @@ func spawn_actor_status_particle(actor: Sprite2D, effect_parent: Node2D, definit
 		"gravity": 0.0,
 		"effect_tag": status_tag,
 		"logical_position": origin,
+		"bound_actor": actor,
 	}
+	var constrained_origin := _constrain_status_particle_position(origin, particle, particle_data)
+	particle.global_position = constrained_origin
+	particle_data["logical_position"] = constrained_origin
 	match definition.particle_style:
 		&"ember":
 			status_particle_noise.frequency = 0.28
@@ -1005,6 +1014,169 @@ func spawn_actor_status_particle(actor: Sprite2D, effect_parent: Node2D, definit
 	particle_data["velocity"] = velocity
 	particle_data["gravity"] = gravity
 	pixel_particles.append(particle_data)
+
+
+func _status_particle_visible_rect(sprite: Sprite2D, sprite_rect: Rect2) -> Rect2:
+	var alpha_bounds := _status_particle_alpha_bounds(sprite)
+	var visible_rect := Rect2(
+		sprite_rect.position + alpha_bounds.position * sprite_rect.size,
+		alpha_bounds.size * sprite_rect.size
+	)
+	if sprite.flip_h:
+		visible_rect.position.x = sprite_rect.position.x + sprite_rect.size.x - (visible_rect.position.x - sprite_rect.position.x) - visible_rect.size.x
+	if sprite.flip_v:
+		visible_rect.position.y = sprite_rect.position.y + sprite_rect.size.y - (visible_rect.position.y - sprite_rect.position.y) - visible_rect.size.y
+	return visible_rect
+
+
+func _status_particle_alpha_bounds(sprite: Sprite2D) -> Rect2:
+	if sprite == null or sprite.texture == null:
+		return Rect2()
+	var region_key := str(sprite.region_rect) if sprite.region_enabled else ""
+	var cache_key := "%s:%s:%s:%d:%d:%d" % [
+		sprite.texture.get_rid(), sprite.region_enabled, region_key,
+		sprite.hframes, sprite.vframes, sprite.frame,
+	]
+	if status_particle_bounds_cache.has(cache_key):
+		return status_particle_bounds_cache[cache_key] as Rect2
+	var image := _status_particle_frame_image(sprite)
+	var alpha_bounds := Rect2()
+	if image != null and not image.is_empty():
+		if image.get_format() != Image.FORMAT_RGBA8:
+			image = image.duplicate()
+			image.convert(Image.FORMAT_RGBA8)
+		var image_width := image.get_width()
+		var image_height := image.get_height()
+		var image_data := image.get_data()
+		var minimum_x := image_width
+		var minimum_y := image_height
+		var maximum_x := -1
+		var maximum_y := -1
+		for y in image_height:
+			for x in image_width:
+				var alpha_index := (y * image_width + x) * 4 + 3
+				if image_data[alpha_index] == 0:
+					continue
+				minimum_x = mini(minimum_x, x)
+				minimum_y = mini(minimum_y, y)
+				maximum_x = maxi(maximum_x, x)
+				maximum_y = maxi(maximum_y, y)
+		if maximum_x >= minimum_x and maximum_y >= minimum_y:
+			alpha_bounds = Rect2(
+				float(minimum_x) / float(image_width),
+				float(minimum_y) / float(image_height),
+				float(maximum_x - minimum_x + 1) / float(image_width),
+				float(maximum_y - minimum_y + 1) / float(image_height)
+			)
+		else:
+			alpha_bounds = Rect2()
+	if status_particle_bounds_cache.size() >= MAX_STATUS_PARTICLE_BOUNDS_CACHE_ENTRIES:
+		status_particle_bounds_cache.clear()
+	status_particle_bounds_cache[cache_key] = alpha_bounds
+	return alpha_bounds
+
+
+func _status_particle_frame_image(sprite: Sprite2D) -> Image:
+	var source := sprite.texture
+	var image: Image = null
+	if source is AtlasTexture:
+		var atlas_texture := source as AtlasTexture
+		if atlas_texture.atlas == null:
+			return null
+		image = atlas_texture.atlas.get_image()
+		if image == null or image.is_empty():
+			return null
+		var atlas_region := Rect2i(atlas_texture.region.position, atlas_texture.region.size)
+		if (
+			atlas_region.size.x <= 0 or atlas_region.size.y <= 0
+			or atlas_region.position.x < 0 or atlas_region.position.y < 0
+			or atlas_region.end.x > image.get_width() or atlas_region.end.y > image.get_height()
+		):
+			return null
+		image = image.get_region(atlas_region)
+	else:
+		image = source.get_image()
+	if image == null or image.is_empty():
+		return null
+	if image.is_compressed() and image.decompress() != OK:
+		return null
+	if sprite.region_enabled:
+		var display_size := Vector2(source.get_size())
+		if display_size.x <= 0.0 or display_size.y <= 0.0:
+			return null
+		var image_scale := Vector2(
+			float(image.get_width()) / display_size.x,
+			float(image.get_height()) / display_size.y
+		)
+		var region_position := Vector2i(
+			roundi(sprite.region_rect.position.x * image_scale.x),
+			roundi(sprite.region_rect.position.y * image_scale.y)
+		)
+		var region_size := Vector2i(
+			roundi(sprite.region_rect.size.x * image_scale.x),
+			roundi(sprite.region_rect.size.y * image_scale.y)
+		)
+		var region := Rect2i(region_position, region_size)
+		if (
+			region.size.x <= 0 or region.size.y <= 0
+			or region.position.x < 0 or region.position.y < 0
+			or region.end.x > image.get_width() or region.end.y > image.get_height()
+		):
+			return null
+		image = image.get_region(region)
+	var horizontal_frames := maxi(sprite.hframes, 1)
+	var vertical_frames := maxi(sprite.vframes, 1)
+	if horizontal_frames > 1 or vertical_frames > 1:
+		var frame_width := floori(float(image.get_width()) / float(horizontal_frames))
+		var frame_height := floori(float(image.get_height()) / float(vertical_frames))
+		var frame_index := clampi(sprite.frame, 0, horizontal_frames * vertical_frames - 1)
+		var frame_x := frame_index % horizontal_frames
+		var frame_y := floori(float(frame_index) / float(horizontal_frames))
+		var frame_region := Rect2i(
+			frame_x * frame_width, frame_y * frame_height, frame_width, frame_height
+		)
+		if frame_region.size.x <= 0 or frame_region.size.y <= 0:
+			return null
+		image = image.get_region(frame_region)
+	return image
+
+
+func _constrain_status_particle_position(position: Vector2, particle: Sprite2D, particle_data: Dictionary) -> Vector2:
+	var actor_value: Variant = particle_data.get("bound_actor")
+	if not is_instance_valid(actor_value) or not (actor_value is Sprite2D):
+		return position
+	var actor := actor_value as Sprite2D
+	var local_rect := _status_particle_visible_rect(actor, actor.get_rect())
+	if local_rect.size.x <= 0.0 or local_rect.size.y <= 0.0:
+		return position
+	var top_left := actor.to_global(local_rect.position)
+	var top_right := actor.to_global(Vector2(local_rect.end.x, local_rect.position.y))
+	var bottom_left := actor.to_global(Vector2(local_rect.position.x, local_rect.end.y))
+	var bottom_right := actor.to_global(local_rect.end)
+	var minimum := Vector2(
+		minf(minf(top_left.x, top_right.x), minf(bottom_left.x, bottom_right.x)),
+		minf(minf(top_left.y, top_right.y), minf(bottom_left.y, bottom_right.y))
+	)
+	var maximum := Vector2(
+		maxf(maxf(top_left.x, top_right.x), maxf(bottom_left.x, bottom_right.x)),
+		maxf(maxf(top_left.y, top_right.y), maxf(bottom_left.y, bottom_right.y))
+	)
+	var particle_size := Vector2.ZERO
+	if particle.texture != null:
+		particle_size = Vector2(particle.texture.get_size()) * Vector2(absf(actor.global_scale.x), absf(actor.global_scale.y))
+	var half_size := particle_size * 0.5
+	var minimum_center := minimum - Vector2.ONE * STATUS_PARTICLE_BOUND_MARGIN + half_size
+	var maximum_center := maximum + Vector2.ONE * STATUS_PARTICLE_BOUND_MARGIN - half_size
+	if minimum_center.x > maximum_center.x:
+		minimum_center.x = (minimum.x + maximum.x) * 0.5
+		maximum_center.x = minimum_center.x
+	if minimum_center.y > maximum_center.y:
+		minimum_center.y = (minimum.y + maximum.y) * 0.5
+		maximum_center.y = minimum_center.y
+	return Vector2(
+		clampf(position.x, minimum_center.x, maximum_center.x),
+		clampf(position.y, minimum_center.y, maximum_center.y)
+	)
 
 
 func spawn_actor_status_edge_burst(actor: Sprite2D, effect_parent: Node2D, definition: StatusEffectDefinition, random_source: RandomNumberGenerator, pixel_texture: Callable, particle_count: int = 3) -> void:
@@ -1120,6 +1292,7 @@ func update_pixel_particles(delta: float, snap_position: Callable, default_lifet
 			velocity.x += float(particle_data.get("curl", 0.0)) * delta
 		var logical_position := particle_data.get("logical_position", particle.global_position) as Vector2
 		logical_position += velocity * delta
+		logical_position = _constrain_status_particle_position(logical_position, particle, particle_data)
 		particle_data["logical_position"] = logical_position
 		particle.global_position = snap_position.call(logical_position)
 		var color := particle.modulate

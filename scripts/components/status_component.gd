@@ -187,6 +187,13 @@ func strongest_active_definition() -> StatusEffectDefinition:
 	return records[0].definition if not records.is_empty() else null
 
 
+func strongest_applied_definition() -> StatusEffectDefinition:
+	for record in presentation_records():
+		if record.origin == StatusRecord.Origin.APPLIED:
+			return record.definition
+	return null
+
+
 func _emit_status_changed() -> void:
 	_presentation_records_dirty = true
 	status_changed.emit()

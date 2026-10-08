@@ -2,6 +2,7 @@ extends Node
 class_name ElementAuraComponent
 
 const ElementCatalogScript = preload("res://scripts/content/element_catalog.gd")
+const ACTOR_LIGHTING_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/actor_lighting_controller.gd")
 const IMBUE_EMISSION_TAG := &"imbue_element"
 const STATUS_OUTLINE_OFFSETS: Array[Vector2i] = [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]
 const MAX_SHARED_OUTLINE_TEXTURES := 192
@@ -140,6 +141,7 @@ func clear_imbue_element_particles() -> void:
 func refresh_status_aura() -> void:
 	var actor := _active_actor_sprite()
 	var component := _valid_status_component(status_component)
+	ACTOR_LIGHTING_CONTROLLER_SCRIPT.refresh_actor_status_tint(actor_sprite, component)
 	var definition: StatusEffectDefinition = component.strongest_active_definition() if component != null else null
 	if actor == null or definition == null or actor.texture == null or overlay_parent == null or not is_instance_valid(overlay_parent):
 		var old_outline := _valid_sprite(_status_outline)

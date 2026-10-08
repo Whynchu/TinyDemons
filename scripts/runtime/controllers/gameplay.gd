@@ -182,8 +182,8 @@ func _apply_player_attack_hitbox() -> void: if player_attack_component != null: 
 func _update_rest_fire_animation(delta: float) -> void:
 	rest_fire_controller.update_animation(rest_fire, rest_fire_frames, delta, FIRE_FRAME_TIME, Callable(self, "_refresh_rest_fire_image"))
 	var light_step := posmod(floori(rest_fire_controller.frame_index * 0.65), 6)
-	var energy_steps := [0.10, 0.14, 0.18, 0.15, 0.11, 0.13]
-	var scale_steps := [0.64, 0.72, 0.82, 0.76, 0.66, 0.72]
+	var energy_steps := [0.34, 0.42, 0.56, 0.48, 0.38, 0.44]
+	var scale_steps := [0.78, 0.86, 0.98, 0.91, 0.82, 0.88]
 	var fire_light := rest_fire.get_node_or_null("FireLight") as PointLight2D
 	if fire_light != null and rest_fire.visible:
 		fire_light.energy = energy_steps[light_step]

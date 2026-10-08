@@ -2,6 +2,10 @@ extends Node
 class_name MagicProjectileController
 
 const SpellFormDefinitionScript = preload("res://scripts/content/spell_form_definition.gd")
+const ACTOR_LIGHTING_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/actor_lighting_controller.gd")
+const PALETTE_LIBRARY_SCRIPT = preload("res://scripts/services/palette_library.gd")
+const SPELL_LIGHT_ENERGY := 0.42
+const SPELL_LIGHT_SCALE := 0.42
 
 ## Owns active projectile records. Movement, collision, and effects remain
 ## callback-driven while gameplay migrates off coordinator-held arrays.
@@ -20,6 +24,7 @@ func spawn(
 	form: Resource = null,
 	speed: float = 70.0
 ) -> void:
+	ACTOR_LIGHTING_CONTROLLER_SCRIPT.attach_elemental_light(sprite, PALETTE_LIBRARY_SCRIPT.accent(palette), SPELL_LIGHT_ENERGY, SPELL_LIGHT_SCALE)
 	var minimum_travel_time: float = float(form.get("projectile_minimum_travel_time")) if form != null else 0.0
 	var orient_to_direction := form != null and int(form.get("projectile_shape")) == SpellFormDefinitionScript.ProjectileShape.DROPLET
 	var bubble_pulse := form != null and int(form.get("projectile_shape")) == SpellFormDefinitionScript.ProjectileShape.BUBBLE
@@ -42,10 +47,12 @@ func spawn(
 
 
 func spawn_beam(sprite: Sprite2D, direction: Vector2, lifetime: float, palette: String, ability_mode: int) -> void:
+	ACTOR_LIGHTING_CONTROLLER_SCRIPT.attach_elemental_light(sprite, PALETTE_LIBRARY_SCRIPT.accent(palette), SPELL_LIGHT_ENERGY, 0.58)
 	projectiles.append({"sprite": sprite, "outline": null, "direction": direction, "timer": lifetime, "hit": false, "palette": palette, "target": null, "ability_mode": ability_mode, "form": null, "beam": true, "speed": 60.0, "beam_hit_counts": {}, "beam_hit_cooldowns": {}})
 
 
 func spawn_tether(line: Line2D, source: Sprite2D, target: Sprite2D, lifetime: float, max_range: float, palette: String, ability_mode: int, form: Resource) -> void:
+	ACTOR_LIGHTING_CONTROLLER_SCRIPT.attach_elemental_light(line, PALETTE_LIBRARY_SCRIPT.accent(palette), 0.38, 0.42)
 	projectiles.append({"tether": true, "line": line, "source": source, "target": target, "timer": lifetime, "max_range": max_range, "palette": palette, "ability_mode": ability_mode, "form": form, "tick_timer": 0.0, "tick_interval": float(form.get("tick_interval"))})
 
 
@@ -86,6 +93,9 @@ func tick(delta: float, speed: float, snap_position: Callable, target_point: Cal
 				continue
 			line.global_position = snap_position.call(source_position)
 			line.points = PackedVector2Array([Vector2.ZERO, line.to_local(snap_position.call(target_position))])
+			var tether_light := line.get_node_or_null("ElementalLight") as PointLight2D
+			if tether_light != null and line.points.size() >= 2:
+				tether_light.position = line.points[0].lerp(line.points[1], 0.5)
 			var line_tint := line.modulate
 			line_tint.a = 0.72 + 0.18 * sin((float(data.get("initial_timer", timer + delta)) - timer) * 18.0)
 			line.modulate = line_tint

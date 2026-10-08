@@ -1,16 +1,21 @@
-# codex â€” status
+# codex — status
 
 _Only codex writes this file._
 
-**Focus:** None
+**Focus:** Elemental, spell, and status-tinted actor lighting for 0.3.72
 **Updated:** 2026-10-08
 
-## Completed: Release 0.3.71 preparation
+## In flight: 0.3.72 release and remote Web export verification
 
-Updated the in-game title, README, versioning authority, and contributor guide
-to 0.3.71. The stat-feedback commit is prepared as the only unpublished commit
-on `main`; user MCP configuration changes remain unstaged. The push is the
-remaining release action.
+Added a 0.60 CanvasModulate to darken the gameplay world while leaving HUD CanvasLayers untouched. Player, factory-built enemies (including family replacements), and the hub NPC receive compact neutral lights; active applied statuses tint actor lights. Spells, beams, tethers, imbued weapons, pickups, and palette-driven fire use brighter colored lights. Status and weapon particles stay within cached visible-pixel bounds plus a two-pixel margin. Version references are 0.3.72. Composition self-test, regression audit, strict audit, and `git diff --check` pass. Local web export config passes, but the export cannot run because the 4.7.1 Web release template is not installed. Push is authorized and the remote Pages workflow will verify export.
+
+## Completed: Constrained elemental and status effects
+
+Weapon motes use cached opaque bounds for their current frame rather than the full transparent frame rectangle. Enemy status particles use the same bounds and are clamped so each particle stays within a two-pixel world-space margin. `git diff --check` passed; no Godot playtest or smoke tests were run.
+
+## Completed: Release 0.3.71 push
+
+Updated the in-game title, README, versioning authority, and contributor guide to 0.3.71; pushed commit `5c28711` to `origin/main`. User MCP configuration changes remain unstaged.
 
 ## Completed: Hub stat allocation feedback
 

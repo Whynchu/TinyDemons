@@ -1210,3 +1210,18 @@ Prepared release 0.3.63 with landscape menu reflow and synchronized in-game/READ
 2026-10-08 done codex: Hub stat labels and bars use the player's current element highlight; values remain white below the shared cap and turn red at cap. Existing over-limit saves remain intact and repairable, with the Hub showing the repair direction. Updated the allocation references; git diff --check passes. No tests requested or run.
 2026-10-08 claim codex: Bump the in-game title and current version references to 0.3.71, amend the unpublished stat-feedback commit to meet the per-push version rule, and push `main`; exclude user MCP configuration edits.
 2026-10-08 done codex: Prepared release 0.3.71 across the title, README, VERSIONING.md, and contributor guide; amending the single unpublished stat-feedback commit before push. User MCP configuration edits remain excluded.
+2026-10-08 done codex: Pushed release commit 5c28711 (0.3.71) to origin/main. The remote advanced from 8605360; unrelated MCP configuration edits remain untouched.
+2026-10-08 claim codex: Constrain elemental weapon and enemy status particle bounds in ElementAuraComponent and EffectsSpawner.
+2026-10-08 done codex: EffectsSpawner samples cached opaque bounds per texture/frame for status and imbue particles, clamps motion to a two-pixel world-space margin, updates the known-issue record and generated script index, and passes git diff --check. No Godot playtest or smoke tests were run.
+
+## 2026-10-08T14:08Z — codex — claim
+Actor lighting work: dim the gameplay canvas and add reusable point lights to player, enemy, and NPC actors. Keep UI on its existing canvas and preserve the existing fire light.
+
+## 2026-10-08T14:10Z — codex — done
+Gameplay rooms now use a 0.60 ambient multiplier, with HUD left on its separate CanvasLayer. The RestFire and actor lights share the same radial falloff texture; player, all factory-built enemies, and the hub NPC receive compact lights. The generated script index was refreshed. git diff --check passes. Godot MCP diagnostics and runtime capture were unavailable because the project had no editor registry entry; no tests were run.
+
+## 2026-10-08T14:52Z — codex — claim
+Update ambient color lighting for fire, spells, and imbued weapons; keep actor lights neutral unless an applied status is active. Bump 0.3.72, run composition and web export checks, then push. Preserve unrelated user and opencode changes.
+
+## 2026-10-08T15:01Z — codex — done
+Release 0.3.72 lighting and bounded-effect changes are ready. Composition self-test, regression audit, strict audit, and diff checks pass. The web-export config check passes; local export needs the missing Godot 4.7.1 web_nothreads_release.zip template, so remote Pages CI will verify export after the authorized push.
