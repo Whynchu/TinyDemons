@@ -3,7 +3,29 @@
 _Only codex writes this file._
 
 **Focus:** None
-**Updated:** 2026-10-07
+**Updated:** 2026-10-08
+
+## Completed: Version 0.3.70 release preparation
+
+Bumped the in-game title, README, and versioning authority to 0.3.70. The two
+unpublished title-reflow commits will be consolidated with this version bump
+because project policy requires every commit pushed to `main` to carry a
+version update. User MCP configuration edits remain outside the release.
+
+## Completed: Title menu reflow after rotation
+
+`GameplayState._on_display_view_size_changed` checks for a missing
+`ScreenStateController.apply_display_layout` method, so screen overlays skip
+their responsive reflow. Added the typed facade call in
+`scripts/runtime/state/gameplay_state.gd` and delegated it through
+`scripts/ui/screen_state_controller.gd`. `git diff --check` passes; no Godot
+tests or runtime verification were run.
+
+## Completed: Composition audit follow-up
+
+Condensed the typed resize dispatch to keep GameplayState at its recorded
+1,714-line baseline. The composition self-test, regression audit, and strict
+target audit all pass.
 
 ## Completed: Anchored stat allocation and Hub allocation bars
 

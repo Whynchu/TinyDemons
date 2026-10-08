@@ -622,8 +622,8 @@ func _build_hub_ui() -> void:
 func _on_display_view_size_changed(_view_size: Vector2i = DisplayLayout.NATIVE_SIZE) -> void:
 	if hud_controller != null and hud_controller.has_method("apply_display_layout"):
 		hud_controller.apply_display_layout(self)
-	if screen_state_controller != null and screen_state_controller.has_method("apply_display_layout"):
-		screen_state_controller.layout_controller.apply_display_layout(self)
+	if screen_state_controller is ScreenStateController:
+		(screen_state_controller as ScreenStateController).apply_display_layout(self)
 	var view_size := Vector2(_view_size)
 	if scene_transition_overlay != null:
 		scene_transition_overlay.size = view_size

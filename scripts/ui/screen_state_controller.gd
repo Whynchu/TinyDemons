@@ -56,7 +56,7 @@ const MENU_CIRCLE_TEXTURE: Texture2D = MenuPromptTextureFactoryScript.MENU_CIRCL
 const MENU_X_TEXTURE: Texture2D = MenuPromptTextureFactoryScript.MENU_X_TEXTURE
 const MENU_TRIANGLE_TEXTURE: Texture2D = MenuPromptTextureFactoryScript.MENU_TRIANGLE_TEXTURE
 const MENU_SQUARE_TEXTURE: Texture2D = MenuPromptTextureFactoryScript.MENU_SQUARE_TEXTURE
-const GAME_VERSION := "0.3.69"
+const GAME_VERSION := "0.3.70"
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const HUB_STAT_ADD_TEXTURE: Texture2D = HubStatsScreenPresenterScript.HUB_STAT_ADD_TEXTURE
 const HUB_STAT_SUBTRACT_TEXTURE: Texture2D = HubStatsScreenPresenterScript.HUB_STAT_SUBTRACT_TEXTURE
@@ -756,6 +756,10 @@ func update_hub_input(root: GameplayState) -> void:
 # --- Title screen construction and layout ---
 func refresh_title_menu_layout(has_profile: bool) -> void:
 	_title_screen_presenter.refresh_menu_layout(has_profile)
+
+
+func apply_display_layout(root: GameplayState) -> void:
+	_screen_layout_controller.apply_display_layout(root)
 
 
 func set_hud_visibility(root: GameplayState, is_visible: bool) -> void:
