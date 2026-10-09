@@ -1249,3 +1249,15 @@ Release 0.3.72 lighting and bounded-effect changes are ready. Composition self-t
 2026-10-08 | codex | done | Removed runtime actor map-light creation, kept fire/effect field refresh and rest-fire reference sizing, and raised map ambient from 0.60 to 0.64. `git diff --check` passes; visual review remains pending.
 2026-10-08 | codex | claim | Bump product version to 0.3.81 and push the pending gameplay/layout release, excluding MCP-only config.
 2026-10-08 | codex | done | Curated the 0.3.81 product release payload and confirmed version references and whitespace; publishing to main next.
+
+## 2026-10-09 — codex — claim
+Status VFX: preserve emission cadence, mix front/back layers, correct live depth and weapon bubble confinement; soften rest-fire inner band.
+
+## 2026-10-09 — codex — done
+Local VFX patch: 5px free-drifting weapon bubbles at unchanged cadence; stable front/rear particles with post-sort depth synchronization; rest-fire inner gain 0.9. Composition regression and whitespace checks pass; runtime visual review awaits Godot MCP access. Not committed or published.
+
+## 2026-10-09 — codex — claim
+Prepare and push the owner-authorized 0.3.82 VFX release, excluding existing client/MCP configuration edits.
+
+## 2026-10-09 — codex — done
+Prepared version 0.3.82 in the game title and release documentation. Composition regression passed for the VFX patch; rendered acceptance remains open. Publishing the authorized release next.

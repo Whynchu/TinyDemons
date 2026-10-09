@@ -31,7 +31,7 @@ void fragment() {
         vec4 axes = light_inverse_axes[i];
         vec2 local = vec2(dot(axes.xy, delta), dot(axes.zw, delta));
         float radius_squared = dot(local, local);
-        float band = radius_squared < inner_radius * inner_radius ? inner_level : outer_level;
+        float band = radius_squared < inner_radius * inner_radius ? inner_level * light_colors[i].a : outer_level;
         float strength = radius_squared < 1.0 ? band * light_centers[i].z : 0.0;
         if (strength > strongest + 0.000001) {
             strongest = strength;

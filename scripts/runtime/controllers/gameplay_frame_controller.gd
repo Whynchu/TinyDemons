@@ -689,6 +689,7 @@ func tick(root: GameplayState, delta: float) -> void:
 		root._update_depth_sorting()
 		root._update_actor_occlusion(delta)
 		_stabilize(root)
+		root.effects_spawner.sync_status_particle_depths()
 		MAP_LIGHTING_CONTROLLER_SCRIPT.refresh_for_actor(root.player)
 		root._update_overworld_ui()
 		root._update_game_over_input()
@@ -799,6 +800,7 @@ func tick(root: GameplayState, delta: float) -> void:
 				root.player_anim_timer = 0.0
 				anim.apply_frame(animation_context(root))
 	root._update_player_shadow(); root._update_cloaked_demon_shadow(); root._update_overworld_ui(); root._tick_focus_combo(delta); root._update_focus_indicator(delta)
+	root.effects_spawner.sync_status_particle_depths()
 	MAP_LIGHTING_CONTROLLER_SCRIPT.refresh_for_actor(root.player)
 
 

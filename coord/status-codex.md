@@ -3,7 +3,21 @@
 _Only codex writes this file._
 
 **Focus:** None
-**Updated:** 2026-10-08
+**Updated:** 2026-10-09
+
+## Implemented: Layered status VFX and smaller weapon bubbles
+
+Kept Water emission cadence and lifetime; weapon bubbles are 5px with free
+world-space drift and slightly wider sideways motion. Status/imbue particles
+mix stable front/rear layers and synchronize after character depth sorting;
+rear particles can peek beyond sprite edges. Weapon depth follows the player
+body. Rest-fire inner band has a 0.9 source gain; the outer band is unchanged.
+The previous unsuccessful layering correction is recorded in KNOWN_ISSUES.
+Composition regression and whitespace checks pass. Shared Godot processes are
+active and Godot MCP tools are unavailable here; rendered acceptance is open.
+Release 0.3.82 is prepared for the authorized push; existing MCP/client configuration edits
+remain separate. Next: inspect idle/moving Water sword, player/enemy/NPC
+crossings and brightest flame frame in the existing editor.
 
 ## Completed: Actor-light removal and ambient lift
 

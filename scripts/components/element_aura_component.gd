@@ -130,7 +130,7 @@ func update_imbue_element_particles(delta: float, layer: Sprite2D, definition: S
 	if remaining > 0.0:
 		_imbue_emission_timers[layer] = remaining
 		return
-	effects.spawn_actor_status_particle(layer, overlay_parent, definition, rng, pixel_texture, IMBUE_EMISSION_TAG)
+	effects.spawn_actor_status_particle(layer, overlay_parent, definition, rng, pixel_texture, IMBUE_EMISSION_TAG, actor_sprite)
 	_imbue_emission_timers[layer] = definition.particle_interval
 
 

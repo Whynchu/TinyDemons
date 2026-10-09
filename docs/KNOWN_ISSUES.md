@@ -919,6 +919,35 @@ checks, so it is still open. Manual Debug-page exploration with
 mouse/touch/controller across aspect ratios and run-reset/session cleanup checks
 also remain useful follow-up.
 
+## Status particle layering and weapon bubbles (2026-10-09)
+
+Owner playthrough reports that Water weapon bubbles cluster while stationary,
+and that a previous committed and pushed status-layer correction did not resolve
+the visual ordering. Keep that earlier attempt recorded as unsuccessful;
+its exact failure cause has not been established through a rendered reproduction.
+
+The source now mixes front and rear status particles based on their emission
+edge, retaining each particle's side for its lifetime. The frame scheduler
+refreshes their depth after actor sorting and attack visual placement. Weapon
+particles use the player's body depth so equipment's own offsets cannot put a
+rear particle above the body. Rear particles can peek past the sprite bounds.
+
+Water weapon bubbles are 5px instead of 7px and drift freely from their emitted
+world position for their existing lifetime, with slightly wider horizontal
+motion. The former moving bounds clamp could collapse their centers onto a
+narrow sword and pull trails back toward it. Emission frequency, status bubble
+size, spell bubble art, and gameplay tuning are retained. Rest-fire inner-band
+illumination is reduced by 10% through a source-specific gain; outer illumination
+and other light sources retain their current gains.
+
+Composition regression and whitespace checks pass. Godot is active, but this
+session has no callable Godot MCP tools; no renderer or runtime checks were run.
+Rendered acceptance remains open: idle and moving Water sword, front/rear
+particles on player and enemies, actor/NPC depth crossings, and the brightest
+flame frame at native resolution. Confirm Ice and Electric remain readable with
+the added rear particles. NPCs participate in world depth sorting; this patch
+does not add status emission to NPCs.
+
 ## Infrastructure findings
 
 ### Enemy/status crowd performance — source optimization implemented, runtime profile open (2026-10-06)

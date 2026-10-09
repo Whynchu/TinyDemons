@@ -917,7 +917,7 @@ func _discard_damage_number(damage_number: Dictionary) -> void:
 			node.queue_free()
 
 
-func spawn_actor_status_particle(actor: Sprite2D, effect_parent: Node2D, definition: StatusEffectDefinition, random_source: RandomNumberGenerator, pixel_texture: Callable, effect_tag_override: StringName = &"") -> void:
+func spawn_actor_status_particle(actor: Sprite2D, effect_parent: Node2D, definition: StatusEffectDefinition, random_source: RandomNumberGenerator, pixel_texture: Callable, effect_tag_override: StringName = &"", depth_actor: Sprite2D = null) -> void:
 	if actor == null or not is_instance_valid(actor) or actor.texture == null or not actor.visible or not actor.is_visible_in_tree():
 		return
 	if effect_parent == null or not is_instance_valid(effect_parent) or definition == null or not pixel_texture.is_valid():
@@ -935,7 +935,8 @@ func spawn_actor_status_particle(actor: Sprite2D, effect_parent: Node2D, definit
 		source = RandomNumberGenerator.new()
 		source.randomize()
 	var color := ElementCatalogScript.damage_number_color(definition.element)
-	var particle_texture := _status_particle_texture(definition.particle_style, color, pixel_texture)
+	var weapon_bubble := definition.particle_style == &"bubble" and effect_tag_override == IMBUE_ELEMENT_TAG
+	var particle_texture := _status_particle_texture(definition.particle_style, color, pixel_texture, 5 if weapon_bubble else 7)
 	if particle_texture == null:
 		return
 	var sprite_rect := actor.get_rect()
@@ -948,7 +949,11 @@ func spawn_actor_status_particle(actor: Sprite2D, effect_parent: Node2D, definit
 	if visible_rect.size.x <= 0.0 or visible_rect.size.y <= 0.0:
 		return
 	var sample_rect := visible_rect
-	if (definition.particle_style == &"frost_crystal" or definition.particle_style == &"bubble") and effect_tag_override != IMBUE_ELEMENT_TAG:
+	# Choose a stable side of the silhouette for each particle's whole life.
+	var edge := source.randi_range(0, 3)
+	var along := source.randf_range(0.12, 0.88)
+	var depth_offset := -1 if edge == 0 or (edge != 2 and along < 0.5) else 1
+	if (definition.particle_style == &"frost_crystal" or definition.particle_style == &"bubble") and effect_tag_override != IMBUE_ELEMENT_TAG and depth_offset > 0:
 		# Keep centered crystals and bubbles just inside the visible edge.
 		var particle_half_size := Vector2(particle_texture.get_size()) * 0.5
 		var inset := Vector2(
@@ -958,8 +963,6 @@ func spawn_actor_status_particle(actor: Sprite2D, effect_parent: Node2D, definit
 		sample_rect = Rect2(visible_rect.position + inset, visible_rect.size - inset * 2.0)
 		if sample_rect.size.x <= 0.0 or sample_rect.size.y <= 0.0:
 			sample_rect = visible_rect
-	var edge := source.randi_range(0, 3)
-	var along := source.randf_range(0.12, 0.88)
 	var local_pixel := Vector2.ZERO
 	match edge:
 		0: local_pixel = Vector2(lerpf(sample_rect.position.x, sample_rect.end.x, along), sample_rect.position.y)
@@ -973,7 +976,11 @@ func spawn_actor_status_particle(actor: Sprite2D, effect_parent: Node2D, definit
 	particle.centered = true
 	particle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	particle.z_as_relative = false
-	particle.z_index = actor.z_index + 1
+	var render_actor := depth_actor if is_instance_valid(depth_actor) else actor
+	# Equipment occupies the adjacent depth slots on either side of the body.
+	if effect_tag_override == IMBUE_ELEMENT_TAG:
+		depth_offset *= 2
+	particle.z_index = clampi(render_actor.z_index + depth_offset, RenderingServer.CANVAS_ITEM_Z_MIN, RenderingServer.CANVAS_ITEM_Z_MAX)
 	effect_parent.add_child(particle)
 	particle.global_position = origin
 	particle.global_scale = actor.global_scale
@@ -988,6 +995,9 @@ func spawn_actor_status_particle(actor: Sprite2D, effect_parent: Node2D, definit
 		"effect_tag": status_tag,
 		"logical_position": origin,
 		"bound_actor": actor,
+		"depth_actor": render_actor,
+		"depth_offset": depth_offset,
+		"free_bubble_drift": weapon_bubble,
 	}
 	var constrained_origin := _constrain_status_particle_position(origin, particle, particle_data)
 	particle.global_position = constrained_origin
@@ -1013,7 +1023,7 @@ func spawn_actor_status_particle(actor: Sprite2D, effect_parent: Node2D, definit
 			velocity = Vector2(source.randf_range(-1.5, 1.5), source.randf_range(2.0, 5.0))
 		&"bubble":
 			lifetime = source.randf_range(1.2, 1.8)
-			velocity = Vector2(source.randf_range(-1.5, 1.5), source.randf_range(-5.0, -3.0))
+			velocity = Vector2(source.randf_range(-3.5, 3.5) if weapon_bubble else source.randf_range(-1.5, 1.5), source.randf_range(-5.0, -3.0))
 	particle_data["timer"] = lifetime
 	particle_data["lifetime"] = lifetime
 	particle_data["velocity"] = velocity
@@ -1154,6 +1164,10 @@ func _status_particle_frame_image(sprite: Sprite2D, source_texture: Texture2D = 
 
 
 func _constrain_status_particle_position(position: Vector2, particle: Sprite2D, particle_data: Dictionary) -> Vector2:
+	# Weapon bubbles keep their emitted world position as the weapon moves.
+	# Their existing lifetime and velocity limit drift to under ten world pixels.
+	if bool(particle_data.get("free_bubble_drift", false)):
+		return position
 	var actor_value: Variant = particle_data.get("bound_actor")
 	if not is_instance_valid(actor_value) or not (actor_value is Sprite2D):
 		return position
@@ -1177,6 +1191,9 @@ func _constrain_status_particle_position(position: Vector2, particle: Sprite2D, 
 	if particle.texture != null:
 		particle_size = Vector2(particle.texture.get_size()) * Vector2(absf(actor.global_scale.x), absf(actor.global_scale.y))
 	var half_size := particle_size * 0.5
+	# Rear particles need to peek past the edge rather than sit under opaque art.
+	if int(particle_data.get("depth_offset", 1)) < 0:
+		half_size = Vector2.ZERO
 	var minimum_center := minimum - Vector2.ONE * STATUS_PARTICLE_BOUND_MARGIN + half_size
 	var maximum_center := maximum + Vector2.ONE * STATUS_PARTICLE_BOUND_MARGIN - half_size
 	if minimum_center.x > maximum_center.x:
@@ -1196,11 +1213,11 @@ func spawn_actor_status_edge_burst(actor: Sprite2D, effect_parent: Node2D, defin
 		spawn_actor_status_particle(actor, effect_parent, definition, random_source, pixel_texture)
 
 
-func _status_particle_texture(particle_style: StringName, color: Color, pixel_texture: Callable) -> Texture2D:
+func _status_particle_texture(particle_style: StringName, color: Color, pixel_texture: Callable, bubble_size: int = 7) -> Texture2D:
 	if particle_style == &"ember":
 		return pixel_texture.call(color) as Texture2D
 	if particle_style == &"bubble":
-		return BubbleVisuals.texture(status_particle_texture_cache, "status_bubble", color.lerp(Color.WHITE, 0.28), color, 7)
+		return BubbleVisuals.texture(status_particle_texture_cache, "status_bubble", color.lerp(Color.WHITE, 0.28), color, bubble_size)
 	var key := "%s:%s" % [String(particle_style), color.to_html(false)]
 	if status_particle_texture_cache.has(key):
 		return status_particle_texture_cache[key] as Texture2D
@@ -1260,6 +1277,19 @@ func _count_status_particles() -> int:
 		if String(effect_tag).begins_with("status_"):
 			count += 1
 	return count
+
+
+func sync_status_particle_depths() -> void:
+	# Called after actor depth sorting and attack visual placement in the frame.
+	for particle_data: Dictionary in pixel_particles:
+		var actor_value: Variant = particle_data.get("depth_actor")
+		var particle_value: Variant = particle_data.get("sprite")
+		if not is_instance_valid(actor_value) or not is_instance_valid(particle_value):
+			continue
+		var actor := actor_value as Sprite2D
+		var particle := particle_value as Sprite2D
+		if actor != null and particle != null:
+			particle.z_index = clampi(actor.z_index + int(particle_data.get("depth_offset", 1)), RenderingServer.CANVAS_ITEM_Z_MIN, RenderingServer.CANVAS_ITEM_Z_MAX)
 
 
 func update_pixel_particles(delta: float, snap_position: Callable, default_lifetime: float) -> void:

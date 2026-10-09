@@ -109,7 +109,7 @@ func capture_sources(sources: Array[PointLight2D], world_view: Rect2 = Rect2()) 
 		var center := source.to_global(source.offset)
 		centers[index] = Vector4(center.x, center.y, clampf(source.energy * source.color.a, 0.0, 1.0), 0.0)
 		inverse_axes[index] = Vector4(inverse.x.x / half_size.x, inverse.y.x / half_size.x, inverse.x.y / half_size.y, inverse.y.y / half_size.y)
-		colors[index] = Vector4(source.color.r, source.color.g, source.color.b, 1.0)
+		colors[index] = Vector4(source.color.r, source.color.g, source.color.b, clampf(float(source.get_meta("map_light_inner_gain", 1.0)), 0.0, 1.0))
 	field_material.set_shader_parameter("light_count", source_count)
 	field_material.set_shader_parameter("light_centers", centers)
 	field_material.set_shader_parameter("light_inverse_axes", inverse_axes)
@@ -128,7 +128,7 @@ func sample_at(world_position: Vector2) -> Color:
 		var axes := inverse_axes[index]
 		var local := Vector2(Vector2(axes.x, axes.y).dot(delta), Vector2(axes.z, axes.w).dot(delta))
 		var radius_squared := local.length_squared()
-		var band := INNER_LEVEL if radius_squared < INNER_RADIUS * INNER_RADIUS else OUTER_LEVEL
+		var band := INNER_LEVEL * colors[index].w if radius_squared < INNER_RADIUS * INNER_RADIUS else OUTER_LEVEL
 		var strength := band * center.z if radius_squared < 1.0 else 0.0
 		var tint := colors[index]
 		if strength > strongest + 0.000001:

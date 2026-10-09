@@ -5,6 +5,8 @@ Status: actor-light removal and ambient lift applied 2026-10-08; visual review p
 ## Requested result
 
 - Two illuminated brightness bands with crisp pixel edges.
+- Rest-fire inner-band contribution has a source-specific 0.9 gain (2026-10-09);
+  the outer band retains its existing strength. Rendered acceptance is pending.
 - Map scenery uses a 0.64 ambient baseline, slightly lifted from 0.60 while
   retaining the dark-room look.
 - Rest-fire light footprints are 1.5x the stable player reference footprint, with +/-3%

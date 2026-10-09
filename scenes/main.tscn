@@ -321,6 +321,7 @@ texture = ExtResource("45_point_light_falloff")
 offset = Vector2(0, 4)
 texture_scale = 0.4
 metadata/map_light_priority = 4
+metadata/map_light_inner_gain = 0.9
 
 [node name="DepthMarker" type="Marker2D" parent="Actors/Props/RestFire" unique_id=377784978]
 position = Vector2(0, 8)
