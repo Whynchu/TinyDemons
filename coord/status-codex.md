@@ -2,10 +2,10 @@
 
 _Only codex writes this file._
 
-**Focus:** Repair 0.3.85 web startup regression
+**Focus:** Finish 0.3.85 web startup regression repair
 **Updated:** 2026-10-10
 
-## Completed: web startup parser failure
+## In flight: web startup parser failure
 
 The user reports that 0.3.85 displayed the authored main scene's room geometry,
 player, and HUD without reaching the title or responding to input. They supplied
@@ -13,9 +13,12 @@ Godot's `Could not parse global class "RoomController"` error. The migration
 call in `RoomController.ensure_layout()` was accidentally dedented to class
 scope; restoring its function indentation addresses that parse failure and the
 dependent `GameplayState` inference errors. Direct preloads also remove the new
-debug-run classes' generated-cache dependency. Browser/runtime confirmation is
-still pending because Godot MCP and a browser surface are unavailable.
-Unrelated worktree edits remain unstaged and untouched.
+debug-run classes' generated-cache dependency. The 0.3.86 Pages run then found
+two independent inferred-local parse failures, in `slime_brain.gd` and
+`gameplay_presentation_runtime_controller.gd`, plus a composition baseline
+regression from the extra `GameplayState` constant. These are corrected for
+0.3.87. Browser/runtime confirmation remains pending; unrelated worktree edits
+remain unstaged and untouched.
 
 ## Completed: contact transfer and responsive player Freeze correction
 

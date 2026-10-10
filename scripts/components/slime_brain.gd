@@ -205,7 +205,7 @@ func context_steering_direction(actor: Sprite2D, tuning: SlimeTuning, random_sou
 	var slime_foot: Vector2 = actor_foot.call(actor)
 	var collision_shape_offsets: Array[Vector2] = []
 	var collision_shape_center_offset := Vector2.ZERO
-	var collision_polygon := gameplay.slime_runtime_controller.slime_collision_polygon(gameplay, actor, slime_foot)
+	var collision_polygon: PackedVector2Array = gameplay.slime_runtime_controller.slime_collision_polygon(gameplay, actor, slime_foot)
 	if collision_polygon.size() >= 3:
 		for point in collision_polygon:
 			var offset: Vector2 = point - slime_foot

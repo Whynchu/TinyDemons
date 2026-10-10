@@ -56,7 +56,7 @@ static func maintain_enemy_regen_lock(root: GameplayState, delta: float) -> void
 	for slime in root.slimes:
 		if root.combat_runtime_controller.is_slime_dead(root, slime) or not root._is_slime_aggroed(slime):
 			continue
-		var health := root._slime_health(slime)
+		var health: HealthComponent = root._slime_health(slime) as HealthComponent
 		if health != null:
 			health.regen_delay_timer = maxf(health.regen_delay_timer, health.regen_interval + delta)
 

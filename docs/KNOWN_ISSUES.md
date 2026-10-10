@@ -6,7 +6,7 @@ Updated: 2026-10-10
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.3.86`. The current smoke inventory is 157 manifest
+Current release: version `0.3.87`. The current smoke inventory is 157 manifest
 rows / 155 runnable paths / 2 report rows / 45-path default gate; counts quoted
 in older sections below are historical snapshots. The authoring and verification
 sequence is in [`authoring-system-plan.md`](authoring-system-plan.md).
@@ -37,9 +37,13 @@ not parse the global class `RoomController`. A statement in
 prevented that class from loading and caused dependent type-inference errors in
 `GameplayState` and the room checkpoint context. The indentation is corrected.
 Startup also now preloads the newly added debug-run configuration and helper
-scripts directly, avoiding generated global-class-cache dependence. Browser
-startup has not been retested; the deployed 0.3.86 build still needs user
-verification.
+scripts directly, avoiding generated global-class-cache dependence.
+The 0.3.86 Pages run failed during export after finding two additional local
+type-inference parse errors in `slime_brain.gd` and
+`gameplay_presentation_runtime_controller.gd`. Its new `GameplayState` preload
+constant also exceeded the recorded line/field baseline; 0.3.87 removes that
+extra constant and keeps the typed configuration through a resource preload.
+Browser startup still needs retesting after 0.3.87 deploys.
 
 ## 2026-10-02 polish pass — Fire cone aim, Orb height, transition/pickup hitches
 

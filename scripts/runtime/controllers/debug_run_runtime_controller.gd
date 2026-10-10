@@ -5,20 +5,20 @@ const DEBUG_RUN_CONFIGURATION_SCRIPT = preload("res://scripts/content/debug_run_
 
 
 static func progression_run(root: GameplayState) -> int:
-	var configuration: DEBUG_RUN_CONFIGURATION_SCRIPT = root.debug_run_configuration
+	var configuration := root.debug_run_configuration as DEBUG_RUN_CONFIGURATION_SCRIPT
 	return configuration.run_number if root.debug_start_in_boss_room and configuration != null else 0
 
 
 static func dungeon_seed(root: GameplayState, preview_session: RefCounted, rng: RandomNumberGenerator) -> int:
 	if preview_session != null:
 		return int(preview_session.get("seed"))
-	var configuration: DEBUG_RUN_CONFIGURATION_SCRIPT = root.debug_run_configuration
+	var configuration := root.debug_run_configuration as DEBUG_RUN_CONFIGURATION_SCRIPT
 	return configuration.dungeon_seed if configuration != null and configuration.dungeon_seed > 0 else rng.randi()
 
 
 static func configure_room(root: GameplayState, profile: PlayerProfile, run_number: int, dungeon_seed: int) -> void:
 	var room := root.room_controller
-	var configuration: DEBUG_RUN_CONFIGURATION_SCRIPT = root.debug_run_configuration
+	var configuration := root.debug_run_configuration as DEBUG_RUN_CONFIGURATION_SCRIPT
 	room.debug_boss_stress_encounter = configuration != null and configuration.boss_stress_encounter
 	if run_number <= 0:
 		return
@@ -31,5 +31,5 @@ static func configure_room(root: GameplayState, profile: PlayerProfile, run_numb
 
 
 static func configure_health(root: GameplayState, health: HealthComponent) -> void:
-	var configuration: DEBUG_RUN_CONFIGURATION_SCRIPT = root.debug_run_configuration
+	var configuration := root.debug_run_configuration as DEBUG_RUN_CONFIGURATION_SCRIPT
 	health.debug_invulnerable = configuration != null and configuration.player_invulnerable
