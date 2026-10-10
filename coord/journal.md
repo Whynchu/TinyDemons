@@ -1348,3 +1348,10 @@ Completed the transfer allowlist and Poison exclusion, player Freeze action/move
 2026-10-10 done codex: Fixed the reported RoomController global-class parse failure by restoring the ensure_layout statement indentation; dependent GameplayState inference errors were traced to this class failure. Prepared 0.3.86 with direct debug-run script preloads as cache hardening. Browser runtime retest remains pending.
 2026-10-10 claim codex: clear the 0.3.86 Pages export errors and republish the startup parser fix as 0.3.87; preserve unrelated edits.
 2026-10-10 progress codex: Pages run 368 found explicit inferred-type parse errors in slime_brain.gd and gameplay_presentation_runtime_controller.gd, plus a GameplayState line/field baseline regression. Added local types and removed the extra state constant.
+
+
+## 2026-10-10T22:23:21Z — codex — claim
+Repair the player health damage-fill animation, bump 0.3.88, and publish the web build.
+
+## 2026-10-10T22:23:21Z — codex — done
+The published HUD controller lacked the state-advance method already called by the fixed-step frame controller. Added the missing method, updated the generated script index and release references, and pushed 0.3.88; Pages export/deployment verification is pending.

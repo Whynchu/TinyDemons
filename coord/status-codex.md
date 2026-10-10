@@ -2,10 +2,15 @@
 
 _Only codex writes this file._
 
-**Focus:** Finish 0.3.85 web startup regression repair
+**Focus:** Release 0.3.88 player health damage-fill animation fix
 **Updated:** 2026-10-10
 
-## In flight: web startup parser failure
+## In flight: 0.3.88 player health damage-fill animation release
+
+The fixed-step frame controller called a missing `HudController.advance_player_health_ui()`, leaving the displayed health and damage-hold timer unchanged. Added the state-only advance method and indexed it. The 0.3.88 release is being pushed so Pages can verify the web export; browser animation retest remains pending because Godot/MCP is off.
+
+
+## Completed: 0.3.87 web startup parser failure
 
 The user reports that 0.3.85 displayed the authored main scene's room geometry,
 player, and HUD without reaching the title or responding to input. They supplied
@@ -17,8 +22,8 @@ debug-run classes' generated-cache dependency. The 0.3.86 Pages run then found
 two independent inferred-local parse failures, in `slime_brain.gd` and
 `gameplay_presentation_runtime_controller.gd`, plus a composition baseline
 regression from the extra `GameplayState` constant. These are corrected for
-0.3.87. Browser/runtime confirmation remains pending; unrelated worktree edits
-remain unstaged and untouched.
+0.3.87. Pages run 369 passed web export and deployment. Interactive startup and controls
+still need browser confirmation; unrelated worktree edits remain untouched.
 
 ## Completed: contact transfer and responsive player Freeze correction
 

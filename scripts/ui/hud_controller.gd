@@ -493,6 +493,16 @@ func update_player_health_ui(health: float, display_health: float, damage_hold: 
 	return {"display_health": display_health, "damage_hold": damage_hold}
 
 
+func advance_player_health_ui(health: float, display_health: float, damage_hold: float, delta: float, drain_speed: float, max_health: float) -> Dictionary:
+	# Bar speeds are %-relative: they scale with max HP so the bar fills/drains at
+	# the same visual rate regardless of how large the pool is.
+	var scale := max_health / 100.0
+	if health > display_health: display_health = move_toward(display_health, health, drain_speed * scale * delta)
+	if damage_hold > 0.0: damage_hold = maxf(damage_hold - delta, 0.0)
+	elif display_health > health: display_health = move_toward(display_health, health, drain_speed * scale * delta)
+	return {"display_health": display_health, "damage_hold": damage_hold}
+
+
 func update_player_status_marks(anchor: Sprite2D, status_component: StatusComponent, pixel_text: Callable) -> void:
 	_prune_player_status_markers()
 	if anchor == null or not is_instance_valid(anchor) or status_component == null or not is_instance_valid(status_component) or not pixel_text.is_valid():

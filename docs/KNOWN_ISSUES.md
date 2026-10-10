@@ -6,7 +6,7 @@ Updated: 2026-10-10
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.3.87`. The current smoke inventory is 157 manifest
+Current release: version `0.3.88`. The current smoke inventory is 157 manifest
 rows / 155 runnable paths / 2 report rows / 45-path default gate; counts quoted
 in older sections below are historical snapshots. The authoring and verification
 sequence is in [`authoring-system-plan.md`](authoring-system-plan.md).
@@ -26,6 +26,15 @@ reports, reproduction notes, and acceptance criteria remain in
 “Implemented in source” means that a code path and focused assertions exist. It
 does not mean that cold-start timing, every display orientation, physical
 touch input, browser behavior, or a complete player journey has been verified.
+
+## 2026-10-10 player health damage-fill animation — 0.3.88
+
+The fixed-step controller called `HudController.advance_player_health_ui()` to
+advance the player's held damage fill, but that method was missing from the
+published HUD controller. The render-rate update uses zero delta, so the
+trailing damage fill did not advance. Added the state update that counts down
+the damage hold and then drains displayed health toward current health. Browser
+animation retest after the Pages deployment remains pending.
 
 ## 2026-10-10 web startup report — 0.3.85
 
