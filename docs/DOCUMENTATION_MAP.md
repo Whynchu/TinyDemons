@@ -2,12 +2,12 @@
 
 Status: current navigation guide for the `0.3.x` cycle
 
-Updated: 2026-09-26
+Updated: 2026-10-10
 
 The repository contains design history, implementation handoffs, audits, and
 active plans. Use this page to choose the right authority before changing code.
-The baseline being preserved is version `0.2.00`; the latest measured audit
-snapshot is version `0.2.99` (see `README.md` and `AUDIT.md`). Historical documents
+The baseline being preserved is version `0.2.00`; the current measured audit
+snapshot is version `0.3.82` (see `README.md` and `AUDIT.md`). Historical documents
 remain useful for compatibility and design rationale, but they must link
 forward to the current authority.
 
@@ -74,10 +74,9 @@ For an external product/design review, use the curated [`review/00-astra-review-
     plan for the player's Triangle spell: one form per element plus a neutral
     stub, binding-selects-form / current-element-selects-payload, the delivery
     model, and the build sequence.
-25. [`repo-review-2026-10-01.md`](repo-review-2026-10-01.md) — repository review
-    of composition maturity, code efficiency, practicality, folder flow, and
-    player-facing delivery at `0.3.25`, with scores and a moving-forward
-    standard.
+25. [`repo-review-2026-10-01.md`](repo-review-2026-10-01.md) — scored repository
+    review at `0.3.25`, with a 2026-10-10 measured reconciliation against the
+    `0.3.82` composition audit and current menu work.
 26. [`elemental-affinity-and-transmission-plan.md`](elemental-affinity-and-transmission-plan.md)
     — active plan for the weapon imbue's per-element look, the `wet` status,
     innate element affinity with presentation-only suppression, bidirectional
@@ -94,7 +93,7 @@ For an external product/design review, use the curated [`review/00-astra-review-
 | Question | Authority | Use supporting material for |
 |---|---|---|
 | What is the player-facing feel and feedback direction? | [`../JUICE.md`](../JUICE.md) | pickup delivery, HUD reactions, menu motion, touch response, and audio hierarchy |
-| How healthy is the codebase (composition, efficiency, practicality, folder flow)? | [`repo-review-2026-10-01.md`](repo-review-2026-10-01.md) | [`AUDIT.md`](AUDIT.md) for source measurements |
+| How healthy is the codebase (composition, efficiency, practicality, folder flow)? | [`repo-review-2026-10-01.md`](repo-review-2026-10-01.md) for the scored review and its current reconciliation | [`AUDIT.md`](AUDIT.md) for current source measurements |
 | What exists right now? | [`AUDIT.md`](AUDIT.md) | traced flows and source files |
 | Where should a feature go? | [`ARCHITECTURE.md`](ARCHITECTURE.md) and [`FEATURE_MAP.md`](FEATURE_MAP.md) | implementation details |
 | What is the accepted refactor route? | [`refactor-route.md`](refactor-route.md) | historical checkpoints |

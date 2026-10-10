@@ -4,6 +4,9 @@ class_name PauseMenuInputController
 ## Owns command-row navigation and Debug-page selection for the Pause menu.
 ## Equipment interaction remains in the shared Hub transaction owner.
 const PauseMenuStateScript = preload("res://scripts/ui/pause_menu_state.gd")
+const PauseItemsInputControllerScript = preload("res://scripts/ui/pause_items_input_controller.gd")
+
+var _items_input_controller: PauseItemsInputController = PauseItemsInputControllerScript.new() as PauseItemsInputController
 
 
 func update(
@@ -16,8 +19,11 @@ func update(
 	if bool(root._is_menu_back_just_pressed()):
 		root._pause_back()
 		return
-	if state.pause_page == PauseMenuStateScript.LAST_PAGE:
+	if state.pause_page == PauseMenuStateScript.DEBUG_PAGE:
 		_update_debug_page_input(root, state, presenter, refresh_debug_menu)
+		return
+	if state.pause_page == PauseMenuStateScript.ITEMS_PAGE:
+		_items_input_controller.update(root, presenter.items_presenter, refresh_pause_ui)
 		return
 	if state.pause_page != PauseMenuStateScript.COMMAND_PAGE:
 		return
@@ -33,12 +39,9 @@ func update(
 		refresh_pause_ui.call(root, Callable(root, "_pixel_text_texture"))
 		root._play_sound("ui_hover", -6.0, 1.0)
 	elif bool(root._is_menu_confirm_just_pressed()):
-		if state.pause_menu_row >= 0 and state.pause_menu_row < presenter.menu_buttons.size():
-			var action := presenter.menu_buttons[state.pause_menu_row]
-			if action != null and not action.disabled:
-				action.pressed.emit()
-			else:
-				root._play_sound("ui_no_input", 0.0, 1.0)
+		var command_list := _pause_command_list(state, presenter.menu_buttons)
+		if command_list != null and command_list.confirm():
+			state.pause_menu_row = command_list.row
 		else:
 			root._play_sound("ui_no_input", 0.0, 1.0)
 
@@ -50,7 +53,8 @@ func _pause_command_list(state: PauseMenuState, buttons: Array[Button]) -> MenuC
 	for index in buttons.size():
 		base_ys.append(buttons[index].position.y if buttons[index] != null else 0.0)
 	state.command_list.configure(buttons, base_ys)
-	state.command_list.row = state.pause_menu_row
+	state.command_list.normalize_row(state.pause_menu_row)
+	state.pause_menu_row = state.command_list.row
 	return state.command_list
 
 

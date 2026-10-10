@@ -3,7 +3,7 @@
 _Only codex writes this file._
 
 **Focus:** None
-**Updated:** 2026-10-09
+**Updated:** 2026-10-10
 
 ## Implemented: Layered status VFX and smaller weapon bubbles
 
@@ -1587,3 +1587,21 @@ overflow, and compact high-value ranges. Recommended recalculating the anchor
 after each point; documented Model C's early multi-tick unlock and deferred a
 separate tier rule. Named stat presenters and responsive/touch acceptance.
 Documentation only; whitespace checks clean, no gameplay changes or tests run.
+## Completed: Pause menu compaction and Items browser (2026-10-10)
+
+Focus: reconcile the 0.3.82 refactor audit, compact hidden pause commands, and
+add a read-only Items page over the full `PlayerProfile.inventory` collection.
+
+Completed: Pip, Thorn, and Hexley review informed the source changes. Added a
+profile-backed, read-only Items page with gear categories, name/rarity sorting,
+grouped quantities, equipped markers, details, and touch scrolling. Hidden
+Debug commands no longer leave a gap; selection skips hidden commands. Pause
+and refactor audit docs plus the generated script index were refreshed.
+
+Verification: strict composition targets, test-manifest validation, and
+`git diff --check` pass. Godot smoke and visual acceptance remain pending because
+Godot MCP tooling is unavailable while an editor/runtime is active.
+
+Handoff: continue with focused in-editor Pause/Items checks and the curated gate
+when the shared editor is idle; do not run standalone Godot tests from this
+active-editor session.

@@ -631,8 +631,10 @@ measurement for values that affect timing, geometry, persistence, or economy.
 
 ## Adding menu content
 
-Current owner: `screen_state_controller.gd`, with stable geometry in the
-corresponding menu scene/layout script.
+Current ownership: `screen_state_controller.gd` composes the screen owners;
+`screen_route_controller.gd` owns Pause/Settings routes; page presenters own
+their presentation and selection models. Pause Items specifically uses
+`pause_items_presenter.gd` and `pause_items_model.gd`.
 
 Start from the Pause and Demon Hub visual contracts. At native 240×160, use the
 existing panel/frame, right-side list, cursor anchor/movement, SELECT/BACK
@@ -641,17 +643,15 @@ define its input context, selection ownership, confirm/back behavior, touch hit
 targets, and cursor visibility. Do not add a separate navigation convention
 for one screen.
 
-Menu work is a planned extraction boundary (Slice 4 of the authoring plan).
-Current reality: pause, Demon Hub, equipment, shop, and fusion are
-scene-authored with presenters; title, archetype, save select, name entry,
-settings, game over, run complete, and loading are still built imperatively in
-`screen_state_controller.gd` and cannot be opened in the editor. Adding a route
-or row currently touches several of: the controller build function
-(`build_hub` alone takes 33 callables), the route's layout script, the
-navigation state in `hub_flow_controller.gd` or the controller, the touch
-active-root list in `touch_controls_layer.gd`, a scene smoke, and
-`tests/manifest.csv`. Start from the Pause and Demon Hub visual contracts and
-follow the presenter pattern rather than adding a new navigation convention.
+Menu work remains an extraction boundary in Slice 4 of the authoring plan.
+Pause and Demon Hub are scene-backed and use dedicated presenters, but there is
+not yet one authored route registry or shared lifecycle for every screen. The
+Pause Items page reuses the framed Pause page structure and current profile gear
+instances; it does not create authoring support for future Consumables or Key
+Items, whose typed definitions and runtime storage remain unimplemented. A menu
+route still spans composition, route state, input, layout, touch hit targets,
+scene coverage, and manifest ownership. Start from the Pause and Demon Hub
+visual contracts and follow the existing presenter/model pattern.
 
 ## Adding audio
 

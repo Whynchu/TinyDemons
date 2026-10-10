@@ -1,16 +1,15 @@
 # Tiny Demons Feature Map
 
-Status: current baseline map; composition refactor complete, remaining root-access owners listed
+Status: current ownership map; strict composition scorecard passes, broader refactor and authoring targets remain open
 
-Updated: 2026-09-26
+Updated: 2026-10-10
 
 This is a human-maintained ownership map. It records the first place to look,
-not a claim that every feature is fully isolated. The composition refactor is
-complete (strict scorecard at 100%); the remaining dynamic root-access owners
-are `screen_state_controller.gd`, `combat_runtime_controller.gd`, and
-`slime_runtime_controller.gd`. Content ownership and the current data traps are
-in [`CONTENT_AUTHORING.md`](CONTENT_AUTHORING.md); the active authoring
-workstream is [`authoring-system-plan.md`](authoring-system-plan.md).
+not a claim that every feature is fully isolated. The strict composition
+scorecard is at 100%, while forward targets and content-authoring migration are
+still open; see the current snapshot in [`AUDIT.md`](AUDIT.md). Content
+ownership and data traps are in [`CONTENT_AUTHORING.md`](CONTENT_AUTHORING.md);
+the active authoring workstream is [`authoring-system-plan.md`](authoring-system-plan.md).
 
 | Feature | Primary owner / first place to look | State or data authority | Presentation / runtime support | Existing verification | Initial risk |
 |---|---|---|---|---|---|
@@ -29,7 +28,8 @@ workstream is [`authoring-system-plan.md`](authoring-system-plan.md).
 | Projectiles and magic | `magic_projectile_controller.gd`, `magic_runtime_controller.gd` | combat/runtime state | projectile scenes and effects | imbue and projectile-related tests | High: documented coordinator seams |
 | Progression and settlement | `progression_controller.gd`, `run_settlement.gd` when extracted | `player_profile.gd` and run state | hub and reward UI | progression, grade, economy tests | High: state boundary needs tracing |
 | Gear and fusion | `item_catalog.gd`, `item_definition.gd`, `item_preview_workbench.gd`, `item_instance.gd`, `equipment_component.gd` | live baselines/sets, standalone definitions, and profile instance IDs | item preview workbench, equipment/fusion/bind menus, slot-level item visual resolver | item-definition, retired-item-purge, item-preview, gear, fusion, equipment tests | Medium: schema-14 retired-item/transmutation save cleanup landed; live baseline/set data remains dictionary-backed and item art is slot-level |
-| Hub and menus | `screen_state_controller.gd` | profile/menu state | menu scenes and layout scripts | menu, hub, touch-menu tests | High: large mixed owner |
+| Pause menu | `screen_route_controller.gd`, `pause_screen_presenter.gd`, `pause_menu_input_controller.gd` | `PauseMenuState`, typed player/profile context | `pause_menu.tscn`, `pause_items_presenter.gd`, `pause_items_model.gd`, `pause_menu_layout.gd`, `menu_command_list.gd` | pause and menu-command smoke tests | Medium: current inventory model supports gear only; runtime visual acceptance remains pending |
+| Hub and menus | `screen_state_controller.gd`, `hub_screen_setup_controller.gd`, `screen_route_controller.gd` | profile/menu state | menu scenes and page presenters | menu, hub, touch-menu tests | High: coordinator facade and route registry work remain |
 | HUD | `player_hud.gd`, `hud_controller.gd` | player/combat display data | `scenes/ui/hud/player_hud.tscn` | player HUD smoke test | Medium: focused scene contract passes; live layout evidence remains |
 | Save and profile | `profile_save_service.gd`, `active_run_save_service.gd` | profile and active-run snapshots | cloud panel and recovery UI | save/cloud/recovery tests | Critical: data integrity |
 | Settings and display | `settings_service.gd`, `display_controller.gd`, `display_layout.gd` | device-wide settings | title/pause settings panels | settings and responsive tests | Medium |

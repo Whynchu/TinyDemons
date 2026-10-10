@@ -28,6 +28,17 @@ func _initialize() -> void:
 		settings._values = SettingsService.DEFAULTS.duplicate(true)
 		settings._loaded = true
 	var original_profile: Dictionary = profile.to_dictionary() if profile != null else {}
+	var duplicate_items_test_item: ItemInstance = null
+	if profile != null:
+		var catalog := ItemCatalog.new()
+		for item_data: Dictionary in profile.inventory:
+			var candidate := ItemInstance.from_dictionary(item_data)
+			if catalog.definition_slot(candidate.definition_id) not in ItemCatalog.SLOTS:
+				continue
+			candidate.instance_id = "pause-items-smoke-copy"
+			duplicate_items_test_item = candidate
+			profile.grant_item(candidate)
+			break
 	_expect(screens != null and profile != null and router != null, "pause menu owners are composed", failures)
 	if screens != null and profile != null and router != null:
 		# Simulate the web/mobile case where the live canvas is already wide but
@@ -77,9 +88,13 @@ func _initialize() -> void:
 			_expect(pause_gold_icon.position == Vector2(expected_divider_x + 6.0, screens.display_view_size.y - 18.0) and pause_soul_icon.position == Vector2(expected_divider_x + 6.0, screens.display_view_size.y - 11.0), "pause resource icons use the authored three-pixel inner margin", failures)
 			if pause_gold_text != null and pause_soul_text != null and pause_gold_text.texture != null and pause_soul_text.texture != null:
 				_expect(pause_gold_text.position == Vector2(screens.display_view_size.x - pause_gold_text.texture.get_width() - 6.0, screens.display_view_size.y - 18.0) and pause_soul_text.position == Vector2(screens.display_view_size.x - pause_soul_text.texture.get_width() - 6.0, screens.display_view_size.y - 11.0), "pause resource counts use the authored right margin", failures)
-		_expect(screens.pause_menu_buttons.size() == 5 and not screens.pause_menu_buttons[3].visible and screens.pause_menu_buttons[3].disabled, "pause exposes four default commands and keeps opt-in Debug access hidden", failures)
-		if screens.pause_menu_buttons.size() >= 5:
-			_expect(screens.pause_menu_buttons[0].position == Vector2(maxf(screens.display_view_size.x - 59.0, 181.0), 7.0) and screens.pause_menu_buttons[3].position.y == 49.0, "pause command rail uses the authored x and y positions", failures)
+		_expect(screens.pause_menu_buttons.size() == 6 and not screens.pause_menu_buttons[4].visible and screens.pause_menu_buttons[4].disabled, "pause exposes Status, Equipment, Items, Settings and Quit Title while keeping opt-in Debug hidden", failures)
+		if screens.pause_menu_buttons.size() >= 6:
+			_expect(screens.pause_menu_buttons[0].position == Vector2(maxf(screens.display_view_size.x - 59.0, 181.0), 7.0) and screens.pause_menu_buttons[3].position.y == 49.0 and screens.pause_menu_buttons[5].position.y == 63.0, "pause command rail closes the hidden Debug gap and keeps later commands compact", failures)
+			screens.pause_menu_row = 4
+			screens.route_controller.update_pause_ui(gameplay, Callable(gameplay, "_pixel_text_texture"))
+			_expect(screens.pause_menu_row == 5 and screens.pause_menu_buttons[5].position.y == 63.0, "a stale selection on hidden Debug advances to Quit Title after rail compaction", failures)
+			screens.pause_menu_row = 0
 		_expect(screens.pause_back_button != null and screens.pause_back_button.position == PauseMenuLayoutScript.back_button_position(screens.display_view_size), "pause back prompt uses the authored rail-anchored footer row", failures)
 		# The native card remains the visual reference, while a wider logical
 		# surface spreads authored left-field groups toward (but never through) the
@@ -96,7 +111,7 @@ func _initialize() -> void:
 		screens.call("_position_pause_controls")
 		for index in screens.pause_menu_buttons.size():
 			var button := screens.pause_menu_buttons[index]
-			_expect(button.visible == (index != 3), "pause menu visibility follows its opt-in Debug preference", failures)
+			_expect(button.visible == (index != 4), "pause menu visibility follows its opt-in Debug preference", failures)
 		_expect(screens.pause_player_card_texts.size() >= 7 and screens.pause_player_card_texts[0].texture != null and screens.pause_player_card_texts[6].texture != null and screens.pause_player_card_texts[6].visible, "pause shows the player info block and level", failures)
 		if screens.pause_player_card_texts.size() >= 7:
 			_expect(screens.pause_player_card_texts[0].position == Vector2(43.0, 29.0) and screens.pause_player_card_texts[1].position == Vector2(88.0, 29.0) and screens.pause_player_card_texts[2].position == Vector2(88.0, 37.0) and screens.pause_player_card_texts[6].position == Vector2(138.0, 29.0), "pause player card uses the authored three-column top row", failures)
@@ -104,13 +119,14 @@ func _initialize() -> void:
 		_expect(pause_portrait != null and pause_portrait.texture != null, "pause shows the palette-aware player portrait", failures)
 		_expect(screens.pause_cursor_text != null and screens.pause_cursor_text.z_index >= 4095 and screens.pause_cursor_text.has_method("move_to"), "pause cursor owns top draw order and unified motion", failures)
 		_expect(screens.pause_status_texts.size() >= 16 and screens.pause_equipment_texts.size() >= 4, "pause owns read-only status and equipment pages", failures)
-		var debug_page := screens.pause_page_roots.get(3) as Control
+		var debug_page := screens.pause_page_roots.get(PauseMenuState.DEBUG_PAGE) as Control
 		var debug_frame := debug_page.get_node_or_null("Background") as NinePatchRect if debug_page != null else null
 		var debug_title := debug_page.get_node_or_null("Title") as Sprite2D if debug_page != null else null
 		var debug_cursor := debug_page.get_node_or_null("DebugCursor") as Sprite2D if debug_page != null else null
 		_expect(debug_frame != null and debug_frame.texture != null and debug_frame.patch_margin_left == 3, "Debug page uses the pause menu's pixel frame artwork", failures)
 		_expect(debug_title != null and debug_title.texture != null and debug_title.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST, "Debug page title uses nearest-filtered pixel text", failures)
-		screens.call("set_pause_page", gameplay, 3)
+		settings.set_setting(&"debug_menu_enabled", true)
+		screens.call("set_pause_page", gameplay, PauseMenuState.DEBUG_PAGE)
 		_expect(debug_page != null and debug_page.visible and debug_cursor != null and debug_cursor.visible, "Debug page shows the shared menu cursor on entry", failures)
 		if screens.debug_menu_buttons.size() > 1:
 			router.set("_menu_direction_events", {&"ui_down": true})
@@ -124,13 +140,34 @@ func _initialize() -> void:
 			screens.debug_menu_layout.refresh(Callable(gameplay, "_pixel_text_texture"), 1, 999, 1234, false, {})
 			var debug_level_text: Sprite2D = screens.debug_menu_layout.level_value
 			_expect(debug_level_text != null and debug_level_text.texture != null and debug_level_text.position.x + debug_level_text.texture.get_width() <= selected_debug_button.position.x, "three-digit debug levels fit before the increment button", failures)
-		screens.call("set_pause_page", gameplay, 0)
+		settings.set_setting(&"debug_menu_enabled", false)
+		screens.call("set_pause_page", gameplay, PauseMenuState.COMMAND_PAGE)
 		if screens.pause_status_button != null:
 			screens.pause_status_button.pressed.emit()
 		var status_background := screens.pause_page_roots[1].get_node_or_null("Background") as NinePatchRect
 		var status_title := screens.pause_page_roots[1].get_node_or_null("Title") as Sprite2D
 		_expect(screens.pause_page == 1 and screens.pause_status_texts[0].visible and not screens.hub_overlay.visible, "pause Status opens a read-only page without hub controls", failures)
 		_expect(status_background != null and status_background.size == screens.display_view_size and status_title != null and status_title.texture != null, "pause Status owns a full-screen background and upper-left title card", failures)
+		if screens.pause_menu_buttons.size() > 2:
+			screens.pause_menu_buttons[2].pressed.emit()
+		var items_page := screens.pause_page_roots.get(PauseMenuState.ITEMS_PAGE) as Control
+		var items_background := items_page.get_node_or_null("Background") as NinePatchRect if items_page != null else null
+		var items_title := items_page.get_node_or_null("Title") as Sprite2D if items_page != null else null
+		_expect(screens.pause_page == PauseMenuState.ITEMS_PAGE and items_page != null and items_page.visible and items_background != null and items_background.texture != null and items_title != null and items_title.texture != null, "pause Items opens on the shared framed page structure", failures)
+		_expect(screens._pause_screen_presenter.items_model != null and screens._pause_screen_presenter.items_model.row_count() > 0, "pause Items lists the profile's current owned gear", failures)
+		if screens._pause_screen_presenter.items_model != null:
+			var duplicate_group_found := false
+			if duplicate_items_test_item != null:
+				for row: Dictionary in screens._pause_screen_presenter.items_model._all_rows:
+					if str(row.get("stack_key", "")) == duplicate_items_test_item.inventory_stack_key():
+						duplicate_group_found = int(row.get("quantity", 0)) == 2
+						break
+			_expect(duplicate_group_found, "identical owned gear is grouped with its computed quantity", failures)
+			var starting_sort := screens._pause_screen_presenter.items_model.sort_index
+			screens._pause_screen_presenter.toggle_items_sort()
+			_expect(screens._pause_screen_presenter.items_model.sort_index != starting_sort, "pause Items can switch between name and rarity sorting", failures)
+			screens._pause_screen_presenter.move_items_filter(1)
+			_expect(screens._pause_screen_presenter.items_model.filter_index == PauseItemsModel.FILTER_WEAPONS, "pause Items cycles to the Weapons category", failures)
 		if screens.pause_equipment_button != null:
 			screens.pause_equipment_button.pressed.emit()
 		var equipment_background := screens.pause_page_roots[2].get_node_or_null("Background") as NinePatchRect

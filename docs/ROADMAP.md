@@ -2,11 +2,11 @@
 
 Status: working roadmap derived from the accepted refactor route
 
-Updated: 2026-09-28
+Updated: 2026-10-10
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.3.23`; the authoring and verification sequence is
+Current release: version `0.3.82`; the authoring and verification sequence is
 now owned by [`authoring-system-plan.md`](authoring-system-plan.md).
 
 The 0.3.0 checkpoint closes the known start-position, controller Debug access,
@@ -17,8 +17,10 @@ This roadmap sequences infrastructure work around the working game. It does
 not authorize a rewrite or change the game's identity. The current product
 contract remains dungeon crawling, elemental combat, puzzle solving,
 exploration, battling, gear, progression, and the title → Hub → dungeon →
-settlement → Hub loop. The measured current state is in [`AUDIT.md`](AUDIT.md);
-the composition refactor is complete (100% on the strict scorecard).
+settlement → Hub loop. The measured current state is in [`AUDIT.md`](AUDIT.md).
+The strict composition scorecard passes; the forward controller and untyped
+root-parameter targets, content-authoring migration, menu-route authoring, and
+runtime verification work remain open.
 
 ## How to use this roadmap
 
@@ -53,7 +55,7 @@ Work should move through one narrow slice at a time:
 | 0.10 | Make documentation authoritative | In progress | current map, roadmap, content guide, known-issues register, and lifecycle headers |
 | 0.15 | Audit and reduce the verification surface | Active issue | every test/report has a role and state; curated release gate; obsolete checks removed |
 | 0.20 | Stabilize active player-facing contracts | In progress | issue tracker findings have focused or manual verification, with failures classified |
-| 0.30 | Establish shared menu boundaries | Planned | one migrated menu proves shared frame, cursor, list, footer, clipping, touch, and responsive contracts |
+| 0.30 | Establish shared menu boundaries | In progress — Pause command reflow and a framed profile Items page are implemented in source; runtime acceptance pending | one migrated menu proves shared frame, cursor, list, footer, clipping, touch, and responsive contracts |
 | 0.40 | Separate room and encounter responsibilities | Complete | typed room transition/activation/entry/spawn/clear results and deterministic room fixtures |
 | 0.50 | Reduce dynamic runtime seams by feature | Complete | composition scorecard and editor composition at 100%; state bag and room owner at strict targets; legacy adapters retired; all authored definitions inspectable |
 | 0.60 | Build a reusable game-development workbench | In progress — owned by [`authoring-system-plan.md`](authoring-system-plan.md) | one shared dock/registry/validation/preview lifecycle with content-kind adapters; enemy proof, source-wired basic/Orb/treasure/boss room prefabs (runtime acceptance open), then gear/elements and full room/map authoring |
@@ -102,7 +104,7 @@ Stopping rules:
 | C2 | Deduplicated the authored Run 1/Run 2 layout assembly; characterized and closed the remaining candidates as not worth the churn | Complete (`e6d4b30`) |
 | C3a | Moved archetype screen flow into `screen_state_controller`, removing the save-flow circular delegation and the dead title path | Complete |
 | C3b | Declared the hub boundary: `screen_state_controller` owns hub state, input, and presentation; `hub_flow_controller` owns hub transactions. Removed the false input router. Moving the 192-line handler into `hub_flow` was rejected because the hub state it reads lives in `screen_state`. Known follow-up: the `HUB_PAGE_*` constants are duplicated in both files. | Complete |
-| C4 | Extract `screen_state_controller` into a menu platform | Deferred until menu work is an active feature |
+| C4 | Extract `screen_state_controller` into a menu platform | Deferred — the current Pause slice uses the existing route/presenter owners; reconsider after its runtime acceptance and a separate extraction boundary are evidenced |
 | C5 | Targeted dynamic-call reduction on authoring-adjacent owners | Planned |
 
 Corrections to the initial scan that prompted this workstream: the title/save

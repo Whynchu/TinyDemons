@@ -1,16 +1,19 @@
 # Popup Timing and Pause Debug Menu Plan
 
-Status: implementation in progress; popup lifecycle and initial pause DEBUG controls are in source, runtime playtest pending
+Status: popup lifecycle and initial pause DEBUG controls are in source; the compact command rail and profile-backed Items page are implemented in source; runtime acceptance is pending
 
-Scope: floating gameplay text timing and an opt-in pause-menu debug page
+Scope: floating gameplay text timing, an opt-in pause-menu debug page, and the
+profile's read-only gear collection
 
-Owner: `effects_spawner.gd` for floating effects; settings and pause presentation
-owners plus a narrow debug runtime controller for debug actions
+Owner: `effects_spawner.gd` for floating effects; `screen_route_controller.gd`
+for Settings/Pause routing; `pause_screen_presenter.gd`,
+`pause_items_presenter.gd`, and `pause_items_model.gd` for Pause presentation;
+a narrow debug runtime controller for debug actions
 
 Current code: damage numbers already scale-pop in `EffectsSpawner`, then begin
 drifting immediately; XP, pickup, and gold labels share some paths but gold has
 a separate spawn path. `SettingsService` stores device-wide preferences, and
-`ScreenStateController` builds the Settings panel and pause command pages.
+`ScreenStateController` composes the Settings and Pause presenters.
 
 Verification: focused popup lifecycle checks, settings persistence/menu
 navigation checks, debug command boundary checks, and desktop/touch playtests.
@@ -157,6 +160,39 @@ while gameplay is paused, then refresh affected status and HUD presentation.
   and clears on exit or new run unless explicitly designated as a preference.
 - Debugging controls do not change ordinary gameplay when the menu is OFF.
 
+## Slice C — Compact Pause rail and profile Items page
+
+Status: implemented in source; focused runtime and visual acceptance pending.
+
+The Pause root presents Status, Equipment, Items, Settings, optional Debug, and
+Quit Title in that order. `MenuCommandList` navigates only visible and enabled
+commands, and `PauseScreenPresenter` positions the visible commands on
+consecutive rows. If a preference change hides the selected command, selection
+advances to the next available command or wraps to the last one.
+
+The Items page reads `PlayerProfile.inventory`, including equipped gear. The
+current filters are All, Weapons, Armor (Head/Body/Arm/Shield), and Accessories;
+sorting toggles between Name A-Z and Rarity. Functionally identical gear
+instances are grouped into a displayed quantity. Details show item name, slot,
+rarity, owned count, enhancement, equipped state, stat bonuses, and authored
+effects. This page is read-only.
+
+The current data model supports equipment only. Consumables and Key Items are
+reserved for later typed definitions and profile/run storage work, so the page
+does not show empty tabs for them. Add those filters when their definitions and
+authoritative storage paths exist.
+
+Acceptance:
+
+- The pause smoke confirms hidden Debug leaves no rail gap, skips stale hidden
+  selections, and preserves Settings and Quit Title order.
+- The Items smoke confirms profile inventory, grouped counts, filters, sorting,
+  and the shared framed page.
+- At 240x160 and the responsive wide surface, labels and details fit without
+  crossing the frame or footer; keyboard/controller navigation and touch targets
+  remain clear.
+- Runtime visual acceptance is recorded only after an in-editor playtest.
+
 ## Implementation sequence
 
 1. [x] Implement and characterize the shared four-update popup hold, including
@@ -167,8 +203,9 @@ while gameplay is paused, then refresh affected status and HUD presentation.
    reset, and player-level override.
 4. [x] Add initial toggles for invulnerability, unlimited Chroma, enemy pause,
    and geometry guides.
-5. [ ] Run the focused popup/settings checks and debug-page/touch playtest, then
-   the curated release gate when the editor is not already running.
+5. [ ] Run the focused popup/settings and Pause rail/Items checks plus the
+   Debug-page/touch playtest, then the curated release gate when the editor is
+   not already running.
 6. [ ] Record runtime proof and remaining limitations in `KNOWN_ISSUES.md` and
    refresh the generated script index.
 

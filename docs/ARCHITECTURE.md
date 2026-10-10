@@ -1,8 +1,8 @@
 # Tiny Demons — Architecture
 
-Status: current ownership and extension guide for the `0.2.x` baseline
+Status: current ownership and extension guide for the `0.3.x` cycle
 
-Updated: 2026-09-28
+Updated: 2026-10-10
 
 Authority: [`AUDIT.md`](AUDIT.md) records measured findings; this document
 defines the intended runtime boundaries and safe extension rules.
@@ -83,9 +83,10 @@ Encrypted-vault deployment and operational verification are documented in
   owns recovery-vault transport; and `cloud_save_panel` owns the title-screen
   recovery workflow. Supabase receives ciphertext, never profile JSON.
 - **Presentation**: `hud_controller`, `effects_spawner`,
-  `screen_state_controller`, `dungeon_minimap_controller`,
-  `sprite_frame_library`, `display_controller`, `display_layout`,
-  `hub_stone_accent_layer`.
+  `screen_state_controller`, `screen_route_controller`,
+  `pause_screen_presenter`, `pause_items_presenter`, `pause_items_model`,
+  `menu_command_list`, `dungeon_minimap_controller`, `sprite_frame_library`,
+  `display_controller`, `display_layout`, `hub_stone_accent_layer`.
 - **Editor preview**: `hub_world_preview.gd` owns the design-time Hub view in
   `scenes/authoring/previews/hub_world_preview.tscn`; it reuses the authored `main.tscn`
   composition without booting profile, run, input, or save services.

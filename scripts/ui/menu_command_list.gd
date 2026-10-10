@@ -18,8 +18,7 @@ var row := 0
 func configure(buttons: Array[Button], base_ys: Array[float]) -> void:
 	_buttons = buttons
 	_base_ys = base_ys
-	if not available_rows().is_empty():
-		row = available_rows()[0]
+	normalize_row()
 
 
 func buttons() -> Array[Button]:
@@ -29,15 +28,33 @@ func buttons() -> Array[Button]:
 func available_rows() -> Array[int]:
 	var rows: Array[int] = []
 	for index in _buttons.size():
-		if _buttons[index] != null and not _buttons[index].disabled:
+		if _buttons[index] != null and _buttons[index].visible and not _buttons[index].disabled:
 			rows.append(index)
 	return rows
+
+
+func normalize_row(preferred_row: int = -1) -> int:
+	var rows := available_rows()
+	if rows.is_empty():
+		row = 0
+		return row
+	var requested := row if preferred_row < 0 else preferred_row
+	if requested in rows:
+		row = requested
+		return row
+	for available_row: int in rows:
+		if available_row > requested:
+			row = available_row
+			return row
+	row = rows.back()
+	return row
 
 
 func move_up() -> void:
 	var rows := available_rows()
 	if rows.is_empty():
 		return
+	normalize_row()
 	var current := rows.find(row)
 	row = rows[posmod(current - 1, rows.size())]
 
@@ -46,11 +63,13 @@ func move_down() -> void:
 	var rows := available_rows()
 	if rows.is_empty():
 		return
+	normalize_row()
 	var current := rows.find(row)
 	row = rows[posmod(current + 1, rows.size())]
 
 
 func selected() -> Button:
+	normalize_row()
 	if _buttons.is_empty() or row < 0 or row >= _buttons.size():
 		return null
 	return _buttons[row]
@@ -71,7 +90,7 @@ func cursor_target() -> Vector2:
 
 func confirm() -> bool:
 	var button := selected()
-	if button == null or button.disabled:
+	if button == null or not button.visible or button.disabled:
 		return false
 	button.pressed.emit()
 	return true

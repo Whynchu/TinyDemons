@@ -1,65 +1,49 @@
-# Tiny Demons — Version 0.2.99 Codebase Audit
+# Tiny Demons — Version 0.3.82 Codebase Audit
 
-Status: canonical source audit for the `0.2.x` cycle after the composition refactor
+Status: current source-backed audit and refactor checkpoint.
 
-Current presentation slice (2026-10-08): implement the accepted
-[`two-band map-lighting plan`](lighting-composition-plan.md). Existing source
-owners remain; a scheduled map component replaces additive accumulation with
-the strongest contribution and isolates ambient darkness to scenery. Focused
-overlap/geometry tests, OpenGL rendered pixel checks and strict composition pass.
-Web export verification follows the 0.3.79 release workflow.
+Updated: 2026-10-10
 
-Audit date: 2026-09-26
+Current release: `0.3.82`. This file retains the older `0.2.x` audit as
+historical context; the measured checkpoint below is the current source state.
 
-Baseline commit: `8b162a2410ebea45bfea2e846b427838663ad61d` (the `0.2.23` tree that
-the measurements below describe; the `0.2.24` documentation/version checkpoint is
-the first commit on top of it)
+## Current measured snapshot (2026-10-10, version 0.3.82)
 
-Baseline game version: `0.2.24`
+| Metric | Current working tree |
+| --- | ---: |
+| GDScript files under `scripts/` | 296 |
+| `root.call/get/set` sites | 1,859 |
+| `GameplayState` lines / fields | 1,714 / 282 |
+| `RoomController` lines | 2,180 |
+| `screen_state_controller.gd` lines | 870 |
+| GDScript script directories / unclassified scripts | 13 / 0 |
+| Test manifest rows / runnable paths / reports / curated gate | 157 / 155 / 2 / 45 |
+| Editor-composition score | 94.6% |
+| Untyped root parameters | 512 |
 
-Current release: `0.3.18` (composition refactor structurally and editor-wise
-complete: the strict scorecard and regression floor both pass at 100%, with 2,198
-root accesses and `GameplayState` at 1,717 lines / 286 fields. The debug-menu
-dispatch added in 0.2.96 was extracted into `DebugSessionController` to restore
-the floor.)
+`tools/validate_composition.ps1 -RequireTargets` passes. Its strict ownership
+scorecard is a regression guard, not evidence that all refactor work is done.
+The forward targets for `screen_state_controller.gd` (870 lines against 800)
+and untyped root parameters (512 against 0) remain open. Content authoring,
+menu-route authoring, verification cleanup, and device-backed performance also
+remain active in [`ROADMAP.md`](ROADMAP.md) and
+[`authoring-system-plan.md`](authoring-system-plan.md).
 
-Supersedes: the `0.2.00` audit (`docs/AUDIT.md` at commit
-`bfe55782f43ee40fe32b5bebd45de988e34579d8`). That document remains available in
-Git history as the historical `0.2.00` baseline; this file is now the current
-source-backed reference. Its pre-`0.2.24` numbers are retained in the historical
-table in section 3 for comparison.
+The current pause-menu slice compacts commands when the opt-in Debug command is
+hidden and adds a read-only Items page over profile-owned gear. Existing
+definitions support six equipment slots; Consumables and Key Items still need
+their own typed definitions and authoritative storage paths before they can be
+listed. The focused Pause smoke assertions were updated, but live UI/playtest
+acceptance was not run during this checkpoint because a Godot editor/runtime was
+already active and this session had no connected Godot MCP tools.
 
-## Current measured snapshot (2026-09-26, version 0.2.99)
-
-The detailed historical audit below describes the `0.2.32` tree. The current
-`0.2.99` working tree measures:
-
-| Metric | 0.2.32 audit | 0.2.99 working tree (2026-09-26) |
-| --- | ---: | ---: |
-| GDScript files in `scripts/` | 171 | 208 |
-| `root.call/get/set` sites | 2,488 | 2,200 |
-| `GameplayState` lines / fields | 1,719 / 286 | 1,718 / 286 |
-| `RoomController` lines | 2,253 | 2,251 |
-| `screen_state_controller.gd` lines | 5,432 | 5,571 |
-| GDScript test/report files | 124 | 145 |
-| Registered runnable smoke paths | 122 | 143 |
-| Curated release-gate paths | 43 | 44 |
-| Project Markdown documents under `docs/` | 89 | 100 |
-
-The strict composition audit and the regression floor both pass at **100%**
-(`validate_composition.ps1`: 2,200 root accesses, `GameplayState` 1,718 lines /
-286 fields, `RoomController` 2,251 lines). The editor-composition metric reads
-100% by its own definition, but
-that metric counts component blindness, `@export` presence, and definition
-scripts loading `.tres`; it does not prove that the authored data is typed,
-validated, or read at runtime. Several catalogs are still untyped dictionaries
-and several resource fields are ignored in favor of duplicated code constants -
-see the trap register in [`authoring-system-plan.md`](authoring-system-plan.md).
-Treat the metric as a regression guard, not an authoring-completeness claim.
-
-The historical sections below retain their original baseline measurements; the
-current snapshot above and the focused verification commands are the live
-source for present-day counts.
+The strict composition audit and test-manifest validator are the verification
+evidence for this checkpoint. `validate_godot_uids.ps1` still stops on the
+previously recorded unresolved resource UID in `resources/definitions/element_catalog.tres`
+(see [`composition-plan-2026.md`](composition-plan-2026.md)); the new Pause
+script sidecars pass its format/uniqueness scan. The detailed sections below
+retain their original historical measurements and findings; use the current
+snapshot above for today's counts.
 
 ## 1. Purpose
 

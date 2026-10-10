@@ -1261,3 +1261,5 @@ Prepare and push the owner-authorized 0.3.82 VFX release, excluding existing cli
 
 ## 2026-10-09 — codex — done
 Prepared version 0.3.82 in the game title and release documentation. Composition regression passed for the VFX patch; rendered acceptance remains open. Publishing the authorized release next.
+2026-10-10 | codex | claim | Compact hidden pause commands, add a read-only profile Items browser, and reconcile pause/refactor audit notes against 0.3.82.
+2026-10-10 | codex | done | Pause Items browser and compact conditional command rail implemented; audit docs and script index refreshed; strict composition, test-manifest, and whitespace checks pass. Godot runtime visual acceptance remains pending because an editor/runtime is active and MCP diagnostics are unavailable.

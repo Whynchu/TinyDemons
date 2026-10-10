@@ -174,7 +174,7 @@ func _initialize() -> void:
 		gameplay.call("_open_pause_menu")
 		await process_frame
 		_expect(screens.pause_overlay.visible and not screens.hub_overlay.visible and screens.state == &"pause", "pause opens a distinct overlay and state", failures)
-		_expect(screens.pause_overlay.size == screens.display_view_size and screens.pause_overlay.position == Vector2.ZERO and screens.pause_menu_buttons.size() == 5, "pause uses its own five-command full-screen shell", failures)
+		_expect(screens.pause_overlay.size == screens.display_view_size and screens.pause_overlay.position == Vector2.ZERO and screens.pause_menu_buttons.size() == 6, "pause uses its own six-command full-screen shell", failures)
 		_expect(gameplay.call("_input_context") == InputRouter.Context.PAUSE, "pause routes through the dedicated input context", failures)
 		if screens.pause_status_button != null:
 			screens.pause_status_button.pressed.emit()

@@ -1,9 +1,9 @@
 extends SceneTree
 
 ## Phase 0.30 characterization: the shared MenuCommandList primitive drives the
-## title/pause command rail. It must navigate only over available (enabled)
-## commands, keep the cursor anchored to the selected row, and dispatch confirm
-## to the selected button.
+## title/pause command rail. It must navigate only over available (visible,
+## enabled) commands, normalize stale selections, keep the cursor anchored to the
+## selected row, and dispatch confirm to that button.
 
 var _finished := false
 
@@ -31,6 +31,12 @@ func _initialize() -> void:
 	list.row = 0
 	list.move_down()
 	_expect(list.row == 2, "down skips a disabled command", failures)
+	buttons[3].visible = false
+	list.row = 3
+	_expect(list.normalize_row() == 2, "a hidden command normalizes to the next visible row or the last available row", failures)
+	list.row = 0
+	list.move_down()
+	_expect(list.row == 2, "down skips a hidden command", failures)
 
 	var confirmed := [false]
 	buttons[2].pressed.connect(func() -> void: confirmed[0] = true)

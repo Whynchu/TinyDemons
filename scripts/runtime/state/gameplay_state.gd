@@ -739,9 +739,9 @@ func _select_hub_menu_row(row: int) -> void:
 func _select_hub_stat_row(row: int) -> void:
 	_hub_economy_controller().call("select_hub_stat_row", self, row)
 func _set_pause_status_page() -> void:
-	screen_state_controller.route_controller.set_pause_page(self, 1)
+	screen_state_controller.route_controller.set_pause_page(self, PauseMenuState.STATUS_PAGE)
 func _set_pause_equipment_page() -> void:
-	screen_state_controller.route_controller.set_pause_page(self, 2)
+	screen_state_controller.route_controller.set_pause_page(self, PauseMenuState.EQUIPMENT_PAGE)
 func _pause_back() -> void:
 	screen_state_controller.route_controller.pause_back(self)
 func _pause_equipment_back() -> void:

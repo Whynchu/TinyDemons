@@ -2,13 +2,13 @@
 
 Status: live register for the `0.3.x` cycle
 
-Updated: 2026-10-02
+Updated: 2026-10-10
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.3.18`. The current smoke inventory is 149 manifest
-rows / 147 runnable paths / 44-path default gate; the counts quoted in older
-sections below are historical snapshots. The authoring and verification
+Current release: version `0.3.82`. The current smoke inventory is 157 manifest
+rows / 155 runnable paths / 2 report rows / 45-path default gate; counts quoted
+in older sections below are historical snapshots. The authoring and verification
 sequence is in [`authoring-system-plan.md`](authoring-system-plan.md).
 
 The 0.3.0 checkpoint includes the authored start-position and teleport
@@ -975,7 +975,7 @@ unverified.
 
 | Finding | Impact | Next evidence or decision |
 |---|---|---|
-| Full smoke runner has 147 runnable manifest paths; the default gate selects 44 and launches one Godot process per selected path | Slow feedback and possible Windows renderer/memory failure avalanche | Use the default gate for release checks and `-TestGroup all` only as a supervised inventory; runner isolates each worker with temporary user data and Dummy audio |
+| Full smoke runner has 155 runnable manifest paths; the default gate selects 45 and launches one Godot process per selected path | Slow feedback and possible Windows renderer/memory failure avalanche | Use the default gate for release checks and `-TestGroup all` only as a supervised inventory; runner isolates each worker with temporary user data and Dummy audio |
 | Boss-room door entry is a genuine slow path (measured 300–385 ms on loaded runs, 100–165 ms on quiet runs) | The boss transition is the worst synchronous path; the harness's single-sample reading is too noisy to gate on | Average the boss-entry measurement across several door entries, then optimize the accent placer, boss activation/spawn, and synchronous profile-save phases after the A17 device profile. Tracked in [`AUDIT.md`](AUDIT.md) section 11.2 |
 | Six formerly unregistered `role:owner` checks are now triaged and resolved | All six have reliable states recorded in `tests/manifest.csv` | `actor_geometry_smoke` harness fixed; `cloud_panel_touch_smoke`, `demon_cloak_smoke`, `hub_content_scroll_smoke`, `resource_drop_motion_smoke` verified; `touch_menu_scroll_smoke` rewritten for the dialogue-context contract and verified |
 | Browser/device verification remains incomplete | Local export support does not prove shipped web behavior | Verify touch, controller prompts, save/reload, audio, responsive layout, and Pages artifact |
@@ -1041,3 +1041,22 @@ Godot parse/definition checks, the 1,000-seed report, legacy save-load probes,
 combat balance, crowd readability at 240x160, and browser acceptance remain
 open. No new Wet audio cue is authored; the existing bubble sounds remain
 specific to the Water spell.
+
+### Pause command rail and Items page — implemented in source, runtime acceptance pending (2026-10-10)
+
+The pause command list now skips invisible commands during navigation and
+repositions visible commands into consecutive rows. Debug remains opt-in. The
+new Items page reads the full `PlayerProfile.inventory`, groups functional
+copies into a displayed count, and shows name/rarity sorting plus All, Weapons,
+Armor, and Accessories filters. Armor currently includes Head, Body, Arm, and
+Shield; the detail panel includes slot, rarity, count, enhancement, equipped
+state, stat bonuses, and authored effects. The page is read-only.
+
+The current profile and item definitions represent gear instances only.
+Consumables and Key Items need typed definitions and authoritative profile or
+run storage before those categories can be shown. The focused pause smoke source
+now covers the compact Debug rail, hidden-selection normalization, Items route,
+grouped counts, and sort/filter state. The smoke was not executed in this
+checkpoint because a Godot editor/runtime was already active and MCP script,
+scene, and playtest tools were unavailable. Screen-size, touch, and controller
+visual acceptance remains open.

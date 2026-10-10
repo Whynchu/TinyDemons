@@ -24,6 +24,7 @@ var pause_settings: Callable = Callable()
 var pause_quit: Callable = Callable()
 var pause_status: Callable = Callable()
 var pause_equipment: Callable = Callable()
+var pause_items: Callable = Callable()
 var pause_set_page: Callable = Callable()
 var pause_back: Callable = Callable()
 var pause_equipment_back: Callable = Callable()
@@ -59,6 +60,11 @@ static func from_gameplay_root(root: Node) -> HubScreenActions:
 	actions.pause_quit = Callable(root, "_quit_to_title_from_pause")
 	actions.pause_status = Callable(root, "_set_pause_status_page")
 	actions.pause_equipment = Callable(root, "_set_pause_equipment_page")
+	actions.pause_set_page = func(page: int) -> void:
+		var gameplay := root as GameplayState
+		if gameplay != null:
+			gameplay.screen_state_controller.route_controller.set_pause_page(gameplay, page)
+	actions.pause_items = actions.pause_set_page.bind(PauseMenuState.ITEMS_PAGE)
 	actions.pause_back = Callable(root, "_pause_back")
 	actions.equipment_remove = Callable(root, "_remove_hub_gear")
 	actions.equipment_remove_all = Callable(root, "_remove_all_hub_gear")

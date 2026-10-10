@@ -236,6 +236,48 @@ color = Color(0.36, 0.4, 0.52, 0.85)
 visible = false
 layout_mode = 0
 
+[node name="PauseItemsPage" type="Control" parent="." unique_id=1325680077]
+visible = false
+anchors_preset = 0
+offset_right = 240.0
+offset_bottom = 160.0
+mouse_filter = 2
+
+[node name="Background" type="NinePatchRect" parent="PauseItemsPage"]
+texture_filter = 1
+layout_mode = 0
+offset_right = 240.0
+offset_bottom = 160.0
+texture = ExtResource("6_frame")
+patch_margin_left = 3
+patch_margin_top = 3
+patch_margin_right = 3
+patch_margin_bottom = 3
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
+
+[node name="TitleTab" type="Panel" parent="PauseItemsPage"]
+layout_mode = 0
+offset_left = 8.0
+offset_right = 90.0
+offset_bottom = 16.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBox_pause_page_title")
+
+[node name="Title" type="Sprite2D" parent="PauseItemsPage"]
+texture_filter = 1
+position = Vector2(13, 4)
+centered = false
+
+[node name="TitleRule" type="ColorRect" parent="PauseItemsPage"]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 17.0
+offset_right = 232.0
+offset_bottom = 18.0
+mouse_filter = 2
+color = Color(0.36, 0.4, 0.52, 0.85)
+
 [node name="PauseGoldIcon" type="Sprite2D" parent="." unique_id=256740188]
 z_index = 2
 texture_filter = 1

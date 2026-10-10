@@ -34,15 +34,20 @@ func update_pause_ui(root: Object, pixel_texture: Callable) -> void:
 		screen.display_view_size = display.visible_view_size_value()
 	screen.pause_overlay.position = Vector2.ZERO
 	screen.pause_overlay.size = screen.display_view_size
-	screen._screen_layout_controller._position_pause_controls(false, true)
-	var highlight := PaletteLibrary.accent(screen.player_palette_name)
-	var menu_player_context: MenuPlayerContext = (root as GameplayState)._menu_player_context() if root is GameplayState else null
-	screen._pause_screen_presenter.update_player_info(menu_player_context, pixel_texture, screen.display_view_size)
 	var settings := root.get("settings_service") as SettingsService
 	var debug_menu_enabled := settings != null and bool(settings.get_setting(&"debug_menu_enabled", false))
+	if screen.pause_page == PauseMenuState.DEBUG_PAGE and not debug_menu_enabled:
+		screen._pause_menu_state.set_page(PauseMenuState.COMMAND_PAGE)
+	var highlight := PaletteLibrary.accent(screen.player_palette_name)
+	var menu_player_context: MenuPlayerContext = (root as GameplayState)._menu_player_context() if root is GameplayState else null
 	var pause_equipment_view_active: Variant = screen._pause_screen_presenter.update_page_visibility(screen.pause_page, debug_menu_enabled, pixel_texture)
+	_normalize_pause_command_row()
+	screen._screen_layout_controller._position_pause_controls(false, true)
+	screen._pause_screen_presenter.update_player_info(menu_player_context, pixel_texture, screen.display_view_size)
 	var back_prompt: Variant = screen._menu_back_prompt_for(root)
 	var confirm_prompt: Variant = screen._menu_confirm_prompt_for(root)
+	if screen.pause_page == PauseMenuState.ITEMS_PAGE:
+		confirm_prompt = str(confirm_prompt).replace("SELECT", "SORT")
 	screen._pause_screen_presenter.update_navigation_prompts(
 		highlight,
 		pause_equipment_view_active,
@@ -50,16 +55,19 @@ func update_pause_ui(root: Object, pixel_texture: Callable) -> void:
 		confirm_prompt,
 		pixel_texture
 	)
-	if screen.pause_page == 1:
+	if screen.pause_page == PauseMenuState.STATUS_PAGE:
 		screen._pause_screen_presenter.update_status(menu_player_context, pixel_texture)
-	elif screen.pause_page == 2:
+	elif screen.pause_page in [PauseMenuState.EQUIPMENT_PAGE, PauseMenuState.ITEMS_PAGE]:
 		var pause_profile: PlayerProfile = menu_player_context.profile if menu_player_context != null else root.get("player_profile") as PlayerProfile
-		if pause_equipment_view_active:
-			screen._hub_screen_render_controller.bind(screen)
-			screen._hub_screen_render_controller._render_equipment_menu(root, pixel_texture, pause_profile, highlight, screen.pause_equipment_menu, false)
-			return
-		screen._pause_screen_presenter.update_equipment(pause_profile, pixel_texture)
-	elif screen.pause_page == 3:
+		if screen.pause_page == PauseMenuState.EQUIPMENT_PAGE:
+			if pause_equipment_view_active:
+				screen._hub_screen_render_controller.bind(screen)
+				screen._hub_screen_render_controller._render_equipment_menu(root, pixel_texture, pause_profile, highlight, screen.pause_equipment_menu, false)
+				return
+			screen._pause_screen_presenter.update_equipment(pause_profile, pixel_texture)
+		else:
+			screen._pause_screen_presenter.update_items(pause_profile, pixel_texture, highlight)
+	elif screen.pause_page == PauseMenuState.DEBUG_PAGE:
 		refresh_debug_menu(root)
 	screen._pause_screen_presenter.update_selected_cursor(
 		screen.pause_page,
@@ -69,13 +77,27 @@ func update_pause_ui(root: Object, pixel_texture: Callable) -> void:
 	)
 
 
+func _normalize_pause_command_row() -> void:
+	if screen.pause_page != PauseMenuState.COMMAND_PAGE:
+		return
+	var command_list := screen._pause_menu_state.command_list
+	if command_list == null:
+		command_list = MenuCommandList.new()
+		screen._pause_menu_state.command_list = command_list
+	var base_ys: Array[float] = []
+	for button: Button in screen._pause_screen_presenter.menu_buttons:
+		base_ys.append(button.position.y if button != null else 0.0)
+	command_list.configure(screen._pause_screen_presenter.menu_buttons, base_ys)
+	screen._pause_menu_state.pause_menu_row = command_list.normalize_row(screen._pause_menu_state.pause_menu_row)
+
+
 func set_pause_page(root: Object, page: int) -> void:
 	screen._pause_menu_state.set_page(page)
 	# A pause page transition is a fresh route entry. Never carry a touch
 	# candidate arm from Hub Equipment (or an earlier pause page) into it.
 	screen.hub_touch_candidate_slot = ""
 	screen.hub_touch_candidate_index = -1
-	if screen.pause_page == 2:
+	if screen.pause_page == PauseMenuState.EQUIPMENT_PAGE:
 		# Pause Equipment shares the live equipment flow, but always enters at its
 		# top command row just like the Demon Hub route.
 		screen.hub_equipment_mode = EquipmentMenuLayout.MODE_COMMAND
@@ -85,15 +107,15 @@ func set_pause_page(root: Object, page: int) -> void:
 		# command selection that may now be disabled for the current loadout.
 		screen.hub_action_column = 0
 		root.call("_play_sound", "ui_confirm", 0.0, 1.0)
-	elif screen.pause_page == 1:
+	elif screen.pause_page == PauseMenuState.STATUS_PAGE:
 		root.call("_play_sound", "ui_confirm", 0.0, 1.0)
-	elif screen.pause_page == 3:
+	elif screen.pause_page == PauseMenuState.ITEMS_PAGE or screen.pause_page == PauseMenuState.DEBUG_PAGE:
 		root.call("_play_sound", "ui_confirm", 0.0, 1.0)
 	update_pause_ui(root, Callable(root, "_pixel_text_texture"))
 
 
 func is_pause_equipment_active() -> bool:
-	return screen.pause_overlay != null and screen.pause_overlay.visible and screen.pause_page == 2
+	return screen.pause_overlay != null and screen.pause_overlay.visible and screen.pause_page == PauseMenuState.EQUIPMENT_PAGE
 
 
 func refresh_equipment_menu(root: Object) -> void:
@@ -131,7 +153,7 @@ func pause_equipment_back(root: Object) -> void:
 func update_pause_input(root: GameplayState) -> void:
 	if screen.pause_overlay == null or not screen.pause_overlay.visible:
 		return
-	if screen.pause_page == 2 and is_pause_equipment_active():
+	if screen.pause_page == PauseMenuState.EQUIPMENT_PAGE and is_pause_equipment_active():
 		var touch_scroll := root._input_touch_scroll_y() as float
 		if not is_zero_approx(touch_scroll):
 			screen.scroll_hub_content(root, touch_scroll)
@@ -265,7 +287,7 @@ func close_settings(root: Object) -> void:
 			screen.pause_overlay.visible = true
 		screen.hub_pause_mode = true
 		screen.pause_page = 0
-		screen.pause_menu_row = 2
+		screen.pause_menu_row = 3
 		screen.set_state(&"pause")
 		update_pause_ui(root, Callable(root, "_pixel_text_texture"))
 	else:

@@ -7,6 +7,9 @@ signal debug_action_requested(action: StringName, amount: int)
 const PAUSE_MENU_SCENE: PackedScene = preload("res://scenes/menus/pause/pause_menu.tscn")
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const PauseMenuLayoutScript = preload("res://scripts/ui/pause_menu_layout.gd")
+const PauseMenuStateScript = preload("res://scripts/ui/pause_menu_state.gd")
+const PauseItemsPresenterScript = preload("res://scripts/ui/pause_items_presenter.gd")
+const PausePageDataPresenterScript = preload("res://scripts/ui/pause_page_data_presenter.gd")
 const DebugMenuLayoutScript = preload("res://scripts/editor/debug_menu_layout.gd")
 const PauseDebugMenuContextScript = preload("res://scripts/ui/pause_debug_menu_context.gd")
 const SoulVisualsScript = preload("res://scripts/runtime/services/soul_visuals.gd")
@@ -26,13 +29,19 @@ var soul_text: Sprite2D = null
 var resource_icon: Sprite2D = null
 var status_texts: Array[Sprite2D] = []
 var equipment_texts: Array[Sprite2D] = []
+var items_presenter: PauseItemsPresenter = null
+var _page_data_presenter: PausePageDataPresenter = PausePageDataPresenterScript.new() as PausePageDataPresenter
 var description_text: Sprite2D = null
 var back_button: Button = null
 var status_button: Button = null
 var equipment_button: Button = null
+var items_button: Button = null
 var settings_button: Button = null
 var debug_button: Button = null
 var quit_button: Button = null
+
+var items_model: PauseItemsModel:
+	get: return items_presenter.model if items_presenter != null else null
 var equipment_menu: EquipmentMenuLayout = null
 var debug_menu_layout: DebugMenuLayout = null
 var debug_menu_buttons: Array[Button] = []
@@ -69,6 +78,7 @@ func build(
 	root_page = built_overlay.get_node_or_null("PauseRootPage") as Control
 	var status_page := built_overlay.get_node_or_null("PauseStatusPage") as Control
 	var equipment_page := built_overlay.get_node_or_null("PauseEquipmentPage") as Control
+	var items_page := built_overlay.get_node_or_null("PauseItemsPage") as Control
 	equipment_menu = equipment_page.get_node_or_null("EquipmentMenu") as EquipmentMenuLayout if equipment_page != null else null
 	if equipment_menu != null:
 		equipment_menu.visible = false
@@ -93,9 +103,16 @@ func build(
 				elif not accepted and actions.equipment_remove_all_cancel.is_valid(): actions.equipment_remove_all_cancel.call())
 	var status_title := status_page.get_node_or_null("Title") as Sprite2D
 	var equipment_title := equipment_page.get_node_or_null("Title") as Sprite2D
+	var items_title := items_page.get_node_or_null("Title") as Sprite2D
 	if status_title != null: status_title.texture = pixel_texture.call("STATUS", Color.WHITE) as Texture2D
 	if equipment_title != null: equipment_title.texture = pixel_texture.call("EQUIPMENT", Color.WHITE) as Texture2D
-	page_roots = {0: root_page, 1: status_page, 2: equipment_page}
+	if items_title != null: items_title.texture = pixel_texture.call("ITEMS", Color.WHITE) as Texture2D
+	page_roots = {
+		PauseMenuStateScript.COMMAND_PAGE: root_page,
+		PauseMenuStateScript.STATUS_PAGE: status_page,
+		PauseMenuStateScript.EQUIPMENT_PAGE: equipment_page,
+		PauseMenuStateScript.ITEMS_PAGE: items_page,
+	}
 	player_portrait = built_overlay.get_node_or_null("PauseRootPage/PausePlayerPortrait") as Sprite2D
 	gold_icon = built_overlay.get_node_or_null("PauseGoldIcon") as Sprite2D
 	resource_icon = built_overlay.get_node_or_null("PauseResourceIcon") as Sprite2D
@@ -110,24 +127,29 @@ func build(
 	equipment_texts.clear()
 	for index in 8:
 		equipment_texts.append(widget_factory.create_sprite(equipment_page, "PauseEquipment%d" % index, null, Vector2(14, 28 + index * 12), false))
+	items_presenter = PauseItemsPresenterScript.new() as PauseItemsPresenter
+	items_presenter.build(items_page, view_size, pixel_texture, widget_factory)
 	description_text = widget_factory.create_sprite(built_overlay, "PauseDescription", null, PauseMenuLayoutScript.select_prompt_position(view_size), false)
 	gold_text = widget_factory.create_sprite(built_overlay, "PauseGoldText", null, PauseMenuLayoutScript.resource_text_position(view_size, 0.0, false), false)
 	soul_text = widget_factory.create_sprite(built_overlay, "PauseSoulText", null, PauseMenuLayoutScript.resource_text_position(view_size, 0.0, true), false)
 	menu_buttons.clear()
-	var labels := ["STATUS", "EQUIPMENT", "SETTINGS", "DEBUG", "QUIT TITLE"]
+	var labels := ["STATUS", "EQUIPMENT", "ITEMS", "SETTINGS", "DEBUG", "QUIT TITLE"]
 	for index in labels.size():
 		var button := widget_factory.make_menu_command_button(labels[index], PauseMenuLayoutScript.command_button_position(view_size, index), PauseMenuLayoutScript.COMMAND_BUTTON_SIZE, pixel_texture)
 		button.name = "Pause%s" % labels[index].replace(" ", "").capitalize()
 		button.focus_mode = Control.FOCUS_NONE
 		if index == 0:
 			if actions.pause_status.is_valid(): button.pressed.connect(actions.pause_status)
-			elif actions.pause_set_page.is_valid(): button.pressed.connect(actions.pause_set_page.bind(1))
+			elif actions.pause_set_page.is_valid(): button.pressed.connect(actions.pause_set_page.bind(PauseMenuStateScript.STATUS_PAGE))
 		elif index == 1:
 			if actions.pause_equipment.is_valid(): button.pressed.connect(actions.pause_equipment)
-			elif actions.pause_set_page.is_valid(): button.pressed.connect(actions.pause_set_page.bind(2))
-		elif index == 2 and actions.pause_settings.is_valid(): button.pressed.connect(actions.pause_settings)
-		elif index == 3: button.pressed.connect(_request_debug_page)
-		elif index == 4 and actions.pause_quit.is_valid(): button.pressed.connect(actions.pause_quit)
+			elif actions.pause_set_page.is_valid(): button.pressed.connect(actions.pause_set_page.bind(PauseMenuStateScript.EQUIPMENT_PAGE))
+		elif index == 2:
+			if actions.pause_items.is_valid(): button.pressed.connect(actions.pause_items)
+			elif actions.pause_set_page.is_valid(): button.pressed.connect(actions.pause_set_page.bind(PauseMenuStateScript.ITEMS_PAGE))
+		elif index == 3 and actions.pause_settings.is_valid(): button.pressed.connect(actions.pause_settings)
+		elif index == 4: button.pressed.connect(_request_debug_page)
+		elif index == 5 and actions.pause_quit.is_valid(): button.pressed.connect(actions.pause_quit)
 		root_page.add_child(button)
 		menu_buttons.append(button)
 	back_button = widget_factory.make_menu_command_button("BACK", PauseMenuLayoutScript.back_button_position(view_size), PauseMenuLayoutScript.BACK_BUTTON_SIZE, pixel_texture)
@@ -140,15 +162,34 @@ func build(
 	debug_menu_layout = DebugMenuLayoutScript.new() as DebugMenuLayout
 	var debug_controls := debug_menu_layout.build(built_overlay, pixel_texture, Callable(widget_factory, "make_menu_command_button"), MENU_CURSOR_TEXTURE)
 	debug_menu_layout.action_requested.connect(_forward_debug_action_requested)
-	page_roots[3] = debug_controls["page"] as Control
+	page_roots[PauseMenuStateScript.DEBUG_PAGE] = debug_controls["page"] as Control
 	debug_menu_buttons = debug_controls["buttons"] as Array[Button]
 	overlay = built_overlay
 	title_text = pause_title
 	status_button = menu_buttons[0] if menu_buttons.size() > 0 else null
 	equipment_button = menu_buttons[1] if menu_buttons.size() > 1 else null
-	settings_button = menu_buttons[2] if menu_buttons.size() > 2 else null
-	debug_button = menu_buttons[3] if menu_buttons.size() > 3 else null
-	quit_button = menu_buttons[4] if menu_buttons.size() > 4 else null
+	items_button = menu_buttons[2] if menu_buttons.size() > 2 else null
+	settings_button = menu_buttons[3] if menu_buttons.size() > 3 else null
+	debug_button = menu_buttons[4] if menu_buttons.size() > 4 else null
+	quit_button = menu_buttons[5] if menu_buttons.size() > 5 else null
+
+
+func update_items(profile: PlayerProfile, pixel_texture: Callable, highlight: Color) -> void:
+	if items_presenter != null:
+		items_presenter.update(profile, pixel_texture, highlight)
+
+
+func move_items_selection(direction: int) -> bool:
+	return items_presenter != null and items_presenter.move_selection(direction)
+
+
+func move_items_filter(direction: int) -> bool:
+	return items_presenter != null and items_presenter.move_filter(direction)
+
+
+func toggle_items_sort() -> void:
+	if items_presenter != null:
+		items_presenter.toggle_sort()
 
 
 func position_controls(view_size: Vector2) -> void:
@@ -175,8 +216,16 @@ func position_controls(view_size: Vector2) -> void:
 	if resource_divider != null:
 		resource_divider.position = Vector2(divider_x, height - PauseMenuLayoutScript.RESOURCE_PANEL_HEIGHT)
 		resource_divider.size = Vector2(maxf(width - divider_x - 1.0, 1.0), 1.0)
-	for index in menu_buttons.size(): menu_buttons[index].position = PauseMenuLayoutScript.command_button_position(view_size, index)
+	var visible_command_index := 0
+	for index in menu_buttons.size():
+		if menu_buttons[index].visible:
+			menu_buttons[index].position = PauseMenuLayoutScript.command_button_position(view_size, visible_command_index)
+			visible_command_index += 1
+		else:
+			menu_buttons[index].position = PauseMenuLayoutScript.command_button_position(view_size, index)
 	if debug_menu_layout != null: debug_menu_layout.apply_layout(view_size)
+	if items_presenter != null:
+		items_presenter.position_controls(view_size)
 	if back_button != null: back_button.position = PauseMenuLayoutScript.back_button_position(view_size)
 	if player_portrait != null:
 		player_portrait.position = Vector2(PauseMenuLayoutScript.left_field_x(PauseMenuLayoutScript.PLAYER_PORTRAIT_POSITION.x, width), PauseMenuLayoutScript.PLAYER_PORTRAIT_POSITION.y)
@@ -204,14 +253,14 @@ func update_page_visibility(page: int, debug_menu_enabled: bool, pixel_texture: 
 	var active_page := page_roots.get(page) as Control
 	if active_page != null:
 		active_page.visible = true
-	var showing_root := page == 0
-	var equipment_view_active := page == 2 and equipment_menu != null
+	var showing_root := page == PauseMenuStateScript.COMMAND_PAGE
+	var equipment_view_active := page == PauseMenuStateScript.EQUIPMENT_PAGE and equipment_menu != null
 	if equipment_menu != null:
 		equipment_menu.visible = equipment_view_active
 		equipment_menu.stop_cursor_motion()
 		if equipment_view_active:
 			equipment_menu.set_pixel_texture(pixel_texture)
-	var equipment_page_root := page_roots.get(2) as Control
+	var equipment_page_root := page_roots.get(PauseMenuStateScript.EQUIPMENT_PAGE) as Control
 	if equipment_page_root != null:
 		for chrome_name in ["Background", "TitleTab", "Title", "TitleRule"]:
 			var chrome := equipment_page_root.get_node_or_null(chrome_name) as CanvasItem
@@ -221,15 +270,15 @@ func update_page_visibility(page: int, debug_menu_enabled: bool, pixel_texture: 
 	if root_panel != null:
 		root_panel.visible = false
 	for index in menu_buttons.size():
-		var debug_command_hidden := index == 3 and not debug_menu_enabled
+		var debug_command_hidden := index == 4 and not debug_menu_enabled
 		menu_buttons[index].visible = showing_root and not debug_command_hidden
 		menu_buttons[index].disabled = debug_command_hidden
 	if back_button != null:
 		back_button.visible = not equipment_view_active
 	for node in status_texts:
-		node.visible = page == 1
+		node.visible = page == PauseMenuStateScript.STATUS_PAGE
 	for node in equipment_texts:
-		node.visible = page == 2 and not equipment_view_active
+		node.visible = page == PauseMenuStateScript.EQUIPMENT_PAGE and not equipment_view_active
 	if description_text != null:
 		description_text.visible = not equipment_view_active
 	if gold_icon != null:
@@ -265,7 +314,7 @@ func update_navigation_prompts(
 func update_selected_cursor(page: int, selected_row: int, cursor_left_gap: float, tween_owner: Node) -> void:
 	if cursor_text != null and not menu_buttons.is_empty():
 		var cursor_index := clampi(selected_row, 0, menu_buttons.size() - 1)
-		cursor_text.visible = page == 0
+		cursor_text.visible = page == PauseMenuStateScript.COMMAND_PAGE
 		var button := menu_buttons[cursor_index]
 		_cursor_animator.move_menu_cursor(
 			cursor_text,
@@ -324,60 +373,15 @@ func update_resources(profile: PlayerProfile, pixel_texture: Callable, view_size
 
 
 func update_status(context: MenuPlayerContext, pixel_texture: Callable) -> void:
-	if context == null or not context.is_valid():
-		return
-	var profile: PlayerProfile = context.profile
-	var snapshot: CombatStatSnapshot = context.snapshot
-	var tuning: CombatTuning = context.combat_tuning
-	var player_tuning: PlayerTuning = context.player_tuning
-	var xp_required := PlayerProfile.xp_required_for_level(profile.level, context.progression_tuning)
-	var values := [
-		"LV ...... %d" % profile.level, "XP ...... %d/%d" % [profile.xp, xp_required], "HP ...... %d/%d" % [context.current_health(), context.max_health()], "CHROMA .. %d/%d" % [context.chroma(), context.max_chroma()], "STR .... %d" % roundi(snapshot.strength), "AGI .... %d" % roundi(snapshot.agi), "VIT .... %d" % roundi(snapshot.vit), "INT .... %d" % roundi(snapshot.intelligence), "MND .... %d" % roundi(snapshot.mnd), "DEF .... %d" % roundi(snapshot.def),
-		"P.ATK .. %d" % roundi(CombatCalculator.attack_power_for_snapshot(snapshot, tuning)), "P.DEF .. %d" % roundi(CombatCalculator.physical_defense_for_snapshot(snapshot)), "M.ATK .. %d" % roundi(CombatCalculator.magic_power_for_snapshot(snapshot, tuning)), "M.DEF .. %d" % roundi(CombatCalculator.magic_defense_for_snapshot(snapshot)), "MOV .... %.2fx" % (player_tuning.agi_multiplier(snapshot.agi) if player_tuning != null else 1.0), "REC .... %.2fx" % (player_tuning.attack_multiplier_for_agi(snapshot.agi) if player_tuning != null else 1.0),
-	]
-	for index in mini(values.size(), status_texts.size()):
-		status_texts[index].texture = pixel_texture.call(values[index], Color8(255, 205, 117) if index == 1 else Color.WHITE) as Texture2D
-	if description_text != null:
-		description_text.texture = null
+	_page_data_presenter.update_status(context, pixel_texture, status_texts, description_text)
 
 
 func update_equipment(profile: PlayerProfile, pixel_texture: Callable) -> void:
-	if profile == null:
-		return
-	var catalog := ItemCatalog.new()
-	var slot_labels := ["WEAPON", "HEAD", "BODY", "ARM", "SHIELD", "ACCESSORY"]
-	for index in mini(slot_labels.size(), equipment_texts.size()):
-		var slot: StringName = ItemCatalog.SLOTS[index]
-		var item := profile.find_item(profile.get_equipped_instance_id(slot))
-		var item_name := "EMPTY"
-		if item != null:
-			item_name = catalog.gear_name(item)
-			if item.enhancement_level > 0: item_name += " F%d" % item.enhancement_level
-		equipment_texts[index].texture = pixel_texture.call("%s .... %s" % [slot_labels[index], item_name], catalog.rarity_color(item.rarity) if item != null else Color8(140, 145, 160)) as Texture2D
-	for index in range(slot_labels.size(), equipment_texts.size()):
-		equipment_texts[index].texture = null
-	if description_text != null:
-		description_text.texture = null
+	_page_data_presenter.update_equipment(profile, pixel_texture, equipment_texts, description_text)
 
 
 func refresh_debug_menu(context: PauseDebugMenuContext, pixel_texture: Callable) -> void:
-	if debug_menu_layout == null or context == null:
-		return
-	var toggles := {
-		&"invulnerable": context.invulnerable,
-		&"unlimited_chroma": context.unlimited_chroma,
-		&"pause_enemies": context.enemies_paused,
-		&"geometry_guides": context.geometry_guides,
-	}
-	debug_menu_layout.refresh(
-		pixel_texture,
-		context.run_number,
-		context.player_level,
-		context.unspent_stat_points,
-		context.reset_confirmation_armed,
-		toggles
-	)
-	debug_menu_layout.select_row(context.selected_row)
+	_page_data_presenter.refresh_debug_menu(debug_menu_layout, context, pixel_texture)
 
 
 func _request_debug_page() -> void:

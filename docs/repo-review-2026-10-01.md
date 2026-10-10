@@ -1,6 +1,6 @@
 # Tiny Demons — Repository Review: Composition, Code Efficiency, and Practicality
 
-Status: current review
+Status: scored review at version 0.3.25; current 0.3.82 reconciliation appended below
 Scope: whole-repository structural review at `d8e3fa3` (release `0.3.25`), covering
 composition maturity, code efficiency, practicality/navigability, documentation
 truth, and player-facing delivery.
@@ -267,3 +267,42 @@ This review consolidates three read-only advisor passes (architecture/code,
 modularity/buildability, player-facing design) run against `0.3.25`. Their
 per-finding evidence is reflected above; the scorecard and ground-truth table are
 from direct measurement.
+
+## 12. Current reconciliation — 2026-10-10, version 0.3.82
+
+Sections 1–11 remain the scored review of the `0.3.25` tree. Their counts,
+documentation-drift examples, and numeric scores are historical. The current
+source-backed snapshot is in [`AUDIT.md`](AUDIT.md); the repository review score
+has not been recalculated for `0.3.82`.
+
+The current static composition check passes its strict targets: 1,859 dynamic
+`root.call/get/set` sites, `GameplayState` at 1,714 lines / 282 fields,
+`RoomController` at 2,180 lines, 296 scripts in 13 directories, and 0
+unclassified scripts. The measured editor-composition score is 94.6%. The
+forward target for `screen_state_controller.gd` is still open at 870 / 800
+lines, and 512 untyped root parameters remain against a zero target. The green
+strict scorecard does not close those forward targets or the authoring-system
+work.
+
+The current Pause slice follows the narrower owner pattern already recorded in
+`FEATURE_MAP.md`: `PauseMenuState` and `MenuCommandList` own routing/navigation
+state, `PauseScreenPresenter` composes the view, `PauseItemsPresenter` renders
+the page, `PauseItemsModel` projects/group/sorts profile gear, and
+`PauseItemsInputController` handles page input. `screen_route_controller.gd`
+continues to route Pause pages. This avoids growing the controller facade and
+the main Pause presenter. The Items page supports All, Weapons, Armor, and
+Accessories, with Name/Rarity sorting and grouped counts. Its data contract is
+gear-only until Consumable and Key Item definitions and storage paths exist.
+
+The test-manifest validator passes at 157 rows, 155 runnable paths, two report
+rows, and a 45-path curated gate. The Pause smoke was updated for this slice,
+but was not executed: Godot editor/runtime processes were already active and no
+Godot MCP diagnostic or playtest tools were connected in the session. Rendered
+layout, touch/controller interaction, and in-editor acceptance remain open.
+
+For agent and human coordination, the repository has role-specific Pip, Thorn,
+and Hexley advisors, a documented one-at-a-time workflow, and the `coord/` board
+protocol for active claims and handoffs. This task used all three advisors and
+recorded its own claim/status. Continue refreshing `AUDIT.md`, `KNOWN_ISSUES.md`,
+and `SCRIPT_INDEX.md` at slice boundaries so source counts and evidence do not
+fall behind release notes.
