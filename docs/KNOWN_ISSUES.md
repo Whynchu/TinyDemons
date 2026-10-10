@@ -1062,7 +1062,8 @@ The current profile and item definitions represent gear instances only.
 Consumables and Key Items need typed definitions and authoritative profile or
 run storage before those categories can be shown. The focused pause smoke source
 now covers the compact Debug rail, hidden-selection normalization, Items route,
-grouped counts, and sort/filter state. The smoke was not executed in this
-checkpoint because a Godot editor/runtime was already active and MCP script,
-scene, and playtest tools were unavailable. Screen-size, touch, and controller
-visual acceptance remains open.
+grouped counts, and sort/filter state. The Items list and detail columns follow
+the shared pixel-preserving responsive mapping in wider logical viewports. The
+smoke was not executed in this checkpoint because a Godot editor/runtime was
+already active and MCP script, scene, and playtest tools were unavailable.
+Screen-size, touch, and controller visual acceptance remains open.

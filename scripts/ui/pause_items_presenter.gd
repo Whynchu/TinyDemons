@@ -6,6 +6,7 @@ class_name PauseItemsPresenter
 
 const PauseItemsModelScript = preload("res://scripts/ui/pause_items_model.gd")
 const PauseMenuLayoutScript = preload("res://scripts/ui/pause_menu_layout.gd")
+const MenuResponsiveLayoutScript = preload("res://scripts/ui/menu_responsive_layout.gd")
 const ITEMS_DETAIL_LINE_COUNT := 10
 
 var model: PauseItemsModel = null
@@ -18,6 +19,7 @@ var empty_text: Sprite2D = null
 var divider: ColorRect = null
 var _catalog: ItemCatalog = null
 var _widget_factory: MenuWidgetFactory = null
+var _view_width := 240.0
 
 
 func build(page: Control, view_size: Vector2, pixel_texture: Callable, widget_factory: MenuWidgetFactory) -> void:
@@ -69,21 +71,26 @@ func build(page: Control, view_size: Vector2, pixel_texture: Callable, widget_fa
 
 
 func position_controls(view_size: Vector2) -> void:
+	_view_width = view_size.x
+	var list_rect := MenuResponsiveLayoutScript.map_rect(Rect2(8.0, 47.0, 103.0, 11.0), view_size.x)
+	var divider_x := MenuResponsiveLayoutScript.map_edge(115.0, view_size.x)
+	var detail_x := MenuResponsiveLayoutScript.map_edge(122.0, view_size.x)
 	for index in filter_buttons.size():
-		filter_buttons[index].position = Vector2(8.0 + index * 54.0, 22.0)
+		filter_buttons[index].position = Vector2(MenuResponsiveLayoutScript.map_edge(8.0 + index * 54.0, view_size.x), 22.0)
 	if sort_button != null:
-		sort_button.position = Vector2(8.0, 35.0)
+		sort_button.position = Vector2(MenuResponsiveLayoutScript.map_edge(8.0, view_size.x), 35.0)
 	if position_text != null:
-		position_text.position = Vector2(122.0, 37.0)
+		position_text.position = Vector2(detail_x, 37.0)
 	if divider != null:
-		divider.position = Vector2(115.0, 34.0)
+		divider.position = Vector2(divider_x, 34.0)
 		divider.size = Vector2(1.0, maxf(minf(view_size.y - 27.0, 99.0), 1.0))
 	for index in row_buttons.size():
-		row_buttons[index].position = Vector2(8.0, 47.0 + index * 12.0)
+		row_buttons[index].position = Vector2(list_rect.position.x, 47.0 + index * 12.0)
+		row_buttons[index].size = list_rect.size
 	for index in detail_texts.size():
-		detail_texts[index].position = Vector2(122.0, 46.0 + index * 10.0)
+		detail_texts[index].position = Vector2(detail_x, 46.0 + index * 10.0)
 	if empty_text != null:
-		empty_text.position = Vector2(13.0, 50.0)
+		empty_text.position = Vector2(list_rect.position.x + 5.0, 50.0)
 
 
 func update(profile: PlayerProfile, pixel_texture: Callable, highlight: Color) -> void:
@@ -110,13 +117,17 @@ func update(profile: PlayerProfile, pixel_texture: Callable, highlight: Color) -
 			continue
 		var row: Dictionary = visible_rows[index]
 		var item := row.get("item") as ItemInstance
-		var item_name := _truncate_text(_catalog.gear_name(item), 12)
+		var row_name_chars := 12 + int(floorf(maxf(row_buttons[index].size.x - 103.0, 0.0) / 5.0))
+		var item_name := _truncate_text(_catalog.gear_name(item), row_name_chars)
 		var row_label := "%s x%d" % [item_name, int(row.get("quantity", 1))]
 		if bool(row.get("equipped", false)):
 			row_label += " EQ"
 		_set_button_pixel_label(button, row_label, pixel_texture, _catalog.rarity_color(item.rarity), false)
 		_widget_factory.set_archetype_button_state(button, model.selected_index == model.scroll_offset + index, highlight)
-	_render_details(model.selected_row(), pixel_texture)
+	var detail_max_chars := 20
+	if not detail_texts.is_empty():
+		detail_max_chars = maxi(20, int(floorf((_view_width - detail_texts[0].position.x - 18.0) / 5.0)))
+	_render_details(model.selected_row(), pixel_texture, detail_max_chars)
 	if empty_text != null:
 		empty_text.visible = model.row_count() == 0
 
@@ -158,7 +169,7 @@ func _set_button_pixel_label(button: Button, label: String, pixel_texture: Calla
 		sprite.position = Vector2(3.0, floorf((button.size.y - float(sprite.texture.get_height())) * 0.5)) if sprite.texture != null else Vector2(3.0, 3.0)
 
 
-func _render_details(row: Dictionary, pixel_texture: Callable) -> void:
+func _render_details(row: Dictionary, pixel_texture: Callable, max_chars: int) -> void:
 	if detail_texts.is_empty():
 		return
 	var lines: Array[String] = []
@@ -202,7 +213,7 @@ func _render_details(row: Dictionary, pixel_texture: Callable) -> void:
 			sprite.texture = null
 			continue
 		var line_color := colors[index] if index < colors.size() else Color.WHITE
-		sprite.texture = pixel_texture.call(_truncate_text(lines[index], 20), line_color) as Texture2D
+		sprite.texture = pixel_texture.call(_truncate_text(lines[index], max_chars), line_color) as Texture2D
 
 
 func _truncate_text(value: String, max_chars: int) -> String:

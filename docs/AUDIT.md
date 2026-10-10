@@ -33,7 +33,9 @@ The current pause-menu slice compacts commands when the opt-in Debug command is
 hidden and adds a read-only Items page over profile-owned gear. Existing
 definitions support six equipment slots; Consumables and Key Items still need
 their own typed definitions and authoritative storage paths before they can be
-listed. The focused Pause smoke assertions were updated, but live UI/playtest
+listed. The Items list and detail columns now use the shared pixel-preserving
+coordinate mapping in wider logical viewports. The focused Pause smoke
+assertions were updated, but live UI/playtest
 acceptance was not run during this checkpoint because a Godot editor/runtime was
 already active and this session had no connected Godot MCP tools.
 

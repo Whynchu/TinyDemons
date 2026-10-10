@@ -1266,3 +1266,5 @@ Prepared version 0.3.82 in the game title and release documentation. Composition
 2026-10-10 | codex | claim | Reconcile the Pause smoke evidence state and current verification counts; audit the next typed item-registry migration boundary without changing content data.
 2026-10-10 | codex | claim | Extend this audit record to correct the Slice 2 resource path and current ItemCatalog, ItemInstance, and equipment owner pointers.
 2026-10-10 | codex | done | Verification counts and Pause/Water evidence reconciled. Corrected live ItemCatalog source pointers and made the first ItemDefinition migration boundary explicit; manifest validator and diff check pass. Pause runtime acceptance remains pending.
+2026-10-10 | codex | claim | Reflow the Pause Items list and details across wider logical viewports while preserving its 240x160 authored layout.
+2026-10-10 | codex | done | Pause Items list/detail columns now expand with the shared pixel-preserving menu mapping; native positions are unchanged. Script index refreshed and whitespace check passes; Godot visual acceptance remains pending.

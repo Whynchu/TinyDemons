@@ -1621,3 +1621,15 @@ runtime checks were run; the user is handling Pause visual acceptance.
 
 Handoff: wait for the user's Pause visual/input acceptance, then implement the
 baseline ItemDefinition migration against the updated Slice 2 boundary.
+
+## Completed: Pause Items wide layout (2026-10-10)
+
+Redistribute the Items list and details across wider logical viewports using
+the shared pixel-preserving menu coordinate rule. Keep native 240x160 positions
+unchanged. The generated script index is refreshed and `git diff --check` is
+clean. No Godot smoke or playtest was run because Godot MCP tooling is
+unavailable while the shared editor/runtime is active; visual acceptance
+remains open.
+
+Handoff: when the shared editor is idle, check Pause Items at native 240x160 and
+a wider Full viewport, then verify touch scrolling and controller selection.
