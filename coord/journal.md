@@ -1268,3 +1268,78 @@ Prepared version 0.3.82 in the game title and release documentation. Composition
 2026-10-10 | codex | done | Verification counts and Pause/Water evidence reconciled. Corrected live ItemCatalog source pointers and made the first ItemDefinition migration boundary explicit; manifest validator and diff check pass. Pause runtime acceptance remains pending.
 2026-10-10 | codex | claim | Reflow the Pause Items list and details across wider logical viewports while preserving its 240x160 authored layout.
 2026-10-10 | codex | done | Pause Items list/detail columns now expand with the shared pixel-preserving menu mapping; native positions are unchanged. Script index refreshed and whitespace check passes; Godot visual acceptance remains pending.
+
+2026-10-10 | codex | claim | Add a supported MCP extension to inspect retained Godot debugger errors and stack traces without changing gameplay input.
+2026-10-10 | codex | claim | Reader confirmed 120 retained warnings and zero errors; claim the reported script locations for behavior-preserving warning fixes.
+2026-10-10 | codex | done | MCP retained-errors reader added; original panel had 120 warnings and 0 errors; warning cleanup verified in a fresh run at 0/0; editor returned to stopped state.
+2026-10-10 | codex | claim | Make `scenes/debug/boss_room_debug.tscn` a deterministic Run 30 mixed-enemy combat stress fixture with player invulnerability and sustained effects; add only the narrow debug bootstrap controls required and profile through the active MCP runtime.
+2026-10-10 | codex | claim | Add opt-in phase scopes inside the profiled slime update to isolate its Run 30 CPU cost during MCP capture.
+
+2026-10-10 | codex | claim | scripts/algorithms/walkable_area.gd: eliminate unconditional boundary distance scans in containment queries during mixed-enemy stress profiling.
+
+2026-10-10 | codex | claim | docs/mixed-encounter-performance-correction-plan.md: document the Run 30 mixed-encounter failure, timing caveats, ordered fixes, and whole-scene performance gates; link the owning plan and issue tracker.
+
+2026-10-10 | codex | done | Added the mixed-encounter performance correction plan, linked it from the documentation map and peak plan, and recorded the measured incident in KNOWN_ISSUES. Internal links verified; performance implementation remains open.
+
+2026-10-10 | codex | claim | Source pass for the Run 30 frame-rate failure: remove idle attack prep and per-call sequence arrays, then reduce measured phase work while preserving the scheduler and combat clocks.
+2026-10-10 | codex | handoff | Corrected displayed-FPS measurement and added elapsed-time-preserving alternating enemy simulation updates. Latest fixed-seed capture improved but remains below the 60 FPS gate; continue against measured costs.
+2026-10-10 | codex | claim | Revise the Run 30 plan to preserve full-rate gameplay and identify remaining waste with source evidence and correctly normalized timing.
+
+2026-10-10 | codex | done | Revised mixed-encounter performance plan: restore full-rate gameplay, normalize capture costs, bound attribution, prioritize actor/geometry and duplicate presentation, preserve collision/status/effect quality. Documentation only; no new playtests.
+
+2026-10-10 | codex | claim | Restore full-rate enemy updates and improve bounded Run 30 capture attribution.
+2026-10-10 | codex | handoff | Full-rate fixture capture measured 6.18 FPS; nested slime runtime attribution identifies movement, contact snapshot, separation, and repeated position validation as the remaining large costs. Continue targeted quality-preserving optimization; target is unmet.
+
+2026-10-10 | codex | handoff | User clarified that the listed on-screen systems were examples, and repeated MCP testing is too slow. Pivoted to a source-backed editor workload/cost guide using the existing Run 30 capture; healer path and interactions will be marked unmeasured unless the trace supports them.
+
+2026-10-10 | codex | done | Added and indexed the editor performance cost guide, updated the Run 30 issue record, and reconciled the active plan with the existing full-rate editor trace. Local documentation links resolve; no new playtest or standalone run was performed. Runtime FPS target remains open.
+
+2026-10-10 | codex | claim | Implement the approved full-rate movement/contact, state-driven status, healer selection, and target-arc improvements in source; validate them together against the in-editor Run 30 target.
+
+2026-10-10 | codex | claim | Expanded the source claim to include gameplay_frame_controller.gd and combat_runtime_controller.gd for once-per-render status aura presentation.
+
+## 2026-10-10 — codex — claim
+Investigate prior FPS work; measured 6.25 FPS scoped and 6.42 FPS minimal capture. Own existing performance claim plus docs/performance-investigation.md. Try conservative convex-floor containment to remove repeated callback dispatch.
+
+
+2026-10-10 | codex | claim | Narrow the failed Run 30 follow-up to actor contact broadphase correctness and cache validity; Pip, Thorn, and Hexley reviewed the measured path. The 64px radius cap can omit enlarged-boss contacts, so no next editor capture until corrected and source-checked.
+
+
+2026-10-10 | codex | handoff | Focused Run 30 editor capture after the contact correction reached 7.421 FPS; snapshot/separation costs fell to 12.627/9.276 ms per rendered frame, while scoot movement remains 26.562 ms. The 60 FPS gate is open; next slice is the measured full-rate movement path, with one editor gate after source review.
+
+## 2026-10-10T15:50:22.519Z — codex — claim
+Implementing an optional in-editor boot + 60-second runtime capture that writes a JSON report, prints its path, and closes only the game window.
+
+## 2026-10-10T15:56:22.389Z — codex — handoff
+Simplified the planned measurement harness to a short, focused headless CPU profile; preserve the editor-only FPS gate for final confirmation.
+
+## 2026-10-10T16:00:28.332Z — codex — blocker
+Headless profiling harness and docs are implemented and script-checked; local command runner could not start PowerShell, so execution and report analysis remain pending.
+
+## 2026-10-10T16:12:00Z — codex — done
+Ran the Run 30 headless CPU diagnostic successfully with Godot 4.7.1. Fixed the stop_capture Dictionary argument exposed by the first run. Report is under user://performance-captures/capture-2026-10-10T12-11-54.json; editor FPS acceptance remains separate.
+
+2026-10-10 | codex | claim | Optimizing repeated floor-walkability sample dispatch/transforms in SlimeGeometryQueries, selected from the fixed-seed headless Run 30 profile; preserve all samples and compare one post-change headless run.
+2026-10-10 | codex | done | Hoisted per-validation guide transforms/direct WalkableArea queries and reused the tick aggro result in scoot updates. The final Run 30 headless profile completed; per-call costs fell directionally, while headless variability prevents an editor acceptance claim. Focused editor gate remains next.
+2026-10-10 | codex | done | Reused the tick aggro result in SlimeActor/update_slime_scoot and hoisted walkability transforms. A deeper SlimeBrain aggro pass showed no lower costs and was reverted. Focused editor FPS acceptance remains open.
+2026-10-10 | codex | claim | Reuse the per-phase slime motion candidate snapshot and measure the fixed-seed headless CPU profile.
+2026-10-10 | codex | done | Added typed cached Spawn/Brain access and direct runtime calls; a per-phase movement candidate snapshot remains but showed no isolated aggregate gain. The active-only spawn registry experiment was reverted. Final Run 30 headless report completed with no runtime errors; earlier reports were annotated as CPU-contended, and the editor gate remains open.
+
+## 2026-10-10T16:25:00Z — codex — claim
+Fix the missing `SlimeSpawnComponent` type resolution through local preloaded script type aliases while preserving typed spawn dispatch.
+
+## 2026-10-10T16:25:00Z — codex — done
+Confirmed the generated global script-class cache lacked `SlimeSpawnComponent`; actor and runtime controller now use a local preload alias for static typing. Godot validation remains pending because Godot/MCP is off and the command runner fails before process startup.
+
+## 2026-10-10T17:46:54Z — codex — claim
+Bump the pushed Pause Items web build to 0.3.83, following `docs/VERSIONING.md`; commit only release markers and publish to `main`.
+
+## 2026-10-10T17:53:00Z — codex — done
+Updated the in-game and current-version markers to 0.3.83, committed the scoped seven-file change as `8f49106`, and pushed it to `main`. GitHub Pages workflow run 365 started for this commit; local unrelated edits remained unstaged.
+
+## 2026-10-10T19:58:00Z — codex — claim
+Restrict contact status transfer and implement responsive player Freeze behavior, including input shake-off and fading icy tint.
+
+## 2026-10-10T20:20:48Z — codex — done
+Completed the transfer allowlist and Poison exclusion, player Freeze action/movement lock with a 0.5 s duration bonus and 0.12 s fresh-input shake-off, and fading sprite tint. Targeted source review and git diff --check pass. Godot diagnostics/runtime were unavailable because Godot/MCP is off; unrelated worktree changes remain untouched and unstaged.
+2026-10-10 | codex | done | Fixed every 0.3.84 composition regression through typed owner extractions and reduced GameplayState/RoomController below their recorded limits. tools/validate_composition.ps1 passes; accepted baseline unchanged. Preparing 0.3.85 web release.

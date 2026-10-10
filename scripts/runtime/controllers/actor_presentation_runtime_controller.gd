@@ -240,12 +240,6 @@ func sync_slime_shadow(root: Object, slime: Sprite2D) -> void:
 	shadow.z_index = -1
 
 
-func present_slime_shadows(root: Object) -> void:
-	for slime in root.get("slimes") as Array[Sprite2D]:
-		if is_instance_valid(slime) and slime.visible and slime.is_visible_in_tree():
-			sync_slime_shadow(root, slime)
-
-
 func update_slime_attack_guides(root: Object, slime: Sprite2D) -> void:
 	var combat := root.call("_slime_combat", slime) as SlimeCombatComponent
 	var active_name := "AttackGuideL" if combat.face_left else "AttackGuideR"

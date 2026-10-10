@@ -10,6 +10,7 @@ signal knockback_finished
 
 var knockback_velocity := Vector2.ZERO
 var knockback_remaining := 0.0
+var status_component: StatusComponent
 var rolling := false
 
 const HORIZONTAL_FACING_DEADZONE := 0.1
@@ -110,9 +111,7 @@ func consume_knockback(delta: float) -> Vector2:
 
 func update_player_hit_reaction(root: Object, delta: float) -> void:
 	root.set("player_hit_flash_timer", maxf(float(root.get("player_hit_flash_timer")) - delta, 0.0)); root.set("player_hitstun_timer", maxf(float(root.get("player_hitstun_timer")) - delta, 0.0))
-	var player := root.get("player") as Sprite2D
-	var status := player.get_node_or_null("Status") as StatusComponent if player != null else null
-	if status != null and status.is_movement_locked():
+	if status_component != null and is_instance_valid(status_component) and status_component.is_movement_locked():
 		cancel_knockback()
 		return
 	if not is_in_knockback(): return

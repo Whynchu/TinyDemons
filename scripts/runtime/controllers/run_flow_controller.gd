@@ -7,6 +7,7 @@ const ROUTE_PAR_CALIBRATION_FACTOR := 150.0 / 90.0
 const AspectCatalogScript = preload("res://scripts/content/aspect_catalog.gd")
 var reward_definition: RewardDefinition = null
 var debug_run_number := 0
+var debug_boss_fixture_start := false
 
 
 func _reward_definition() -> RewardDefinition:
@@ -277,10 +278,10 @@ func begin_new_run(root: GameplayState, preserve_current_dungeon := false) -> vo
 	if player_status != null:
 		player_status.clear_all()
 	var debug_session := root.get_node_or_null("DebugSessionController") as Node
-	if (debug_session == null or not bool(debug_session.get("active"))) and not root.debug_start_in_boss_room:
+	if (debug_session == null or not bool(debug_session.get("active"))) and not debug_boss_fixture_start:
 		debug_run_number = 0
 	# A debug boss fixture must not erase the user's interrupted-run checkpoint.
-	if not root.debug_start_in_boss_room:
+	if not debug_boss_fixture_start:
 		ActiveRunSaveServiceScript.clear_snapshot(ProfileSaveService.current_slot())
 	# Every run begins at the hub in Gray. The selected starter flame is present
 	# at the fire, but the hub exits stay a real gate until the player attunes to

@@ -2,8 +2,128 @@
 
 _Only codex writes this file._
 
-**Focus:** None
+**Focus:** Available for next task
 **Updated:** 2026-10-10
+
+## Completed: contact transfer and responsive player Freeze correction
+
+Contact transfer now requires both an explicit allowlisted ID (Wet, Burn,
+Chill, Freeze, or Shocked) and the resource opt-in. Poison is explicitly
+non-transferable, including Shadow Poison. The player receives 3.5 seconds of
+Freeze versus 3.0 seconds for NPCs; fresh merged directional, button, analog,
+mouse, target, or guard input triggers a brief local shake and removes 0.12
+seconds. Freeze cancels player actions, blocks movement/casting/attacks, and
+holds the animation pose; knockback is cleared while the movement lock is
+active. Frozen actors receive a sprite-aligned icy overlay that fades with
+remaining Freeze duration.
+
+Verification: targeted source review and `git diff --check` pass. Godot
+diagnostics and runtime checks were not run because Godot/MCP is off. Existing
+unrelated worktree changes were preserved and not staged.
+
+## Completed: spawn type-cache compile correction
+
+The editor reported `Could not find type "SlimeSpawnComponent"` because the
+generated `.godot/global_script_class_cache.cfg` did not yet contain that class.
+`SlimeActor` and `SlimeRuntimeController` now preload the component script into
+a local constant and use that constant as the static type. This preserves typed
+component calls without relying on the generated global-class cache. Runtime
+behavior is unchanged. Godot validation remains pending because the editor/MCP
+is off and the command runner is failing before process startup.
+
+## Completed: typed spawn dispatch and headless measurement
+
+`SlimeSpawnComponent` now has a typed class and `SlimeActor` caches the typed
+reference. The runtime uses direct component methods for spawn active checks,
+ticks, cancellation, and spawn-lock checks; skeleton notice presentation uses
+its cached Brain component. The movement actor phase also reuses one ordered
+non-slime contact-candidate snapshot and reads typed `GameplayState` fields.
+
+The Run 30 headless report measured `slime_spawn_tick` at 0.872 and 0.873 ms
+per callback on two runs, then 0.838 ms on the final source run, compared with
+1.156 ms in the immediate pre-change run. Older reports ranged from 0.899 to
+1.036 ms, so this is directional rather than a controlled causal result. The
+final report is `capture-2026-10-10T13-06-39.json`: 519 frames, 42.52 headless
+FPS, 59.812 ms wall-frame p95, and no rendering metrics. Godot reported no
+runtime errors.
+
+An active-only spawn registry was tried and removed because its repeated
+per-callback measurements varied from 0.81 to 0.96 ms, including a run ending
+with zero active entries. The earlier movement snapshot/reference changes
+remain source-level optimizations; the headless scope totals did not isolate a
+measurable gain. A process audit found a stale profile worker from 12:09 still
+running during the older 12:11–12:27 measurements; those are now marked
+contaminated in the cost guide. I stopped only that orphaned headless worker.
+The separate Godot 4.7.2 editor remains open and was not stopped. The 60 FPS
+editor acceptance gate remains open.
+
+## Completed: measured Run 30 movement-path correction
+
+Kept the 60 Hz schedule and every collision sample. `SlimeGeometryQueries._current_slime_collision_polygon_is_walkable` now reads the `CollisionPolygon` global transform once per validation and calls the owning `WalkableArea` directly for each existing vertex, edge midpoint, and center sample. `SlimeActor.tick_runtime` reuses the aggro decision already computed for its movement branch by passing it through an optional scoot callback argument; direct callers retain the old callback fallback.
+
+The retained source corrections were exercised by the fixed-seed headless profile with exit code 0. A later process audit found an orphaned profile worker still consuming CPU during the initial comparison captures, so those early per-call differences are contaminated and cannot support causal savings claims. A deeper attempt to pass aggro into `SlimeBrain.tick_scoot` was reverted. The raw reports and measurement-integrity note are recorded in `docs/performance-cost-guide.md`; the editor 60 FPS gate remains open.
+
+**Next:** one focused Run 30 editor acceptance capture when Godot is available. Do not treat headless throughput or rendering counters as the acceptance result.
+
+## Completed: short headless CPU profile
+
+Ran `tools/profile_run30_headless.gd` with the installed Godot 4.7.1 mono console executable. Fixed a `stop_capture` call-site type error discovered on the first run (the method takes a Dictionary directly, not an Array containing one), then reran successfully. Report: `C:\Users\Samue\AppData\Roaming\Godot\app_userdata\TinyDemons\performance-captures\capture-2026-10-10T12-11-54.json`.
+
+The headless diagnostic recorded 4.641 s startup, 159 frames over 13.574 s, 11.71 average FPS, and 199.935 ms wall-frame p95. Largest inclusive scopes per frame: `frame_controller` 58.55 ms, `physics_callback_inclusive` 59.60 ms, and `slime_runtime` 46.83 ms; nested values overlap and must not be summed. Boot phases led by player animation build 937.8 ms, cloak refresh 802.3 ms, equipment visuals 724.4 ms, and slime textures 670.7 ms. Rendering metrics are unavailable in headless mode; the 64×64 window and severe outlier stalls make FPS/frame timings diagnostic only, not editor acceptance evidence. Editor FPS gate remains open.
+
+After the contact broadphase/cache correction, the focused Run 30 editor capture
+recorded 278 frames over 37.460 seconds: 7.421 FPS, 134.748 ms mean wall frame,
+p95 170.905 ms, p99 190.330 ms, and 278 hitches over 16.67 ms. The game window
+was focused, editor mode was confirmed, and the full fixture was running. No
+standalone run is authorized or planned.
+
+Measured scopes per rendered frame: slime runtime 94.001 ms, actor ticks
+56.133 ms, scoot movement 26.562 ms, contact snapshot 12.627 ms, separation
+9.276 ms, player contacts 7.503 ms, status visuals 5.433 ms, and actor
+occlusion 0.220 ms. Compared with the prior focused 5.653 FPS capture, slime
+runtime fell from 118.987 ms, contact snapshot from 17.965, and separation from
+18.212. This is a material contact-path improvement; the 60 FPS gate still
+fails by a wide margin.
+
+The contact query is source-reviewed by Thorn, Hexley, and Pip. Its envelope
+covers the unchanged radius/rectangle narrowphase; cache reuse is invalidated
+on grid rebuild/invalidation. MCP script diagnostics and whitespace checks
+pass. The next bounded review targets measured movement in `slime_brain.gd`,
+`slime_runtime_controller.gd`, and `slime_geometry_queries.gd`. Do not capture
+again until that source pass is ready.
+
+## Completed: source-backed editor cost map
+
+Created and linked `docs/performance-cost-guide.md`, mapping gameplay and
+rendering costs from source plus the existing editor capture. The 41.584-second
+Run 30 window recorded 6.613 FPS (151.215 ms mean wall frame, p95 190.115 ms)
+and 7.829 physics callbacks per rendered frame.
+Nested scopes place slime runtime at 110.983 ms/render, actor ticks at 66.202,
+and scoot movement at 32.282; contact snapshot and separation are each about
+15.3 ms/render. The capture ended with the game window unfocused, so it is
+diagnostic evidence rather than editor acceptance. Healer target scans and the
+target arc’s per-frame rebuild/redraw are visible source suspects, not measured
+hotspots. No new MCP playtest is planned for the guide.
+
+## In flight: quality-preserving Run 30 optimization
+
+The movement candidate filter is implemented in `actor_collision_system.gd`
+and `slime_runtime_controller.gd`: each movement call builds an ordered list of
+the current non-slime colliders once and reuses it for every displacement
+attempt. Candidate order, exact contacts, movement step size, floor/static
+checks, and the 60 Hz schedule are unchanged. The filtered list skips both
+repeated membership lookups in the hot loop; the original resolver behavior
+remains the default for unfiltered callers. Thorn confirmed ordered equivalence
+and no roster mutation or scratch reentry in the synchronous path; Hexley
+confirmed the player-facing collision contract; Pip bounded the one-run editor
+gate. Focused MCP script diagnostics and `git diff --check` pass. Next: one
+focused editor acceptance capture with the unchanged Run 30 setup.
+Healer/arc/outline changes and extra MCP probes remain out of scope without
+timing evidence.
+
+## Prior full-quality Run 30 performance handoff (still open)
+
+Earlier full-rate fixture capture measured 6.18 FPS (250 frames, 161.81 ms average wall frame, p95 204.82 ms) with 7.8 physics callbacks per rendered frame. Nested attribution in that window showed slime runtime at 119.46 ms/render, actor ticks at 64.80 ms, scoot movement at 29.80 ms, contact snapshot at 15.57 ms, separation at 13.23 ms, and position validation at 12.06 ms. A later editor-connected window is recorded above and in `docs/performance-cost-guide.md`; neither is acceptance evidence. The 60 FPS floor remains unmet. Current next direction: reduce measured full-rate movement/contact work while preserving collision, combat, healing, and effect clocks.
 
 ## Implemented: Layered status VFX and smaller weapon bubbles
 
@@ -1633,3 +1753,30 @@ remains open.
 
 Handoff: when the shared editor is idle, check Pause Items at native 240x160 and
 a wider Full viewport, then verify touch scrolling and controller selection.
+
+
+## 2026-10-10 — MCP debugger reader and warning cleanup
+
+- Added read-only `tiny_demons_debugger_read_errors` with pagination, source locations, stack details, untrusted wrapping, bounded responses, and Godot 4.7 Errors-tab lookup.
+- Captured 120 original panel entries: 0 runtime errors, 120 warnings. Fixed the reported warning sites while retaining extracted-controller fields and serialized resource APIs.
+- Fresh MCP play session: 0 Errors-panel entries, 0 errors, 0 warnings. Runtime connected successfully; returned editor to stopped state.
+- Focused `script_check`: extension and 39 changed scripts pass. It reports clone-only self-type errors for `gameplay_state.gd`, including numerous pre-existing typed calls; the actual project loaded and ran.
+
+## Completed: 0.3.84 composition-audit correction
+
+The CI regression floor now passes without changing its baseline. Extracted
+render-rate presentation, player Freeze handling, debug-run setup, debug stress
+roster construction, and run-level scaling into their feature owners. Replaced
+component node lookups with injected typed status references, typed actor
+collision and slime steering APIs, and moved processing ownership to the frame
+controller. GameplayState is at its 1,714-line baseline; RoomController is 2,170
+lines versus its 2,180-line baseline. The fixed-seed profile and Freeze behavior
+remain in the release. The editor is off, so no Godot runtime validation was
+performed.
+
+## Completed: 0.3.83 version bump and mobile web publish
+
+Updated the in-game version and current-version markers in the versioning docs,
+then committed only those seven files/hunks as `8f49106` and pushed to `main`.
+The Web Pages workflow started for this commit and is still running. Local
+unrelated worktree edits were left unstaged.

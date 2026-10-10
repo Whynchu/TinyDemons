@@ -1,3 +1,4 @@
+# Owner: Actor status state, ticking, suppression, and contact transfer.
 extends Node
 class_name StatusComponent
 

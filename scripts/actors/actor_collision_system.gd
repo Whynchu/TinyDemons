@@ -1,3 +1,4 @@
+# Owner: Actor collision geometry, contact broad phase, and response.
 extends Node
 class_name ActorCollisionSystem
 
@@ -70,7 +71,7 @@ func resolve_motion_contacts(
 	actor: Sprite2D,
 	movement: Vector2,
 	candidates: Array[Sprite2D],
-	root: Object,
+	root: GameplayState,
 	actor_is_slime_override: Variant = null,
 	candidates_are_slime_filtered: bool = false
 ) -> void:
@@ -92,7 +93,7 @@ func resolve_motion_contacts(
 		resolve_contact_pair(actor, other, movement, root)
 
 
-func resolve_slime_contacts(slimes: Array[Sprite2D], root: Object, max_passes: int = 2) -> int:
+func resolve_slime_contacts(slimes: Array[Sprite2D], root: GameplayState, max_passes: int = 2) -> int:
 	var resolved_pairs := 0
 	if slimes.size() < 2:
 		return 0
@@ -102,7 +103,7 @@ func resolve_slime_contacts(slimes: Array[Sprite2D], root: Object, max_passes: i
 	# resolver stays correct for direct callers.
 	if not _slime_grid_valid:
 		build_slime_grid(slimes, actor_foot, is_spawn_locked)
-	if not _contact_broadphase_ready_for_separation or _contact_broadphase_root_id != root.get_instance_id() or _contact_broadphase_physics_frame != Engine.get_physics_frames():
+	if not _contact_broadphase_ready_for_separation or _contact_broadphase_root_id != _contact_broadphase_key(slimes) or _contact_broadphase_physics_frame != Engine.get_physics_frames():
 		_contact_foot_cache.clear()
 		_contact_radius_cache.clear()
 		_contact_collision_rect_cache.clear()
@@ -158,7 +159,7 @@ func resolve_slime_contacts(slimes: Array[Sprite2D], root: Object, max_passes: i
 func capture_status_contact_pairs(
 	slimes: Array[Sprite2D],
 	player: Sprite2D,
-	root: Object,
+	root: GameplayState,
 	actor_foot: Callable,
 	is_spawn_locked: Callable,
 	is_dead: Callable
@@ -203,14 +204,20 @@ func capture_status_contact_pairs(
 			pair.configure(slime, player)
 			contacts.append(pair)
 	_contact_broadphase_ready_for_separation = true
-	_contact_broadphase_root_id = root.get_instance_id()
+	_contact_broadphase_root_id = _contact_broadphase_key(slimes, player)
 	_contact_broadphase_physics_frame = Engine.get_physics_frames()
 	return contacts
 
 
+func _contact_broadphase_key(slimes: Array[Sprite2D], fallback: Sprite2D = null) -> int:
+	if not slimes.is_empty() and is_instance_valid(slimes[0]):
+		return slimes[0].get_instance_id()
+	return fallback.get_instance_id() if fallback != null and is_instance_valid(fallback) else 0
+
+
 func _prepare_contact_broadphase_cache(
 	slimes: Array[Sprite2D],
-	root: Object,
+	root: GameplayState,
 	actor_foot: Callable,
 	is_spawn_locked: Callable = Callable(),
 	is_dead: Callable = Callable(),
@@ -231,7 +238,7 @@ func _prepare_contact_broadphase_cache(
 
 
 func _contact_capture_broadphase_radius(
-	root: Object,
+	root: GameplayState,
 	actor: Sprite2D,
 	actor_foot: Callable,
 	foot_cache: Dictionary,
@@ -276,7 +283,7 @@ func _contact_capture_actor_foot(actor: Sprite2D, cache: Dictionary, actor_foot:
 
 
 func _contact_capture_push_vector(
-	root: Object,
+	root: GameplayState,
 	actor: Sprite2D,
 	other: Sprite2D,
 	foot_cache: Dictionary,
@@ -307,7 +314,7 @@ func _contact_capture_push_vector(
 	return normal * push_distance if normal.is_finite() else Vector2.ZERO
 
 
-func _contact_capture_actor_radius(root: Object, actor: Sprite2D, cache: Dictionary) -> float:
+func _contact_capture_actor_radius(root: GameplayState, actor: Sprite2D, cache: Dictionary) -> float:
 	if cache.has(actor):
 		return float(cache[actor])
 	var radius := actor_contact_radius(root, actor)
@@ -315,7 +322,7 @@ func _contact_capture_actor_radius(root: Object, actor: Sprite2D, cache: Diction
 	return radius
 
 
-func _contact_capture_collision_rect(root: Object, actor: Sprite2D, cache: Dictionary) -> Rect2:
+func _contact_capture_collision_rect(root: GameplayState, actor: Sprite2D, cache: Dictionary) -> Rect2:
 	if cache.has(actor):
 		return cache[actor] as Rect2
 	var rect := root.call("_collision_rect", actor) as Rect2
@@ -381,7 +388,7 @@ func _grid_cell(point: Vector2) -> Vector2i:
 	return Vector2i(floori(point.x / SLIME_GRID_CELL_SIZE), floori(point.y / SLIME_GRID_CELL_SIZE))
 
 
-func _separate_slime_pair(root: Object, actor: Sprite2D, other: Sprite2D, push: Vector2) -> bool:
+func _separate_slime_pair(root: GameplayState, actor: Sprite2D, other: Sprite2D, push: Vector2) -> bool:
 	var actor_start := actor.position
 	var other_start := other.position
 	var actor_movement_locked := _actor_movement_locked(actor)
@@ -443,7 +450,7 @@ func _is_support_cast_locked(actor: Sprite2D) -> bool:
 	return support != null and bool(support.call("is_cast_active"))
 
 
-func _move_regular_away_from_boss(root: Object, regular: Sprite2D, preferred_direction: Vector2) -> bool:
+func _move_regular_away_from_boss(root: GameplayState, regular: Sprite2D, preferred_direction: Vector2) -> bool:
 	if preferred_direction.length_squared() <= 0.0001:
 		return false
 	var directions := [preferred_direction, preferred_direction.rotated(PI * 0.5)]
@@ -463,7 +470,7 @@ func _move_regular_away_from_boss(root: Object, regular: Sprite2D, preferred_dir
 	return false
 
 
-func _position_is_valid(root: Object, actor: Sprite2D) -> bool:
+func _position_is_valid(root: GameplayState, actor: Sprite2D) -> bool:
 	return bool(root.call("_can_actor_stand_at_current_position", actor)) and not bool(root.call("_collides_with_static", actor))
 
 
@@ -522,7 +529,7 @@ func _polygon_center(polygon: PackedVector2Array) -> Vector2:
 	return center / float(polygon.size())
 
 
-func resolve_contact_pair(actor: Sprite2D, other: Sprite2D, movement: Vector2, root: Object) -> void:
+func resolve_contact_pair(actor: Sprite2D, other: Sprite2D, movement: Vector2, root: GameplayState) -> void:
 	var slimes := root.get("slimes") as Array[Sprite2D]
 	if (slimes.has(actor) and root.has_method("_is_slime_spawn_locked") and bool(root.call("_is_slime_spawn_locked", actor))) or (slimes.has(other) and root.has_method("_is_slime_spawn_locked") and bool(root.call("_is_slime_spawn_locked", other))):
 		return
@@ -565,7 +572,7 @@ func resolve_contact_pair(actor: Sprite2D, other: Sprite2D, movement: Vector2, r
 		push_actor(root, actor, other, movement)
 
 
-func push_actor(root: Object, actor: Sprite2D, other: Sprite2D, movement: Vector2) -> void:
+func push_actor(root: GameplayState, actor: Sprite2D, other: Sprite2D, movement: Vector2) -> void:
 	var push := overlap_push_vector(root, actor, other)
 	if push == Vector2.ZERO: return
 	var actor_movement_locked := _actor_movement_locked(actor)
@@ -587,7 +594,7 @@ func push_actor(root: Object, actor: Sprite2D, other: Sprite2D, movement: Vector
 	try_move_swept(other, -push * other_share + movement * other_share * 0.45, 0.75, Callable(root, "_can_actor_stand_at_current_position"), Callable(root, "_collides_with_static"))
 
 
-func separate_actor(root: Object, actor: Sprite2D, other: Sprite2D) -> void:
+func separate_actor(root: GameplayState, actor: Sprite2D, other: Sprite2D) -> void:
 	if _actor_movement_locked(actor):
 		return
 	actor.position += overlap_push_vector(root, actor, other)
@@ -600,7 +607,7 @@ func _actor_movement_locked(actor: Sprite2D) -> bool:
 	return status != null and status.is_movement_locked()
 
 
-func overlap_push_vector(root: Object, actor: Sprite2D, other: Sprite2D) -> Vector2:
+func overlap_push_vector(root: GameplayState, actor: Sprite2D, other: Sprite2D) -> Vector2:
 	if (actor != null and bool(actor.get_meta("boss_airborne", false))) or (other != null and bool(other.get_meta("boss_airborne", false))):
 		return Vector2.ZERO
 	var chest := root.get("chest") as Sprite2D
@@ -621,7 +628,7 @@ func overlap_push_vector(root: Object, actor: Sprite2D, other: Sprite2D) -> Vect
 	return Vector2(0.0, -overlap.size.y if actor_center.y < other_center.y else overlap.size.y)
 
 
-func actors_are_in_contact(root: Object, actor: Sprite2D, other: Sprite2D) -> bool:
+func actors_are_in_contact(root: GameplayState, actor: Sprite2D, other: Sprite2D) -> bool:
 	if (actor != null and bool(actor.get_meta("boss_airborne", false))) or (other != null and bool(other.get_meta("boss_airborne", false))):
 		return false
 	var chest := root.get("chest") as Sprite2D
@@ -635,7 +642,7 @@ func actors_are_in_contact(root: Object, actor: Sprite2D, other: Sprite2D) -> bo
 	return actor_contact_push_vector(root, actor, other) != Vector2.ZERO
 
 
-func actor_contact_push_vector(root: Object, actor: Sprite2D, other: Sprite2D) -> Vector2:
+func actor_contact_push_vector(root: GameplayState, actor: Sprite2D, other: Sprite2D) -> Vector2:
 	if actor == null or other == null or not is_instance_valid(actor) or not is_instance_valid(other):
 		return Vector2.ZERO
 	if _uses_body_contact(actor) or _uses_body_contact(other):
@@ -655,7 +662,7 @@ func actor_contact_push_vector(root: Object, actor: Sprite2D, other: Sprite2D) -
 	return normal * push_distance if normal.is_finite() else Vector2.ZERO
 
 
-func player_contact_movement(root: Object, movement: Vector2) -> Vector2:
+func player_contact_movement(root: GameplayState, movement: Vector2) -> Vector2:
 	var player := root.get("player") as Sprite2D
 	if player == null or movement.length_squared() <= 0.0001:
 		return movement
@@ -684,7 +691,7 @@ func _uses_body_contact(actor: Sprite2D) -> bool:
 	return actor != null and float(actor.get_meta("encounter_scale", 1.0)) > 1.0
 
 
-func _player_occupies_active_doorway(root: Object) -> bool:
+func _player_occupies_active_doorway(root: GameplayState) -> bool:
 	var state := root as GameplayState
 	var room_controller := state.room_controller if state != null else null
 	var player := state.player if state != null else null
@@ -704,7 +711,7 @@ func _player_occupies_active_doorway(root: Object) -> bool:
 	return false
 
 
-func _rect_overlap_push_vector(root: Object, actor: Sprite2D, other: Sprite2D) -> Vector2:
+func _rect_overlap_push_vector(root: GameplayState, actor: Sprite2D, other: Sprite2D) -> Vector2:
 	var rect := root.call("_collision_rect", actor) as Rect2
 	var other_rect := root.call("_collision_rect", other) as Rect2
 	return _rect_contact_push_vector(rect, other_rect)
@@ -721,7 +728,7 @@ func _rect_contact_push_vector(rect: Rect2, other_rect: Rect2) -> Vector2:
 	return Vector2(0.0, -overlap.size.y if actor_center.y < other_center.y else overlap.size.y)
 
 
-func actor_contact_radius(root: Object, actor: Sprite2D) -> float:
+func actor_contact_radius(root: GameplayState, actor: Sprite2D) -> float:
 	var chest := root.get("chest") as Sprite2D
 	var guide: Rect2 = root.call("_collision_guide_rect_by_name", actor, "CollisionGuide")
 	return ActorGeometry.contact_radius(actor, chest, guide, 3.6)

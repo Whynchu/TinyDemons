@@ -9,6 +9,7 @@ const ChromaCostsScript = preload("res://scripts/content/chroma_costs.gd")
 ## Editor-facing attack tuning.
 @export var sword_beam_cooldown := 8.0
 @export var spin_hitstun_duration := 0.18
+var status_component: StatusComponent
 
 enum AttackKind { NONE, ATTACK1, ATTACK2, SPIN, CHARGING, CHARGED_ATTACK2 }
 
@@ -87,7 +88,7 @@ func start_charged_attack(root: GameplayState) -> bool:
 
 
 func _start_attack(root: GameplayState, new_kind: int, new_variant: int, animation_name: String) -> bool:
-	if _player_attack_locked(root):
+	if _player_attack_locked():
 		return false
 	var anim := root.player_animation_component
 	if anim == null:
@@ -231,7 +232,7 @@ func sword_beam_cost_for(chroma: Node) -> int:
 
 
 func begin_charge(root: GameplayState) -> bool:
-	if _player_attack_locked(root) or not should_enter_charge():
+	if _player_attack_locked() or not should_enter_charge():
 		return false
 	attack_kind = AttackKind.CHARGING
 	charge_release_pending = false
@@ -258,8 +259,7 @@ func begin_charge(root: GameplayState) -> bool:
 
 
 func tick_charge(root: GameplayState, delta: float) -> void:
-	if _player_attack_locked(root):
-		root._interrupt_player_attack()
+	if _player_attack_locked():
 		return
 	if attack_kind != AttackKind.CHARGING:
 		return
@@ -289,7 +289,7 @@ func tick_charge(root: GameplayState, delta: float) -> void:
 
 
 func apply_hitbox(root: GameplayState) -> void:
-	if _player_attack_locked(root):
+	if _player_attack_locked():
 		return
 	var hitbox := attack_polygon(root)
 	if hitbox.size() < 3:
@@ -553,11 +553,8 @@ func cancel() -> void:
 	attack_button_held = false
 
 
-func _player_attack_locked(root: GameplayState) -> bool:
-	if root == null or root.player == null:
-		return false
-	var status := root.player.get_node_or_null("Status") as StatusComponent
-	return status != null and status.is_attack_locked()
+func _player_attack_locked() -> bool:
+	return status_component != null and is_instance_valid(status_component) and status_component.is_attack_locked()
 
 
 func buffer_combo(window: float) -> void:

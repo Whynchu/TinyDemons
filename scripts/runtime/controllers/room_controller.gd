@@ -4,6 +4,8 @@ class_name RoomController
 const ASPECT_CATALOG_SCRIPT = preload("res://scripts/content/aspect_catalog.gd")
 const SLIME_VARIANT_CATALOG_SCRIPT = preload("res://scripts/content/slime_variant_catalog.gd")
 const ENEMY_FACTORY_SCRIPT = preload("res://scripts/content/enemy_factory.gd")
+const DEBUG_BOSS_STRESS_BUILDER = preload("res://scripts/content/debug_boss_stress_encounter_builder.gd")
+const ENCOUNTER_SCALING = preload("res://scripts/content/enemy_encounter_scaling.gd")
 const ROOM_TRANSITION_RESULT_SCRIPT = preload("res://scripts/runtime/contexts/room_transition_result.gd")
 const ROOM_ACTIVATION_RESULT_SCRIPT = preload("res://scripts/runtime/contexts/room_activation_result.gd")
 const ROOM_SPAWN_RESULT_SCRIPT = preload("res://scripts/runtime/contexts/room_spawn_result.gd")
@@ -177,7 +179,7 @@ func ensure_layout(graph: DungeonGraph, room_id: StringName, room: DungeonGraph.
 			state["regular_room_treasure"] = room_type == DungeonGraph.ROOM_COMBAT and progression_run_rank >= 1 and (room.reward_tier == DungeonGraph.REWARD_RISK or treasure_rng.randf() < _room_definition().regular_room_treasure_chance)
 		if not state.has("enemy_spawn_seed"):
 			state["enemy_spawn_seed"] = room.generation_seed + 303
-		EncounterDefinition.migrate_saved_room_support_companions(state, room, room_type, _generated_enemy_base_level(room_depth), progression_run_rank, progression_run_number, _enemy_level_cap(), _room_definition(), debug_enemy_variant.is_empty(), run_element_theme); room_states[room_id] = state
+EncounterDefinition.migrate_saved_room_support_companions(state, room, room_type, ENCOUNTER_SCALING.base_level(progression_run_rank), progression_run_rank, progression_run_number, ENCOUNTER_SCALING.level_cap(progression_run_rank), _room_definition(), debug_enemy_variant.is_empty(), run_element_theme); room_states[room_id] = state
 	elif room_type == DungeonGraph.ROOM_DOWNSTAIRS:
 		if not state.has("enemy_variants"):
 			var boss_encounter := _generate_boss_encounter(room.generation_seed, room_depth)
@@ -261,7 +263,7 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 	# Popcorn is deliberately tied to the player's durable level instead of the
 	# dungeon run curve. It is recovery fodder, so it should remain five levels
 	# below the player even when a high-level player revisits an early run.
-	var base_level := _generated_enemy_base_level(room_depth) + (1 if special_room else 0)
+	var base_level := ENCOUNTER_SCALING.base_level(progression_run_rank) + (1 if special_room else 0)
 	if encounter_tier == DungeonGraph.ENCOUNTER_DANGEROUS:
 		base_level += 1
 	elif encounter_tier == DungeonGraph.ENCOUNTER_ELITE:
@@ -279,7 +281,7 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 		# pressure spike intact while guaranteeing every actual popcorn slot in a
 		# shadow encounter is a Normal Slime.
 		var selected_definition := ENEMY_FACTORY_SCRIPT.definition(StringName(selected))
-		var is_popcorn := not force_debug_enemy and selected != "purple" and selected_definition != null and selected_definition.type_id == &"slime" and encounter_rng.randf() < _popcorn_enemy_chance()
+		var is_popcorn := not force_debug_enemy and selected != "purple" and selected_definition != null and selected_definition.type_id == &"slime" and encounter_rng.randf() < ENCOUNTER_SCALING.popcorn_chance(_room_definition(), progression_run_rank)
 		popcorn_flags.append(is_popcorn)
 		popcorn_types.append(ROOM_POPCORN if is_popcorn else "")
 		elite_flags.append(encounter_tier == DungeonGraph.ENCOUNTER_ELITE and not is_popcorn)
@@ -288,14 +290,14 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 			# Elite levels stay above the full normal encounter band, so the
 			# overhead marker communicates a real stat-pool increase.
 			level_floor = base_level + 1
-		var enemy_level := _popcorn_enemy_level() if is_popcorn else encounter_rng.randi_range(level_floor, base_level + level_spread)
-		var level_cap := _enemy_level_cap() + ELITE_ENCOUNTER_LEVEL_BONUS if encounter_tier == DungeonGraph.ENCOUNTER_ELITE and not is_popcorn else _enemy_level_cap()
+		var enemy_level := ENCOUNTER_SCALING.popcorn_level(player_level) if is_popcorn else encounter_rng.randi_range(level_floor, base_level + level_spread)
+		var level_cap := ENCOUNTER_SCALING.level_cap(progression_run_rank) + ELITE_ENCOUNTER_LEVEL_BONUS if encounter_tier == DungeonGraph.ENCOUNTER_ELITE and not is_popcorn else ENCOUNTER_SCALING.level_cap(progression_run_rank)
 		levels.append(enemy_level if is_popcorn else clampi(enemy_level, 1, level_cap))
 	definition.finalize_room_encounter(
 		force_debug_enemy, variants, levels, popcorn_flags, popcorn_types,
-		ambush_flags, elite_flags, _popcorn_enemy_level(), ROOM_POPCORN,
+		ambush_flags, elite_flags, ENCOUNTER_SCALING.popcorn_level(player_level), ROOM_POPCORN,
 		ELITE_POPCORN, encounter_rng, _room_definition(), progression_run_rank, progression_run_number,
-		base_level, level_spread, encounter_tier, _enemy_level_cap(), run_element_theme, generation_seed)
+		base_level, level_spread, encounter_tier, ENCOUNTER_SCALING.level_cap(progression_run_rank), run_element_theme, generation_seed)
 	return {"variants": variants, "levels": levels, "popcorn": popcorn_flags, "popcorn_types": popcorn_types, "ambush": ambush_flags, "elite": elite_flags}
 
 
@@ -334,9 +336,9 @@ func _preferred_variant_weight(variant: String) -> float:
 	return definition.preferred_weight if definition != null and definition.preferred_weight > 0.0 else 0.75
 
 func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictionary:
-	var boss_level := _generated_enemy_base_level(room_depth)
+	var boss_level := ENCOUNTER_SCALING.base_level(progression_run_rank)
 	if not debug_enemy_variant.is_empty() and EnemyFactory.is_variant(debug_enemy_variant):
-		return EnemyFactory.single_variant_encounter(debug_enemy_variant, mini(boss_level, _enemy_level_cap()))
+		return EnemyFactory.single_variant_encounter(debug_enemy_variant, mini(boss_level, ENCOUNTER_SCALING.level_cap(progression_run_rank)))
 	if debug_boss_stress_encounter:
 		return _generate_debug_boss_stress_encounter(generation_seed, boss_level)
 	# Keep early boss rooms focused on the boss and low-level neutral popcorn.
@@ -355,7 +357,7 @@ func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictiona
 	var has_explicit_boss_variant := bool(boss_selection.has_explicit_variant)
 	if boss_variant.is_empty(): return {}
 	var variants: Array[String] = [String(boss_variant)]
-	var levels: Array[int] = [mini(boss_level + 1, _enemy_level_cap())]
+	var levels: Array[int] = [mini(boss_level + 1, ENCOUNTER_SCALING.level_cap(progression_run_rank))]
 	var scales: Array[float] = [3.0]
 	var encounter_rng := RandomNumberGenerator.new()
 	encounter_rng.seed = generation_seed + 707
@@ -367,7 +369,7 @@ func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictiona
 		if not has_explicit_boss_variant and run_element_theme.has(ElementCatalog.Element.SHADOW) and progression_run_rank > 1 and encounter_rng.randf() < SHADOW_BOSS_CHANCE:
 			selected_variant = "purple"
 		variants.append(selected_variant)
-		levels.append(mini(boss_level, _enemy_level_cap()))
+		levels.append(mini(boss_level, ENCOUNTER_SCALING.level_cap(progression_run_rank)))
 		scales.append(1.0)
 	# Boss rooms add run-scaled popcorn support, mirroring Shadow's mana drops.
 	var popcorn_flags: Array[bool] = []
@@ -382,7 +384,7 @@ func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictiona
 		if progression_run_number >= SKELETON_FIRST_RUN_NUMBER and not has_explicit_boss_variant and not support_variant_pool.is_empty():
 			support_variant = EncounterDefinition.select_weighted_variant(support_variant_pool, encounter_rng)
 		variants.append(support_variant)
-		levels.append(_popcorn_enemy_level())
+		levels.append(ENCOUNTER_SCALING.popcorn_level(player_level))
 		scales.append(1.0)
 		popcorn_flags.append(true)
 		popcorn_types.append(ELITE_POPCORN)
@@ -392,93 +394,18 @@ func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictiona
 
 
 func _generate_debug_boss_stress_encounter(generation_seed: int, boss_level: int) -> Dictionary:
-	var boss_rng := RandomNumberGenerator.new()
-	boss_rng.seed = generation_seed + 991
-	var boss_selection := EncounterDefinition.select_boss_variant(boss_variant_selection, run_element_theme, progression_run_number, generation_seed, boss_rng)
-	var boss_variant := boss_selection.variant as StringName
-	if boss_variant.is_empty():
-		return {}
-	var variants: Array[String] = [String(boss_variant)]
-	var levels: Array[int] = [mini(boss_level + 1, _enemy_level_cap())]
-	var scales: Array[float] = [3.0]
-	var popcorn_flags: Array[bool] = [false]
-	var popcorn_types: Array[String] = [""]
-	var ambush_flags: Array[bool] = [false]
 	if run_element_theme.is_empty():
 		run_element_theme = EncounterDefinition.select_run_element_theme(generation_seed, progression_run_number)
-	for index in 3:
-		var element := run_element_theme[index % run_element_theme.size()]
-		_append_debug_stress_enemy(variants, levels, scales, popcorn_flags, popcorn_types, ambush_flags, _stress_variant_for_element(&"slime", element, false), boss_level)
-	_append_debug_stress_enemy(variants, levels, scales, popcorn_flags, popcorn_types, ambush_flags, _stress_variant_for_element(&"skeleton", ElementCatalog.Element.NEUTRAL, false), boss_level)
-	for index in 3:
-		var element := run_element_theme[index % run_element_theme.size()]
-		_append_debug_stress_enemy(variants, levels, scales, popcorn_flags, popcorn_types, ambush_flags, _stress_variant_for_element(&"skeleton", element, false), boss_level)
-	for index in 4:
-		var element := run_element_theme[index % run_element_theme.size()]
-		_append_debug_stress_enemy(variants, levels, scales, popcorn_flags, popcorn_types, ambush_flags, _stress_variant_for_element(&"slime", element, true), boss_level)
-	EncounterDefinition.constrain_generated_roster(variants, ambush_flags, run_element_theme, progression_run_number, generation_seed, "Debug boss stress")
-	return {"variants": variants, "levels": levels, "scales": scales, "popcorn": popcorn_flags, "popcorn_types": popcorn_types, "ambush": ambush_flags}
-
-
-func _stress_variant_for_element(type_id: StringName, element: int, require_support_caster: bool) -> StringName:
-	for variant_id in EnemyFactory.variants_for_type(type_id):
-		var definition := EnemyFactory.definition(variant_id)
-		if definition == null or definition.element != element or definition.encounter_min_run_number > progression_run_number:
-			continue
-		if require_support_caster != (definition.behavior_id == &"support_caster"):
-			continue
-		return variant_id
-	return &""
-
-
-func _append_debug_stress_enemy(
-	variants: Array[String],
-	levels: Array[int],
-	scales: Array[float],
-	popcorn_flags: Array[bool],
-	popcorn_types: Array[String],
-	ambush_flags: Array[bool],
-	variant_id: StringName,
-	boss_level: int
-) -> void:
-	if variant_id.is_empty():
-		return
-	variants.append(String(variant_id))
-	levels.append(mini(boss_level, _enemy_level_cap()))
-	scales.append(1.0)
-	popcorn_flags.append(false)
-	popcorn_types.append("")
-	ambush_flags.append(false)
-
-
-func _enemy_level_cap() -> int:
-	return progression_run_rank + 2 if progression_run_rank <= 3 else progression_run_rank + 4
-
-
-func _generated_enemy_base_level(_room_depth: int) -> int:
-	# Flat difficulty: enemy level derives from run rank, not room depth. The
-	# depth parameter is retained only so callers (boss/encounter) keep an
-	# unchanged signature while the difficulty source is rank-only.
-	# R1-R3 use compact three-level bands; from R4 onward the encounter band
-	# widens to five levels as the dungeon starts scaling more aggressively.
-	return progression_run_rank + 1 if progression_run_rank <= 3 else progression_run_rank + 2
-
-
-func _popcorn_enemy_chance() -> float:
-	return _room_definition().popcorn_chance_for_rank(progression_run_rank)
-
-
-func _popcorn_enemy_level() -> int:
-	return maxi(1, player_level - 5)
+	return DEBUG_BOSS_STRESS_BUILDER.build(boss_variant_selection, run_element_theme, progression_run_number, generation_seed, boss_level, ENCOUNTER_SCALING.level_cap(progression_run_rank))
 
 
 func _popcorn_enemy_level_for_root(root: Object) -> int:
 	var profile := root.get("player_profile") as PlayerProfile
-	return maxi(1, profile.level - 5) if profile != null else _popcorn_enemy_level()
+	return ENCOUNTER_SCALING.popcorn_level_for_profile(profile, player_level)
 
 
 func _popcorn_enemy_level_for_profile(profile: PlayerProfile) -> int:
-	return maxi(1, profile.level - 5) if profile != null else _popcorn_enemy_level()
+	return ENCOUNTER_SCALING.popcorn_level_for_profile(profile, player_level)
 
 
 func _boss_support_popcorn_count() -> int:

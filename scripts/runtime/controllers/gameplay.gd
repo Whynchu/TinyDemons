@@ -122,16 +122,6 @@ func _update_music_state() -> void:
 		_start_run_music()
 	else:
 		_fade_out_music()
-func _process(delta: float) -> void:
-	var capture_service: Node = performance_capture_service as Node if OS.is_debug_build() else null
-	var capture_active := capture_service != null and bool(capture_service.get("capturing")) and bool(capture_service.get("scope_capture_enabled"))
-	var started_usec := Time.get_ticks_usec() if capture_active else 0
-	if gameplay_frame_controller != null:
-		gameplay_frame_controller.present(self, delta)
-	if capture_active:
-		capture_service.call("record_scope", &"frame_presentation", Time.get_ticks_usec() - started_usec)
-
-
 func _physics_process(delta: float) -> void:
 	var capture_service: Node = null
 	var capture_active := false

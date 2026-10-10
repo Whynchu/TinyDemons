@@ -23,10 +23,7 @@ const DEFAULT_CHROMA_TUNING: ChromaTuning = preload("res://resources/tuning/chro
 @export_category("Debug")
 @export var debug_start_in_boss_room := false
 @export var debug_boss_variant: StringName = &""
-@export_range(0, 99, 1) var debug_run_number := 0
-@export_range(0, 2147483647, 1) var debug_dungeon_seed := 0
-@export var debug_player_invulnerable := false
-@export var debug_boss_stress_encounter := false
+@export var debug_run_configuration: DebugRunConfiguration = DebugRunConfiguration.new()
 @export var debug_enemy_test_id: StringName = &""
 @export var debug_actor_geometry := false
 @export var debug_stat_breakdown := false
@@ -1560,8 +1557,6 @@ func _update_slime_knockback(slime: Sprite2D, delta: float) -> bool: return comb
 func _reset_slime_scoot(slime: Sprite2D) -> void: combat_runtime_controller.call("reset_slime_scoot", self, slime)
 func _show_slime_hit_flash(slime: Sprite2D) -> void: combat_runtime_controller.call("show_slime_hit_flash", self, slime)
 func _update_enemy_hit_flashes(delta: float) -> void: combat_runtime_controller.call("update_enemy_hit_flashes", self, delta)
-func _maintain_enemy_regen_lock(delta: float) -> void: combat_runtime_controller.call("maintain_enemy_regen_lock", self, delta)
-func _update_enemy_health_presentation(delta: float) -> void: combat_runtime_controller.call("update_enemy_health_presentation", self, delta)
 func _spawn_damage_number(slime: Sprite2D, amount: float, was_critical: bool = false, attack_element: int = 0, immune: bool = false) -> void: combat_runtime_controller.call("spawn_damage_number", self, slime, amount, was_critical, attack_element, immune)
 func _spawn_player_number(text: String, value: int, color: Color, is_healing: bool, display_text: String) -> void: combat_runtime_controller.call("spawn_player_number", self, text, value, color, is_healing, display_text)
 func _spawn_player_damage_number(amount: float, attack_element: int = 0, immune: bool = false) -> void: combat_runtime_controller.call("spawn_player_damage_number", self, amount, attack_element, immune)

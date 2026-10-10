@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="DebugRunConfiguration" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/content/debug_run_configuration.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+run_number = 30
+dungeon_seed = 24681357
+player_invulnerable = true
+boss_stress_encounter = true

@@ -1,3 +1,4 @@
+# Owner: Slime support casting and heal behavior.
 extends Node
 class_name SlimeSupportComponent
 

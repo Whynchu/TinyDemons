@@ -196,13 +196,16 @@ func context_steering_direction(actor: Sprite2D, tuning: SlimeTuning, random_sou
 		root = root.get_parent()
 	if root == null:
 		return Vector2.RIGHT
-	var player := root.get("player") as Sprite2D
+	var gameplay := root as GameplayState
+	if gameplay == null:
+		return Vector2.RIGHT
+	var player := gameplay.player
 	if player == null:
 		return Vector2.RIGHT
 	var slime_foot: Vector2 = actor_foot.call(actor)
 	var collision_shape_offsets: Array[Vector2] = []
 	var collision_shape_center_offset := Vector2.ZERO
-	var collision_polygon := root.call("_slime_collision_polygon", actor, slime_foot) as PackedVector2Array
+	var collision_polygon := gameplay.slime_runtime_controller.slime_collision_polygon(gameplay, actor, slime_foot)
 	if collision_polygon.size() >= 3:
 		for point in collision_polygon:
 			var offset: Vector2 = point - slime_foot
@@ -237,7 +240,7 @@ func context_steering_direction(actor: Sprite2D, tuning: SlimeTuning, random_sou
 	# Buddy avoidance only cares about slimes within steering clearance. Query
 	# the broad-phase grid once instead of re-scanning the whole crowd per
 	# candidate direction.
-	var collision := root.get("actor_collision_system") as ActorCollisionSystem
+	var collision := gameplay.actor_collision_system
 	var nearby_radius := maxf(tuning.steering_clearance, tuning.support_preferred_range) if support_positioning else tuning.steering_clearance
 	var nearby: Array[Sprite2D] = collision.slime_grid_candidates(slime_foot, nearby_radius) if collision != null else []
 	var actor_is_boss := _is_boss(actor)
@@ -246,7 +249,7 @@ func context_steering_direction(actor: Sprite2D, tuning: SlimeTuning, random_sou
 	var steering_buddy_weights: Array[float] = []
 	var support_buddy_feet: Array[Vector2] = []
 	for buddy in nearby:
-		if buddy == actor or bool(root.call("_is_slime_dead", buddy)):
+		if buddy == actor or gameplay.combat_runtime_controller.is_slime_dead(gameplay, buddy):
 			continue
 		var buddy_foot: Vector2 = actor_foot.call(buddy)
 		var buddy_delta: Vector2 = slime_foot - buddy_foot
@@ -265,14 +268,14 @@ func context_steering_direction(actor: Sprite2D, tuning: SlimeTuning, random_sou
 		var danger := 0.0
 		var candidate_walkable := true
 		if collision_shape_offsets.is_empty():
-			candidate_walkable = bool(root.call("_is_slime_collision_rect_walkable_at", actor, candidate_foot))
+			candidate_walkable = gameplay.slime_runtime_controller.is_slime_collision_rect_walkable_at(gameplay, actor, candidate_foot)
 		else:
 			for offset in collision_shape_offsets:
-				if not bool(root.call("_is_slime_walkable_point", candidate_foot + offset)):
+				if not gameplay.slime_runtime_controller.is_slime_walkable_point(gameplay, candidate_foot + offset):
 					candidate_walkable = false
 					break
 			if candidate_walkable:
-				candidate_walkable = bool(root.call("_is_slime_walkable_point", candidate_foot + collision_shape_center_offset))
+				candidate_walkable = gameplay.slime_runtime_controller.is_slime_walkable_point(gameplay, candidate_foot + collision_shape_center_offset)
 		if not candidate_walkable:
 			danger += tuning.steering_blocked_danger_weight
 

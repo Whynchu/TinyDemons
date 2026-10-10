@@ -1,3 +1,4 @@
+# Owner: Actor status aura and freeze tint presentation.
 extends Node
 class_name ElementAuraComponent
 
@@ -264,7 +265,7 @@ func _refresh_freeze_tint(actor: Sprite2D, component: StatusComponent) -> void:
 	if record == null or record.origin != StatusRecord.Origin.APPLIED or record.remaining <= 0.0 or actor.texture == null:
 		_hide_freeze_tint()
 		return
-	if _valid_sprite(_freeze_tint_overlay) == null or _freeze_tint_overlay.get_parent() != overlay_parent:
+	if _valid_sprite(_freeze_tint_overlay) == null:
 		if _valid_sprite(_freeze_tint_overlay) != null:
 			_freeze_tint_overlay.queue_free()
 		_freeze_tint_overlay = _new_sibling_overlay(actor, "FreezeTint")
