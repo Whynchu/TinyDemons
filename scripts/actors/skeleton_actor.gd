@@ -44,10 +44,16 @@ var animation_timer := 0.0
 var animation_frame := 0
 var animation_name := "idle"
 var animation_facing_left := false
+var _attack_sequence_right: Array[Texture2D] = []
+var _attack_sequence_left: Array[Texture2D] = []
+var _attack_sequence_right_ready := false
+var _attack_sequence_left_ready := false
 
 
 func apply_authored_visuals() -> void:
 	warm_authored_frames()
+	_attack_sequence_right_ready = false
+	_attack_sequence_left_ready = false
 	idle_frames = _cached_idle_frames.duplicate()
 	if texture == null and not idle_frames.is_empty():
 		texture = idle_frames[0]
@@ -93,7 +99,18 @@ static func warm_authored_frames() -> void:
 
 
 func attack_sequence_frames(facing_left: bool) -> Array[Texture2D]:
-	var authored_attack: Array[Texture2D] = attack_left_frames if facing_left else attack_frames
+	if facing_left:
+		if not _attack_sequence_left_ready:
+			_attack_sequence_left = _build_attack_sequence(attack_left_frames, between_attack_left_frame)
+			_attack_sequence_left_ready = true
+		return _attack_sequence_left
+	if not _attack_sequence_right_ready:
+		_attack_sequence_right = _build_attack_sequence(attack_frames, between_attack_frame)
+		_attack_sequence_right_ready = true
+	return _attack_sequence_right
+
+
+func _build_attack_sequence(authored_attack: Array[Texture2D], recovery: Texture2D) -> Array[Texture2D]:
 	var sequence: Array[Texture2D] = []
 	for frame_index in authored_attack.size():
 		var attack_frame := authored_attack[frame_index]
@@ -101,7 +118,6 @@ func attack_sequence_frames(facing_left: bool) -> Array[Texture2D]:
 		if frame_index == 1:
 			for _tick in range(ATTACK_SECOND_FRAME_HOLD_TICKS - 1):
 				sequence.append(attack_frame)
-	var recovery := between_attack_left_frame if facing_left else between_attack_frame
 	if recovery != null:
 		for _frame_index in BETWEEN_ATTACK_RECOVERY_FRAMES:
 			sequence.append(recovery)

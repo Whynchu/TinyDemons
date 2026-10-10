@@ -1,4 +1,5 @@
 extends Node
+class_name SlimeSpawnComponent
 
 ## Owns the short first-entry spawn animation state. While active, the parent
 ## slime is intentionally non-interactive; the runtime controller advances the

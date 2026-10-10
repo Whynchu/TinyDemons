@@ -6,6 +6,8 @@ const ACTOR_LIGHTING_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controll
 const IMBUE_EMISSION_TAG := &"imbue_element"
 const STATUS_OUTLINE_OFFSETS: Array[Vector2i] = [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]
 const MAX_SHARED_OUTLINE_TEXTURES := 192
+const FREEZE_TINT_MODULATE := Color(0.58, 0.83, 1.0, 1.0)
+const FREEZE_TINT_MAX_OPACITY := 0.5
 
 @export var actor_sprite: Sprite2D
 # Player attacks temporarily render through a separate sprite; include it in the aura source set.
@@ -22,6 +24,7 @@ var _imbue_flashes: Dictionary = {}
 var _imbue_emission_timers: Dictionary = {}
 var _status_outline: Sprite2D = null
 var _status_outline_source_key := ""
+var _freeze_tint_overlay: Sprite2D = null
 var _status_particle_timers: Dictionary = {}
 var _pending_suppression_bursts: Array[Dictionary] = []
 var _stun_shake_remaining := 0.0
@@ -63,6 +66,8 @@ func clear_status_visuals() -> void:
 	_stun_shake_remaining = 0.0
 	_stun_shake_duration = 0.0
 	_stun_shake_amplitude = 0.0
+	if _freeze_tint_overlay != null and is_instance_valid(_freeze_tint_overlay):
+		_freeze_tint_overlay.visible = false
 	_queue_status_outline()
 
 
@@ -142,6 +147,7 @@ func refresh_status_aura() -> void:
 	var actor := _active_actor_sprite()
 	var component := _valid_status_component(status_component)
 	ACTOR_LIGHTING_CONTROLLER_SCRIPT.refresh_actor_status_tint(actor_sprite, component)
+	_refresh_freeze_tint(actor, component)
 	var definition: StatusEffectDefinition = component.strongest_active_definition() if component != null else null
 	if actor == null or definition == null or actor.texture == null or overlay_parent == null or not is_instance_valid(overlay_parent):
 		var old_outline := _valid_sprite(_status_outline)
@@ -189,6 +195,12 @@ func trigger_status_stun_shake(duration: float, is_initial_pulse: bool) -> void:
 	_stun_shake_amplitude = 3.0 if is_initial_pulse else 2.0
 
 
+func trigger_freeze_input_shake() -> void:
+	_stun_shake_remaining = 0.08
+	_stun_shake_duration = 0.08
+	_stun_shake_amplitude = 1.0
+
+
 func status_stun_visual_offset() -> Vector2:
 	if _stun_shake_remaining <= 0.0 or _stun_shake_duration <= 0.0:
 		return Vector2.ZERO
@@ -200,13 +212,13 @@ func status_stun_visual_offset() -> Vector2:
 
 
 func advance_status_visuals(delta: float, effects: EffectsSpawner, rng: RandomNumberGenerator, pixel_texture: Callable) -> void:
-	refresh_status_aura()
 	_stun_shake_remaining = maxf(_stun_shake_remaining - maxf(delta, 0.0), 0.0)
 	if _stun_shake_remaining <= 0.0:
 		_stun_shake_duration = 0.0
 		_stun_shake_amplitude = 0.0
 	var actor := _active_actor_sprite()
 	var component := _valid_status_component(status_component)
+	_refresh_freeze_tint(actor, component)
 	if actor == null or component == null or effects == null or not is_instance_valid(effects) or not pixel_texture.is_valid():
 		_status_particle_timers.clear()
 		_pending_suppression_bursts.clear()
@@ -233,11 +245,53 @@ func advance_status_visuals(delta: float, effects: EffectsSpawner, rng: RandomNu
 			_status_particle_timers.erase(status_id)
 
 
+func present_status_aura() -> void:
+	refresh_status_aura()
+
+
 func _active_actor_sprite() -> Sprite2D:
 	var alternate := _valid_sprite(alternate_actor_sprite)
 	if alternate != null and alternate.visible and alternate.is_visible_in_tree():
 		return alternate
 	return _valid_sprite(actor_sprite)
+
+
+func _refresh_freeze_tint(actor: Sprite2D, component: StatusComponent) -> void:
+	if actor == null or component == null or overlay_parent == null or not is_instance_valid(overlay_parent):
+		_hide_freeze_tint()
+		return
+	var record := component.record_for(&"freeze")
+	if record == null or record.origin != StatusRecord.Origin.APPLIED or record.remaining <= 0.0 or actor.texture == null:
+		_hide_freeze_tint()
+		return
+	if _valid_sprite(_freeze_tint_overlay) == null or _freeze_tint_overlay.get_parent() != overlay_parent:
+		if _valid_sprite(_freeze_tint_overlay) != null:
+			_freeze_tint_overlay.queue_free()
+		_freeze_tint_overlay = _new_sibling_overlay(actor, "FreezeTint")
+		_freeze_tint_overlay.top_level = true
+	var overlay := _freeze_tint_overlay
+	overlay.texture = actor.texture
+	overlay.hframes = actor.hframes
+	overlay.vframes = actor.vframes
+	overlay.frame = actor.frame
+	overlay.region_enabled = actor.region_enabled
+	overlay.region_rect = actor.region_rect
+	overlay.material = actor.material
+	overlay.use_parent_material = actor.use_parent_material
+	overlay.global_transform = actor.global_transform
+	overlay.offset = actor.offset
+	overlay.centered = actor.centered
+	overlay.flip_h = actor.flip_h
+	overlay.flip_v = actor.flip_v
+	overlay.z_index = actor.z_index
+	var thaw_progress := clampf(record.remaining / maxf(record.total_duration, 0.001), 0.0, 1.0)
+	overlay.modulate = Color(FREEZE_TINT_MODULATE.r, FREEZE_TINT_MODULATE.g, FREEZE_TINT_MODULATE.b, FREEZE_TINT_MAX_OPACITY * thaw_progress)
+	overlay.visible = thaw_progress > 0.0 and actor.visible and actor.is_visible_in_tree()
+
+
+func _hide_freeze_tint() -> void:
+	if _valid_sprite(_freeze_tint_overlay) != null:
+		_freeze_tint_overlay.visible = false
 
 
 func _new_sibling_overlay(layer: Sprite2D, overlay_name: String) -> Sprite2D:
@@ -294,6 +348,9 @@ func _exit_tree() -> void:
 	if status_component != null and is_instance_valid(status_component) and status_component.suppression_changed.is_connected(_on_affinity_suppression_changed):
 		status_component.suppression_changed.disconnect(_on_affinity_suppression_changed)
 	clear_imbue()
+	if _valid_sprite(_freeze_tint_overlay) != null:
+		_freeze_tint_overlay.queue_free()
+	_freeze_tint_overlay = null
 	_queue_status_outline()
 
 

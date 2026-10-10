@@ -44,8 +44,8 @@ currently a dead end.
 | Product | `freeze` |
 | Proc | guaranteed when both ingredients are present on the same actor |
 | Consumed | both ingredient statuses (`wet`, `chill`) are removed and replaced by `freeze` |
-| Duration | 3.0 s, refreshed (not stacked) on re-application |
-| Effect | movement locked, incoming damage +25% |
+| Duration | 3.0 s NPC / 3.5 s player, refreshed (not stacked) on re-application |
+| Effect | movement locked, incoming damage +25%; player attacks/casts and animation stop, while fresh inputs shake and shorten Freeze |
 
 The reaction is symmetric and order-independent: `wet` then `chill` and
 `chill` then `wet` both freeze.
@@ -178,8 +178,11 @@ The original movement-only decision is superseded by the 2026-10-05 combat
 update: Freeze still leaves `attack_speed_multiplier()` unchanged, but Slime
 actors pause attack updates while Freeze is active. The current and legacy
 Slime tick paths share this lock, and boss phases that resist movement locks
-also resist Freeze's attack lock. Player Freeze remains governed by the player
-control path; this update specifically prevents enemies from attacking.
+also resist Freeze's attack lock. The player control path cancels active
+attacks, rolls, and casts, holds the player on an idle frame, and blocks new
+attacks and casts until thaw. Player Freeze lasts 0.5 seconds longer than the
+3.0-second NPC duration; each fresh gameplay input shortens it by 0.12 seconds
+and triggers a small local shake.
 
 Runtime enforcement also stops movement already in progress: an active slime
 scoot is canceled, Skeleton's direct-walk path is guarded, and attack lunges,
@@ -199,11 +202,14 @@ callback.
 - Wet and Freeze use the requested `W` and `F` badge glyphs. The world-space
   status outline is a top-level sibling at one depth step behind the actor;
   player, enemy, and NPC setup share the same `ElementAuraComponent` path.
+- A translucent icy sprite overlay follows the actor frame and fades with the
+  Freeze record's remaining-duration fraction. Player input shake uses the
+  existing local actor-visual offset path.
 
 ## Numbers, and why they are provisional
 
-- Duration 3.0 s — two normal attack cycles, short enough that a miss feels
-  earned rather than wasted.
+- Duration 3.0 s for NPCs plus a 0.5 s player extension — the player can shorten
+  the extra lock by making fresh directional or button inputs.
 - Vulnerability +25%, `maximum_stacks = 1` with duration refresh rather than
   stacking — stacking would need a rising curve and a hard cap decision that
   the first version does not need.
@@ -268,7 +274,12 @@ not this one.
 8. Bosses: `freeze` applies and its vulnerability works; its movement lock
    respects the existing boss gate.
 9. Presentation: `freeze` shows a badge glyph and edge particles distinct from
-   `chill`, and element 7 tint.
+   `chill`, element 7 tint, and an icy sprite overlay that fades while thawing.
+10. Contact transmission includes `wet`, `burn`, `chill`, `shocked`, and
+    `freeze`; `poison` never transfers.
+11. Player Freeze cancels and blocks attacks/casts, stops player animation
+    advancement, lasts 0.5 s longer than NPC Freeze, and fresh directional or
+    button input shakes the player and shortens Freeze by 0.12 s.
 
 ## Verification
 
@@ -322,6 +333,15 @@ single-stack definition, burn extinguishing, an ice-shard particle, and the
 `F` badge. Wet's badge is `W`. Test source covers symmetric order, innate Wet,
 consumption, movement, vulnerability, and expiry. The focused smoke is
 registered but unrun, so runtime acceptance remains pending.
+
+## Implementation correction (2026-10-10)
+
+Contact transmission now has an explicit status-ID allowlist: Wet, Burn, Chill,
+Shocked, and Freeze. Poison is excluded even if its resource flag changes.
+Frozen players cancel active actions and animation advancement, gain a 0.5 s
+duration bonus, and can shorten Freeze by 0.12 s per fresh merged input while
+shaking locally. All frozen actors receive a sprite-aligned icy tint that fades
+with remaining duration. Godot runtime acceptance remains pending.
 
 ## Related
 

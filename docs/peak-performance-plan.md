@@ -20,7 +20,7 @@ web export checks, and Samsung A17 browser measurements
 Supersedes: none; this plan specializes the performance track in
 [`long-term-composition-and-performance-plan.md`](long-term-composition-and-performance-plan.md)
 
-Updated: 2026-09-19
+Updated: 2026-10-10
 
 ## Outcome
 
@@ -42,6 +42,17 @@ returns structured JSON without an in-game overlay. It currently captures
 frame time, p99/worst frame, hitch count, physics time, FPS, node/object counts,
 draw calls, render objects, video memory, static memory, and scoped subsystem
 timings.
+
+The dedicated Run 30 mixed-enemy failure has its own active execution plan:
+[mixed-encounter-performance-correction-plan.md](mixed-encounter-performance-correction-plan.md).
+It records the current 2–5 FPS stress-scene capture, separates scoped tick cost
+from displayed-frame cost, and defines the 60 FPS floor and 200+ FPS desktop
+stretch target. Its incident-specific budgets do not replace the device-backed
+budgets below.
+
+For the source-backed breakdown of gameplay, effects, interaction, and rendering
+costs—and the distinction between measured hotspots and unmeasured suspects—see
+[Runtime Performance Cost Map and Practices](performance-cost-guide.md).
 
 The first deterministic active-room capture on Godot 4.7.1 / Windows Mobile
 renderer reported:

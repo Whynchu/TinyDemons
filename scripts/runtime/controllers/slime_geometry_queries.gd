@@ -1,6 +1,43 @@
 extends RefCounted
 class_name SlimeGeometryQueries
 
+var _callback_root: GameplayState
+var _actor_foot_callback: Callable
+var _is_walkable_callback: Callable
+var _is_slime_walkable_point_callback: Callable
+var _collision_rect_callback: Callable
+var _slime_collision_polygon_callback: Callable
+var _collision_polygon_walkability_callback: Callable
+var _static_cache_root: GameplayState
+var _static_cache_physics_frame := -1
+var _cached_chest_collision: Sprite2D
+var _cached_firepit_collision: Sprite2D
+
+
+func _ensure_static_obstacle_cache(root: GameplayState) -> void:
+	var physics_frame := Engine.get_physics_frames()
+	if _static_cache_root == root and _static_cache_physics_frame == physics_frame:
+		return
+	_static_cache_root = root
+	_static_cache_physics_frame = physics_frame
+	var collisions := root.collision_sprites
+	var chest := root.chest
+	var firepit := _firepit_collision_body(root)
+	_cached_chest_collision = chest if chest != null and collisions.has(chest) else null
+	_cached_firepit_collision = firepit if firepit != null and collisions.has(firepit) else null
+
+
+func _ensure_root_callbacks(root: GameplayState) -> void:
+	if _callback_root == root and _actor_foot_callback.is_valid():
+		return
+	_callback_root = root
+	_actor_foot_callback = Callable(root, "_actor_foot")
+	_is_walkable_callback = Callable(root, "_is_walkable")
+	_is_slime_walkable_point_callback = Callable(root, "_is_slime_walkable_point")
+	_collision_rect_callback = Callable(root, "_collision_rect")
+	_slime_collision_polygon_callback = Callable(root, "_slime_collision_polygon")
+	_collision_polygon_walkability_callback = Callable(self, "_current_slime_collision_polygon_is_walkable")
+
 ## Typed access to room collision and walkability data used by slime movement,
 ## placement, interaction, and actor-foot queries. GameplayState delegates remain
 ## the stable public callback surface for the rest of the game.
@@ -9,16 +46,10 @@ func _firepit_collision_body(root: GameplayState) -> Sprite2D:
 	return root.rest_fire.get_node_or_null("Firepit") as Sprite2D if root.rest_fire != null else null
 
 func collides_with_static(root: GameplayState, actor: Sprite2D) -> bool:
-	var firepit := _firepit_collision_body(root)
-	var chest := root.chest
-	for other in root.collision_sprites:
-		if other == actor or (other != chest and other != firepit):
-			continue
-		if other == firepit and collision_polygon_intersects_actor(root, actor, firepit):
-			return true
-		if other == chest and collision_rect(root, actor).intersects(collision_rect(root, other), false):
-			return true
-	return false
+	_ensure_static_obstacle_cache(root)
+	if _cached_firepit_collision != null and _cached_firepit_collision != actor and collision_polygon_intersects_actor(root, actor, _cached_firepit_collision):
+		return true
+	return _cached_chest_collision != null and _cached_chest_collision != actor and collision_rect(root, actor).intersects(collision_rect(root, _cached_chest_collision), false)
 
 
 func collision_polygon_intersects_actor(root: GameplayState, actor: Sprite2D, polygon_owner: Sprite2D) -> bool:
@@ -81,16 +112,43 @@ func is_walkable(root: GameplayState, point: Vector2) -> bool:
 
 
 func can_actor_stand_at_current_position(root: GameplayState, actor: Sprite2D) -> bool:
+	_ensure_root_callbacks(root)
 	var collision := root.actor_collision_system
 	return collision == null or collision.can_actor_stand(
 		actor,
 		root.slimes,
-		Callable(root, "_actor_foot"),
-		Callable(root, "_is_walkable"),
-		Callable(root, "_is_slime_walkable_point"),
-		Callable(root, "_collision_rect"),
-		Callable(root, "_slime_collision_polygon")
+		_actor_foot_callback,
+		_is_walkable_callback,
+		_is_slime_walkable_point_callback,
+		_collision_rect_callback,
+		_slime_collision_polygon_callback,
+		_collision_polygon_walkability_callback
 	)
+
+
+## Checks the transformed foot shape in place, avoiding a PackedVector2Array per movement substep.
+func _current_slime_collision_polygon_is_walkable(slime: Sprite2D) -> bool:
+	var guide := slime.get_node_or_null("CollisionPolygon") as Polygon2D
+	if guide == null or guide.polygon.size() < 3 or not is_instance_valid(_callback_root):
+		return false
+	var area := _callback_root.walkable_area
+	if not is_instance_valid(area):
+		return false
+	var points := guide.polygon
+	# A guide transform is identical for every sample in this validation. Read it
+	# once instead of walking the parent transform chain for every vertex/midpoint.
+	var guide_transform := guide.global_transform
+	var center := Vector2.ZERO
+	var current := guide_transform * points[0]
+	for index in points.size():
+		var next := guide_transform * points[(index + 1) % points.size()]
+		if not area.is_slime_walkable(current):
+			return false
+		if not area.is_slime_walkable(current.lerp(next, 0.5)):
+			return false
+		center += current
+		current = next
+	return area.is_slime_walkable(center / float(points.size()))
 
 
 func is_slime_walkable_point(root: GameplayState, point: Vector2) -> bool:
@@ -173,11 +231,11 @@ func is_slime_collision_rect_walkable_at(root: GameplayState, slime: Sprite2D, f
 	return true
 
 
-func slime_collision_polygon(root: GameplayState, slime: Sprite2D, foot: Vector2 = Vector2.INF) -> PackedVector2Array:
+func slime_collision_polygon(_root: GameplayState, slime: Sprite2D, foot: Vector2 = Vector2.INF) -> PackedVector2Array:
 	return ActorGeometry.collision_polygon(slime, GameplayState.ACTOR_FOOT_OFFSET, foot)
 
 
-func slime_body_polygon(root: GameplayState, slime: Sprite2D) -> PackedVector2Array:
+func slime_body_polygon(_root: GameplayState, slime: Sprite2D) -> PackedVector2Array:
 	return ActorGeometry.body_polygon(slime, GameplayState.ACTOR_FOOT_OFFSET)
 
 
@@ -185,9 +243,10 @@ func is_slime_collision_polygon_walkable(root: GameplayState, polygon: PackedVec
 	var center := Vector2.ZERO
 	for index in polygon.size():
 		var point := polygon[index]
-		# The authored slime foot polygons are convex; vertices + center bound the
-		# whole shape, so edge midpoints are skipped to halve the per-scoot cost.
 		if not is_slime_walkable_point(root, point):
+			return false
+		var next_point := polygon[(index + 1) % polygon.size()]
+		if not is_slime_walkable_point(root, point.lerp(next_point, 0.5)):
 			return false
 		center += point
 	return is_slime_walkable_point(root, center / float(polygon.size()))

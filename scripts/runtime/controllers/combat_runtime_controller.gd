@@ -796,15 +796,28 @@ func try_apply_status(root: GameplayState, target: Node, element: int, effective
 	return _actor_status_runtime.try_apply_status(root, target, element, effectiveness, guaranteed)
 
 
-func tick_actor_statuses(root: GameplayState, actor: Sprite2D, delta: float, is_player: bool) -> void:
-	_actor_status_runtime.tick_actor_statuses(root, actor, delta, is_player)
+func tick_actor_statuses(root: GameplayState, actor: Sprite2D, delta: float, is_player: bool, actor_is_known_alive: bool = false) -> void:
+	_actor_status_runtime.tick_actor_statuses(root, actor, delta, is_player, actor_is_known_alive)
 
 
-func update_enemy_health(root: Object, delta: float) -> void:
+func present_actor_status_auras(root: GameplayState) -> void:
+	_actor_status_runtime.present_actor_status_auras(root)
+
+
+func maintain_enemy_regen_lock(root: Object, delta: float) -> void:
+	for slime in root.get("slimes") as Array[Sprite2D]:
+		if is_slime_dead(root, slime) or not bool(root.call("_is_slime_aggroed", slime)):
+			continue
+		var health := root.call("_slime_health", slime) as HealthComponent
+		if health != null:
+			health.regen_delay_timer = maxf(health.regen_delay_timer, health.regen_interval + delta)
+
+
+func update_enemy_health_presentation(root: Object, delta: float) -> void:
 	var tuning := root.get("slime_tuning") as SlimeTuning
 	for slime in root.get("slimes") as Array[Sprite2D]:
 		if not is_slime_dead(root, slime):
-			(root.call("_slime_health_presenter", slime) as SlimeHealthPresenter).update(delta, root.call("_slime_health", slime) as HealthComponent, float(root.call("_enemy_max_health", slime)), tuning, bool(root.call("_is_slime_aggroed", slime)))
+			(root.call("_slime_health_presenter", slime) as SlimeHealthPresenter).update(delta, root.call("_slime_health", slime) as HealthComponent, float(root.call("_enemy_max_health", slime)), tuning, false)
 
 
 func spawn_damage_number(root: Object, slime: Sprite2D, amount: float, was_critical: bool = false, attack_element: int = ElementCatalogScript.Element.NEUTRAL, immune: bool = false) -> void:

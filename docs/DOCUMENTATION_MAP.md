@@ -87,6 +87,8 @@ For an external product/design review, use the curated [`review/00-astra-review-
 30. [`elemental-status-interaction-plan.md`](elemental-status-interaction-plan.md) — accepted status-reaction tree and bounded implementation sequence for heat/cold producing Wet and the Shocked damage tick.
 31. [`idle-mode-and-equipment-quality-plan.md`](idle-mode-and-equipment-quality-plan.md) — input-driven autoplay, human override, puzzle-free route policy, simple combat behavior, and numerical equipment sorting/best-stat-pool action. Lifecycle decisions settled 2026-10-07 (explicit Hub start, separate loop opt-in, puzzle-avoiding routing, equal six-lane scoring, best equip in Pause Equipment only, manual starter attunement); implementation has not started.
 32. [`anchored-stat-allocation-proposals.md`](anchored-stat-allocation-proposals.md) — selected Model C stat cap, legacy migration rules, and the Hub's ticked allocation-bar contract.
+33. [`mixed-encounter-performance-correction-plan.md`](mixed-encounter-performance-correction-plan.md) — active Run 30 mixed-enemy frame-rate incident, corrected interpretation of the current capture, implementation order, and 60/200 FPS acceptance gates.
+34. [`performance-cost-guide.md`](performance-cost-guide.md) — source-backed cost map for editor gameplay workloads, measured Run 30 scopes, unmeasured suspects, and Godot performance practices.
 
 ## Authority by question
 
@@ -117,6 +119,8 @@ For an external product/design review, use the curated [`review/00-astra-review-
 | Where are scripts organized by role? | [`script-role-map-2026.md`](script-role-map-2026.md) | per-file destination, role definitions, resolved assignment decisions |
 | What is the long-term modularity and performance direction? | [`long-term-composition-and-performance-plan.md`](long-term-composition-and-performance-plan.md) | content definitions, runtime composition, authoring workflows, and device-backed performance work |
 | What is the end-to-end performance execution plan? | [`peak-performance-plan.md`](peak-performance-plan.md) | boot/menu gates, capture scenarios, lifecycle separation, runtime budgets, and A17 verification |
+| How do we fix 2–5 FPS in a dense mixed-enemy room? | [`mixed-encounter-performance-correction-plan.md`](mixed-encounter-performance-correction-plan.md) | Run 30 reproduction, timing caveats, ordered source changes, and whole-scene acceptance gates |
+| Which gameplay and rendering systems currently cost time, and what practices reduce their work? | [`performance-cost-guide.md`](performance-cost-guide.md) | measured editor scopes, source-based suspects, subsystem owners, and cost-preserving approaches |
 | What is the current target HUD and touch-polish contract? | [`ui-consistency-and-touch-polish-plan.md`](ui-consistency-and-touch-polish-plan.md) | target health geometry, map footer anchoring, and shop row hitboxes |
 | What is the popup hold and pause Debug menu plan? | [`popup-and-debug-menu-plan.md`](popup-and-debug-menu-plan.md) | four-update floating-text hold, Settings opt-in, run/player cheats, and safe debug-session boundaries |
 | What are the current combat and dungeon design principles? | [`combat-and-dungeon-design-principles.md`](combat-and-dungeon-design-principles.md) | feature-specific plans and tuning values |

@@ -20,3 +20,4 @@ particle_style = &"ice_shard"
 particle_interval = 0.14
 extinguishes = Array[StringName]([&"burn"])
 extinguish_stacks_per_application = 3
+transmissible = true

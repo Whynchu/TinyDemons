@@ -38,7 +38,7 @@ func chest_item_drop_chance(root: Object) -> float:
 
 func chest_item_drop_chance_for_values(profile: PlayerProfile, run: RunState, tier: StringName) -> float:
 	var exploration_bonus: float = minf(float(run.chests_opened) * _reward_definition().exploration_bonus_per_chest, _reward_definition().exploration_bonus_cap) if run != null else 0.0
-	var run_rank := run_rank_for_profile(profile)
+	var profile_run_rank := run_rank_for_profile(profile)
 	var grade := profile.last_run_grade if profile != null else "D"
 	var completed_runs := profile.completed_runs if profile != null else 0
 	var definition := _reward_definition()
@@ -47,8 +47,8 @@ func chest_item_drop_chance_for_values(profile: PlayerProfile, run: RunState, ti
 	if tier == DungeonGraph.REWARD_RISK:
 		# The dangerous route's material reward is a modest improvement over an
 		# ordinary combat chest; the elite vault remains the guaranteed premium.
-		return definition.risk_item_drop_chance(exploration_bonus, run_rank, grade, completed_runs)
-	return definition.item_drop_chance(exploration_bonus, run_rank, grade, completed_runs)
+		return definition.risk_item_drop_chance(exploration_bonus, profile_run_rank, grade, completed_runs)
+	return definition.item_drop_chance(exploration_bonus, profile_run_rank, grade, completed_runs)
 
 
 func chest_item_drop_count(root: Object, roll: float) -> int:
@@ -59,10 +59,10 @@ func chest_item_drop_count(root: Object, roll: float) -> int:
 func chest_item_drop_count_for_values(profile: PlayerProfile, tier: StringName, roll: float) -> int:
 	if tier == DungeonGraph.REWARD_VAULT:
 		return _reward_definition().vault_item_drop_count
-	var run_rank := run_rank_for_profile(profile)
+	var profile_run_rank := run_rank_for_profile(profile)
 	var grade := profile.last_run_grade if profile != null else "D"
 	var completed_runs := profile.completed_runs if profile != null else 0
-	return _reward_definition().drop_count_for(roll, run_rank, grade, completed_runs)
+	return _reward_definition().drop_count_for(roll, profile_run_rank, grade, completed_runs)
 
 
 func _rarity_adjustments_for_completed_runs(base_multipliers: Array, completed_runs: int) -> Array:
@@ -263,6 +263,8 @@ func run_rank_for_profile(profile: PlayerProfile) -> int:
 
 
 func element_theme_run_number(profile: PlayerProfile) -> int:
+	if debug_run_number > 0:
+		return debug_run_number
 	return maxi(profile.completed_runs + 1 if profile != null else 1, 1)
 
 
@@ -275,10 +277,11 @@ func begin_new_run(root: GameplayState, preserve_current_dungeon := false) -> vo
 	if player_status != null:
 		player_status.clear_all()
 	var debug_session := root.get_node_or_null("DebugSessionController") as Node
-	if debug_session == null or not bool(debug_session.get("active")):
+	if (debug_session == null or not bool(debug_session.get("active"))) and not root.debug_start_in_boss_room:
 		debug_run_number = 0
-	# A new run must never inherit a previous interrupted run's checkpoint.
-	ActiveRunSaveServiceScript.clear_snapshot(ProfileSaveService.current_slot())
+	# A debug boss fixture must not erase the user's interrupted-run checkpoint.
+	if not root.debug_start_in_boss_room:
+		ActiveRunSaveServiceScript.clear_snapshot(ProfileSaveService.current_slot())
 	# Every run begins at the hub in Gray. The selected starter flame is present
 	# at the fire, but the hub exits stay a real gate until the player attunes to
 	# it, just like the first run's tutorial gate.

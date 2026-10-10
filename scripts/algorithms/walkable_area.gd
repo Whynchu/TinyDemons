@@ -19,6 +19,9 @@ var portal_regions: Array[PackedVector2Array] = []
 var boundary_edges: Array[PackedVector2Array] = []
 var authored_tile_polygon := PackedVector2Array()
 var tile_geometry_authoritative := false
+## Advances when room geometry changes so runtime validation can run once per
+## actor spawn and geometry revision instead of rechecking valid motion every tick.
+var geometry_revision := 0
 var entrance_block_polygons: Array[PackedVector2Array] = []
 # A bounds box per entrance block (grown by the edge margin) plus a union box.
 # The per-frame slime walkability path calls is_in_entrance_block for every
@@ -57,6 +60,7 @@ func set_geometry(new_polygons: Array[PackedVector2Array], new_outline: PackedVe
 
 
 func collect_geometry(node: Node, tile_polygon: Callable) -> void:
+	geometry_revision += 1
 	polygons.clear()
 	points.clear()
 	base_regions.clear()
@@ -102,10 +106,10 @@ static func _load_authored_tile_polygon() -> PackedVector2Array:
 	return _authored_tile_polygon_cache
 
 
-func _tile_polygon_at(owner: Node2D, local_origin: Vector2) -> PackedVector2Array:
+func _tile_polygon_at(geometry_owner: Node2D, local_origin: Vector2) -> PackedVector2Array:
 	var polygon := PackedVector2Array()
 	for point in authored_tile_polygon:
-		polygon.append(owner.to_global(local_origin + point))
+		polygon.append(geometry_owner.to_global(local_origin + point))
 	return polygon
 
 
@@ -182,6 +186,7 @@ func collect_floor_collision_guide(node: Node) -> bool:
 
 
 func build_outline(use_polygon_direct: bool) -> void:
+	geometry_revision += 1
 	if polygons.is_empty():
 		outline = PackedVector2Array()
 		_prepare_floor_planes()
@@ -199,6 +204,7 @@ func build_outline(use_polygon_direct: bool) -> void:
 
 
 func set_entrance_blocks(new_blocks: Array[PackedVector2Array]) -> void:
+	geometry_revision += 1
 	entrance_block_polygons = new_blocks.duplicate()
 	entrance_block_bounds_valid = false
 	_prepare_floor_planes()
@@ -246,10 +252,13 @@ func _point_in_regions(point: Vector2, padding: float) -> bool:
 		if Geometry2D.is_point_in_polygon(point, region):
 			inside = true
 			break
-	var boundary_distance := _boundary_distance(point)
+	# Containment settles these cases without scanning every boundary edge.
+	# Distance only matters outside an expanded region or inside an inset one.
 	if padding < 0.0:
-		return inside or boundary_distance <= -padding
-	return inside and boundary_distance >= padding
+		return inside or _boundary_distance(point) <= -padding
+	if not inside:
+		return false
+	return padding == 0.0 or _boundary_distance(point) >= padding
 
 
 func _boundary_distance(point: Vector2) -> float:

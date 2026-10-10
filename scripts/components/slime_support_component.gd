@@ -153,7 +153,7 @@ func _resolve_heal(context: SlimeSupportContext, actor: Sprite2D, tuning: SlimeT
 	_clear_charge_effect()
 
 
-func cancel_cast(reason: StringName = &"cancelled") -> void:
+func cancel_cast(_reason: StringName = &"cancelled") -> void:
 	if state == State.READY:
 		return
 	var actor := get_parent() as Sprite2D
@@ -202,7 +202,6 @@ func _on_health_damaged(_amount: float) -> void:
 
 
 func _can_seek_heal_target(context: SlimeSupportContext, actor: Sprite2D) -> bool:
-	var tuning := context.slime_tuning
 	var combat := actor.get_node_or_null("Combat") as SlimeCombatComponent
 	if combat == null or combat.active or combat.hitstun_timer > 0.0 or combat.knockback_timer > 0.0:
 		return false
@@ -211,23 +210,25 @@ func _can_seek_heal_target(context: SlimeSupportContext, actor: Sprite2D) -> boo
 	var spawn := actor.get_node_or_null("Spawn")
 	if spawn != null and bool(spawn.call("is_active")):
 		return false
-	if context.is_aggroed.is_valid() and bool(context.is_aggroed.call(actor)):
-		return true
-	return has_nearby_alerted_ally(context, actor, tuning)
+	return true
 
 
 func _select_heal_target(context: SlimeSupportContext, actor: Sprite2D, tuning: SlimeTuning) -> Sprite2D:
 	var actor_foot: Vector2 = context.actor_foot.call(actor)
 	var actor_pool := context.slimes
 	var player := context.player
-	var can_self_heal := _has_living_ally(context, actor)
+	var is_aggroed := context.is_aggroed.is_valid() and bool(context.is_aggroed.call(actor))
+	var nearby_alert_radius := maxf(tuning.support_heal_radius, tuning.aggro_range)
+	var nearby_alert_radius_squared := nearby_alert_radius * nearby_alert_radius
+	var has_living_ally := false
+	var has_nearby_alerted_ally := false
 	var self_health := actor.get_node_or_null("Health") as HealthComponent
 	var self_missing := 0.0
+	var prioritize_self := false
 	if self_health != null:
 		self_missing = maxf(self_health.maximum_health - self_health.current_health, 0.0)
 		var health_ratio := self_health.current_health / maxf(self_health.maximum_health, 0.01)
-		if can_self_heal and self_missing > 0.0 and health_ratio <= clampf(tuning.support_self_heal_threshold, 0.0, 1.0):
-			return actor
+		prioritize_self = self_missing > 0.0 and health_ratio <= clampf(tuning.support_self_heal_threshold, 0.0, 1.0)
 	var best_in_range: Sprite2D
 	var best_in_range_missing := 0.0
 	var best_in_range_distance := INF
@@ -241,13 +242,29 @@ func _select_heal_target(context: SlimeSupportContext, actor: Sprite2D, tuning: 
 		if bool(context.is_dead.call(candidate)):
 			continue
 		var health := candidate.get_node_or_null("Health") as HealthComponent
-		if health == null or health.current_health <= 0.0:
+		if health != null and health.current_health <= 0.0:
 			continue
-		var missing := health.maximum_health - health.current_health
-		if missing <= 0.0:
+		if health != null:
+			has_living_ally = true
+		var missing := health.maximum_health - health.current_health if health != null else 0.0
+		var is_heal_candidate := health != null and missing > 0.0
+		var needs_alert_check := not is_aggroed and not has_nearby_alerted_ally
+		if not is_heal_candidate and not needs_alert_check:
+			if prioritize_self and has_living_ally and (is_aggroed or has_nearby_alerted_ally):
+				return actor
 			continue
 		var candidate_foot: Vector2 = context.actor_foot.call(candidate)
-		var distance := actor_foot.distance_to(candidate_foot)
+		var distance_squared := actor_foot.distance_squared_to(candidate_foot)
+		if needs_alert_check and distance_squared <= nearby_alert_radius_squared:
+			var brain := candidate.get_node_or_null("Brain") as SlimeBrain
+			var is_noticing := brain != null and (brain.is_noticing() or (brain.notice_started and not brain.notice_animation_finished))
+			if is_noticing or (context.is_aggroed.is_valid() and bool(context.is_aggroed.call(candidate))):
+				has_nearby_alerted_ally = true
+		if prioritize_self and has_living_ally and (is_aggroed or has_nearby_alerted_ally):
+			return actor
+		if not is_heal_candidate:
+			continue
+		var distance := sqrt(distance_squared)
 		if distance <= tuning.support_heal_radius:
 			if missing > best_in_range_missing or (is_equal_approx(missing, best_in_range_missing) and distance < best_in_range_distance):
 				best_in_range = candidate
@@ -257,11 +274,15 @@ func _select_heal_target(context: SlimeSupportContext, actor: Sprite2D, tuning: 
 			nearest_out_of_range = candidate
 			nearest_out_of_range_distance = distance
 			nearest_out_of_range_missing = missing
+	if not is_aggroed and not has_nearby_alerted_ally:
+		return null
+	if prioritize_self and has_living_ally:
+		return actor
 	if best_in_range != null:
 		return best_in_range
 	if nearest_out_of_range != null:
 		return nearest_out_of_range
-	return actor if can_self_heal and self_missing > 0.0 else null
+	return actor if has_living_ally and self_missing > 0.0 else null
 
 
 func _is_heal_target_in_range(context: SlimeSupportContext, actor: Sprite2D, target: Sprite2D, tuning: SlimeTuning) -> bool:
@@ -325,7 +346,7 @@ func has_nearby_alerted_ally(context: SlimeSupportContext, actor: Sprite2D, tuni
 	return false
 
 
-func _begin_cast(context: SlimeSupportContext, actor: Sprite2D, target: Sprite2D, tuning: SlimeTuning) -> void:
+func _begin_cast(context: SlimeSupportContext, actor: Sprite2D, target: Sprite2D, _tuning: SlimeTuning) -> void:
 	state = State.CASTING
 	heal_target = target
 	heal_resolved = false

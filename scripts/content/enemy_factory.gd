@@ -14,18 +14,18 @@ const TYPE_SLIME: StringName = &"slime"
 const TYPE_SKELETON: StringName = &"skeleton"
 
 
-static func assemble(definition: EnemyDefinition) -> SlimeActor:
-	if definition == null:
+static func assemble(enemy_definition: EnemyDefinition) -> SlimeActor:
+	if enemy_definition == null:
 		return null
-	var actor := _new_actor_for_type(definition.type_id)
+	var actor := _new_actor_for_type(enemy_definition.type_id)
 	if actor == null:
-		push_error("Cannot assemble variant '%s': unsupported enemy type_id '%s'." % [definition.variant_id, definition.type_id])
+		push_error("Cannot assemble variant '%s': unsupported enemy type_id '%s'." % [enemy_definition.variant_id, enemy_definition.type_id])
 		return null
 	actor.centered = false
 	if actor is SkeletonActor:
 		actor.offset = SkeletonActor.FRAME_OFFSET
 	actor.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	configure_actor(actor, definition)
+	configure_actor(actor, enemy_definition)
 	return actor
 
 
@@ -38,43 +38,43 @@ static func _new_actor_for_type(type_id: StringName) -> SlimeActor:
 	return null
 
 
-static func configure_actor(actor: SlimeActor, definition: EnemyDefinition) -> void:
-	if actor == null or definition == null:
+static func configure_actor(actor: SlimeActor, enemy_definition: EnemyDefinition) -> void:
+	if actor == null or enemy_definition == null:
 		return
-	if definition.type_id not in [TYPE_SLIME, TYPE_SKELETON]:
-		push_error("Cannot configure enemy actor for unsupported type_id '%s'." % definition.type_id)
+	if enemy_definition.type_id not in [TYPE_SLIME, TYPE_SKELETON]:
+		push_error("Cannot configure enemy actor for unsupported type_id '%s'." % enemy_definition.type_id)
 		return
 	actor.ensure_components()
 	if actor is SkeletonActor:
 		(actor as SkeletonActor).apply_authored_visuals()
-	apply_geometry(actor, definition)
-	actor.variant = String(definition.variant_id)
-	actor.combat_element = definition.element
-	actor.set_meta("element", definition.element)
-	actor.set_meta("damage_contract", String(definition.damage_contract))
-	actor.set_meta("enemy_definition_id", definition.variant_id)
-	actor.set_meta("enemy_variant_id", definition.variant_id)
-	actor.set_meta("enemy_type_id", definition.type_id)
-	actor.set_meta("ranged_stationary_attack", definition.type_id == TYPE_SKELETON)
-	actor.set_meta("behavior_id", definition.behavior_id)
+	apply_geometry(actor, enemy_definition)
+	actor.variant = String(enemy_definition.variant_id)
+	actor.combat_element = enemy_definition.element
+	actor.set_meta("element", enemy_definition.element)
+	actor.set_meta("damage_contract", String(enemy_definition.damage_contract))
+	actor.set_meta("enemy_definition_id", enemy_definition.variant_id)
+	actor.set_meta("enemy_variant_id", enemy_definition.variant_id)
+	actor.set_meta("enemy_type_id", enemy_definition.type_id)
+	actor.set_meta("ranged_stationary_attack", enemy_definition.type_id == TYPE_SKELETON)
+	actor.set_meta("behavior_id", enemy_definition.behavior_id)
 	var status_component := actor.get_node_or_null("Status") as StatusComponent
 	if status_component != null:
-		status_component.status_immunities = definition.status_immunities.duplicate()
-		status_component.configure_innate(ElementCatalog.innate_status_id_for_element(definition.element))
-	if definition.type_id == TYPE_SKELETON:
+		status_component.status_immunities = enemy_definition.status_immunities.duplicate()
+		status_component.configure_innate(ElementCatalog.innate_status_id_for_element(enemy_definition.element))
+	if enemy_definition.type_id == TYPE_SKELETON:
 		actor.set_meta("attack_hit_frame_override", SkeletonActor.BONE_THROW_ATTACK_FRAME_INDEX)
-	actor.set_meta("visual_source", definition.visual_source)
+	actor.set_meta("visual_source", enemy_definition.visual_source)
 	var enemy_chroma := actor.get_node_or_null("EnemyChroma")
 	if enemy_chroma != null:
-		enemy_chroma.call("configure", definition.element != 0, String(definition.visual_source))
+		enemy_chroma.call("configure", enemy_definition.element != 0, String(enemy_definition.visual_source))
 	var stats := actor.get_node_or_null("Stats") as StatsComponent
 	if stats == null:
 		stats = StatsComponent.new()
 		stats.name = "Stats"
 		actor.add_child(stats)
-	stats.apply_enemy_variant_profile(definition.base_stats, definition.growth_weights, definition.variant_id)
+	stats.apply_enemy_variant_profile(enemy_definition.base_stats, enemy_definition.growth_weights, enemy_definition.variant_id)
 	var support := actor.get_node_or_null("Support") as Node
-	if definition.behavior_id == &"support_caster":
+	if enemy_definition.behavior_id == &"support_caster":
 		if support == null:
 			support = SLIME_SUPPORT_COMPONENT_SCRIPT.new() as Node
 			support.name = "Support"
@@ -153,20 +153,20 @@ static func resolve_variant_id(value: StringName) -> StringName:
 	return &""
 
 
-static func geometry_profile(definition: EnemyDefinition) -> Resource:
-	if definition == null:
+static func geometry_profile(enemy_definition: EnemyDefinition) -> Resource:
+	if enemy_definition == null:
 		return null
-	return SLIME_VARIANT_CATALOG_SCRIPT.family_geometry_profile(definition.type_id)
+	return SLIME_VARIANT_CATALOG_SCRIPT.family_geometry_profile(enemy_definition.type_id)
 
 
 static func family_geometry_profile(type_id: StringName) -> Resource:
 	return SLIME_VARIANT_CATALOG_SCRIPT.family_geometry_profile(type_id)
 
 
-static func apply_geometry(actor: SlimeActor, definition: EnemyDefinition) -> void:
-	if actor == null or definition == null:
+static func apply_geometry(actor: SlimeActor, enemy_definition: EnemyDefinition) -> void:
+	if actor == null or enemy_definition == null:
 		return
-	var geometry: Resource = geometry_profile(definition)
+	var geometry: Resource = geometry_profile(enemy_definition)
 	if geometry == null:
 		return
 	if geometry == null:

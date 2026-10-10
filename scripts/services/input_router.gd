@@ -12,12 +12,17 @@ var devices: Array[int] = []
 var _current: Dictionary = {}
 var _previous: Dictionary = {}
 var _movement := Vector2.ZERO
+var _previous_movement := Vector2.ZERO
 var _menu_directions: Dictionary = {}
 var _previous_menu_directions: Dictionary = {}
 var _menu_repeat_elapsed: Dictionary = {}
 var _menu_direction_events: Dictionary = {}
 var _target_axis := 0.0
+var _previous_target_axis := 0.0
+var _target_trigger := 0.0
+var _previous_target_trigger := 0.0
 var _guard_axis := 0.0
+var _previous_guard_axis := 0.0
 var _has_connected_joypads := false
 var touch_provider: Node = null
 var _touch_snapshot: Dictionary = {}
@@ -43,6 +48,10 @@ func poll(next_context: int, delta: float = 1.0 / 60.0) -> void:
 	if touch_provider != null and touch_provider.has_method("set_input_context"):
 		touch_provider.call("set_input_context", context)
 	_previous = _current.duplicate()
+	_previous_movement = _movement
+	_previous_target_axis = _target_axis
+	_previous_target_trigger = _target_trigger
+	_previous_guard_axis = _guard_axis
 	_previous_menu_directions = _menu_directions.duplicate()
 	_current.clear()
 	_touch_snapshot = _read_touch_snapshot()
@@ -115,6 +124,7 @@ func poll(next_context: int, delta: float = 1.0 / 60.0) -> void:
 			elapsed -= MENU_REPEAT_INTERVAL
 		_menu_repeat_elapsed[direction] = elapsed
 	_target_axis = _strongest_axis(JOY_AXIS_RIGHT_X as JoyAxis)
+	_target_trigger = _strongest_trigger(JOY_AXIS_TRIGGER_RIGHT as JoyAxis)
 	_guard_axis = _strongest_trigger(JOY_AXIS_TRIGGER_LEFT as JoyAxis)
 
 
@@ -144,6 +154,35 @@ func just_released(action: StringName) -> bool:
 	return not pressed(action) and bool(_previous.get(action, false))
 
 
+func consume_frozen_gameplay_input_press() -> bool:
+	var pressed_this_frame := _mouse_left_click_pending or _mouse_right_click_pending or _mouse_middle_click_pending
+	_mouse_left_click_pending = false
+	_mouse_right_click_pending = false
+	_mouse_middle_click_pending = false
+	if pressed_this_frame:
+		return true
+	for action: StringName in ACTIONS:
+		if just_pressed(action):
+			return true
+	for action: StringName in [&"menu_confirm", &"menu_back"]:
+		if just_pressed(action):
+			return true
+	var movement_now := _movement.limit_length(1.0)
+	var movement_before := _previous_movement.limit_length(1.0)
+	if movement_now.length() >= 0.18 and (
+		movement_before.length() < 0.18
+		or movement_now.normalized().dot(movement_before.normalized()) < 0.7
+	):
+		return true
+	var target_now := absf(_target_axis) >= 0.35
+	var target_before := absf(_previous_target_axis) >= 0.35
+	if target_now and (not target_before or signf(_target_axis) != signf(_previous_target_axis)):
+		return true
+	if _target_trigger >= 0.35 and _previous_target_trigger < 0.35:
+		return true
+	return _guard_axis >= 0.35 and _previous_guard_axis < 0.35
+
+
 func movement(deadzone: float) -> Vector2:
 	return _movement.limit_length(1.0) if _movement.length() >= deadzone else Vector2.ZERO
 
@@ -164,7 +203,7 @@ func button_pressed(button: int) -> bool:
 
 
 func target_held(trigger_deadzone: float) -> bool:
-	return pressed(&"target") or _strongest_trigger(JOY_AXIS_TRIGGER_RIGHT as JoyAxis) > trigger_deadzone
+	return pressed(&"target") or _target_trigger > trigger_deadzone
 
 
 func target_cycle_direction(deadzone: float) -> int:
@@ -248,9 +287,9 @@ func mouse_left_just_pressed() -> bool:
 
 
 func consume_mouse_left_press() -> bool:
-	var pressed := mouse_left_just_pressed()
+	var was_pressed := mouse_left_just_pressed()
 	_mouse_left_click_pending = false
-	return pressed
+	return was_pressed
 
 
 func mouse_left_click_position() -> Vector2:
@@ -266,9 +305,9 @@ func mouse_right_just_pressed() -> bool:
 
 
 func consume_mouse_right_press() -> bool:
-	var pressed := mouse_right_just_pressed()
+	var was_pressed := mouse_right_just_pressed()
 	_mouse_right_click_pending = false
-	return pressed
+	return was_pressed
 
 
 func mouse_right_click_position() -> Vector2:
@@ -276,9 +315,9 @@ func mouse_right_click_position() -> Vector2:
 
 
 func consume_mouse_middle_press() -> bool:
-	var pressed := _mouse_middle_click_pending
+	var was_pressed := _mouse_middle_click_pending
 	_mouse_middle_click_pending = false
-	return pressed
+	return was_pressed
 
 
 func mouse_middle_click_position() -> Vector2:

@@ -61,12 +61,12 @@ var variant_id: StringName:
 		return id
 
 
-static func from_variant(variant_id: StringName) -> EnemyDefinition:
+static func from_variant(requested_variant_id: StringName) -> EnemyDefinition:
 	# Use a runtime load here instead of a compile-time preload. The catalog
 	# itself owns the authored .tres resource, so preloading it from this script
 	# creates a cold-start cycle when the definition validator scans resources.
 	var catalog = load("res://scripts/content/slime_variant_catalog.gd")
-	var definition := catalog.definition_resource(variant_id) as EnemyDefinition
+	var definition := catalog.definition_resource(requested_variant_id) as EnemyDefinition
 	if definition != null:
 		return definition
 	return catalog.definition_resource(&"grey")

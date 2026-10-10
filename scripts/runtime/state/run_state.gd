@@ -453,27 +453,27 @@ func _ensure_elemental_shop_sword(catalog: ItemCatalog, may_create_offer: bool) 
 	var unsold_index := -1
 	var has_current_run_record := false
 	for index in shop_stock.size():
-		var entry := shop_stock[index]
-		if not bool(entry.get("guaranteed_elemental_sword", false)):
+		var stock_entry := shop_stock[index]
+		if not bool(stock_entry.get("guaranteed_elemental_sword", false)):
 			continue
-		if str(entry.get("guaranteed_run_id", "")) == run_id:
+		if str(stock_entry.get("guaranteed_run_id", "")) == run_id:
 			has_current_run_record = true
-		if unsold_index < 0 and not bool(entry.get("sold", false)):
+		if unsold_index < 0 and not bool(stock_entry.get("sold", false)):
 			unsold_index = index
 	if unsold_index >= 0:
 		var existing := shop_stock[unsold_index]
 		existing["price"] = ELEMENTAL_SHOP_SWORD_PRICE
 		existing["slot"] = "weapon"
 		existing["permanent"] = false
-		var item := ItemInstance.from_dictionary(existing.get("item", {}) as Dictionary)
-		item.rarity = &"common"
-		item.quality = 1.0
-		item.enhancement_level = 0
-		item.fusion_count = 0
-		item.fusion_stat_points = 0
-		item.affixes.clear()
-		item.transmutation_id = &""
-		existing["item"] = item.to_dictionary()
+		var existing_item := ItemInstance.from_dictionary(existing.get("item", {}) as Dictionary)
+		existing_item.rarity = &"common"
+		existing_item.quality = 1.0
+		existing_item.enhancement_level = 0
+		existing_item.fusion_count = 0
+		existing_item.fusion_stat_points = 0
+		existing_item.affixes.clear()
+		existing_item.transmutation_id = &""
+		existing["item"] = existing_item.to_dictionary()
 		existing["guaranteed_run_id"] = run_id
 		shop_stock[unsold_index] = existing
 		# Reprice and normalize the guaranteed offer in older saved runs, while

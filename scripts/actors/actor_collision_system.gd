@@ -1,7 +1,7 @@
 extends Node
 class_name ActorCollisionSystem
 
-## Handles static movement checks and bounded actor-contact resolution.
+## Handles floor checks and bounded actor-contact broad/narrow phases.
 
 @export var contact_distance := 64.0
 
@@ -19,6 +19,18 @@ const MAX_SLIME_SEPARATION_BUDGET := 28
 var _slime_grid: Dictionary = {}
 var _slime_grid_index: Dictionary = {}
 var _slime_grid_valid := false
+var _grid_candidate_scratch: Array[Sprite2D] = []
+var _motion_candidate_slime_ids: Dictionary = {}
+var _motion_candidate_scratch: Array[Sprite2D] = []
+var _contact_eligibility_cache: Dictionary = {}
+var _contact_foot_cache: Dictionary = {}
+var _contact_radius_cache: Dictionary = {}
+var _contact_collision_rect_cache: Dictionary = {}
+var _contact_broadphase_radius_cache: Dictionary = {}
+var _contact_broadphase_max_radius := 0.0
+var _contact_broadphase_ready_for_separation := false
+var _contact_broadphase_root_id := 0
+var _contact_broadphase_physics_frame := -1
 
 
 func stabilize_guides(actors_to_stabilize: Array[Sprite2D], update_attack_guides: Callable) -> void:
@@ -40,15 +52,40 @@ func stabilize_guides(actors_to_stabilize: Array[Sprite2D], update_attack_guides
 			update_attack_guides.call(actor)
 
 
-func resolve_motion_contacts(actor: Sprite2D, movement: Vector2, candidates: Array[Sprite2D], root: Object) -> void:
-	var slimes := root.get("slimes") as Array[Sprite2D]
-	var actor_is_slime := slimes.has(actor)
+func build_motion_contact_candidates(candidates: Array[Sprite2D], slimes: Array[Sprite2D]) -> Array[Sprite2D]:
+	_motion_candidate_slime_ids.clear()
+	for slime in slimes:
+		if is_instance_valid(slime):
+			_motion_candidate_slime_ids[slime.get_instance_id()] = true
+	_motion_candidate_scratch.clear()
+	for candidate in candidates:
+		if is_instance_valid(candidate) and _motion_candidate_slime_ids.has(candidate.get_instance_id()):
+			continue
+		_motion_candidate_scratch.append(candidate)
+	# The returned scratch array is consumed synchronously by one movement call.
+	return _motion_candidate_scratch
+
+
+func resolve_motion_contacts(
+	actor: Sprite2D,
+	movement: Vector2,
+	candidates: Array[Sprite2D],
+	root: Object,
+	actor_is_slime_override: Variant = null,
+	candidates_are_slime_filtered: bool = false
+) -> void:
+	# Slime movement passes a filtered candidate snapshot and its known actor
+	# kind, so avoid resolving the same roster property on every displacement.
+	var slimes: Array[Sprite2D] = []
+	if not candidates_are_slime_filtered or actor_is_slime_override == null:
+		slimes = root.get("slimes") as Array[Sprite2D]
+	var actor_is_slime := slimes.has(actor) if actor_is_slime_override == null else bool(actor_is_slime_override)
 	for other in candidates:
 		if other == actor or not is_instance_valid(other) or not other.visible or bool(other.get_meta("boss_airborne", false)):
 			continue
-		if slimes.has(other) and root.has_method("_is_slime_spawn_locked") and bool(root.call("_is_slime_spawn_locked", other)):
+		if not candidates_are_slime_filtered and slimes.has(other) and root.has_method("_is_slime_spawn_locked") and bool(root.call("_is_slime_spawn_locked", other)):
 			continue
-		if actor_is_slime and slimes.has(other):
+		if actor_is_slime and not candidates_are_slime_filtered and slimes.has(other):
 			continue
 		if actor.global_position.distance_squared_to(other.global_position) > contact_distance * contact_distance:
 			continue
@@ -59,19 +96,43 @@ func resolve_slime_contacts(slimes: Array[Sprite2D], root: Object, max_passes: i
 	var resolved_pairs := 0
 	if slimes.size() < 2:
 		return 0
+	var actor_foot := Callable(root, "_actor_foot")
+	var is_spawn_locked := Callable(root, "_is_slime_spawn_locked") if root.has_method("_is_slime_spawn_locked") else Callable()
 	# The frame cache normally builds the broad-phase grid; build it lazily so the
 	# resolver stays correct for direct callers.
 	if not _slime_grid_valid:
-		build_slime_grid(slimes, Callable(root, "_actor_foot"), Callable(root, "_is_slime_spawn_locked") if root.has_method("_is_slime_spawn_locked") else Callable())
+		build_slime_grid(slimes, actor_foot, is_spawn_locked)
+	if not _contact_broadphase_ready_for_separation or _contact_broadphase_root_id != root.get_instance_id() or _contact_broadphase_physics_frame != Engine.get_physics_frames():
+		_contact_foot_cache.clear()
+		_contact_radius_cache.clear()
+		_contact_collision_rect_cache.clear()
+		_contact_broadphase_radius_cache.clear()
+		_prepare_contact_broadphase_cache(slimes, root, actor_foot, is_spawn_locked, Callable(), false)
+	_contact_broadphase_ready_for_separation = false
 	var separation_attempts := 0
-	for _separation_pass in max_passes:
+	for separation_pass in max_passes:
+		if separation_pass > 0:
+			# Separation moved actors after the previous pass. Rebuild their cells
+			# before searching again so the next pass remains complete for large
+			# contacts and does not rely on an oversized stale-grid radius.
+			build_slime_grid(slimes, actor_foot, is_spawn_locked)
+			_contact_foot_cache.clear()
+			_contact_radius_cache.clear()
+			_contact_collision_rect_cache.clear()
+			_contact_broadphase_radius_cache.clear()
+			_prepare_contact_broadphase_cache(slimes, root, actor_foot, is_spawn_locked, Callable(), false)
 		var resolved_this_pass := false
 		for actor_index in slimes.size():
 			var actor := slimes[actor_index]
 			if not is_instance_valid(actor) or not actor.visible or bool(actor.get_meta("boss_airborne", false)) or (root.has_method("_is_slime_spawn_locked") and bool(root.call("_is_slime_spawn_locked", actor))):
 				continue
-			var nearby := slime_grid_candidates(root.call("_actor_foot", actor), contact_distance)
-			for other in nearby:
+			# Keep the legacy search window during a pass because earlier pairs can
+			# move actors while their grid cells remain fixed. Expand it when an
+			# enlarged actor's exact contact envelope is wider.
+			var contact_envelope := float(_contact_broadphase_radius_cache.get(actor, contact_distance)) + _contact_broadphase_max_radius
+			var query_radius := maxf(contact_distance, contact_envelope)
+			_fill_slime_grid_candidates(actor_foot.call(actor), query_radius, _grid_candidate_scratch)
+			for other in _grid_candidate_scratch:
 				if other == actor or not is_instance_valid(other) or not other.visible or bool(other.get_meta("boss_airborne", false)) or (root.has_method("_is_slime_spawn_locked") and bool(root.call("_is_slime_spawn_locked", other))):
 					continue
 				if slime_grid_position(other) <= actor_index:
@@ -79,12 +140,16 @@ func resolve_slime_contacts(slimes: Array[Sprite2D], root: Object, max_passes: i
 				if separation_attempts >= MAX_SLIME_SEPARATION_BUDGET:
 					return resolved_pairs
 				separation_attempts += 1
-				var push := actor_contact_push_vector(root, actor, other)
+				var push := _contact_capture_push_vector(root, actor, other, _contact_foot_cache, _contact_radius_cache, _contact_collision_rect_cache, actor_foot)
 				if push == Vector2.ZERO:
 					continue
 				if _separate_slime_pair(root, actor, other, push):
 					resolved_pairs += 1
 					resolved_this_pass = true
+					_contact_foot_cache.erase(actor)
+					_contact_foot_cache.erase(other)
+					_contact_collision_rect_cache.erase(actor)
+					_contact_collision_rect_cache.erase(other)
 		if not resolved_this_pass:
 			break
 	return resolved_pairs
@@ -99,33 +164,89 @@ func capture_status_contact_pairs(
 	is_dead: Callable
 ) -> Array[StatusContactPair]:
 	var contacts: Array[StatusContactPair] = []
+	_contact_eligibility_cache.clear()
+	_contact_foot_cache.clear()
+	_contact_radius_cache.clear()
+	_contact_collision_rect_cache.clear()
+	_contact_broadphase_radius_cache.clear()
+	_contact_broadphase_max_radius = 0.0
+	_contact_broadphase_ready_for_separation = false
 	if not _slime_grid_valid:
 		build_slime_grid(slimes, actor_foot, is_spawn_locked)
-	var seen_pairs: Dictionary = {}
+	# The radius envelope covers every entry in the live movement grid. Exact
+	# status-pair eligibility is still checked inside the snapshot loops.
+	_prepare_contact_broadphase_cache(slimes, root, actor_foot, is_spawn_locked, Callable(), false)
 	for actor_index in slimes.size():
 		var actor := slimes[actor_index]
-		if not _contact_capture_actor_is_eligible(actor, is_spawn_locked, is_dead):
+		if not _contact_capture_actor_is_eligible_cached(actor, _contact_eligibility_cache, is_spawn_locked, is_dead):
 			continue
-		for other in slime_grid_candidates(actor_foot.call(actor) as Vector2, contact_distance):
-			if other == actor or slime_grid_position(other) <= actor_index or not _contact_capture_actor_is_eligible(other, is_spawn_locked, is_dead):
+		var actor_foot_position := _contact_capture_actor_foot(actor, _contact_foot_cache, actor_foot)
+		var actor_query_radius := float(_contact_broadphase_radius_cache.get(actor, contact_distance)) + _contact_broadphase_max_radius
+		_fill_slime_grid_candidates(actor_foot_position, actor_query_radius, _grid_candidate_scratch)
+		for other in _grid_candidate_scratch:
+			# The stable grid indices emit each unordered pair once.
+			if other == actor or slime_grid_position(other) <= actor_index or not _contact_capture_actor_is_eligible_cached(other, _contact_eligibility_cache, is_spawn_locked, is_dead):
 				continue
-			if actor_contact_push_vector(root, actor, other) == Vector2.ZERO:
+			if _contact_capture_push_vector(root, actor, other, _contact_foot_cache, _contact_radius_cache, _contact_collision_rect_cache, actor_foot) == Vector2.ZERO:
 				continue
-			var key := "%d:%d" % [mini(actor.get_instance_id(), other.get_instance_id()), maxi(actor.get_instance_id(), other.get_instance_id())]
-			if seen_pairs.has(key):
-				continue
-			seen_pairs[key] = true
 			var pair := StatusContactPair.new()
 			pair.configure(actor, other)
 			contacts.append(pair)
 	if player != null and is_instance_valid(player):
-		for slime in slime_grid_candidates(actor_foot.call(player) as Vector2, contact_distance):
-			if not _contact_capture_actor_is_eligible(slime, is_spawn_locked, is_dead) or actor_contact_push_vector(root, slime, player) == Vector2.ZERO:
+		var player_foot_position := _contact_capture_actor_foot(player, _contact_foot_cache, actor_foot)
+		var player_query_radius := _contact_capture_broadphase_radius(root, player, actor_foot, _contact_foot_cache, _contact_radius_cache, _contact_collision_rect_cache, _contact_broadphase_radius_cache) + _contact_broadphase_max_radius
+		_fill_slime_grid_candidates(player_foot_position, player_query_radius, _grid_candidate_scratch)
+		for slime in _grid_candidate_scratch:
+			if not _contact_capture_actor_is_eligible_cached(slime, _contact_eligibility_cache, is_spawn_locked, is_dead) or _contact_capture_push_vector(root, slime, player, _contact_foot_cache, _contact_radius_cache, _contact_collision_rect_cache, actor_foot) == Vector2.ZERO:
 				continue
 			var pair := StatusContactPair.new()
 			pair.configure(slime, player)
 			contacts.append(pair)
+	_contact_broadphase_ready_for_separation = true
+	_contact_broadphase_root_id = root.get_instance_id()
+	_contact_broadphase_physics_frame = Engine.get_physics_frames()
 	return contacts
+
+
+func _prepare_contact_broadphase_cache(
+	slimes: Array[Sprite2D],
+	root: Object,
+	actor_foot: Callable,
+	is_spawn_locked: Callable = Callable(),
+	is_dead: Callable = Callable(),
+	require_capture_eligibility: bool = true
+) -> void:
+	_contact_broadphase_max_radius = 0.0
+	for actor in slimes:
+		if require_capture_eligibility:
+			if not _contact_capture_actor_is_eligible(actor, is_spawn_locked, is_dead):
+				continue
+		else:
+			if actor == null or not is_instance_valid(actor) or not actor.visible or bool(actor.get_meta("boss_airborne", false)):
+				continue
+			if is_spawn_locked.is_valid() and bool(is_spawn_locked.call(actor)):
+				continue
+		var radius := _contact_capture_broadphase_radius(root, actor, actor_foot, _contact_foot_cache, _contact_radius_cache, _contact_collision_rect_cache, _contact_broadphase_radius_cache)
+		_contact_broadphase_max_radius = maxf(_contact_broadphase_max_radius, radius)
+
+
+func _contact_capture_broadphase_radius(
+	root: Object,
+	actor: Sprite2D,
+	actor_foot: Callable,
+	foot_cache: Dictionary,
+	radius_cache: Dictionary,
+	collision_rect_cache: Dictionary,
+	broadphase_radius_cache: Dictionary
+) -> float:
+	if broadphase_radius_cache.has(actor):
+		return float(broadphase_radius_cache[actor])
+	var actor_foot_position := _contact_capture_actor_foot(actor, foot_cache, actor_foot)
+	var rect := _contact_capture_collision_rect(root, actor, collision_rect_cache)
+	var rect_radius := actor_foot_position.distance_to(rect.get_center()) + rect.size.length() * 0.5
+	var radius := maxf(_contact_capture_actor_radius(root, actor, radius_cache), rect_radius)
+	broadphase_radius_cache[actor] = radius
+	return radius
 
 
 func _contact_capture_actor_is_eligible(actor: Sprite2D, is_spawn_locked: Callable, is_dead: Callable) -> bool:
@@ -138,7 +259,72 @@ func _contact_capture_actor_is_eligible(actor: Sprite2D, is_spawn_locked: Callab
 	return true
 
 
+func _contact_capture_actor_is_eligible_cached(actor: Sprite2D, cache: Dictionary, is_spawn_locked: Callable, is_dead: Callable) -> bool:
+	if cache.has(actor):
+		return bool(cache[actor])
+	var eligible := _contact_capture_actor_is_eligible(actor, is_spawn_locked, is_dead)
+	cache[actor] = eligible
+	return eligible
+
+
+func _contact_capture_actor_foot(actor: Sprite2D, cache: Dictionary, actor_foot: Callable) -> Vector2:
+	if cache.has(actor):
+		return cache[actor] as Vector2
+	var foot := actor_foot.call(actor) as Vector2
+	cache[actor] = foot
+	return foot
+
+
+func _contact_capture_push_vector(
+	root: Object,
+	actor: Sprite2D,
+	other: Sprite2D,
+	foot_cache: Dictionary,
+	radius_cache: Dictionary,
+	collision_rect_cache: Dictionary,
+	actor_foot: Callable
+) -> Vector2:
+	if _uses_body_contact(actor) or _uses_body_contact(other):
+		var actor_rect := _contact_capture_collision_rect(root, actor, collision_rect_cache)
+		var other_rect := _contact_capture_collision_rect(root, other, collision_rect_cache)
+		return _rect_contact_push_vector(actor_rect, other_rect)
+	var delta := _contact_capture_actor_foot(actor, foot_cache, actor_foot) - _contact_capture_actor_foot(other, foot_cache, actor_foot)
+	if not delta.is_finite():
+		return Vector2.ZERO
+	var distance := delta.length()
+	var minimum_distance := _contact_capture_actor_radius(root, actor, radius_cache) + _contact_capture_actor_radius(root, other, radius_cache)
+	if not is_finite(distance) or not is_finite(minimum_distance) or minimum_distance <= 0.0:
+		return Vector2.ZERO
+	if distance >= minimum_distance:
+		return Vector2.ZERO
+	if distance <= 0.001:
+		delta = Vector2.RIGHT
+		distance = 1.0
+	var push_distance := minimum_distance - distance
+	if not is_finite(push_distance) or push_distance <= 0.0:
+		return Vector2.ZERO
+	var normal := delta.normalized()
+	return normal * push_distance if normal.is_finite() else Vector2.ZERO
+
+
+func _contact_capture_actor_radius(root: Object, actor: Sprite2D, cache: Dictionary) -> float:
+	if cache.has(actor):
+		return float(cache[actor])
+	var radius := actor_contact_radius(root, actor)
+	cache[actor] = radius
+	return radius
+
+
+func _contact_capture_collision_rect(root: Object, actor: Sprite2D, cache: Dictionary) -> Rect2:
+	if cache.has(actor):
+		return cache[actor] as Rect2
+	var rect := root.call("_collision_rect", actor) as Rect2
+	cache[actor] = rect
+	return rect
+
+
 func build_slime_grid(slimes: Array[Sprite2D], actor_foot: Callable, is_spawn_locked: Callable = Callable()) -> void:
+	_contact_broadphase_ready_for_separation = false
 	_slime_grid.clear()
 	_slime_grid_index.clear()
 	for index in slimes.size():
@@ -156,6 +342,7 @@ func build_slime_grid(slimes: Array[Sprite2D], actor_foot: Callable, is_spawn_lo
 
 
 func invalidate_slime_grid() -> void:
+	_contact_broadphase_ready_for_separation = false
 	_slime_grid_valid = false
 
 
@@ -163,19 +350,25 @@ func invalidate_slime_grid() -> void:
 ## around `point`. Callers still apply their exact distance/dead/boss filters.
 func slime_grid_candidates(point: Vector2, radius: float) -> Array[Sprite2D]:
 	var result: Array[Sprite2D] = []
+	_fill_slime_grid_candidates(point, radius, result)
+	return result
+
+
+func _fill_slime_grid_candidates(point: Vector2, radius: float, result: Array[Sprite2D]) -> void:
+	result.clear()
 	if not _slime_grid_valid:
-		return result
-	var cell_radius := maxi(1, int(ceil(radius / SLIME_GRID_CELL_SIZE)))
-	var center := _grid_cell(point)
-	for cell_x in range(center.x - cell_radius, center.x + cell_radius + 1):
-		for cell_y in range(center.y - cell_radius, center.y + cell_radius + 1):
+		return
+	var min_cell := _grid_cell(point - Vector2.ONE * radius)
+	var max_cell := _grid_cell(point + Vector2.ONE * radius)
+	for cell_x in range(min_cell.x, max_cell.x + 1):
+		for cell_y in range(min_cell.y, max_cell.y + 1):
 			var bucket: Variant = _slime_grid.get(Vector2i(cell_x, cell_y))
 			if bucket == null:
 				continue
+			# Each live slime is inserted into exactly one grid cell and each
+			# cell coordinate is visited once, so candidates cannot duplicate.
 			for slime in bucket as Array:
-				if not result.has(slime):
-					result.append(slime)
-	return result
+				result.append(slime)
 
 
 ## The slot index recorded for a slime by the last grid build (used to dedupe
@@ -290,21 +483,28 @@ func try_move_swept(actor: Sprite2D, movement: Vector2, max_step: float, can_sta
 	return actor.position.distance_squared_to(original) > 0.0001
 
 
-func can_actor_stand(actor: Sprite2D, slimes: Array[Sprite2D], foot: Callable, is_walkable: Callable, is_slime_walkable: Callable, collision_rect: Callable, collision_polygon: Callable) -> bool:
-	if not slimes.has(actor):
+func can_actor_stand(actor: Sprite2D, slimes: Array[Sprite2D], foot: Callable, is_walkable: Callable, is_slime_walkable: Callable, collision_rect: Callable, collision_polygon: Callable, collision_polygon_walkability: Callable = Callable()) -> bool:
+	var actor_is_slime := actor is SlimeActor
+	if not actor_is_slime:
+		actor_is_slime = slimes.has(actor)
+	if not actor_is_slime:
 		# Room floor geometry is authored for the actor's foot path. The sprite
 		# body is intentionally allowed to overhang the isometric floor edge; using
 		# every body corner here makes ordinary wall travel snag and prevents an
 		# open lower doorway from reaching its transition trigger. Closed doorway
 		# seams are handled by the entrance block polygons through this foot check.
 		return bool(is_walkable.call(foot.call(actor)))
+	var collision_guide := actor.get_node_or_null("CollisionPolygon") as Polygon2D
+	if collision_guide != null and collision_guide.polygon.size() >= 3 and collision_polygon_walkability.is_valid():
+		return bool(collision_polygon_walkability.call(actor))
 	var polygon: PackedVector2Array = collision_polygon.call(actor)
 	if polygon.size() >= 3:
-		# Sample each vertex and the center. The authored slime foot polygons are
-		# convex, so checking the full vertex set already bounds the whole shape;
-		# edge midpoints would double the walkability cost for no extra coverage.
 		for index: int in polygon.size():
-			if not bool(is_slime_walkable.call(polygon[index])):
+			var point := polygon[index]
+			if not bool(is_slime_walkable.call(point)):
+				return false
+			var next_point := polygon[(index + 1) % polygon.size()]
+			if not bool(is_slime_walkable.call(point.lerp(next_point, 0.5))):
 				return false
 		return bool(is_slime_walkable.call(_polygon_center(polygon)))
 	var rect: Rect2 = collision_rect.call(actor)
@@ -507,6 +707,10 @@ func _player_occupies_active_doorway(root: Object) -> bool:
 func _rect_overlap_push_vector(root: Object, actor: Sprite2D, other: Sprite2D) -> Vector2:
 	var rect := root.call("_collision_rect", actor) as Rect2
 	var other_rect := root.call("_collision_rect", other) as Rect2
+	return _rect_contact_push_vector(rect, other_rect)
+
+
+func _rect_contact_push_vector(rect: Rect2, other_rect: Rect2) -> Vector2:
 	var overlap := rect.intersection(other_rect)
 	if not overlap.has_area():
 		return Vector2.ZERO

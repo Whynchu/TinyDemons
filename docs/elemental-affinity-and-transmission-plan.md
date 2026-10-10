@@ -9,7 +9,7 @@ across each run and each room, including supports that all heal their allies.
 Plan author: space-bunny; implementation: codex; owner-directed behavior choices recorded 2026-10-03
 Review: codex, owner-requested corrections recorded 2026-10-03. Slice numbers
 are retained for coordination; shipping dependencies are clarified below.
-Current code: five registered statuses (`burn`, `poison`, `chill`, `shocked`, `wet`), typed applied/innate `StatusRecord`s, shared aura/imbue particle owners, bidirectional contact transfer, and saved themed enemy rosters.
+Current code: five element-owned statuses (`burn`, `poison`, `chill`, `shocked`, `wet`), auxiliary `freeze`, typed applied/innate `StatusRecord`s, and bidirectional contact transfer limited to Wet, Burn, Chill, Shocked, and Freeze. Poison is explicitly excluded from contact transfer.
 Verification: focused component/transmission/theme smoke coverage is registered but has not been run. Both pure-text composition modes and `git diff --check` pass. Godot script/definition/catalog checks, runtime combat and native 240x160 readability, seed sweep, and browser playtest remain outstanding.
 Supersedes: nothing. Extends
 [`elemental-ability-and-status-system.md`](elemental-ability-and-status-system.md)
@@ -443,8 +443,9 @@ exists.
 
 ### 6.3 Contact transmission
 
-Bidirectional and element-agnostic. Whoever carries a condition passes it to
-whatever they touch.
+Bidirectional and element-agnostic for the explicit transferable set only:
+Wet, Burn, Chill, Shocked, and auxiliary Freeze. Poison is a deliberate special
+case: it never passes on contact, even if a resource flag is accidentally set.
 
 **Rule 1 — direction.** Both directions, always. The player is a vector like any
 other actor.
@@ -483,12 +484,12 @@ stack cap rather than sharing mutable records or copying the donor's full stack
 count. Ordinary elemental hits retain the definition's proc chance; contact
 transmission does not roll it a second time.
 
-Explicitly set `transmissible = true` on Burn, Poison, Chill, Shocked and Wet.
-Shadow has one element-owned status, Poison, which follows the same explicit
-transmission rule as the other registered statuses. The former auxiliary Hex
-damage mark was removed; Hex remains the Shadow projectile shape. Successful
-transfer sets provenance on the receiving record. The badge ring remains until
-that record expires or is removed, even if a later ordinary hit refreshes it.
+The runtime allowlist is authoritative and the resource flag is an additional
+opt-in. Explicitly set `transmissible = true` on Burn, Chill, Shocked, Wet, and
+Freeze; keep Poison false. New statuses do not transmit until both the allowlist
+and their resource flag are updated. Successful transfer sets provenance on
+the receiving record. The badge ring remains until that record expires or is
+removed, even if a later ordinary hit refreshes it.
 
 **Rule 6 — eligibility.** Skip dead, spawn-locked and non-visible actors; skip
 while the room is not engaged. Reuse the existing guards.
@@ -689,7 +690,8 @@ reads the complete six-status registry and
 `ElementCatalog.DATA.validate().is_empty()`. At Wet activation, additionally
 require `ElementCatalog.status_effect_for_element(2).id == &"wet"` and both
 S3/S4 acceptance bars. Verify equal-stack presentation is independent of
-application order and Shadow Poison transfer as its only Shadow status.
+application order and Shadow Poison remaining non-transferable like every other
+Poison status; only Wet, Burn, Chill, Shocked, and Freeze may transfer.
 
 ### S2 — Innate affinity and suppression
 

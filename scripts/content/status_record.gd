@@ -6,6 +6,7 @@ enum Origin { APPLIED, INNATE }
 var definition: StatusEffectDefinition
 var origin: int = Origin.APPLIED
 var remaining := 0.0
+var total_duration := 0.0
 var stacks := 1
 var source_element := 0
 var tick_timer := 0.0
@@ -28,6 +29,7 @@ func configure(
 	definition = new_definition
 	origin = new_origin
 	remaining = new_remaining
+	total_duration = new_remaining
 	stacks = maxi(new_stacks, 1)
 	source_element = new_source_element
 	arrived_by_transmission = new_arrived_by_transmission

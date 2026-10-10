@@ -75,7 +75,7 @@ static func available_run_elements_for_number(run_number: int) -> Array[int]:
 	return elements
 
 
-static func select_run_element_theme(seed: int, run_number: int) -> Array[int]:
+static func select_run_element_theme(run_seed: int, run_number: int) -> Array[int]:
 	var theme_run := maxi(run_number, 1)
 	if theme_run <= 1:
 		return []
@@ -83,7 +83,7 @@ static func select_run_element_theme(seed: int, run_number: int) -> Array[int]:
 	if available.is_empty():
 		return []
 	var rng := RandomNumberGenerator.new()
-	rng.seed = seed ^ 0x454C5448
+	rng.seed = run_seed ^ 0x454C5448
 	var target_count := 1 if theme_run == 2 else (3 if rng.randf() < default_data().three_element_theme_chance else 2)
 	target_count = mini(target_count, available.size())
 	if target_count == 1:
@@ -213,7 +213,7 @@ static func prepare_variant_pools_for_theme(
 		balance_enemy_family_weights(variant_pool, skeleton_variant_pool)
 
 
-static func constrain_roster_to_theme(variants: Array[String], theme: Array[int], run_number: int, seed: int) -> Dictionary:
+static func constrain_roster_to_theme(variants: Array[String], theme: Array[int], run_number: int, run_seed: int) -> Dictionary:
 	var constrained := variants.duplicate()
 	var remaps: Array[String] = []
 	var lost_shadow_indices: Array[int] = []
@@ -240,7 +240,7 @@ static func constrain_roster_to_theme(variants: Array[String], theme: Array[int]
 			continue
 		replacement_candidates.sort()
 		var replacement_rng := RandomNumberGenerator.new()
-		replacement_rng.seed = seed ^ (slot + 1) * 0x4D494752
+		replacement_rng.seed = run_seed ^ (slot + 1) * 0x4D494752
 		var new_id: StringName = replacement_candidates[replacement_rng.randi_range(0, replacement_candidates.size() - 1)]
 		constrained[slot] = String(new_id)
 		remaps.append("%s -> %s" % [String(old_id), String(new_id)])
@@ -256,7 +256,7 @@ static func constrain_cached_room_theme(
 	state: Dictionary,
 	theme: Array[int],
 	run_number: int,
-	seed: int,
+	run_seed: int,
 	debug_bypass: bool = false
 ) -> void:
 	if debug_bypass or not state.has("enemy_variants"):
@@ -264,11 +264,11 @@ static func constrain_cached_room_theme(
 	var variants: Array[String] = []
 	for value in state.get("enemy_variants", []) as Array:
 		variants.append(str(value))
-	var constrained := constrain_roster_to_theme(variants, theme, run_number, seed)
+	var constrained := constrain_roster_to_theme(variants, theme, run_number, run_seed)
 	for problem in constrained.errors:
 		push_error("Room '%s' elemental theme: %s" % [String(room_id), str(problem)])
 	if constrained.errors.is_empty() and not constrained.remaps.is_empty():
-		push_warning("Room '%s' seed %d remapped %d cached enemy slots into run theme %s." % [String(room_id), seed, constrained.remaps.size(), str(theme)])
+		push_warning("Room '%s' seed %d remapped %d cached enemy slots into run theme %s." % [String(room_id), run_seed, constrained.remaps.size(), str(theme)])
 		state["enemy_variants"] = constrained.variants
 		var ambush := state.get("enemy_ambush", []) as Array
 		for slot in constrained.lost_shadow_indices:
@@ -287,24 +287,24 @@ static func constrain_generated_roster(
 	ambush_flags: Array[bool],
 	theme: Array[int],
 	run_number: int,
-	seed: int,
+	run_seed: int,
 	label: String
 ) -> void:
-	var constrained := constrain_roster_to_theme(variants, theme, run_number, seed)
+	var constrained := constrain_roster_to_theme(variants, theme, run_number, run_seed)
 	if not constrained.remaps.is_empty():
-		push_warning("%s seed %d remapped %d enemy slots into run theme %s." % [label, seed, constrained.remaps.size(), str(theme)])
+		push_warning("%s seed %d remapped %d enemy slots into run theme %s." % [label, run_seed, constrained.remaps.size(), str(theme)])
 	for problem in constrained.errors:
-		push_error("%s seed %d elemental theme: %s" % [label, seed, str(problem)])
+		push_error("%s seed %d elemental theme: %s" % [label, run_seed, str(problem)])
 	for slot in constrained.lost_shadow_indices:
 		if slot < ambush_flags.size():
 			ambush_flags[slot] = false
 	for index in constrained.variants.size():
 		variants[index] = constrained.variants[index]
 	for problem in validate_roster_theme(variants, theme, run_number):
-		push_error("%s seed %d elemental theme invariant: %s" % [label, seed, problem])
+		push_error("%s seed %d elemental theme invariant: %s" % [label, run_seed, problem])
 
 
-static func select_boss_variant(candidate: StringName, theme: Array[int], run_number: int, seed: int, rng: RandomNumberGenerator) -> Dictionary:
+static func select_boss_variant(candidate: StringName, theme: Array[int], run_number: int, run_seed: int, rng: RandomNumberGenerator) -> Dictionary:
 	if run_number <= 1 and candidate == &"purple":
 		candidate = &"grey"
 	var definition := SLIME_VARIANT_CATALOG_SCRIPT.definition_resource(candidate)
@@ -312,7 +312,7 @@ static func select_boss_variant(candidate: StringName, theme: Array[int], run_nu
 	if has_explicit_variant:
 		if definition.element != ElementCatalog.Element.NEUTRAL and not theme.has(definition.element):
 			push_warning("Authored boss variant '%s' conflicts with run theme %s; a same-family elemental replacement will be used." % [String(candidate), str(theme)])
-			var constrained := constrain_roster_to_theme([String(candidate)], theme, run_number, seed)
+			var constrained := constrain_roster_to_theme([String(candidate)], theme, run_number, run_seed)
 			if not constrained.errors.is_empty():
 				for problem in constrained.errors:
 					push_error("Authored boss elemental theme: %s" % str(problem))
@@ -399,7 +399,7 @@ static func validate_run_rosters(room_states: Dictionary, theme: Array[int]) -> 
 	return problems
 
 
-static func legacy_theme_for_rosters(room_states: Dictionary, seed: int, run_number: int) -> Array[int]:
+static func legacy_theme_for_rosters(room_states: Dictionary, run_seed: int, run_number: int) -> Array[int]:
 	var counts: Dictionary = {}
 	for state_value in room_states.values():
 		if not state_value is Dictionary:
@@ -422,12 +422,12 @@ static func legacy_theme_for_rosters(room_states: Dictionary, seed: int, run_num
 	if elements.size() > 3:
 		elements.resize(3)
 	if elements.is_empty():
-		return select_run_element_theme(seed, run_number)
+		return select_run_element_theme(run_seed, run_number)
 	elements.sort()
 	return elements
 
 
-static func migrate_cached_rosters(room_states: Dictionary, theme: Array[int], run_number: int, seed: int) -> Dictionary:
+static func migrate_cached_rosters(room_states: Dictionary, theme: Array[int], run_number: int, run_seed: int) -> Dictionary:
 	var migrated := room_states.duplicate(true)
 	var remaps: Array[String] = []
 	var errors: Array[String] = []
@@ -438,7 +438,7 @@ static func migrate_cached_rosters(room_states: Dictionary, theme: Array[int], r
 		var variants: Array[String] = []
 		for value in state.get("enemy_variants", []) as Array:
 			variants.append(str(value))
-		var result := constrain_roster_to_theme(variants, theme, run_number, seed ^ str(room_id).hash())
+		var result := constrain_roster_to_theme(variants, theme, run_number, run_seed ^ str(room_id).hash())
 		for message in result.errors:
 			errors.append("room '%s': %s" % [str(room_id), str(message)])
 		for mapping in result.remaps:
@@ -582,7 +582,7 @@ static func append_support_companions(
 	elite_flags: Array[bool],
 	encounter_rng: RandomNumberGenerator,
 	room_policy: RoomDefinition,
-	run_rank: int,
+	_run_rank: int,
 	run_number: int,
 	base_level: int,
 	level_spread: int,

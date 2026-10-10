@@ -23,6 +23,10 @@ const DEFAULT_CHROMA_TUNING: ChromaTuning = preload("res://resources/tuning/chro
 @export_category("Debug")
 @export var debug_start_in_boss_room := false
 @export var debug_boss_variant: StringName = &""
+@export_range(0, 99, 1) var debug_run_number := 0
+@export_range(0, 2147483647, 1) var debug_dungeon_seed := 0
+@export var debug_player_invulnerable := false
+@export var debug_boss_stress_encounter := false
 @export var debug_enemy_test_id: StringName = &""
 @export var debug_actor_geometry := false
 @export var debug_stat_breakdown := false
@@ -1006,7 +1010,7 @@ func _configure_slime_variant(slime: Sprite2D, variant: String) -> void: combat_
 func _knockback_slime(slime: Sprite2D, knockback_multiplier: float = 1.0, strength_scaled: bool = true, attack_scaled: bool = true, ignore_phase_resistance: bool = false, direction_override: Vector2 = Vector2.ZERO) -> void: combat_runtime_controller.call("knockback_slime", self, slime, knockback_multiplier, strength_scaled, attack_scaled, ignore_phase_resistance, direction_override)
 func _slime_knockback_direction(slime: Sprite2D) -> Vector2: return combat_runtime_controller.call("slime_knockback_direction", self, slime) as Vector2
 func _kill_slime(slime: Sprite2D) -> void: combat_runtime_controller.call("kill_slime", self, slime)
-func _is_slime_dead(slime: Sprite2D) -> bool: return bool(combat_runtime_controller.call("is_slime_dead", self, slime))
+func _is_slime_dead(slime: Sprite2D) -> bool: return combat_runtime_controller.is_slime_dead(self, slime)
 func _are_all_slimes_dead() -> bool: return bool(combat_runtime_controller.call("are_all_slimes_dead", self))
 func _unlock_chest() -> void:
 	var room: DungeonGraph.RoomRecord = dungeon_graph.get_room(current_room_id) if dungeon_graph != null else null
@@ -1477,13 +1481,13 @@ func _room_checkpoint_context() -> RoomCheckpointContext:
 
 func _room_enemy_runtime_context() -> RoomEnemyRuntimeContext:
 	var state: Dictionary = room_controller.room_states.get(current_room_id, {}) as Dictionary
-	var slimes := self.slimes
+	var room_slimes := self.slimes
 	var combat_components: Array[SlimeCombatComponent] = []
 	var health_components: Array[HealthComponent] = []
-	for slime in slimes:
+	for slime in room_slimes:
 		combat_components.append(SlimeActor.component(slime, "Combat", SlimeCombatComponent) as SlimeCombatComponent)
 		health_components.append(slime.get_node_or_null("Health") as HealthComponent)
-	return RoomEnemyRuntimeContext.new(current_room_id, state.get("enemy_variants", []) as Array, slimes, combat_components, health_components)
+	return RoomEnemyRuntimeContext.new(current_room_id, state.get("enemy_variants", []) as Array, room_slimes, combat_components, health_components)
 
 func _save_current_room_state() -> RoomCheckpointResult: pickup_runtime_controller.settle_gold_pickups(self); return room_controller.save_current_room_state(_room_checkpoint_context())
 func _apply_room_state() -> RoomActivationResult: return room_controller.activate_room(room_controller.activation_context_for(self))
@@ -1502,7 +1506,7 @@ func _separate_slime_from_player(slime: Sprite2D) -> void: slime_runtime_control
 func _configure_slime_ambush(slime: Sprite2D, enabled: bool) -> void: slime_runtime_controller.call("configure_slime_ambush", self, slime, enabled)
 func _slime_ambush(slime: Sprite2D) -> SlimeAmbushComponent: return slime_runtime_controller.call("slime_ambush", self, slime) as SlimeAmbushComponent
 func _slime_spawn(slime: Sprite2D) -> Node: return slime_runtime_controller.call("slime_spawn", self, slime) as Node
-func _is_slime_spawn_locked(slime: Sprite2D) -> bool: return bool(slime_runtime_controller.call("is_slime_spawn_locked", self, slime))
+func _is_slime_spawn_locked(slime: Sprite2D) -> bool: return slime_runtime_controller.is_slime_spawn_locked(self, slime)
 func _begin_slime_spawn(slime: Sprite2D) -> bool: return bool(slime_runtime_controller.call("begin_slime_spawn", self, slime))
 func _set_slime_spawn_frame(slime: Sprite2D, frame_index: int) -> void: slime_runtime_controller.call("set_slime_spawn_frame", self, slime, frame_index)
 func _finish_slime_spawn(slime: Sprite2D) -> void: slime_runtime_controller.call("finish_slime_spawn", self, slime)
@@ -1511,13 +1515,13 @@ func _is_slime_targetable(slime: Sprite2D) -> bool: return bool(slime_runtime_co
 func _is_target_actor_dead(target: Sprite2D) -> bool: return bool(slime_runtime_controller.call("is_target_actor_dead", self, target))
 func _move_slimes(delta: float) -> void:
 	var started_usec := Time.get_ticks_usec()
-	slime_runtime_controller.call("move_slimes", self, delta)
+	slime_runtime_controller.move_slimes(self, delta)
 	_record_performance_scope(&"slime_runtime", started_usec)
 func _prepare_slime_frame_cache() -> void: slime_runtime_controller.call("prepare_slime_frame_cache", self)
 func _trigger_slime_notice(slime: Sprite2D) -> void: slime_runtime_controller.call("trigger_slime_notice", self, slime)
 func _slime_position_is_valid(slime: Sprite2D) -> bool: return bool(slime_runtime_controller.call("slime_position_is_valid", self, slime))
 func _recover_slime_position(slime: Sprite2D) -> void: slime_runtime_controller.call("recover_slime_position", self, slime)
-func _update_slime_attack(slime: Sprite2D, delta: float) -> bool: return bool(slime_runtime_controller.call("update_slime_attack", self, slime, delta))
+func _update_slime_attack(slime: Sprite2D, delta: float) -> bool: return slime_runtime_controller.update_slime_attack(self, slime, delta)
 func _set_slime_attack_frame(slime: Sprite2D, frame_index: int) -> void: slime_runtime_controller.call("set_slime_attack_frame", self, slime, frame_index)
 func _set_slime_support_animation_frame(slime: Sprite2D, phase: StringName, frame_index: int) -> void: slime_runtime_controller.call("set_slime_support_animation_frame", self, slime, phase, frame_index)
 func _start_slime_attack(slime: Sprite2D) -> void: slime_runtime_controller.call("start_slime_attack", self, slime)
@@ -1526,7 +1530,7 @@ func _slime_shocked_frames(slime: Sprite2D) -> Array[Texture2D]: return slime_ru
 func _set_slime_notice_frame(slime: Sprite2D, frame_index: int) -> void: slime_runtime_controller.call("set_slime_notice_frame", self, slime, frame_index)
 func _restore_slime_idle_texture(slime: Sprite2D) -> void: slime_runtime_controller.call("restore_slime_idle_texture", self, slime)
 func _can_slime_attack_player(slime: Sprite2D) -> bool: return bool(slime_runtime_controller.call("can_slime_attack_player", self, slime))
-func _is_slime_aggroed(slime: Sprite2D) -> bool: return bool(slime_runtime_controller.call("is_slime_aggroed", self, slime))
+func _is_slime_aggroed(slime: Sprite2D) -> bool: return slime_runtime_controller.is_slime_aggroed(self, slime)
 func _begin_boss_jump_phase_popcorn(boss: Sprite2D, anchor: Vector2) -> int: return int(room_controller.begin_boss_jump_phase_popcorn(self, boss, anchor))
 func _boss_jump_phase_popcorn_alive(boss: Sprite2D) -> bool: return bool(room_controller.boss_jump_phase_popcorn_alive(self, boss))
 func _clear_boss_jump_phase_popcorn(boss: Sprite2D) -> void: room_controller.clear_boss_jump_phase_popcorn(boss)
@@ -1552,11 +1556,12 @@ func _slime_attack_lunge_vector(slime: Sprite2D) -> Vector2: return combat_runti
 func _slime_attack_commitment_vector(slime: Sprite2D, target_point: Vector2) -> Vector2: return combat_runtime_controller.call("slime_attack_commitment_vector", self, slime, target_point) as Vector2
 func _capture_slime_attack(slime: Sprite2D) -> void: slime_runtime_controller.call("capture_slime_attack", self, slime)
 func _apply_player_hit_knockback(slime: Sprite2D, knockback_multiplier: float = 1.0) -> void: combat_runtime_controller.call("apply_player_hit_knockback", self, slime, knockback_multiplier)
-func _update_slime_knockback(slime: Sprite2D, delta: float) -> bool: return bool(combat_runtime_controller.call("update_slime_knockback", self, slime, delta))
+func _update_slime_knockback(slime: Sprite2D, delta: float) -> bool: return combat_runtime_controller.update_slime_knockback(self, slime, delta)
 func _reset_slime_scoot(slime: Sprite2D) -> void: combat_runtime_controller.call("reset_slime_scoot", self, slime)
 func _show_slime_hit_flash(slime: Sprite2D) -> void: combat_runtime_controller.call("show_slime_hit_flash", self, slime)
 func _update_enemy_hit_flashes(delta: float) -> void: combat_runtime_controller.call("update_enemy_hit_flashes", self, delta)
-func _update_enemy_health(delta: float) -> void: combat_runtime_controller.call("update_enemy_health", self, delta)
+func _maintain_enemy_regen_lock(delta: float) -> void: combat_runtime_controller.call("maintain_enemy_regen_lock", self, delta)
+func _update_enemy_health_presentation(delta: float) -> void: combat_runtime_controller.call("update_enemy_health_presentation", self, delta)
 func _spawn_damage_number(slime: Sprite2D, amount: float, was_critical: bool = false, attack_element: int = 0, immune: bool = false) -> void: combat_runtime_controller.call("spawn_damage_number", self, slime, amount, was_critical, attack_element, immune)
 func _spawn_player_number(text: String, value: int, color: Color, is_healing: bool, display_text: String) -> void: combat_runtime_controller.call("spawn_player_number", self, text, value, color, is_healing, display_text)
 func _spawn_player_damage_number(amount: float, attack_element: int = 0, immune: bool = false) -> void: combat_runtime_controller.call("spawn_player_damage_number", self, amount, attack_element, immune)
@@ -1579,19 +1584,19 @@ func _spawn_player_level_number(level: int) -> void: combat_runtime_controller.c
 func _update_damage_numbers(delta: float) -> void: combat_runtime_controller.call("update_damage_numbers", self, delta)
 func _pixel_text_texture(text: String, color: Color) -> Texture2D: return combat_runtime_controller.call("pixel_text_texture", self, text, color) as Texture2D
 func _pixel_name_texture(text: String, color: Color) -> Texture2D: return combat_runtime_controller.call("pixel_name_texture", self, text, color) as Texture2D
-func _update_slime_scoot(slime: Sprite2D, delta: float) -> void: slime_runtime_controller.call("update_slime_scoot", self, slime, delta)
+func _update_slime_scoot(slime: Sprite2D, delta: float, aggro_override: Variant = null) -> void: slime_runtime_controller.update_slime_scoot(self, slime, delta, aggro_override)
 func _start_slime_scoot(slime: Sprite2D) -> void: slime_runtime_controller.call("start_slime_scoot", self, slime)
 func _repath_slime_after_block(slime: Sprite2D) -> void: slime_runtime_controller.call("repath_slime_after_block", self, slime)
 func _slime_wall_detour_target(slime: Sprite2D) -> Vector2: return slime_runtime_controller.call("slime_wall_detour_target", self, slime) as Vector2
 func _start_slime_hold(slime: Sprite2D) -> void: slime_runtime_controller.call("start_slime_hold", self, slime)
 func _set_actor_visual_scale(actor: Sprite2D, visual_scale: Vector2) -> void: actor_presentation_runtime_controller.call("set_actor_visual_scale", self, actor, visual_scale)
-func _try_move_actor(actor: Sprite2D, movement: Vector2) -> bool: return bool(slime_runtime_controller.call("try_move_actor", self, actor, movement))
+func _try_move_actor(actor: Sprite2D, movement: Vector2) -> bool: return slime_runtime_controller.try_move_actor(self, actor, movement)
 func _try_move_actor_axes(actor: Sprite2D, movement: Vector2) -> bool: return bool(slime_runtime_controller.call("try_move_actor_axes", self, actor, movement))
 func _resolve_actor_contacts(actor: Sprite2D, movement: Vector2) -> void: slime_runtime_controller.call("resolve_actor_contacts", self, actor, movement)
-func _collides_with_static(actor: Sprite2D) -> bool: return bool(slime_runtime_controller.call("collides_with_static", self, actor))
+func _collides_with_static(actor: Sprite2D) -> bool: return slime_runtime_controller.collides_with_static(self, actor)
 func _collision_polygon_intersects_actor(actor: Sprite2D, polygon_owner: Sprite2D) -> bool: return bool(slime_runtime_controller.call("collision_polygon_intersects_actor", self, actor, polygon_owner))
 func _perspective_movement(movement: Vector2) -> Vector2: return slime_runtime_controller.call("perspective_movement", self, movement) as Vector2
-func _collision_rect(actor: Sprite2D) -> Rect2: return slime_runtime_controller.call("collision_rect", self, actor) as Rect2
+func _collision_rect(actor: Sprite2D) -> Rect2: return slime_runtime_controller.collision_rect(self, actor)
 func _collision_guide_rect(actor: Sprite2D) -> Rect2: return slime_runtime_controller.call("collision_guide_rect", self, actor) as Rect2
 func _collision_guide_rect_by_name(actor: Sprite2D, guide_name: String) -> Rect2: return slime_runtime_controller.call("collision_guide_rect_by_name", self, actor, guide_name) as Rect2
 func _build_depth_lists() -> void: actor_presentation_runtime_controller.call("build_depth_lists", self)
@@ -1622,7 +1627,7 @@ func _add_depth_sprite(sprite: Sprite2D) -> void: actor_presentation_runtime_con
 func _update_depth_sorting() -> void: actor_presentation_runtime_controller.call("update_depth_sorting", self)
 func _update_actor_occlusion(delta: float) -> void: actor_presentation_runtime_controller.call("update_actor_occlusion", self, delta)
 func _record_performance_scope(scope_name: StringName, started_usec: int) -> void:
-	if OS.is_debug_build() and performance_capture_service != null and bool(performance_capture_service.get("capturing")):
+	if OS.is_debug_build() and performance_capture_service != null and bool(performance_capture_service.get("capturing")) and bool(performance_capture_service.get("scope_capture_enabled")):
 		performance_capture_service.call("record_scope", scope_name, Time.get_ticks_usec() - started_usec)
 func _is_actor_occlusion_flashing(actor: Sprite2D) -> bool: return bool(actor_presentation_runtime_controller.call("is_actor_occlusion_flashing", self, actor))
 func _update_player_shadow() -> void: shadow_controller.update_player_shadow(self, DEPTH_Z_SCALE)
@@ -1684,7 +1689,7 @@ func _magic_hit_slime(slime: Sprite2D, world_position: Vector2, palette: String,
 func _player_weapon_element() -> int: return magic_runtime_controller.player_weapon_element(_magic_context())
 func _spawn_magic_trail(world_position: Vector2, palette: String) -> void: magic_runtime_controller.spawn_magic_trail(_magic_context(), world_position, palette)
 func _spawn_magic_impact(world_position: Vector2, palette: String) -> void: magic_runtime_controller.spawn_magic_impact(_magic_context(), world_position, palette)
-func _update_overworld_ui() -> void: effects_spawner.resolve_item_acquisition_deliveries_if_blocked(); hud_controller.update_overworld(self, get_process_delta_time(), OVERWORLD_UI_Z)
+func _update_overworld_ui() -> void: hud_controller.update_overworld(self, get_process_delta_time(), OVERWORLD_UI_Z)
 func _depth_key(sprite: Sprite2D) -> float: return float(actor_presentation_runtime_controller.call("depth_key", self, sprite))
 func _equipment_occlusion_depth_key(sprite: Sprite2D) -> float: return float(actor_presentation_runtime_controller.call("equipment_occlusion_depth_key", self, sprite))
 func _sprite_source_global_rect(sprite: Sprite2D) -> Rect2: return actor_presentation_runtime_controller.call("sprite_source_global_rect", self, sprite) as Rect2
@@ -1698,17 +1703,17 @@ func _sync_actor_geometry_offset(actor: Sprite2D) -> void: actor_presentation_ru
 func _collect_walkable_tiles(node: Node) -> void: slime_runtime_controller.call("collect_walkable_tiles", self, node)
 func _build_walkable_outline() -> void: slime_runtime_controller.call("build_walkable_outline", self)
 func _build_entrance_block_polygons() -> void: slime_runtime_controller.call("build_entrance_block_polygons", self)
-func _is_walkable(point: Vector2) -> bool: return bool(slime_runtime_controller.call("is_walkable", self, point))
-func _can_actor_stand_at_current_position(actor: Sprite2D) -> bool: return bool(slime_runtime_controller.call("can_actor_stand_at_current_position", self, actor))
-func _is_slime_walkable_point(point: Vector2) -> bool: return bool(slime_runtime_controller.call("is_slime_walkable_point", self, point))
+func _is_walkable(point: Vector2) -> bool: return slime_runtime_controller.is_walkable(self, point)
+func _can_actor_stand_at_current_position(actor: Sprite2D) -> bool: return slime_runtime_controller.can_actor_stand_at_current_position(self, actor)
+func _is_slime_walkable_point(point: Vector2) -> bool: return slime_runtime_controller.is_slime_walkable_point(self, point)
 func _tile_top_polygon(tile: Sprite2D) -> PackedVector2Array: return slime_runtime_controller.call("tile_top_polygon", self, tile) as PackedVector2Array
 func _nearest_slime_walkable_point(point: Vector2) -> Vector2: return slime_runtime_controller.call("nearest_slime_walkable_point", self, point) as Vector2
 func _random_slime_walkable_point_near(point: Vector2, sample_count: int, ignored_slime: Sprite2D = null) -> Vector2: return slime_runtime_controller.call("random_slime_walkable_point_near", self, point, sample_count, ignored_slime) as Vector2
 func _nearest_valid_slime_walkable_point(point: Vector2, slime: Sprite2D) -> Vector2: return slime_runtime_controller.call("nearest_valid_slime_walkable_point", self, point, slime) as Vector2
 func _is_slime_collision_rect_walkable_at(slime: Sprite2D, foot: Vector2) -> bool: return bool(slime_runtime_controller.call("is_slime_collision_rect_walkable_at", self, slime, foot))
-func _slime_collision_polygon(slime: Sprite2D, foot: Vector2 = Vector2.INF) -> PackedVector2Array: return slime_runtime_controller.call("slime_collision_polygon", self, slime, foot) as PackedVector2Array
-func _slime_body_polygon(slime: Sprite2D) -> PackedVector2Array: return slime_runtime_controller.call("slime_body_polygon", self, slime) as PackedVector2Array
+func _slime_collision_polygon(slime: Sprite2D, foot: Vector2 = Vector2.INF) -> PackedVector2Array: return slime_runtime_controller.slime_collision_polygon(self, slime, foot)
+func _slime_body_polygon(slime: Sprite2D) -> PackedVector2Array: return slime_runtime_controller.slime_body_polygon(self, slime)
 func _is_slime_collision_polygon_walkable(polygon: PackedVector2Array) -> bool: return bool(slime_runtime_controller.call("is_slime_collision_polygon_walkable", self, polygon))
 func _is_point_near_other_slime(point: Vector2, ignored_slime: Sprite2D = null) -> bool: return bool(slime_runtime_controller.call("is_point_near_other_slime", self, point, ignored_slime))
-func _actor_foot(actor: Sprite2D) -> Vector2: return slime_runtime_controller.call("actor_foot", self, actor) as Vector2
+func _actor_foot(actor: Sprite2D) -> Vector2: return slime_runtime_controller.actor_foot(self, actor)
 func _slime_shadow_anchor(slime: Sprite2D) -> Vector2: return ActorGeometry.slime_shadow_anchor(slime)

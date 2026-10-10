@@ -29,7 +29,7 @@ func is_ready() -> bool:
 
 
 func reject(new_status: int, new_reason: StringName) -> void:
-	status = new_status
+	status = new_status as Status
 	reason = new_reason
 
 

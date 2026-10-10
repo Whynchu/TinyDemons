@@ -87,6 +87,8 @@ func start_charged_attack(root: GameplayState) -> bool:
 
 
 func _start_attack(root: GameplayState, new_kind: int, new_variant: int, animation_name: String) -> bool:
+	if _player_attack_locked(root):
+		return false
 	var anim := root.player_animation_component
 	if anim == null:
 		return false
@@ -229,7 +231,7 @@ func sword_beam_cost_for(chroma: Node) -> int:
 
 
 func begin_charge(root: GameplayState) -> bool:
-	if not should_enter_charge():
+	if _player_attack_locked(root) or not should_enter_charge():
 		return false
 	attack_kind = AttackKind.CHARGING
 	charge_release_pending = false
@@ -256,6 +258,9 @@ func begin_charge(root: GameplayState) -> bool:
 
 
 func tick_charge(root: GameplayState, delta: float) -> void:
+	if _player_attack_locked(root):
+		root._interrupt_player_attack()
+		return
 	if attack_kind != AttackKind.CHARGING:
 		return
 	var tuning := root.player_tuning
@@ -284,6 +289,8 @@ func tick_charge(root: GameplayState, delta: float) -> void:
 
 
 func apply_hitbox(root: GameplayState) -> void:
+	if _player_attack_locked(root):
+		return
 	var hitbox := attack_polygon(root)
 	if hitbox.size() < 3:
 		return
@@ -544,6 +551,13 @@ func cancel() -> void:
 	combo_timer = 0.0
 	combo_running_attack = false
 	attack_button_held = false
+
+
+func _player_attack_locked(root: GameplayState) -> bool:
+	if root == null or root.player == null:
+		return false
+	var status := root.player.get_node_or_null("Status") as StatusComponent
+	return status != null and status.is_attack_locked()
 
 
 func buffer_combo(window: float) -> void:

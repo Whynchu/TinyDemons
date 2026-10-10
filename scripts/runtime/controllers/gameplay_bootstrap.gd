@@ -228,11 +228,15 @@ func initialize(root: GameplayState, preview_session: RefCounted = null) -> void
 		rng.seed = int(preview_session.get("seed"))
 	var run_state := RunState.new()
 	root.run_state = run_state
+	var debug_progression_run: int = root.debug_run_number if root.debug_start_in_boss_room else 0
+	if debug_progression_run > 0:
+		root.run_flow_controller.debug_run_number = debug_progression_run
+	var progression_completed_runs: int = debug_progression_run - 1 if debug_progression_run > 0 else profile.completed_runs
 	var dungeon_graph := root.dungeon_graph
-	dungeon_graph.configure_progression(profile.completed_runs)
-	var dungeon_seed := int(preview_session.get("seed")) if preview_session != null else rng.randi()
+	dungeon_graph.configure_progression(progression_completed_runs)
+	var dungeon_seed: int = int(preview_session.get("seed")) if preview_session != null else (root.debug_dungeon_seed if root.debug_dungeon_seed > 0 else rng.randi())
 	root.current_dungeon_seed = dungeon_seed
-	var initial_room_id: StringName = root.dungeon_map_controller.begin_run(dungeon_graph, dungeon_seed, profile.completed_runs, profile.starter_flame, profile.persistent_flame() if profile.has_bound_element else &"", profile.puzzle_attempt_rotation_quarter_turns)
+	var initial_room_id: StringName = root.dungeon_map_controller.begin_run(dungeon_graph, dungeon_seed, progression_completed_runs, profile.starter_flame, profile.persistent_flame() if profile.has_bound_element else &"", profile.puzzle_attempt_rotation_quarter_turns)
 	root.dungeon_minimap_controller.call("configure", root.dungeon_map_controller)
 	await root.get_tree().process_frame
 	var minimap_travel_callback := Callable(root, "_on_minimap_flame_travel_requested")
@@ -256,6 +260,12 @@ func initialize(root: GameplayState, preview_session: RefCounted = null) -> void
 	root._sync_current_room_metadata()
 	root.room_controller.boss_variant_selection = root.debug_boss_variant
 	root.room_controller.debug_enemy_variant = debug_enemy_test_id if debug_enemy_test_enabled else &""
+	root.room_controller.debug_boss_stress_encounter = root.debug_boss_stress_encounter
+	if debug_progression_run > 0:
+		var theme_run_number := root.run_flow_controller.element_theme_run_number(profile)
+		root.room_controller.progression_run_rank = root.run_flow_controller.run_rank(root)
+		root.room_controller.progression_run_number = theme_run_number
+		root.room_controller.set_run_element_theme(EncounterDefinition.select_run_element_theme(dungeon_seed, theme_run_number))
 	root.room_controller.set_current_room(root.current_room_id, root.current_room_type)
 	root._collect_dungeon_sockets(); root.room_controller.validate_socket_setup(); root._ensure_current_room_layout()
 	await root.get_tree().process_frame
@@ -539,11 +549,13 @@ func _initialize_player(root: GameplayState, player: Sprite2D) -> void:
 	var health := _ensure_player_component(player, HealthComponent, "Health") as HealthComponent
 	var status_component := _ensure_player_component(player, StatusComponent, "Status") as StatusComponent
 	status_component.health_component = health
+	status_component.set_duration_bonus_for_status(&"freeze", PlayerController.PLAYER_FREEZE_DURATION_BONUS)
 	var element_aura := _ensure_player_component(player, ElementAuraComponent, "ElementAura") as ElementAuraComponent
 	element_aura.configure(player, player.get_parent() as Node2D, status_component, root.player_attack_visual)
 	health.set_process(false); health.regen_delay = tuning.regen_delay; health.regen_interval = tuning.regen_interval; health.regen_amount = tuning.regen_amount
 	health.damaged.connect(Callable(root, "_on_player_health_damaged")); health.healed.connect(Callable(root, "_on_player_health_healed")); health.health_changed.connect(Callable(root, "_on_player_health_changed"))
 	root.player_health_component = health
+	health.debug_invulnerable = root.debug_player_invulnerable
 	var motor := _ensure_player_component(player, ActorMotor, "Motor") as ActorMotor; motor.motion_requested.connect(Callable(root, "_on_player_motor_motion")); root.player_motor = motor
 	root.player_controller = _ensure_player_component(player, PlayerController, "Controller") as PlayerController; root.player_controller.configure_input_router(root.input_router); root.player_roll_component = _ensure_player_component(player, PlayerRollComponent, "Roll") as PlayerRollComponent; root.player_attack_component = _ensure_player_component(player, PlayerAttackComponent, "Attack") as PlayerAttackComponent; root.player_animation_component = _ensure_player_component(player, PlayerAnimationComponent, "Animation") as PlayerAnimationComponent
 	var guard := _ensure_player_component(player, PlayerGuardComponent, "Guard") as PlayerGuardComponent; guard.initialize(_guard_context(root, player)); root.player_guard_component = guard

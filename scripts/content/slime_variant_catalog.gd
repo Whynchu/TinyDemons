@@ -18,9 +18,9 @@ static var _variant_cache: Array[StringName] = []
 static func _ensure_cache() -> void:
 	if _cache_loaded:
 		return
-	for definition in DATA.authored_definitions():
-		_definition_cache[definition.variant_id] = definition
-		_variant_cache.append(definition.variant_id)
+	for enemy_definition in DATA.authored_definitions():
+		_definition_cache[enemy_definition.variant_id] = enemy_definition
+		_variant_cache.append(enemy_definition.variant_id)
 	_cache_loaded = true
 
 static func definitions() -> Dictionary:
@@ -51,45 +51,45 @@ static func invalidate_cache() -> void:
 	_variant_cache.clear()
 
 
-static func save_definition(definition: EnemyDefinition) -> Error:
-	if definition == null:
+static func save_definition(enemy_definition: EnemyDefinition) -> Error:
+	if enemy_definition == null:
 		return ERR_INVALID_PARAMETER
-	if definition.resource_path.is_empty():
+	if enemy_definition.resource_path.is_empty():
 		return ERR_FILE_NOT_FOUND
-	if definition.resource_path.contains("::"):
+	if enemy_definition.resource_path.contains("::"):
 		return ResourceSaver.save(DATA, CATALOG_RESOURCE_PATH)
-	var save_error := ResourceSaver.save(definition, definition.resource_path)
+	var save_error := ResourceSaver.save(enemy_definition, enemy_definition.resource_path)
 	if save_error != OK:
 		return save_error
-	if not DATA.definitions.has(definition):
-		DATA.definitions.append(definition)
+	if not DATA.definitions.has(enemy_definition):
+		DATA.definitions.append(enemy_definition)
 		return ResourceSaver.save(DATA, CATALOG_RESOURCE_PATH)
 	return OK
 
 
-static func register_definition(definition: EnemyDefinition) -> Error:
-	if definition == null or definition.resource_path.is_empty():
+static func register_definition(enemy_definition: EnemyDefinition) -> Error:
+	if enemy_definition == null or enemy_definition.resource_path.is_empty():
 		return ERR_INVALID_PARAMETER
-	if DATA.definitions.has(definition):
+	if DATA.definitions.has(enemy_definition):
 		return OK
-	if definition_resource(definition.variant_id) != null:
+	if definition_resource(enemy_definition.variant_id) != null:
 		return ERR_ALREADY_EXISTS
-	DATA.definitions.append(definition)
+	DATA.definitions.append(enemy_definition)
 	var save_error := ResourceSaver.save(DATA, CATALOG_RESOURCE_PATH)
 	if save_error != OK:
-		DATA.definitions.erase(definition)
+		DATA.definitions.erase(enemy_definition)
 	return save_error
 
 
-static func definition_source_path(definition: EnemyDefinition) -> String:
-	if definition.resource_path.contains("::"):
+static func definition_source_path(enemy_definition: EnemyDefinition) -> String:
+	if enemy_definition.resource_path.contains("::"):
 		return CATALOG_RESOURCE_PATH
-	return definition.resource_path
+	return enemy_definition.resource_path
 
 
 static func definition_resource(variant_id: StringName) -> EnemyDefinition:
-	var definition := definitions().get(variant_id) as EnemyDefinition
-	return definition
+	var enemy_definition := definitions().get(variant_id) as EnemyDefinition
+	return enemy_definition
 
 
 static func family_geometry_profile(type_id: StringName) -> Resource:

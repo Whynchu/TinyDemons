@@ -4,6 +4,7 @@ class_name SlimeActor
 
 const ElementCatalogScript = preload("res://scripts/content/element_catalog.gd")
 const EnemyChromaComponentScript = preload("res://scripts/components/enemy_chroma_component.gd")
+const SlimeSpawnComponentScript = preload("res://scripts/components/slime_spawn_component.gd")
 
 
 static func _guard_context(root: Object) -> PlayerGuardContext:
@@ -32,6 +33,15 @@ static func _guard_context(root: Object) -> PlayerGuardContext:
 @export var variant := "green"
 @export var tuning: SlimeTuning
 var combat_element: int = ElementCatalogScript.Element.GRASS
+var _brain_component: SlimeBrain
+var _combat_component: SlimeCombatComponent
+var _status_component: StatusComponent
+var _aura_component: ElementAuraComponent
+var _tactics_component: EnemyTacticsComponent
+var _ambush_component: SlimeAmbushComponent
+var _spawn_component: SlimeSpawnComponentScript
+var _support_component: Node
+var _component_cache_ready := false
 
 
 static func component(actor: Sprite2D, node_name: String, component_type: Variant) -> Node:
@@ -51,6 +61,8 @@ func _ready() -> void:
 		return
 	if tuning == null:
 		tuning = SlimeTuning.new()
+	child_entered_tree.connect(_on_component_child_entered)
+	child_exiting_tree.connect(_on_component_child_exiting)
 	ensure_components()
 
 
@@ -68,8 +80,33 @@ func ensure_components() -> void:
 	_ensure_component("Tactics", EnemyTacticsComponent)
 	_ensure_component("Animation", SlimeAnimationComponent)
 	_ensure_component("Visual", SlimeVisualComponent)
-	_ensure_component("Spawn", load("res://scripts/components/slime_spawn_component.gd"))
+	_ensure_component("Spawn", SlimeSpawnComponentScript)
 	_ensure_component("HealthPresenter", SlimeHealthPresenter)
+	_refresh_component_refs()
+
+
+func _refresh_component_refs() -> void:
+	_brain_component = get_node_or_null("Brain") as SlimeBrain
+	_combat_component = get_node_or_null("Combat") as SlimeCombatComponent
+	_status_component = get_node_or_null("Status") as StatusComponent
+	_aura_component = get_node_or_null("ElementAura") as ElementAuraComponent
+	_tactics_component = get_node_or_null("Tactics") as EnemyTacticsComponent
+	_ambush_component = get_node_or_null("Ambush") as SlimeAmbushComponent
+	_spawn_component = get_node_or_null("Spawn") as SlimeSpawnComponentScript
+	_support_component = get_node_or_null("Support")
+	if _brain_component != null:
+		_brain_component.status_component = _status_component
+	_component_cache_ready = true
+
+
+func _on_component_child_entered(_child: Node) -> void:
+	if _component_cache_ready:
+		_refresh_component_refs()
+
+
+func _on_component_child_exiting(_child: Node) -> void:
+	if _component_cache_ready:
+		call_deferred("_refresh_component_refs")
 
 
 func configure_health(max_health: float, regen_delay: float, regen_interval: float, regen_amount: float) -> HealthComponent:
@@ -86,59 +123,75 @@ func configure_health(max_health: float, regen_delay: float, regen_interval: flo
 
 
 func tick_components(delta: float) -> void:
-	var brain := get_node_or_null("Brain") as SlimeBrain
-	if brain != null:
-		brain.tick(delta)
-	var combat := get_node_or_null("Combat") as SlimeCombatComponent
-	if combat != null:
-		combat.tick(delta)
-	var tactics := get_node_or_null("Tactics") as EnemyTacticsComponent
-	if tactics != null:
-		tactics.tick(delta)
-	var ambush := get_node_or_null("Ambush") as SlimeAmbushComponent
-	if ambush != null:
-		ambush.tick(self, delta)
+	if not _component_cache_ready:
+		_refresh_component_refs()
+	if _brain_component != null:
+		_brain_component.tick(delta)
+	if _combat_component != null:
+		_combat_component.tick(delta)
+	if _tactics_component != null:
+		_tactics_component.tick(delta)
+	if _ambush_component != null:
+		_ambush_component.tick(self, delta)
+
+
+func spawn_component() -> SlimeSpawnComponentScript:
+	if not _component_cache_ready:
+		_refresh_component_refs()
+	return _spawn_component
 
 
 func begin_spawn(spawn_frames: Array[Texture2D], frame_time: float) -> void:
-	var spawn := get_node_or_null("Spawn") as Node
+	if not _component_cache_ready:
+		_refresh_component_refs()
+	var spawn := _spawn_component
 	if spawn == null:
-		spawn = _ensure_component("Spawn", load("res://scripts/components/slime_spawn_component.gd"))
-	spawn.call("begin", spawn_frames, frame_time)
+		spawn = _ensure_component("Spawn", SlimeSpawnComponentScript) as SlimeSpawnComponentScript
+		_spawn_component = spawn
+	if spawn != null:
+		spawn.begin(spawn_frames, frame_time)
 
 
 func tick_spawn(delta: float, _set_frame: Callable, finish: Callable) -> bool:
-	var spawn := get_node_or_null("Spawn") as Node
-	return spawn != null and bool(spawn.call("tick", delta, _set_frame, finish))
+	if not _component_cache_ready:
+		_refresh_component_refs()
+	var spawn := _spawn_component
+	return spawn != null and spawn.tick(delta, _set_frame, finish)
 
 
 func cancel_spawn() -> void:
-	var spawn := get_node_or_null("Spawn") as Node
+	if not _component_cache_ready:
+		_refresh_component_refs()
+	var spawn := _spawn_component
 	if spawn != null:
-		spawn.call("cancel")
+		spawn.cancel()
 
 
 func is_spawn_locked() -> bool:
-	var spawn := get_node_or_null("Spawn") as Node
-	return spawn != null and bool(spawn.call("is_active"))
+	if not _component_cache_ready:
+		_refresh_component_refs()
+	var spawn := _spawn_component
+	return spawn != null and spawn.is_active()
 
 
-func tick_runtime(delta: float, is_dead: Callable, update_knockback: Callable, update_attack: Callable, is_aggroed: Callable, aggro_target: Callable, update_scoot: Callable, allow_movement: bool = true) -> void:
-	var combat := get_node_or_null("Combat") as SlimeCombatComponent
+func tick_runtime(delta: float, is_dead: Callable, update_knockback: Callable, update_attack: Callable, is_aggroed: Callable, update_scoot: Callable, allow_movement: bool = true, update_scoot_aggro: Callable = Callable()) -> void:
+	if not _component_cache_ready:
+		_refresh_component_refs()
+	var combat := _combat_component
 	if combat == null or is_dead.call(self) or is_spawn_locked():
 		return
-	var status := get_node_or_null("Status") as StatusComponent
+	var status := _status_component
 	var movement_locked: bool = status != null and status.is_movement_locked()
 	var action_delta := _action_delta(delta)
 	combat.cooldown = maxf(combat.cooldown - action_delta, 0.0)
 	if movement_locked:
 		combat.knockback_timer = 0.0
 		combat.knockback_velocity = Vector2.ZERO
-		var brain := get_node_or_null("Brain") as SlimeBrain
-		if brain != null:
-			brain.scoot_timer = 0.0
-			brain.scoot_start = position
-			brain.scoot_target = position
+		var locked_brain := _brain_component
+		if locked_brain != null:
+			locked_brain.scoot_timer = 0.0
+			locked_brain.scoot_start = position
+			locked_brain.scoot_target = position
 		# Reset active locomotion/squash presentation without advancing or moving.
 		update_scoot.call(self, 0.0)
 	if combat.status_stun_timer > 0.0:
@@ -148,7 +201,7 @@ func tick_runtime(delta: float, is_dead: Callable, update_knockback: Callable, u
 	if status != null and status.is_attack_locked():
 		return
 	if not movement_locked and update_knockback.call(self, delta):
-		var support := get_node_or_null("Support") as Node
+		var support := _support_component
 		if support != null:
 			support.call("cancel_cast", &"knockback")
 		return
@@ -159,25 +212,21 @@ func tick_runtime(delta: float, is_dead: Callable, update_knockback: Callable, u
 		return
 	if movement_locked:
 		return
-	# This movement stage is skipped for frozen actors; otherwise the frame
-	# controller rotates a movement budget across the crowd, so a slime can be
-	# asked to skip its scoot this frame while combat/knockback stay live.
+	# Frozen actors retain their combat timers but do not integrate movement.
 	if not allow_movement:
 		return
-	var brain := get_node_or_null("Brain") as SlimeBrain
-	if is_aggroed.call(self):
-		if brain != null:
-			if brain.repath_timer <= 0.0:
-				brain.target = aggro_target.call(self)
-				brain.repath_timer = 0.08
-			brain.repath_timer = maxf(brain.repath_timer - delta, 0.0)
+	var brain := _brain_component
+	var aggroed := bool(is_aggroed.call(self))
+	if aggroed:
+		if brain != null and brain.repath_timer <= 0.0:
+			brain.repath_timer = 0.08
+	if update_scoot_aggro.is_valid():
+		update_scoot_aggro.call(self, delta, aggroed)
+	else:
 		update_scoot.call(self, delta)
-		return
-	if brain != null: brain.repath_timer = float(brain.repath_timer) - delta
-	update_scoot.call(self, delta)
 
 
-static func tick_legacy_runtime(actor: Sprite2D, delta: float, is_dead: Callable, update_knockback: Callable, update_attack: Callable, is_aggroed: Callable, aggro_target: Callable, update_scoot: Callable, allow_movement: bool = true) -> void:
+static func tick_legacy_runtime(actor: Sprite2D, delta: float, is_dead: Callable, update_knockback: Callable, update_attack: Callable, is_aggroed: Callable, update_scoot: Callable, allow_movement: bool = true, update_scoot_aggro: Callable = Callable()) -> void:
 	var spawn := actor.get_node_or_null("Spawn") as Node
 	if bool(is_dead.call(actor)) or (spawn != null and bool(spawn.call("is_active"))):
 		return
@@ -191,11 +240,11 @@ static func tick_legacy_runtime(actor: Sprite2D, delta: float, is_dead: Callable
 	if movement_locked:
 		combat.knockback_timer = 0.0
 		combat.knockback_velocity = Vector2.ZERO
-		var brain := actor.get_node_or_null("Brain") as SlimeBrain
-		if brain != null:
-			brain.scoot_timer = 0.0
-			brain.scoot_start = actor.position
-			brain.scoot_target = actor.position
+		var locked_brain := actor.get_node_or_null("Brain") as SlimeBrain
+		if locked_brain != null:
+			locked_brain.scoot_timer = 0.0
+			locked_brain.scoot_start = actor.position
+			locked_brain.scoot_target = actor.position
 		update_scoot.call(actor, 0.0)
 	if not movement_locked and bool(update_knockback.call(actor, delta)):
 		return
@@ -209,21 +258,21 @@ static func tick_legacy_runtime(actor: Sprite2D, delta: float, is_dead: Callable
 	if not allow_movement:
 		return
 	var brain := actor.get_node_or_null("Brain") as SlimeBrain
-	if bool(is_aggroed.call(actor)):
-		if brain != null:
-			if brain.repath_timer <= 0.0:
-				brain.target = aggro_target.call(actor)
-				brain.repath_timer = 0.08
-			brain.repath_timer = maxf(brain.repath_timer - delta, 0.0)
-		update_scoot.call(actor, delta)
-		return
-	if brain != null:
+	var aggroed := bool(is_aggroed.call(actor))
+	if aggroed:
+		if brain != null and brain.repath_timer <= 0.0:
+			brain.repath_timer = 0.08
+	elif brain != null:
 		brain.repath_timer = float(brain.repath_timer) - delta
-	update_scoot.call(actor, delta)
+	if update_scoot_aggro.is_valid():
+		update_scoot_aggro.call(actor, delta, aggroed)
+	else:
+		update_scoot.call(actor, delta)
 
 
 func _action_delta(delta: float) -> float:
-	return _action_delta_for(self, delta)
+	var multiplier := _status_component.attack_speed_multiplier() if _status_component != null else 1.0
+	return maxf(delta, 0.0) * clampf(multiplier, 0.05, 1.0)
 
 
 static func _action_delta_for(actor: Node, delta: float) -> float:

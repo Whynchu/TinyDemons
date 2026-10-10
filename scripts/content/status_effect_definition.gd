@@ -14,6 +14,7 @@ enum Family {
 
 const STATUS_IDS: Array[StringName] = [&"burn", &"poison", &"chill", &"shocked", &"wet"]
 const AUXILIARY_STATUS_IDS: Array[StringName] = [&"freeze"]
+const CONTACT_TRANSMISSIBLE_STATUS_IDS: Array[StringName] = [&"wet", &"burn", &"chill", &"freeze", &"shocked"]
 const PARTICLE_STYLES: Array[StringName] = [&"ember", &"poison_mote", &"electric_spark", &"frost_crystal", &"bubble", &"ice_shard"]
 
 @export var id: StringName = &""
@@ -128,6 +129,10 @@ func validate() -> Array[String]:
 ## so a frozen target can be both rooted and easier to break.
 func applies_damage_vulnerability() -> bool:
 	return family == Family.DAMAGE_VULNERABILITY or family == Family.MOVEMENT_LOCK
+
+
+func can_transmit_by_contact() -> bool:
+	return transmissible and CONTACT_TRANSMISSIBLE_STATUS_IDS.has(id)
 
 
 func tick_interval_for(_stacks: int) -> float:

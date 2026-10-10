@@ -25,10 +25,10 @@ func is_ready() -> bool:
 
 
 func reject(new_status: int) -> void:
-	status = new_status
+	status = new_status as Status
 
 
-func record_spawn(slot: int, animated: bool) -> void:
+func record_spawn(_slot: int, animated: bool) -> void:
 	spawned_slots += 1
 	if animated:
 		animated_spawn_started = true

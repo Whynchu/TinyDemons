@@ -321,7 +321,7 @@ static func assign_regular_shadow_frames(slimes: Array[Sprite2D], frame_library:
 		visual.shadow_spawn_frames = palette_set["spawn"]
 
 
-static func _boss_ability_frame_library(frame_library: SpriteFrameLibrary, cache: Dictionary, warm_texture: Callable) -> Dictionary:
+static func _boss_ability_frame_library(frame_library: SpriteFrameLibrary, _cache: Dictionary, warm_texture: Callable) -> Dictionary:
 	const key := "boss-ability-shader-v2"
 	if frame_set_cache.has(key):
 		return frame_set_cache[key] as Dictionary
@@ -344,7 +344,10 @@ static func _boss_ability_frame_library(frame_library: SpriteFrameLibrary, cache
 			var frames: Array[Texture2D] = []
 			for frame in sources[state] as Array:
 				frames.append(frame as Texture2D)
-			palette_set[state] = frames[0] if state == "shadow_idle" and not frames.is_empty() else frames
+			if state == "shadow_idle" and not frames.is_empty():
+				palette_set[state] = frames[0]
+			else:
+				palette_set[state] = frames
 		result[palette] = palette_set
 	for state in sources:
 		for frame in sources[state] as Array:
@@ -355,7 +358,7 @@ static func _boss_ability_frame_library(frame_library: SpriteFrameLibrary, cache
 	return result
 
 
-static func _regular_shadow_frame_library(frame_library: SpriteFrameLibrary, cache: Dictionary, warm_texture: Callable) -> Dictionary:
+static func _regular_shadow_frame_library(frame_library: SpriteFrameLibrary, _cache: Dictionary, warm_texture: Callable) -> Dictionary:
 	const key := "regular-shadow-shader-v2"
 	if frame_set_cache.has(key):
 		return frame_set_cache[key] as Dictionary
@@ -372,7 +375,10 @@ static func _regular_shadow_frame_library(frame_library: SpriteFrameLibrary, cac
 			var frames: Array[Texture2D] = []
 			for frame in sources[state] as Array:
 				frames.append(frame as Texture2D)
-			palette_set[state] = frames[0] if state == "idle" and not frames.is_empty() else frames
+			if state == "idle" and not frames.is_empty():
+				palette_set[state] = frames[0]
+			else:
+				palette_set[state] = frames
 		result[palette] = palette_set
 	for state in sources:
 		for frame in sources[state] as Array:

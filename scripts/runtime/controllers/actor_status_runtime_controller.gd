@@ -1,6 +1,9 @@
 extends RefCounted
 class_name ActorStatusRuntimeController
 
+var _status_visual_root: GameplayState
+var _pixel_particle_texture_callback: Callable
+
 
 func try_apply_status(root: GameplayState, target: Node, element: int, effectiveness: float, guaranteed := false) -> bool:
 	if target == null or not is_instance_valid(target):
@@ -16,14 +19,15 @@ func try_apply_status(root: GameplayState, target: Node, element: int, effective
 	return StatusApplication.apply(request)
 
 
-func tick_actor_statuses(root: GameplayState, actor: Sprite2D, delta: float, is_player: bool) -> void:
+func tick_actor_statuses(root: GameplayState, actor: Sprite2D, delta: float, is_player: bool, actor_is_known_alive: bool = false) -> void:
 	if actor == null or not is_instance_valid(actor):
 		return
 	if is_player and (root.player_dead or root.player_death_pending):
 		return
-	if not is_player and root._is_slime_dead(actor):
+	if not is_player and not actor_is_known_alive and root._is_slime_dead(actor):
 		return
-	var component := actor.get_node_or_null("Status") as StatusComponent
+	var slime_actor := actor as SlimeActor
+	var component: StatusComponent = slime_actor._status_component if slime_actor != null and is_instance_valid(slime_actor._status_component) else actor.get_node_or_null("Status") as StatusComponent
 	if component == null:
 		return
 	for result in component.advance(delta):
@@ -31,14 +35,41 @@ func tick_actor_statuses(root: GameplayState, actor: Sprite2D, delta: float, is_
 			_apply_status_damage_tick(root, actor, result, is_player, result.status_id != &"shocked")
 		elif result.kind == StatusTickResult.Kind.STUN_PULSE:
 			_apply_status_stun_pulse(root, actor, result, is_player)
-	var aura := actor.get_node_or_null("ElementAura") as ElementAuraComponent
+	var aura: ElementAuraComponent = slime_actor._aura_component if slime_actor != null and is_instance_valid(slime_actor._aura_component) else actor.get_node_or_null("ElementAura") as ElementAuraComponent
 	if aura != null and is_instance_valid(aura):
+		_ensure_status_visual_callbacks(root)
 		aura.advance_status_visuals(
 			delta,
 			root.effects_spawner,
 			root.rng,
-			Callable(root, "_pixel_particle_texture")
+			_pixel_particle_texture_callback
 		)
+
+
+func present_actor_status_auras(root: GameplayState) -> void:
+	if root.player != null and not root.player_dead and not root.player_death_pending:
+		_present_actor_status_aura(root.player)
+	for actor in root.slimes:
+		if actor == null or not is_instance_valid(actor) or not actor.visible or not actor.is_visible_in_tree() or root._is_slime_dead(actor):
+			continue
+		_present_actor_status_aura(actor)
+
+
+func _present_actor_status_aura(actor: Sprite2D) -> void:
+	var slime_actor := actor as SlimeActor
+	var component: StatusComponent = slime_actor._status_component if slime_actor != null and is_instance_valid(slime_actor._status_component) else actor.get_node_or_null("Status") as StatusComponent
+	if component == null:
+		return
+	var aura: ElementAuraComponent = slime_actor._aura_component if slime_actor != null and is_instance_valid(slime_actor._aura_component) else actor.get_node_or_null("ElementAura") as ElementAuraComponent
+	if aura != null and is_instance_valid(aura):
+		aura.present_status_aura()
+
+
+func _ensure_status_visual_callbacks(root: GameplayState) -> void:
+	if _status_visual_root == root and _pixel_particle_texture_callback.is_valid():
+		return
+	_status_visual_root = root
+	_pixel_particle_texture_callback = Callable(root, "_pixel_particle_texture")
 
 
 func _apply_status_damage_tick(root: GameplayState, actor: Sprite2D, result: StatusTickResult, is_player: bool, apply_elemental_multiplier: bool = true) -> void:

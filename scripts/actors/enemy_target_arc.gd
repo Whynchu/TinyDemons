@@ -2,12 +2,31 @@ extends Node2D
 class_name EnemyTargetArc
 
 const ARC_CORE := Color8(112, 255, 151, 176)
-const ARC_HIGHLIGHT := Color8(210, 255, 216, 232)
 
 const MIN_ARC_HEIGHT := 3.0
 const MAX_ARC_HEIGHT := 8.0
 const PIXEL_SAMPLES_PER_WORLD_PIXEL := 2.0
 const CAST_WORLD_Z_LIMIT := 4088
+
+
+class ArcMarkerLayer extends Node2D:
+	const HIGHLIGHT := Color8(210, 255, 216, 232)
+	var spark_points := PackedVector2Array()
+	var glimmer_points := PackedVector2Array()
+
+	func set_points(next_sparks: PackedVector2Array, next_glimmers: PackedVector2Array) -> void:
+		if spark_points == next_sparks and glimmer_points == next_glimmers:
+			return
+		spark_points = next_sparks
+		glimmer_points = next_glimmers
+		queue_redraw()
+
+	func _draw() -> void:
+		for point in spark_points:
+			draw_rect(Rect2(point, Vector2.ONE), HIGHLIGHT)
+		for point in glimmer_points:
+			draw_rect(Rect2(point, Vector2.ONE), HIGHLIGHT)
+
 
 var source_anchor: Node2D
 var target_anchor: Node2D
@@ -24,6 +43,8 @@ var elapsed := 0.0
 var finishing := false
 var fade_remaining := 0.0
 var fade_duration := 0.0
+var _cached_arc_points := PackedVector2Array()
+var _marker_layer: ArcMarkerLayer
 
 
 func configure(source: Node2D, target: Node2D, source_world_point: Vector2, target_world_point: Vector2, renderer: OcclusionRenderer) -> void:
@@ -36,6 +57,9 @@ func configure(source: Node2D, target: Node2D, source_world_point: Vector2, targ
 	target_offset = target_world_point - target.global_position
 	_attach_target_outline()
 	_update_anchor_points()
+	_cached_arc_points = _build_arc_points()
+	_ensure_marker_layer()
+	_update_marker_positions()
 	queue_redraw()
 
 
@@ -47,8 +71,11 @@ func finish(cancelled: bool = false) -> void:
 
 func _process(delta: float) -> void:
 	elapsed += maxf(delta, 0.0)
-	_update_anchor_points()
+	if _update_anchor_points():
+		_cached_arc_points = _build_arc_points()
+		queue_redraw()
 	_sync_target_outline()
+	_update_marker_positions()
 	if finishing:
 		fade_remaining = maxf(fade_remaining - maxf(delta, 0.0), 0.0)
 		modulate.a = fade_remaining / maxf(fade_duration, 0.001)
@@ -56,21 +83,22 @@ func _process(delta: float) -> void:
 			target_outline.modulate = ARC_CORE * Color(1.0, 1.0, 1.0, modulate.a)
 		if fade_remaining <= 0.0:
 			queue_free()
-	queue_redraw()
 
 
 func _draw() -> void:
-	var points := _build_arc_points()
-	for point in points:
+	for point in _cached_arc_points:
 		draw_rect(Rect2(to_local(point), Vector2.ONE), ARC_CORE)
-	_draw_traveling_sparks(points)
-	_draw_target_glimmers()
 
 
-func _update_anchor_points() -> void:
+func _update_anchor_points() -> bool:
 	if source_anchor == null or not is_instance_valid(source_anchor) or target_anchor == null or not is_instance_valid(target_anchor):
+		var had_geometry := not _cached_arc_points.is_empty() or start_point != Vector2.ZERO or end_point != Vector2.ZERO
+		start_point = Vector2.ZERO
+		end_point = Vector2.ZERO
 		target_outline_pixels.clear()
-		return
+		return had_geometry
+	var previous_start := start_point
+	var previous_end := end_point
 	var resolved_source_visual := _actor_visual_sprite(source_anchor)
 	if resolved_source_visual != null:
 		source_visual = resolved_source_visual
@@ -84,6 +112,35 @@ func _update_anchor_points() -> void:
 	start_point = _top_center_outline_pixel(source_outline_pixels, source_visual, source_anchor, source_offset)
 	end_point = _top_center_outline_pixel(target_outline_pixels, target_visual, target_anchor, target_offset)
 	z_index = mini(maxi(source_anchor.z_index, target_anchor.z_index) + 1, CAST_WORLD_Z_LIMIT)
+	return start_point != previous_start or end_point != previous_end
+
+
+func _ensure_marker_layer() -> void:
+	if _marker_layer != null and is_instance_valid(_marker_layer):
+		return
+	_marker_layer = ArcMarkerLayer.new()
+	_marker_layer.name = "TargetArcMarkers"
+	add_child(_marker_layer)
+
+
+func _update_marker_positions() -> void:
+	if _marker_layer == null or not is_instance_valid(_marker_layer):
+		return
+	var spark_positions := PackedVector2Array()
+	if not _cached_arc_points.is_empty():
+		var phase := fposmod(elapsed * 0.52, 1.0)
+		for spark_index in 2:
+			var t := fposmod(phase + float(spark_index) * 0.5, 1.0)
+			var point_index := clampi(roundi(t * float(_cached_arc_points.size() - 1)), 0, _cached_arc_points.size() - 1)
+			spark_positions.append(to_local(_cached_arc_points[point_index]))
+	var glimmer_positions := PackedVector2Array()
+	if not target_outline_pixels.is_empty():
+		var phase := fposmod(elapsed * 0.68, 1.0)
+		for glimmer_index in 2:
+			var t := fposmod(phase + float(glimmer_index) * 0.5, 1.0)
+			var point_index := clampi(floori(t * float(target_outline_pixels.size())), 0, target_outline_pixels.size() - 1)
+			glimmer_positions.append(to_local(target_outline_pixels[point_index]))
+	_marker_layer.set_points(spark_positions, glimmer_positions)
 
 
 func _actor_visual_sprite(actor: Node2D) -> Sprite2D:
@@ -91,7 +148,7 @@ func _actor_visual_sprite(actor: Node2D) -> Sprite2D:
 		return null
 	if actor is Sprite2D:
 		return actor as Sprite2D
-	var first_sprite: Sprite2D
+	var first_sprite: Sprite2D = null
 	for candidate: Node in actor.find_children("*", "Sprite2D", true, false):
 		var sprite := candidate as Sprite2D
 		if sprite == null or sprite.name.ends_with("Outline") or sprite.name.ends_with("Shadow"):
@@ -231,23 +288,3 @@ func _build_arc_points() -> PackedVector2Array:
 		if points.is_empty() or points[points.size() - 1] != pixel_point:
 			points.append(pixel_point)
 	return points
-
-
-func _draw_traveling_sparks(points: PackedVector2Array) -> void:
-	if points.is_empty():
-		return
-	var phase := fposmod(elapsed * 0.52, 1.0)
-	for spark_index in 2:
-		var t := fposmod(phase + float(spark_index) * 0.5, 1.0)
-		var point_index := clampi(roundi(t * float(points.size() - 1)), 0, points.size() - 1)
-		draw_rect(Rect2(to_local(points[point_index]), Vector2.ONE), ARC_HIGHLIGHT)
-
-
-func _draw_target_glimmers() -> void:
-	if target_outline_pixels.is_empty():
-		return
-	var phase := fposmod(elapsed * 0.68, 1.0)
-	for glimmer_index in 2:
-		var t := fposmod(phase + float(glimmer_index) * 0.5, 1.0)
-		var point_index := clampi(floori(t * float(target_outline_pixels.size())), 0, target_outline_pixels.size() - 1)
-		draw_rect(Rect2(to_local(target_outline_pixels[point_index]), Vector2.ONE), ARC_HIGHLIGHT)

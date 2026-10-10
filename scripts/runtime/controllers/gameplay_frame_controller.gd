@@ -12,6 +12,7 @@ const PHASE_TRANSITIONS := &"transitions"
 const PHASE_ORDER: Array[StringName] = [PHASE_INPUT, PHASE_SIMULATION, PHASE_CONTACT, PHASE_DAMAGE, PHASE_PRESENTATION, PHASE_TRANSITIONS]
 ## A quick click on an enemy selects it; a deliberate hold also attacks it.
 const MOUSE_TARGET_HOLD_ATTACK_DELAY := 0.18
+const PLAYER_FREEZE_SHAKE_OFF_SECONDS_PER_INPUT := 0.12
 
 enum MouseLeftHoldMode { NONE, ATTACK, TARGET, INTERACTION }
 
@@ -36,6 +37,7 @@ var _mouse_left_attack_held := false
 var _mouse_interact_input_this_frame := false
 var _mouse_click_aim_direction_this_frame := Vector2.ZERO
 var _debug_session_controller: Node = null
+var _player_freeze_pose_active := false
 
 
 func invalidate_contexts() -> void:
@@ -316,9 +318,13 @@ func _roll_context(root: GameplayState) -> PlayerRollContext:
 	context.roll_dust_spawned_this_roll_get = func() -> Variant: return root.get("roll_dust_spawned_this_roll")
 	context.roll_dust_spawned_this_roll_set = func(value: Variant) -> void: root.set("roll_dust_spawned_this_roll", value)
 	context.player_anim_name_set = func(value: Variant) -> void: root.set("player_anim_name", value)
-	context.apply_animation_frame = func() -> void: root.player_animation_component.apply_frame(animation_context(root)) if root.player_animation_component != null else null
+	context.apply_animation_frame = func() -> void:
+		if root.player_animation_component != null:
+			root.player_animation_component.apply_frame(animation_context(root))
 	context.movement_anim_name = func() -> Variant: return root.player_animation_component.movement_anim_name(animation_context(root)) if root.player_animation_component != null else ""
-	context.update_motor_facing = func(direction: Vector2) -> void: root.player_motor.update_horizontal_facing(root, direction) if root.player_motor != null else null
+	context.update_motor_facing = func(direction: Vector2) -> void:
+		if root.player_motor != null:
+			root.player_motor.update_horizontal_facing(root, direction)
 	context.movement_input = Callable(root, "_movement_input")
 	context.player_facing_vector = Callable(root, "_player_facing_vector")
 	context.perspective_movement = Callable(root, "_perspective_movement")
@@ -527,12 +533,123 @@ func _update_magic_input(root: GameplayState, delta: float, mouse_magic_click: b
 	root.magic_input_was_down = magic_down
 
 
+func _enter_player_freeze_pose(root: GameplayState) -> void:
+	root._interrupt_player_attack()
+	if root.player_roll_component != null:
+		root.player_roll_component.cancel()
+	if root.player_motor != null:
+		root.player_motor.end_roll()
+	root.player_is_attacking = false
+	root.player_is_magic_casting = false
+	root.player_is_rolling = false
+	root.player_is_backflipping = false
+	root.player_is_defending = false
+	root.player_is_moving = false
+	root.player_is_running = false
+	root.player_is_targeting = false
+	root.player_roll_input_held = false
+	root.player_roll_hold_armed = false
+	root.player_between_timer = 0.0
+	root.player_attack_hit_done = false
+	root.player_attack_visual.visible = false
+	root.player.visible = true
+	root._restore_actor_base_visual_scale(root.player)
+	root.player_anim_name = "idle"
+	root.player_anim_frame = 0
+	root.player_anim_timer = 0.0
+	if root.player_animation_component != null:
+		root.player_animation_component.apply_frame(animation_context(root))
+
+
+func _sync_player_input_edges_while_frozen(root: GameplayState) -> void:
+	root.player_attack_input_was_down = root._is_attack_input_pressed()
+	root.player_roll_input_was_down = root._is_roll_input_pressed()
+	root.player_roll_input_held = false
+	root.magic_input_was_down = root._is_magic_input_pressed()
+	root.interact_input_was_down = root._is_interact_input_pressed()
+	root.target_input_was_down = root._is_target_input_held()
+	_mouse_left_hold_mode = MouseLeftHoldMode.NONE
+	_mouse_target_hold_elapsed = 0.0
+	_mouse_left_attack_held = false
+
+
+func _update_player_freeze(root: GameplayState, status: StatusComponent) -> bool:
+	var freeze_record := status.record_for(&"freeze") if status != null else null
+	var frozen := freeze_record != null and freeze_record.origin == StatusRecord.Origin.APPLIED and freeze_record.remaining > 0.0
+	if not frozen:
+		_player_freeze_pose_active = false
+		return false
+	if not _player_freeze_pose_active:
+		_enter_player_freeze_pose(root)
+		_player_freeze_pose_active = true
+	if root.input_router != null and root.input_router.consume_frozen_gameplay_input_press():
+		var aura := root.player.get_node_or_null("ElementAura") as ElementAuraComponent if root.player != null else null
+		if aura != null:
+			aura.trigger_freeze_input_shake()
+		status.shorten_applied_status_duration(&"freeze", PLAYER_FREEZE_SHAKE_OFF_SECONDS_PER_INPUT)
+	_sync_player_input_edges_while_frozen(root)
+	return true
+
+
+func present(root: GameplayState, delta: float) -> void:
+	var screens := root.screen_state_controller as ScreenStateController
+	if root.boot_active or root.loading_screen_active or (screens != null and screens.state != &"gameplay"):
+		return
+	var minimap := root.dungeon_minimap_controller as Node
+	if minimap != null and bool(minimap.call("is_map_open")):
+		return
+	var run_complete_overlay := screens.run_complete_presenter.overlay if screens != null else null
+	if run_complete_overlay != null and run_complete_overlay.visible:
+		return
+	# Flush display-only HUD state once after the final physics step for this
+	# rendered frame. Catch-up steps can update health, MP, and targets repeatedly;
+	# only their final values can be shown on screen.
+	root._update_mp_desaturation()
+	root._update_player_health_ui(0.0)
+	root._update_player_mp_ui(0.0)
+	root._update_target_ui()
+	root._update_enemy_health_presentation(delta)
+	root._update_overworld_ui()
+	root._update_depth_sorting()
+	var status_runtime := root.combat_runtime_controller as CombatRuntimeController
+	if status_runtime != null:
+		status_runtime.present_actor_status_auras(root)
+	var actor_presentation := root.actor_presentation_runtime_controller as Node
+	if actor_presentation != null:
+		actor_presentation.call("present_slime_shadows", root)
+	root._update_actor_occlusion(delta)
+	root._update_player_palette_flash(delta)
+	root._update_player_shadow()
+	root._update_cloaked_demon_shadow()
+	if root.effects_spawner != null:
+		root.effects_spawner.sync_status_particle_depths()
+	MAP_LIGHTING_CONTROLLER_SCRIPT.refresh_for_actor(root.player)
+
+
+func _advance_player_health_state(root: GameplayState, delta: float) -> void:
+	var health_component := root.player_health_component
+	var current_health := health_component.current_health if health_component != null else 0.0
+	var hud := root.hud_controller as HudController
+	if hud == null:
+		return
+	var state: Dictionary = hud.advance_player_health_ui(current_health, root.player_display_health, root.player_damage_fill_hold_timer, delta, root.slime_tuning.health_drain_fill_speed, root._player_max_health())
+	root.player_display_health = float(state["display_health"])
+	root.player_damage_fill_hold_timer = float(state["damage_hold"])
+
+
+func _advance_player_mp_state(root: GameplayState, delta: float) -> void:
+	var runtime := root.magic_runtime_controller as MagicRuntimeController
+	var chroma_component := root.player_chroma_component as PlayerChromaComponent
+	var chroma := float(chroma_component.current_chroma) if chroma_component != null and is_instance_valid(chroma_component) else 0.0
+	if runtime != null:
+		runtime.advance_player_mp_ui(chroma, delta)
+
+
 func tick(root: GameplayState, delta: float) -> void:
 	_mouse_interact_input_this_frame = false
 	_mouse_click_aim_direction_this_frame = Vector2.ZERO
 	if root.display_controller != null:
 		root.display_controller.tick_screen_shake(delta, root.hitstop_timer > 0.0)
-	root._update_mp_desaturation()
 	root._update_music_state()
 	if root.boot_active:
 		if root.loading_screen_active: root._update_loading_screen(delta)
@@ -618,14 +735,16 @@ func tick(root: GameplayState, delta: float) -> void:
 		root._update_pause_input()
 		# The HUD remains alive above the menu. Continue ticking it so the coin
 		# animation and top-bar status do not freeze while the game is paused.
-		root._update_overworld_ui()
+		if root.effects_spawner != null:
+			root.effects_spawner.resolve_item_acquisition_deliveries_if_blocked()
 		return
 	var hub_overlay := ssc.hub_overlay
 	if hub_overlay != null and hub_overlay.visible:
 		root._update_hub_input()
 		# The HUD remains alive above the nested hub panel. Continue ticking it so
 		# the coin animation and gold display do not freeze while shopping.
-		root._update_overworld_ui()
+		if root.effects_spawner != null:
+			root.effects_spawner.resolve_item_acquisition_deliveries_if_blocked()
 		return
 	var run_complete_overlay := ssc.run_complete_presenter.overlay
 	if run_complete_overlay != null and run_complete_overlay.visible:
@@ -645,6 +764,8 @@ func tick(root: GameplayState, delta: float) -> void:
 	# before any pickup, door, or enemy work. ProfileSaveService only writes on a
 	# later frame than the request, so the serializing frame is a quiet one.
 	var capture_service: Node = root.performance_capture_service as Node if OS.is_debug_build() else null
+	if capture_service != null and not bool(capture_service.get("scope_capture_enabled")):
+		capture_service = null
 	if not bool(root.get("room_transition_locked")):
 		ProfileSaveService.flush_deferred_save(false, capture_service)
 	var aspect_ability := root.player_aspect_ability_component
@@ -672,38 +793,38 @@ func tick(root: GameplayState, delta: float) -> void:
 			root.player_guard_component.clear_for_death(_guard_context(root))
 		if root.player_animation_component != null:
 			root.player_animation_component.tick_coordinator_animation(animation_context(root), delta)
-		root._update_player_health_ui(delta)
-		root._update_enemy_health(delta)
+		root._maintain_enemy_regen_lock(delta)
 		root._update_damage_numbers(delta)
 		var motor := root.player_motor
 		if motor == null or not motor.is_in_knockback(): root._start_player_death()
+		_advance_player_health_state(root, delta)
 		return
 	if root.player_dead:
 		if root.player_guard_component != null:
 			root.player_guard_component.clear_for_death(_guard_context(root))
-		root._update_player_health_ui(delta)
-		root._update_enemy_health(delta)
+		root._maintain_enemy_regen_lock(delta)
 		if root.feedback_animation_registry != null: root.feedback_animation_registry.tick(delta)
 		root.effects_spawner.update_pixel_particles_from_root(root, delta); root._update_player_death(delta); equipment_visual.tick_death(equipment_visual_context(root)); root._update_damage_numbers(delta)
+		_advance_player_health_state(root, delta)
 		root._update_enemy_hit_flashes(delta)
-		root._update_depth_sorting()
-		root._update_actor_occlusion(delta)
 		_stabilize(root)
-		root.effects_spawner.sync_status_particle_depths()
-		MAP_LIGHTING_CONTROLLER_SCRIPT.refresh_for_actor(root.player)
-		root._update_overworld_ui()
 		root._update_game_over_input()
+		if root.effects_spawner != null:
+			root.effects_spawner.resolve_item_acquisition_deliveries_if_blocked()
 		return
+	var player_frozen := _update_player_freeze(root, player_status)
 	if root._is_pause_input_just_pressed():
 		root._open_pause_menu()
 		return
-	var player_input_locked: bool = dialogue_was_active or root.player_is_magic_casting
+	var player_input_locked: bool = dialogue_was_active or root.player_is_magic_casting or player_frozen
 	var player_tuning := root.player_tuning
 	var previous_attacking: bool = root.player_is_attacking
 	var previous_attack_animation := root.player_anim_name
 	var guard := root.player_guard_component
 	if guard != null: guard.tick(_guard_context(root), delta, not player_input_locked and root._is_guard_input_held())
-	if not player_input_locked:
+	if player_frozen:
+		pass
+	elif not player_input_locked:
 		update_player_input(root, delta)
 	else:
 		if root.input_router != null:
@@ -718,7 +839,7 @@ func tick(root: GameplayState, delta: float) -> void:
 			# Keep polling Triangle while that window is active, even though movement
 			# and the other player actions remain locked.
 			_update_magic_input(root, delta)
-	player_input_locked = dialogue_was_active or root.player_is_magic_casting
+	player_input_locked = dialogue_was_active or root.player_is_magic_casting or player_frozen
 	var player_attack := root.player_attack_component
 	if player_attack != null and not player_input_locked:
 		player_attack.tick_charge(root, delta)
@@ -733,20 +854,18 @@ func tick(root: GameplayState, delta: float) -> void:
 	root._update_entry_orb_player_reaction()
 	if not player_input_locked and root.player_motor != null: root.player_motor.move_player(root, delta, mouse_aim_active(root))
 	root.magic_runtime_controller.tick_magic_animation(magic_context(root), delta)
-	root.player_animation_component.tick_coordinator_animation(animation_context(root), delta)
+	if not player_frozen and root.player_animation_component != null:
+		root.player_animation_component.tick_coordinator_animation(animation_context(root), delta)
 	root._tick_run_telemetry(delta)
 	var debug_session := _debug_session(root)
 	if debug_session == null or not bool(debug_session.get("enemies_paused")):
 		root._move_slimes(delta)
 		root._update_special_enemy_respawns(delta)
 		root._update_enemy_hit_flashes(delta)
-		root._update_enemy_health(delta)
+		root._maintain_enemy_regen_lock(delta)
 	var room_clear_runtime := root.combat_runtime_controller as CombatRuntimeController
 	if room_clear_runtime != null:
 		room_clear_runtime.reconcile_empty_combat_room(root)
-	root._update_target_ui()
-	root._update_player_health_ui(delta)
-	root._update_player_mp_ui(delta)
 	root._update_magic_projectiles(delta)
 	root._update_damage_numbers(delta)
 	if root.feedback_animation_registry != null:
@@ -758,18 +877,16 @@ func tick(root: GameplayState, delta: float) -> void:
 		# A door crossing is the one place a whole room is mounted, laid out, and
 		# activated inside a single tick. Time it here so the capture can separate
 		# transition cost from the rest of the frame.
-		var door_started_usec := Time.get_ticks_usec()
+		var door_started_usec := Time.get_ticks_usec() if capture_service != null and bool(capture_service.get("capturing")) else 0
 		root._update_door_transition()
 		if capture_service != null and bool(capture_service.get("capturing")) and bool(root.get("room_transition_locked")):
 			capture_service.call("record_scope", &"room_transition", Time.get_ticks_usec() - door_started_usec)
-		root._update_depth_sorting(); root._update_targeting(); root._update_actor_occlusion(delta); root._update_player_palette_flash(delta); _stabilize(root)
+		root._update_targeting(); _stabilize(root)
 		# The charge pose is rendered by the base player sprite. The shared attack
 		# visual updater must not turn the previous attack frame back on after the
 		# animation component has deliberately hidden it.
 		var attack_visual_active := root.player_is_attacking and root.player_anim_name != "charge"
 		root.player_animation_component.update_attack_visual(root.player, root.player_attack_visual, attack_visual_active, Vector2(-10, -10), root.player.z_index)
-	else:
-		root._update_player_palette_flash(delta)
 	var now_attacking: bool = root.player_is_attacking
 	var anim := root.player_animation_component
 	if previous_attacking and not now_attacking:
@@ -799,9 +916,13 @@ func tick(root: GameplayState, delta: float) -> void:
 				root.player_anim_frame = 0
 				root.player_anim_timer = 0.0
 				anim.apply_frame(animation_context(root))
-	root._update_player_shadow(); root._update_cloaked_demon_shadow(); root._update_overworld_ui(); root._tick_focus_combo(delta); root._update_focus_indicator(delta)
-	root.effects_spawner.sync_status_particle_depths()
-	MAP_LIGHTING_CONTROLLER_SCRIPT.refresh_for_actor(root.player)
+	if root.effects_spawner != null:
+		root.effects_spawner.resolve_item_acquisition_deliveries_if_blocked()
+	root._tick_focus_combo(delta); root._update_focus_indicator(delta)
+	# Advance health and MP interpolation on every authoritative physics tick;
+	# render their final state once in present().
+	_advance_player_health_state(root, delta)
+	_advance_player_mp_state(root, delta)
 
 
 func _stabilize(root: GameplayState) -> void:

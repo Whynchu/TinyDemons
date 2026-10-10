@@ -112,7 +112,7 @@ func slice_full_row_visible(path: String, row: int, frame_size: Vector2i) -> Arr
 	if texture == null:
 		return frames
 	var sheet := _cached_image(texture)
-	var frame_count := sheet.get_width() / frame_size.x
+	var frame_count := int(float(sheet.get_width()) / float(frame_size.x))
 	for frame_index in frame_count:
 		var frame := Image.create_empty(frame_size.x, frame_size.y, false, sheet.get_format())
 		frame.blit_rect(

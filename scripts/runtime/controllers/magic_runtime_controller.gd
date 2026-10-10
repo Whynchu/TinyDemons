@@ -60,9 +60,11 @@ var fire_cone_source_loaded := false
 
 
 func update_player_mp_ui(context: MagicRuntimeContext, delta := 0.0) -> void:
-	# The visual state must update even while the MP HUD is not built or visible.
-	# In particular, a spell can consume MP before the HUD is ready.
+	# Keep state interpolation on the physics schedule, then paint only when the
+	# caller reaches the once-per-render presentation phase.
 	context.update_mp_desaturation.call()
+	var chroma := current_player_chroma(context)
+	advance_player_mp_ui(chroma, float(delta))
 	var fill := context.player_mp_fill_get.call() as Sprite2D
 	if fill == null:
 		return
@@ -74,18 +76,20 @@ func update_player_mp_ui(context: MagicRuntimeContext, delta := 0.0) -> void:
 	context.player_mp_fill_size_set.call(fill_size)
 	var chroma_component := context.player_chroma_component
 	var max_mp := float(chroma_component.get("max_chroma")) if chroma_component != null else float(context.imbue_mp_cost)
-	var chroma := current_player_chroma(context)
-	if displayed_chroma < 0.0:
-		displayed_chroma = chroma
-	else:
-		displayed_chroma = move_toward(displayed_chroma, chroma, CHROMA_FILL_TWEEN_SPEED * maxf(float(delta), 0.0))
-	if is_equal_approx(displayed_chroma, chroma):
-		displayed_chroma = chroma
 	if context.hud_controller != null:
 		context.hud_controller.set_chroma_bar_values(fill, context.hud_controller.chroma_highlight_target, fill_size, chroma, displayed_chroma, max_mp)
 	var text := context.player_mp_text_get.call() as Sprite2D
 	if text != null:
 		text.texture = context.pixel_text_texture.call("%d/%d" % [ceili(chroma), int(max_mp)], Color.WHITE)
+
+
+func advance_player_mp_ui(chroma: float, delta: float) -> void:
+	if displayed_chroma < 0.0:
+		displayed_chroma = chroma
+	else:
+		displayed_chroma = move_toward(displayed_chroma, chroma, CHROMA_FILL_TWEEN_SPEED * maxf(delta, 0.0))
+	if is_equal_approx(displayed_chroma, chroma):
+		displayed_chroma = chroma
 
 
 func current_player_chroma(context: MagicRuntimeContext) -> float:
@@ -104,6 +108,9 @@ func restore_player_mp(context: MagicRuntimeContext) -> void:
 
 
 func update_magic_input(context: MagicRuntimeContext, magic_down: bool, was_down: bool, delta: float) -> bool:
+	if _player_is_frozen(context):
+		cancel_magic_animation(context)
+		return false
 	var hold_threshold := _hold_threshold(context)
 	if magic_down:
 		if not was_down:
@@ -161,11 +168,20 @@ func _begin_magic_candidate(context: MagicRuntimeContext) -> bool:
 
 
 func _magic_action_blocked(context: MagicRuntimeContext, allow_candidate := false) -> bool:
+	if _player_is_frozen(context):
+		return true
 	if bool(context.player_is_attacking_get.call()) or bool(context.player_is_rolling_get.call()) or bool(context.player_is_backflipping_get.call()) or bool(context.player_is_defending_get.call()) or bool(context.player_dead_get.call()):
 		return true
 	if bool(context.player_is_magic_casting_get.call()) and not (allow_candidate and magic_animation_active and magic_hold_active and not magic_animation_is_imbue):
 		return true
 	return false
+
+
+func _player_is_frozen(context: MagicRuntimeContext) -> bool:
+	if context == null or context.player == null:
+		return false
+	var status := context.player.get_node_or_null("Status") as StatusComponent
+	return status != null and status.is_attack_locked()
 
 
 func _hold_threshold(context: MagicRuntimeContext) -> float:
@@ -243,14 +259,16 @@ func sync_chroma_presentation(context: MagicRuntimeContext) -> void:
 
 
 func execute_current_aspect_ability(context: MagicRuntimeContext, mode: int) -> bool:
+	if _player_is_frozen(context):
+		return false
 	if magic_animation_active and magic_hold_active and not magic_animation_is_imbue:
 		var candidate_form := SpellFormCatalogScript.cast_form_for(context.player_chroma_component, mode)
 		var candidate_delivery := SpellFormCatalogScript.delivery_of(candidate_form)
 		var candidate_target := pending_magic_target if pending_magic_target != null and is_instance_valid(pending_magic_target) and bool(context.is_slime_targetable.call(pending_magic_target)) else null
 		if candidate_delivery == SpellFormDefinitionScript.Delivery.INSTANT_TARGET or candidate_delivery == SpellFormDefinitionScript.Delivery.BEAM:
 			if candidate_target == null:
-				var current := context.valid_current_target.call() as Sprite2D
-				candidate_target = current if current != null and bool(context.is_slime_targetable.call(current)) else context.closest_target.call() as Sprite2D
+				var candidate_current := context.valid_current_target.call() as Sprite2D
+				candidate_target = candidate_current if candidate_current != null and bool(context.is_slime_targetable.call(candidate_current)) else context.closest_target.call() as Sprite2D
 			if not _form_has_required_target(context, candidate_form, candidate_target):
 				return false
 			pending_magic_target = candidate_target
@@ -293,7 +311,7 @@ func _form_has_required_target(context: MagicRuntimeContext, form: Resource, tar
 
 
 func begin_magic_animation(context: MagicRuntimeContext, direction: Vector2, target: Sprite2D, mode: int, is_imbue := false, is_candidate := false) -> bool:
-	if magic_animation_active:
+	if magic_animation_active or _player_is_frozen(context):
 		return false
 	magic_animation_active = true
 	magic_animation_timer = 0.0
@@ -336,7 +354,7 @@ func _capture_spell_selection(context: MagicRuntimeContext, mode: int) -> void:
 			var current_aspect := int(chroma.get("current_aspect"))
 			if current_aspect == ChromaComponentScript.Aspect.NONE:
 				current_aspect = int(chroma.get("bound_aspect"))
-			payload = ElementCatalogScript.element_for_aspect(current_aspect)
+			payload = ElementCatalogScript.element_for_aspect(current_aspect) as ElementCatalogScript.Element
 	pending_magic_palette = ElementCatalogScript.palette_key(payload)
 
 
@@ -734,8 +752,8 @@ func _fire_cone_animation_frames(context: MagicRuntimeContext, radius: float, ha
 func _fire_cone_frames(palette: String) -> Array[Texture2D]:
 	if not fire_cone_source_loaded:
 		fire_cone_source_loaded = true
-		var frame_library = SpriteFrameLibraryScript.new()
-		fire_cone_source_frames = frame_library.slice_frames("res://assets/artwork/Fire.png", FIRE_SPRITE_FRAME_SIZE)
+		var ability_frame_library = SpriteFrameLibraryScript.new()
+		fire_cone_source_frames = ability_frame_library.slice_frames("res://assets/artwork/Fire.png", FIRE_SPRITE_FRAME_SIZE)
 	if fire_cone_frames_by_palette.has(palette):
 		return fire_cone_frames_by_palette[palette] as Array[Texture2D]
 	if fire_cone_source_frames.is_empty():
@@ -858,7 +876,7 @@ func spawn_magic_bubble_pop(context: MagicRuntimeContext, origin: Vector2, palet
 
 
 func spawn_sky_strike(context: MagicRuntimeContext, target: Sprite2D, world_position: Vector2, palette: String) -> void:
-	var player := context.player
+	var _player := context.player
 	var effects := context.effects_spawner
 	var rng := context.rng
 	var bolt_palette := palette if palette in PaletteLibrary.PALETTE_NAMES else "blue"
@@ -1089,7 +1107,7 @@ func spawn_magic_projectile(context: MagicRuntimeContext, origin: Vector2, direc
 			var current_aspect := int(context.player_chroma_component.get("current_aspect"))
 			if current_aspect == ChromaComponentScript.Aspect.NONE:
 				current_aspect = int(context.player_chroma_component.get("bound_aspect"))
-			payload = ElementCatalogScript.element_for_aspect(current_aspect)
+			payload = ElementCatalogScript.element_for_aspect(current_aspect) as ElementCatalogScript.Element
 		palette = ElementCatalogScript.palette_key(payload)
 	var base_color := PaletteLibrary.normal(palette)
 	var accent_color := PaletteLibrary.accent(palette)
@@ -1459,7 +1477,7 @@ func magic_projectile_hit_targets(context: MagicRuntimeContext, sprite: Sprite2D
 		# The beam's collision follows its authored frame instead of the tiny
 		# magic-projectile radius. This makes the complete visible blade connect.
 		var frame_size := sprite.texture.get_size() / float(sprite.hframes)
-		radius = maxi(radius, int(maxf(frame_size.x, frame_size.y) * 0.5 + 3.0))
+		radius = maxi(int(radius), int(maxf(frame_size.x, frame_size.y) * 0.5 + 3.0))
 	var hits: Array = []
 	var slimes := context.slimes
 	for slime in slimes:

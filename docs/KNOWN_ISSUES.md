@@ -6,7 +6,7 @@ Updated: 2026-10-10
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.3.83`. The current smoke inventory is 157 manifest
+Current release: version `0.3.84`. The current smoke inventory is 157 manifest
 rows / 155 runnable paths / 2 report rows / 45-path default gate; counts quoted
 in older sections below are historical snapshots. The authoring and verification
 sequence is in [`authoring-system-plan.md`](authoring-system-plan.md).
@@ -978,6 +978,53 @@ bubbles now emit from an inset sprite perimeter so their centered particles stay
 closer to the affected actor. `git diff --check` passes; Godot runtime and device
 measurements have not been run, so the frame-rate improvement remains
 unverified.
+
+### Mixed-enemy Run 30 stress scene — catastrophic frame rate remains open (2026-10-10)
+
+The direct-play `scenes/debug/boss_room_debug.tscn` fixture is configured for a
+fixed-seed Run 30 encounter with mixed slimes, healers, skeletons, a large boss,
+and player invulnerability. The incident record includes a 23.78-second window
+at 6.56 FPS and a later editor-connected 41.584-second window at 6.613 FPS
+(275 frames, 151.215 ms mean wall interval, p95 190.115 ms). In the later window,
+scheduled physics callbacks averaged 7.829 per rendered frame. Nested scopes
+located 110.983 ms/render in slime runtime, including 66.202 ms actor ticks,
+32.282 ms scoot movement, 15.262 ms contact snapshot, and 15.418 ms separation.
+Status visuals added 9.968 ms/render. These are distinct capture windows, not a
+controlled before/after comparison; the later window ended with the game
+unfocused and is diagnostic, not acceptance evidence. Healer target scans,
+target-arc drawing, pickups, and GPU frame time are not individually attributed.
+See [performance-cost-guide.md](performance-cost-guide.md) for the wider source
+map and cost-preserving options. The source changes to contact snapshots,
+steering data, aggro target searches, and walkability early-outs have not
+brought the scene near 60 FPS. Capture scope nesting and warm-up outliers still
+need careful interpretation.
+
+The first coordinated full-rate source batch then produced a focused,
+editor-focused 40.685-second capture (230 frames): **5.653 FPS**, 176.891 ms
+mean wall interval, p95 239.543 ms, and p99 263.796 ms. It reduced status-visual
+cost to 5.991 ms/render, while slime runtime measured 118.987 ms/render, scoot
+movement 31.243 ms, contact snapshot 17.965 ms, separation 18.212 ms, and player
+contacts 7.491 ms. This failed the 60 FPS gate and was worse end to end; the
+status improvement does not establish an overall win. The contact follow-up
+removes a non-conservative 64 px upper cap and refreshes the grid before another
+separation pass. Script diagnostics pass; the focused result is recorded below.
+
+After that contact correction, a focused 37.460-second editor capture recorded
+278 frames: **7.421 FPS**, 134.748 ms mean wall interval, p95 170.905 ms, and
+p99 190.330 ms, with the game window focused. Slime runtime measured 94.001
+ms/render, actor ticks 56.133, movement 26.562, contact snapshot 12.627,
+separation 9.276, player contacts 7.503, and status visuals 5.433. Contact
+snapshot plus separation fell by about 14.3 ms/render versus the previous
+focused window, and end-to-end throughput rose from 5.653 to 7.421 FPS. This
+is a measured improvement, not a controlled single-variable proof; the 60 FPS
+floor still fails. Movement is now the largest measured remaining slice. The
+next source pass will target that path before another editor capture.
+
+**Status: open.** The active execution order and acceptance gates are in
+[`mixed-encounter-performance-correction-plan.md`](mixed-encounter-performance-correction-plan.md).
+Do not mark the issue fixed from per-scope improvements; the whole-scene 60 FPS
+floor must pass, with 200+ FPS measured separately in an uncapped desktop
+release build.
 
 | Finding | Impact | Next evidence or decision |
 |---|---|---|

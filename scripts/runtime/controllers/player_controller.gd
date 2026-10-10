@@ -2,6 +2,7 @@ extends Node
 class_name PlayerController
 
 ## Boundary for player action locks during composition migration.
+const PLAYER_FREEZE_DURATION_BONUS := 0.5
 
 const MOVE_ACTIONS := {
 	Vector2.LEFT: &"move_left",
@@ -18,7 +19,9 @@ func configure_input_router(router: InputRouter) -> void:
 
 
 func can_receive_input() -> bool:
-	return true
+	var actor := get_parent() as Node
+	var status := actor.get_node_or_null("Status") as StatusComponent if actor != null else null
+	return status == null or not status.is_movement_locked()
 
 
 func connected_devices() -> Array[int]:

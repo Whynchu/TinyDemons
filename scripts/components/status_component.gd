@@ -17,6 +17,7 @@ var _presentation_records_dirty := true
 var innate_status_id: StringName = &""
 var _innate_definition: StatusEffectDefinition
 var movement_lock_resistance_check: Callable = Callable()
+var _duration_bonus_by_status: Dictionary[StringName, float] = {}
 
 
 func configure_innate(status_id: StringName) -> void:
@@ -31,6 +32,16 @@ func configure_innate(status_id: StringName) -> void:
 
 func set_movement_lock_resistance_check(check: Callable) -> void:
 	movement_lock_resistance_check = check
+
+
+func set_duration_bonus_for_status(status_id: StringName, seconds: float) -> void:
+	if status_id.is_empty():
+		return
+	var bonus := maxf(seconds, 0.0)
+	if is_zero_approx(bonus):
+		_duration_bonus_by_status.erase(status_id)
+	else:
+		_duration_bonus_by_status[status_id] = bonus
 
 
 func reset_for_spawn() -> void:
@@ -53,13 +64,15 @@ func apply_effect(definition: StatusEffectDefinition, source_element: int, arriv
 		return false
 	if definition.id == innate_status_id:
 		return false
+	var applied_duration := _applied_duration_for(definition)
 	var record := _active.get(definition.id) as StatusRecord
 	if record == null or record.origin != StatusRecord.Origin.APPLIED:
 		record = StatusRecordScript.new() as StatusRecord
-		record.configure(definition, StatusRecord.Origin.APPLIED, definition.duration, 1, source_element, arrived_by_transmission)
+		record.configure(definition, StatusRecord.Origin.APPLIED, applied_duration, 1, source_element, arrived_by_transmission)
 	else:
 		record.definition = definition
-		record.remaining = definition.duration
+		record.remaining = applied_duration
+		record.total_duration = applied_duration
 		record.stacks = mini(record.stacks + 1, definition.maximum_stacks)
 		record.source_element = source_element
 		record.arrived_by_transmission = record.arrived_by_transmission or arrived_by_transmission
@@ -137,6 +150,26 @@ func advance(delta: float) -> Array[StatusTickResult]:
 		_recompute_suppression()
 		_emit_status_changed()
 	return results
+
+
+func shorten_applied_status_duration(status_id: StringName, seconds: float) -> bool:
+	var record := record_for(status_id)
+	if record == null or record.origin != StatusRecord.Origin.APPLIED or seconds <= 0.0:
+		return false
+	record.remaining = maxf(record.remaining - seconds, 0.0)
+	if record.remaining > 0.0:
+		return false
+	_active.erase(status_id)
+	_refresh_stun_cadences()
+	_recompute_suppression()
+	_emit_status_changed()
+	return true
+
+
+func _applied_duration_for(definition: StatusEffectDefinition) -> float:
+	if definition == null:
+		return 0.0
+	return maxf(definition.duration + float(_duration_bonus_by_status.get(definition.id, 0.0)), 0.0)
 
 
 func clear_all() -> void:
@@ -243,7 +276,7 @@ func transmissible_records() -> Array[StatusRecord]:
 	var result: Array[StatusRecord] = []
 	for record_value: Variant in _active.values():
 		var record := record_value as StatusRecord
-		if record == null or record.definition == null or not record.definition.transmissible:
+		if record == null or record.definition == null or not record.definition.can_transmit_by_contact():
 			continue
 		if record.origin == StatusRecord.Origin.INNATE and not record.suppressed_by.is_empty():
 			continue

@@ -240,6 +240,12 @@ func sync_slime_shadow(root: Object, slime: Sprite2D) -> void:
 	shadow.z_index = -1
 
 
+func present_slime_shadows(root: Object) -> void:
+	for slime in root.get("slimes") as Array[Sprite2D]:
+		if is_instance_valid(slime) and slime.visible and slime.is_visible_in_tree():
+			sync_slime_shadow(root, slime)
+
+
 func update_slime_attack_guides(root: Object, slime: Sprite2D) -> void:
 	var combat := root.call("_slime_combat", slime) as SlimeCombatComponent
 	var active_name := "AttackGuideL" if combat.face_left else "AttackGuideR"
@@ -307,7 +313,9 @@ func update_depth_sorting(root: Object) -> void:
 
 
 func update_actor_occlusion(root: Object, delta: float) -> void:
-	var started_usec := Time.get_ticks_usec()
+	var capture := root.get("performance_capture_service") as Node
+	var capture_enabled := capture != null and bool(capture.get("capturing")) and bool(capture.get("scope_capture_enabled"))
+	var started_usec := Time.get_ticks_usec() if capture_enabled else 0
 	var player := root.get("player") as Sprite2D
 	var target := root.call("_valid_current_target") as Sprite2D
 	var actors: Array[Sprite2D] = [player]
@@ -321,8 +329,7 @@ func update_actor_occlusion(root: Object, delta: float) -> void:
 	var equipment_visual := root.get("player_equipment_visual_component") as PlayerEquipmentVisualComponent
 	if equipment_visual != null:
 		equipment_visual.update_occlusion(root.gameplay_frame_controller.equipment_visual_context(root), delta)
-	var capture := root.get("performance_capture_service") as Node
-	if capture != null and bool(capture.get("capturing")):
+	if capture_enabled:
 		capture.call("record_scope", &"actor_occlusion", Time.get_ticks_usec() - started_usec)
 
 

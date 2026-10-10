@@ -34,6 +34,7 @@ var preferred_enemy_variant := "grey"
 var secondary_enemy_variant := "grey"
 var boss_variant_selection: StringName = &""
 var debug_enemy_variant: StringName = &""
+var debug_boss_stress_encounter := false
 var matchup_policy := "run_default"
 var encounter_definition: EncounterDefinition = null
 var room_definition: RoomDefinition = null
@@ -336,6 +337,8 @@ func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictiona
 	var boss_level := _generated_enemy_base_level(room_depth)
 	if not debug_enemy_variant.is_empty() and EnemyFactory.is_variant(debug_enemy_variant):
 		return EnemyFactory.single_variant_encounter(debug_enemy_variant, mini(boss_level, _enemy_level_cap()))
+	if debug_boss_stress_encounter:
+		return _generate_debug_boss_stress_encounter(generation_seed, boss_level)
 	# Keep early boss rooms focused on the boss and low-level neutral popcorn.
 	# Normal/elemental minor slimes join the roster starting with Run 5.
 	# Run 5 is the first mixed-support boss encounter. Add only one minor at
@@ -386,6 +389,66 @@ func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictiona
 		ambush_flags.append(support_variant == "purple" and encounter_rng.randf() < 0.40)
 	EncounterDefinition.constrain_generated_roster(variants, ambush_flags, run_element_theme, progression_run_number, generation_seed, "Generated boss")
 	return {"variants": variants, "levels": levels, "scales": scales, "popcorn": popcorn_flags, "popcorn_types": popcorn_types, "ambush": ambush_flags}
+
+
+func _generate_debug_boss_stress_encounter(generation_seed: int, boss_level: int) -> Dictionary:
+	var boss_rng := RandomNumberGenerator.new()
+	boss_rng.seed = generation_seed + 991
+	var boss_selection := EncounterDefinition.select_boss_variant(boss_variant_selection, run_element_theme, progression_run_number, generation_seed, boss_rng)
+	var boss_variant := boss_selection.variant as StringName
+	if boss_variant.is_empty():
+		return {}
+	var variants: Array[String] = [String(boss_variant)]
+	var levels: Array[int] = [mini(boss_level + 1, _enemy_level_cap())]
+	var scales: Array[float] = [3.0]
+	var popcorn_flags: Array[bool] = [false]
+	var popcorn_types: Array[String] = [""]
+	var ambush_flags: Array[bool] = [false]
+	if run_element_theme.is_empty():
+		run_element_theme = EncounterDefinition.select_run_element_theme(generation_seed, progression_run_number)
+	for index in 3:
+		var element := run_element_theme[index % run_element_theme.size()]
+		_append_debug_stress_enemy(variants, levels, scales, popcorn_flags, popcorn_types, ambush_flags, _stress_variant_for_element(&"slime", element, false), boss_level)
+	_append_debug_stress_enemy(variants, levels, scales, popcorn_flags, popcorn_types, ambush_flags, _stress_variant_for_element(&"skeleton", ElementCatalog.Element.NEUTRAL, false), boss_level)
+	for index in 3:
+		var element := run_element_theme[index % run_element_theme.size()]
+		_append_debug_stress_enemy(variants, levels, scales, popcorn_flags, popcorn_types, ambush_flags, _stress_variant_for_element(&"skeleton", element, false), boss_level)
+	for index in 4:
+		var element := run_element_theme[index % run_element_theme.size()]
+		_append_debug_stress_enemy(variants, levels, scales, popcorn_flags, popcorn_types, ambush_flags, _stress_variant_for_element(&"slime", element, true), boss_level)
+	EncounterDefinition.constrain_generated_roster(variants, ambush_flags, run_element_theme, progression_run_number, generation_seed, "Debug boss stress")
+	return {"variants": variants, "levels": levels, "scales": scales, "popcorn": popcorn_flags, "popcorn_types": popcorn_types, "ambush": ambush_flags}
+
+
+func _stress_variant_for_element(type_id: StringName, element: int, require_support_caster: bool) -> StringName:
+	for variant_id in EnemyFactory.variants_for_type(type_id):
+		var definition := EnemyFactory.definition(variant_id)
+		if definition == null or definition.element != element or definition.encounter_min_run_number > progression_run_number:
+			continue
+		if require_support_caster != (definition.behavior_id == &"support_caster"):
+			continue
+		return variant_id
+	return &""
+
+
+func _append_debug_stress_enemy(
+	variants: Array[String],
+	levels: Array[int],
+	scales: Array[float],
+	popcorn_flags: Array[bool],
+	popcorn_types: Array[String],
+	ambush_flags: Array[bool],
+	variant_id: StringName,
+	boss_level: int
+) -> void:
+	if variant_id.is_empty():
+		return
+	variants.append(String(variant_id))
+	levels.append(mini(boss_level, _enemy_level_cap()))
+	scales.append(1.0)
+	popcorn_flags.append(false)
+	popcorn_types.append("")
+	ambush_flags.append(false)
 
 
 func _enemy_level_cap() -> int:
@@ -551,13 +614,13 @@ func plan_connected_room_transition(
 	graph: DungeonGraph,
 	source_room_id: StringName,
 	destination_room_id: StringName,
-	arrival_socket_id: StringName,
+	requested_arrival_socket_id: StringName,
 	departure_socket_id: StringName = &""
 ) -> RoomTransitionResult:
 	var result := ROOM_TRANSITION_RESULT_SCRIPT.new() as RoomTransitionResult
 	result.source_room_id = source_room_id
 	result.destination_room_id = destination_room_id
-	result.arrival_socket_id = arrival_socket_id
+	result.arrival_socket_id = requested_arrival_socket_id
 	result.departure_socket_id = departure_socket_id
 	if graph == null:
 		result.reject(RoomTransitionResult.Status.INVALID_GRAPH, &"missing_graph")
@@ -2169,7 +2232,7 @@ func update_large_room_camera(_root: Object = null) -> void:
 
 
 func _mark_finished(root: Object) -> void:
-	var room_id: StringName = root.get("current_room_id")
+	var _room_id: StringName = root.get("current_room_id")
 	mark_cleared(_room_clear_context_from_root(root))
 
 

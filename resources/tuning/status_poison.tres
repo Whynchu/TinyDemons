@@ -16,4 +16,4 @@ badge_icon = ExtResource("2")
 badge_icon_uses_element_palette = true
 particle_style = &"poison_mote"
 particle_interval = 0.16
-transmissible = true
+transmissible = false

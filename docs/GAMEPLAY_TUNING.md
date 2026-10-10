@@ -155,7 +155,7 @@ purchase; other shop stock remains seeded and stable.
 | Chill | Ice | 20% per eligible hit | 2.0 s | 15% movement and attack-speed reduction per stack; cap 3; multiplier floor 0.55 | Drifting frost crystals / 0.16 s |
 | Shocked | Electric | 10% per eligible hit | 6.0 s | 2% of target max HP per stack every 3 s (4% total per stack); immediate 0.2 s action lock on proc, then repeat every 1 s; each extra stack reduces repeat cadence by 0.05 s to a 0.5 s floor; cap 3 | Electric sparks every 0.12 s; sprite-only jolt for 0.2 s per lock |
 | Wet | Water | 25% per eligible hit | 3.0 s | Cap 2; each applied stack adds 35% Electric damage taken; divides Shocked cadence by 1.5 per stack (0.5 s interval floor); removes up to 3 applied Burn stacks when Wet is applied | Slow-rising bubbles / 0.22 s |
-| Freeze | Water + Ice mixture | Guaranteed when Wet and Chill coexist | 3.0 s | Consumes applied Wet and Chill; locks movement; enemy attacks pause until expiry; direct incoming damage +25%; Fire melts applied Freeze into Wet | Ice shards / 0.14 s |
+| Freeze | Water + Ice mixture | Guaranteed when Wet and Chill coexist | 3.0 s NPC / 3.5 s player | Consumes applied Wet and Chill; locks movement; enemy attacks pause; player attacks/casts and animation pause; fresh player inputs shake and remove 0.12 s each; direct incoming damage +25%; Fire melts applied Freeze into Wet | Ice shards / 0.14 s; icy sprite tint fades while thawing |
 
 ### Combat interaction coverage
 
@@ -174,9 +174,10 @@ matchup multipliers are documented there separately from status reactions.
 | Actor status markers | Enemy health-bar status badges and world status outlines draw below their owning actor sprite | Implemented |
 
 Ordinary status procs require a successful, non-immune elemental hit with
-positive effectiveness. Contact transmission applies a carried transmissible
-status without another proc roll; authored immunity and special combat defense
-checks still apply. The unordered actor pair then has a three-second cooldown.
+positive effectiveness. Contact transmission applies only Wet, Burn, Chill,
+Shocked, and Freeze without another proc roll; Poison is never transferable.
+Authored immunity and special combat defense checks still apply. The unordered
+actor pair then has a three-second cooldown.
 `EnemyDefinition.status_immunities` can reject named status IDs. An enemy's
 elemental status is innate: it is harmless, suppressed by applied ailments, and
 does not provide its own mechanical modifier. Wet and Freeze use `W` and `F`
