@@ -13,6 +13,7 @@ const RoomCheckpointContextScript = preload("res://scripts/runtime/contexts/room
 const RunCheckpointContextScript = preload("res://scripts/runtime/contexts/run_checkpoint_context.gd")
 const RunCheckpointServiceScript = preload("res://scripts/runtime/services/run_checkpoint_service.gd")
 const MenuPlayerContextScript = preload("res://scripts/ui/menu_player_context.gd")
+const DEBUG_RUN_CONFIGURATION_SCRIPT = preload("res://scripts/content/debug_run_configuration.gd")
 const DEFAULT_COMBAT_TUNING: CombatTuning = preload("res://resources/tuning/combat_default.tres")
 const DEFAULT_PROGRESSION_TUNING: ProgressionTuning = preload("res://resources/tuning/progression_default.tres")
 const DEFAULT_PLAYER_TUNING: PlayerTuning = preload("res://resources/tuning/player_default.tres")
@@ -23,7 +24,7 @@ const DEFAULT_CHROMA_TUNING: ChromaTuning = preload("res://resources/tuning/chro
 @export_category("Debug")
 @export var debug_start_in_boss_room := false
 @export var debug_boss_variant: StringName = &""
-@export var debug_run_configuration: DebugRunConfiguration = DebugRunConfiguration.new()
+@export var debug_run_configuration: DEBUG_RUN_CONFIGURATION_SCRIPT = DEBUG_RUN_CONFIGURATION_SCRIPT.new()
 @export var debug_enemy_test_id: StringName = &""
 @export var debug_actor_geometry := false
 @export var debug_stat_breakdown := false

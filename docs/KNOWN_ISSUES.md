@@ -6,7 +6,7 @@ Updated: 2026-10-10
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.3.84`. The current smoke inventory is 157 manifest
+Current release: version `0.3.86`. The current smoke inventory is 157 manifest
 rows / 155 runnable paths / 2 report rows / 45-path default gate; counts quoted
 in older sections below are historical snapshots. The authoring and verification
 sequence is in [`authoring-system-plan.md`](authoring-system-plan.md).
@@ -26,6 +26,20 @@ reports, reproduction notes, and acceptance criteria remain in
 “Implemented in source” means that a code path and focused assertions exist. It
 does not mean that cold-start timing, every display orientation, physical
 touch input, browser behavior, or a complete player journey has been verified.
+
+## 2026-10-10 web startup report — 0.3.85
+
+The deployed 0.3.85 build was reported to remain on the authored `main.tscn`
+room and door geometry, with the player and in-game HUD visible but inert
+instead of reaching the title. The user supplied a parser error: Godot could
+not parse the global class `RoomController`. A statement in
+`RoomController.ensure_layout()` had lost its function indentation, which
+prevented that class from loading and caused dependent type-inference errors in
+`GameplayState` and the room checkpoint context. The indentation is corrected.
+Startup also now preloads the newly added debug-run configuration and helper
+scripts directly, avoiding generated global-class-cache dependence. Browser
+startup has not been retested; the deployed 0.3.86 build still needs user
+verification.
 
 ## 2026-10-02 polish pass — Fire cone aim, Orb height, transition/pickup hitches
 

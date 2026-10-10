@@ -179,7 +179,7 @@ func ensure_layout(graph: DungeonGraph, room_id: StringName, room: DungeonGraph.
 			state["regular_room_treasure"] = room_type == DungeonGraph.ROOM_COMBAT and progression_run_rank >= 1 and (room.reward_tier == DungeonGraph.REWARD_RISK or treasure_rng.randf() < _room_definition().regular_room_treasure_chance)
 		if not state.has("enemy_spawn_seed"):
 			state["enemy_spawn_seed"] = room.generation_seed + 303
-EncounterDefinition.migrate_saved_room_support_companions(state, room, room_type, ENCOUNTER_SCALING.base_level(progression_run_rank), progression_run_rank, progression_run_number, ENCOUNTER_SCALING.level_cap(progression_run_rank), _room_definition(), debug_enemy_variant.is_empty(), run_element_theme); room_states[room_id] = state
+		EncounterDefinition.migrate_saved_room_support_companions(state, room, room_type, ENCOUNTER_SCALING.base_level(progression_run_rank), progression_run_rank, progression_run_number, ENCOUNTER_SCALING.level_cap(progression_run_rank), _room_definition(), debug_enemy_variant.is_empty(), run_element_theme); room_states[room_id] = state
 	elif room_type == DungeonGraph.ROOM_DOWNSTAIRS:
 		if not state.has("enemy_variants"):
 			var boss_encounter := _generate_boss_encounter(room.generation_seed, room_depth)

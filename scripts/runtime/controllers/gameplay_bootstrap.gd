@@ -27,6 +27,7 @@ const DEBUG_SESSION_CONTROLLER_SCRIPT = preload("res://scripts/editor/debug_sess
 const CLOUD_SAVE_SERVICE_SCRIPT = preload("res://scripts/services/cloud_save_service.gd")
 const CLOUD_SAVE_PANEL_SCRIPT = preload("res://scripts/ui/cloud_save_panel.gd")
 const ROOM_PREFAB_HOST_SCRIPT = preload("res://scripts/runtime/controllers/room_prefab_host.gd")
+const DEBUG_RUN_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/debug_run_runtime_controller.gd")
 ## Runtime enemy capacity is a pool size, not an authored content roster. Every
 ## slot is materialized by EnemyFactory so a new definition never needs a scene
 ## node added to main.tscn.
@@ -228,11 +229,11 @@ func initialize(root: GameplayState, preview_session: RefCounted = null) -> void
 		rng.seed = int(preview_session.get("seed"))
 	var run_state := RunState.new()
 	root.run_state = run_state
-	var debug_progression_run: int = DebugRunRuntimeController.progression_run(root)
+	var debug_progression_run: int = DEBUG_RUN_RUNTIME_CONTROLLER_SCRIPT.progression_run(root)
 	var progression_completed_runs: int = debug_progression_run - 1 if debug_progression_run > 0 else profile.completed_runs
 	var dungeon_graph := root.dungeon_graph
 	dungeon_graph.configure_progression(progression_completed_runs)
-	var dungeon_seed: int = DebugRunRuntimeController.dungeon_seed(root, preview_session, rng)
+	var dungeon_seed: int = DEBUG_RUN_RUNTIME_CONTROLLER_SCRIPT.dungeon_seed(root, preview_session, rng)
 	root.current_dungeon_seed = dungeon_seed
 	var initial_room_id: StringName = root.dungeon_map_controller.begin_run(dungeon_graph, dungeon_seed, progression_completed_runs, profile.starter_flame, profile.persistent_flame() if profile.has_bound_element else &"", profile.puzzle_attempt_rotation_quarter_turns)
 	root.dungeon_minimap_controller.call("configure", root.dungeon_map_controller)
@@ -258,7 +259,7 @@ func initialize(root: GameplayState, preview_session: RefCounted = null) -> void
 	root._sync_current_room_metadata()
 	root.room_controller.boss_variant_selection = root.debug_boss_variant
 	root.room_controller.debug_enemy_variant = debug_enemy_test_id if debug_enemy_test_enabled else &""
-	DebugRunRuntimeController.configure_room(root, profile, debug_progression_run, dungeon_seed)
+	DEBUG_RUN_RUNTIME_CONTROLLER_SCRIPT.configure_room(root, profile, debug_progression_run, dungeon_seed)
 	root.room_controller.set_current_room(root.current_room_id, root.current_room_type)
 	root._collect_dungeon_sockets(); root.room_controller.validate_socket_setup(); root._ensure_current_room_layout()
 	await root.get_tree().process_frame
@@ -548,7 +549,7 @@ func _initialize_player(root: GameplayState, player: Sprite2D) -> void:
 	health.set_process(false); health.regen_delay = tuning.regen_delay; health.regen_interval = tuning.regen_interval; health.regen_amount = tuning.regen_amount
 	health.damaged.connect(Callable(root, "_on_player_health_damaged")); health.healed.connect(Callable(root, "_on_player_health_healed")); health.health_changed.connect(Callable(root, "_on_player_health_changed"))
 	root.player_health_component = health
-	DebugRunRuntimeController.configure_health(root, health)
+	DEBUG_RUN_RUNTIME_CONTROLLER_SCRIPT.configure_health(root, health)
 	var motor := _ensure_player_component(player, ActorMotor, "Motor") as ActorMotor; motor.status_component = status_component; motor.motion_requested.connect(Callable(root, "_on_player_motor_motion")); root.player_motor = motor
 	root.player_controller = _ensure_player_component(player, PlayerController, "Controller") as PlayerController; root.player_controller.configure_input_router(root.input_router); root.player_roll_component = _ensure_player_component(player, PlayerRollComponent, "Roll") as PlayerRollComponent; root.player_attack_component = _ensure_player_component(player, PlayerAttackComponent, "Attack") as PlayerAttackComponent; root.player_animation_component = _ensure_player_component(player, PlayerAnimationComponent, "Animation") as PlayerAnimationComponent
 	var guard := _ensure_player_component(player, PlayerGuardComponent, "Guard") as PlayerGuardComponent; guard.initialize(_guard_context(root, player)); root.player_guard_component = guard
