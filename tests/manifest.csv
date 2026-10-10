@@ -28,7 +28,7 @@
 "item_economy_smoke","gate","verified","gear & fusion","item economy: ItemInstance/PlayerProfile/equipment","pure","core smoke checklist evidence"
 "item_definition_slice_smoke","owner","verified","gear & fusion","standalone typed item definition registry","pure","data-only cinder_blade proof"
 "menu_route_scene_smoke","gate","verified","hub & menus","menu routing via ScreenStateController","main","game-over harness fixed 2026-09-13: injected _menu_direction_events; passes"
-"pause_menu_scene_smoke","gate","verified","hub & menus","pause menu scene layout and typed player presentation context","main","focused run 2026-09-27; full-boot fixture, authored rail/frame, typed player-card context, status/equipment routes, Debug pixel-frame/cursor presentation, responsive layout, and profile-safe fixture"
+"pause_menu_scene_smoke","gate","unverified","hub & menus","Pause command rail, Items inventory route, filters, grouping, sorting, and responsive page contract","main","Assertions expanded 2026-10-10 for hidden Debug reflow and profile Items inventory; updated smoke has not run. Pause visual/input acceptance is pending. Earlier 2026-09-27 evidence covered the previous contract only."
 "player_hud_scene_smoke","gate","verified","HUD","player HUD scene contract","fixture","focused run 2026-09-13; prompt paths aligned with authored cooldown-icon hierarchy"
 "progression_smoke","gate","verified","progression & settlement","ProgressionController progression math","pure","core smoke checklist evidence"
 "r6_plus_risk_reward_generation_smoke","gate","verified","generated layouts","R6+ risk/reward generator contract","pure","2026-09-13 focused evidence"

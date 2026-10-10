@@ -1605,3 +1605,19 @@ Godot MCP tooling is unavailable while an editor/runtime is active.
 Handoff: continue with focused in-editor Pause/Items checks and the curated gate
 when the shared editor is idle; do not run standalone Godot tests from this
 active-editor session.
+
+## Completed: Verification records and item-authoring audit (2026-10-10)
+
+Updated current manifest counts to 157 rows / 155 runnable / 45 gate, marked
+the expanded Pause smoke unverified, and recorded the user's Water-particle
+visual feedback with remaining checks scoped. Corrected current item-authoring
+paths and owner pointers, and documented the next ItemCatalog migration boundary:
+12 Plain/Basic baselines first, preserving projections, IDs, and preview-only
+ownership; set synthesis moves in a later atomic slice.
+
+Verification: `validate_test_manifest.ps1` reports 157 rows, 155 runnable, two
+reports, and 45 gate entries; `git diff --check` passes. No Godot tests or
+runtime checks were run; the user is handling Pause visual acceptance.
+
+Handoff: wait for the user's Pause visual/input acceptance, then implement the
+baseline ItemDefinition migration against the updated Slice 2 boundary.

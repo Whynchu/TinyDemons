@@ -9,11 +9,12 @@ Scope: `tests/`, `tests/run_all_smoke.ps1`, `docs/AUDIT.md`, and
 
 Owner: verification infrastructure and repository maintainability
 
-Current code: the runner derives grouping from `tests/manifest.csv`. The
-manifest classifies all 149 test/report scripts with a role, state, owner,
-target, and load kind. Its default release gate selects 44 paths; `owner`,
-`reference`, `diagnostic`, and `all` groups keep the remaining evidence
-available without making every check a default blocker. The two `report`
+Current code (2026-10-10): the runner derives grouping from `tests/manifest.csv`.
+The manifest has 157 rows: 155 runnable paths plus two report scripts. Its
+current role counts are 45 gate, 96 owner, 12 reference, two diagnostic, and two
+report rows. `all` includes the 155 runnable paths; the default release gate
+selects 45. The other groups keep focused evidence available without making
+every check a default blocker. The two `report`
 scripts (`fusion_menu_preview`, `puzzle_map_reference_diff_report`) are
 intentionally not runner tests. Note that the executable manifest validator
 accepts only `gate`, `owner`, `reference`, `diagnostic`, and `report` roles;
@@ -84,11 +85,11 @@ can be separated into product, harness, and environment causes:
 
 | Command | Current scope | Use |
 |---|---:|---|
-| default / `-TestGroup gate` | 44 Godot paths plus SFX, web export, and main-scene checks | Release and broad-refactor gate |
-| `-TestGroup owner` | 89 Godot paths | Focused feature-owner regressions |
+| default / `-TestGroup gate` | 45 manifest-selected paths plus SFX, web export, and main-scene checks | Release and broad-refactor gate |
+| `-TestGroup owner` | 96 Godot paths | Focused feature-owner regressions |
 | `-TestGroup reference` | 12 Godot paths | Opt-in authored/visual/reference checks |
 | `-TestGroup diagnostic` | 2 Godot paths | Opt-in performance/diagnostic evidence |
-| `-TestGroup all` | 147 runnable Godot paths plus the post-run checks | Supervised complete inventory |
+| `-TestGroup all` | 155 runnable paths plus the post-run checks | Supervised complete inventory |
 
 The web export is intentionally part of the default gate because browser
 delivery is a supported target. A restricted local run may still label its

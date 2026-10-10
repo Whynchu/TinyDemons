@@ -1263,3 +1263,6 @@ Prepare and push the owner-authorized 0.3.82 VFX release, excluding existing cli
 Prepared version 0.3.82 in the game title and release documentation. Composition regression passed for the VFX patch; rendered acceptance remains open. Publishing the authorized release next.
 2026-10-10 | codex | claim | Compact hidden pause commands, add a read-only profile Items browser, and reconcile pause/refactor audit notes against 0.3.82.
 2026-10-10 | codex | done | Pause Items browser and compact conditional command rail implemented; audit docs and script index refreshed; strict composition, test-manifest, and whitespace checks pass. Godot runtime visual acceptance remains pending because an editor/runtime is active and MCP diagnostics are unavailable.
+2026-10-10 | codex | claim | Reconcile the Pause smoke evidence state and current verification counts; audit the next typed item-registry migration boundary without changing content data.
+2026-10-10 | codex | claim | Extend this audit record to correct the Slice 2 resource path and current ItemCatalog, ItemInstance, and equipment owner pointers.
+2026-10-10 | codex | done | Verification counts and Pause/Water evidence reconciled. Corrected live ItemCatalog source pointers and made the first ItemDefinition migration boundary explicit; manifest validator and diff check pass. Pause runtime acceptance remains pending.

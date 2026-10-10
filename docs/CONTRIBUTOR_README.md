@@ -81,8 +81,8 @@ filtering and integer-like scaling intact when changing display settings.
 When a Godot editor peer is connected through the MCP toolkit, use MCP for
 scene inspection, script diagnostics, playtests, screenshots, and runtime logs.
 Do **not** run `tests/run_all_smoke.ps1` from that editor session. The default
-release gate is currently 44 processes; `-TestGroup all` launches all 143
-runnable paths in sequence, and a headless renderer crash can produce an
+release gate is currently 45 manifest-selected paths; `-TestGroup all` launches
+all 155 runnable paths in sequence, and a headless renderer crash can produce an
 avalanche of Windows memory-error dialogs. MCP cannot run `tests/*.gd`; focused
 in-editor verification means diagnostics, a scene probe, or a playtest.
 

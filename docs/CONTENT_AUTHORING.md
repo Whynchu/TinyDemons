@@ -480,12 +480,14 @@ Current owners:
 
 - live baseline/set definitions and retained metadata:
   `resources/definitions/item_catalog.tres` (`ItemCatalogData`), loaded by
-  `scripts/item_catalog.gd`;
+  `scripts/content/item_catalog.gd` through
+  `scripts/content/item_catalog_data.gd`;
 - new standalone definitions: `resources/definitions/items/*.tres`
   (`ItemDefinition`), discovered by the same catalog registry;
-- serialized instance identity: `scripts/item_instance.gd`;
-- equip/unequip state: `scripts/equipment_component.gd`;
-- equipment presentation: `scripts/player_equipment_visual_component.gd`;
+- serialized instance identity: `scripts/content/item_instance.gd`;
+- equip/unequip state: `scripts/components/equipment_component.gd`;
+- equipment presentation:
+  `scripts/components/player_equipment_visual_component.gd`;
 - acquisition rules: the shop, chest, drop, fusion, and settlement owners; and
 - player-facing contracts: `gear-catalogue-spec.md`,
   `gear-effect-contracts.md`, and `gear-catalogue.md`.

@@ -878,10 +878,10 @@ performance investigation, not a gameplay-contract failure.
 ## Verification surface audit — open
 
 The repository has a large test/report inventory. `tests/manifest.csv` now
-classifies all 149 scripts with a role (gate/owner/reference/diagnostic/report),
-state, owner, target, and load kind. The runner derives its grouping from that
-manifest: the default release gate selects 44 paths; `-TestGroup all` covers the
-147 runnable paths. The 2026-09-13 pruning slice removed the stale
+classifies 157 rows: 155 runnable paths and two reports, with role, state, owner,
+target, and load kind. The runner derives its grouping from that manifest: the
+default release gate selects 45 paths; `-TestGroup all` covers the 155 runnable
+paths. The 2026-09-13 pruning slice removed the stale
 `backtrack_popcorn_smoke` expectation and consolidated the three identical
 R3/R4/R5 layout wrappers into `authored_layouts_smoke`; no gate coverage or web
 export coverage was removed. The separate classification and pruning issue is
@@ -921,10 +921,11 @@ also remain useful follow-up.
 
 ## Status particle layering and weapon bubbles (2026-10-09)
 
-Owner playthrough reports that Water weapon bubbles cluster while stationary,
-and that a previous committed and pushed status-layer correction did not resolve
-the visual ordering. Keep that earlier attempt recorded as unsuccessful;
-its exact failure cause has not been established through a rendered reproduction.
+A 2026-10-09 owner playthrough reported that Water weapon bubbles clustered
+while stationary and that a previous committed status-layer correction had not
+resolved the visual ordering. Keep that earlier attempt recorded as
+unsuccessful; its exact failure cause was not established through a rendered
+reproduction.
 
 The source now mixes front and rear status particles based on their emission
 edge, retaining each particle's side for its lifetime. The frame scheduler
@@ -942,11 +943,16 @@ and other light sources retain their current gains.
 
 Composition regression and whitespace checks pass. Godot is active, but this
 session has no callable Godot MCP tools; no renderer or runtime checks were run.
-Rendered acceptance remains open: idle and moving Water sword, front/rear
-particles on player and enemies, actor/NPC depth crossings, and the brightest
-flame frame at native resolution. Confirm Ice and Electric remain readable with
-the added rear particles. NPCs participate in world depth sorting; this patch
-does not add status emission to NPCs.
+Rendered acceptance remains open for front/rear particles on the player and
+enemies across depth crossings, actor/NPC crossings, and the brightest flame
+frame at native resolution. Confirm Ice and Electric remain readable with the
+added rear particles. NPCs participate in world depth sorting; this patch does
+not add status emission to NPCs.
+
+**Player visual note (2026-10-10):** the user reports that the Water status
+particles look great. Keep the broader Ice/Electric readability, player/enemy
+front/rear depth behavior, actor/NPC crossings, and brightest-flame checks open
+until reviewed.
 
 ## Infrastructure findings
 
