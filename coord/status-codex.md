@@ -44,7 +44,8 @@ Verification: `tests/test_gdscript.py` and `tests/test_extractors_registry.py`
 pass (5 tests); `uv lock --check`, `compileall`, and `git diff --check` pass. A
 read-only sweep of 605 Tiny Demons scripts found 0 extractor errors and 7
 grammar-recovery files. `graphify update .` refreshed the fork's own graph to
-20,060 nodes and 40,883 edges. This is local work on `godot-support`, not pushed.
+20,060 nodes and 40,883 edges. This initial GDScript slice is on the pushed
+`godot-support` branch.
 
 Handoff: next implement the shared Godot text parser for `.tres` and `.tscn`,
 then resolve `res://` script/resource references against project roots and UID
@@ -63,8 +64,8 @@ Cloned upstream Graphify into `graphify-godot/` and added the directory to the
 Tiny Demons `.gitignore`. The local base was Graphify `b4e6307` (package
 `0.9.85`); implementation is now on the separate `godot-support` branch. The
 clone's `origin` is `Whynchu/graphify-godot`, with `Graphify-Labs/graphify` as
-`upstream`; `remote.pushDefault` points pushes to the fork. The checkout remains
-local and has not been pushed.
+`upstream`; `remote.pushDefault` points pushes to the fork. The
+`godot-support` branch now tracks `origin/godot-support`.
 
 ## Completed: Slime CollisionGuide is the combat hitbox
 
