@@ -811,7 +811,7 @@ func tick(root: GameplayState, delta: float) -> void:
 		root._move_slimes(delta)
 		root._update_special_enemy_respawns(delta)
 		root._update_enemy_hit_flashes(delta)
-		root._maintain_enemy_regen_lock(delta)
+		GAMEPLAY_PRESENTATION_RUNTIME.maintain_enemy_regen_lock(root, delta)
 	var room_clear_runtime := root.combat_runtime_controller as CombatRuntimeController
 	if room_clear_runtime != null:
 		room_clear_runtime.reconcile_empty_combat_room(root)

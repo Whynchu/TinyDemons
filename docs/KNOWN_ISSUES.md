@@ -6,7 +6,7 @@ Updated: 2026-10-11
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.3.91`. The current smoke inventory is 157 manifest
+Current release: version `0.3.92`. The current smoke inventory is 157 manifest
 rows / 155 runnable paths / 2 report rows / 45-path default gate; counts quoted
 in older sections below are historical snapshots. The authoring and verification
 sequence is in [`authoring-system-plan.md`](authoring-system-plan.md).
@@ -38,6 +38,13 @@ player DEF, including DEF from the equipped shield.
 The player confirmed the combat changes looked good. GitHub Pages run 371
 passed web export and deployment for commit `307bdd5`. Manual combat acceptance
 is recorded; the registered status and guard checks remain marked unverified.
+
+## 2026-10-11 active-frame regen-lock call — 0.3.92
+
+Gameplay called the removed `GameplayState._maintain_enemy_regen_lock()` wrapper
+from the normal active-frame path, raising an invalid-call error. That path now
+uses `GameplayPresentationRuntimeController.maintain_enemy_regen_lock()`, as the
+death and death-pending paths already do.
 
 ## 2026-10-10 player health damage-fill animation — 0.3.88
 

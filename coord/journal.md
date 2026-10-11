@@ -1379,3 +1379,6 @@ Slime combat hit geometry now comes from CollisionGuide; the workbench displays 
 
 ## 2026-10-11 — codex — done
 Version 0.3.90 prepared with enemy workbench geometry and documentation. Focused lifecycle test passed in the prior editor session; this shell has no Godot executable. Diff whitespace check passes.
+
+## 2026-10-11 — codex — done
+Active gameplay frame now calls the existing static regen-lock helper. Script diagnostics and whitespace checks pass; version 0.3.92 prepared for release.

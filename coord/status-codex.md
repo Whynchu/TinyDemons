@@ -2,7 +2,7 @@
 
 _Only codex writes this file._
 
-**Focus:** Completed slime CollisionGuide hitbox correction for 0.3.91.
+**Focus:** Released the active-frame regen-lock call fix as 0.3.92.
 **Updated:** 2026-10-11
 
 ## Completed: Slime CollisionGuide is the combat hitbox
@@ -17,7 +17,14 @@ regular and boss slimes.
 
 Godot script diagnostics pass for the geometry, workbench, smoke, and version
 scripts; `git diff --check` passes. The gameplay smoke itself was not run in
-this shell. Version markers are 0.3.91; release push is pending.
+this shell. Version markers are 0.3.91; Pages run 373 passed for commit `7c73131`.
+
+## Completed: Active-frame regen-lock invalid call
+
+Replaced the only remaining `root._maintain_enemy_regen_lock(delta)` call with
+the static presentation controller method already used by the death paths.
+Godot script diagnostics and `git diff --check` pass. Release 0.3.92 is pushed;
+Pages verification is pending.
 
 ## Completed: Enemy workbench slime contact geometry
 
