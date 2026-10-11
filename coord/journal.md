@@ -1424,3 +1424,9 @@ Verifying the existing Tiny Demons Graphify map excludes the entire nested graph
 
 ## 2026-10-11 - codex - done
 Verified Graphify honors the root /graphify-godot/ ignore rule and the Tiny Demons map has no source paths inside the nested fork. Generated cluster analysis and graph.html at graphify-godot/.tools/tiny-demons-map/ (1,015 aggregated communities); all outputs remain ignored/local.
+
+## 2026-10-11 - codex - claim
+Replacing generic Tiny Demons Graphify community labels with deterministic hub names and regenerating the report and HTML. The nested graphify-godot fork remains excluded.
+
+## 2026-10-11 - codex - done
+Regenerated the ignored Tiny Demons map with deterministic hub labels: 1,015 labeled communities, no Community N placeholders in graph.html, and zero graph source paths inside the nested graphify-godot fork.

@@ -5,6 +5,17 @@ _Only codex writes this file._
 **Focus:** Completed `.tres`/`.tscn` parsing, Godot resource links, and the local Tiny Demons map.
 **Updated:** 2026-10-11
 
+## Completed: Readable Tiny Demons community map (2026-10-11)
+
+Regenerated the ignored local map at
+`graphify-godot/.tools/tiny-demons-map/` with Graphify's deterministic
+structural hub labels. All 1,015 communities have labels (1,004 unique, 0
+`Community N` placeholders). The graph has 16,995 nodes and 19,443 links, and
+no source paths inside the nested `graphify-godot/` fork. The refreshed
+`GRAPH_REPORT.md`, `.graphify_analysis.json`, and 664 KB `graph.html` are all
+present; the HTML contains no generic community names. No LLM backend was
+configured, so labeling made no external calls.
+
 ## Completed: Godot text resources and links
 
 Added bounded parsing for `.tres` and `.tscn`, resource/subresource/scene
