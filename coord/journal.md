@@ -1415,3 +1415,12 @@ Added Godot text-resource parsing and links, validated focused coverage, refresh
 
 ## 2026-10-11T20:23Z - codex - done
 Fast-forwarded the Godot support commits to the graphify-godot fork default v8 branch at ea4fdc4, pushed it, and removed the temporary godot-support branch. Updated the integration plan and status.
+
+## 2026-10-11 — codex — claim
+Syncing latest Graphify upstream v8 into graphify-godot v8, reconciling the cache schema, verifying focused regressions, and pushing the fork branch if they pass. No overlap with opencode's smoke workflow claim.
+
+## 2026-10-11 - codex - claim
+Verifying the existing Tiny Demons Graphify map excludes the entire nested graphify-godot folder; will add an explicit ignore rule only if the current Git/Graphify ignore configuration does not already guarantee exclusion.
+
+## 2026-10-11 - codex - done
+Verified Graphify honors the root /graphify-godot/ ignore rule and the Tiny Demons map has no source paths inside the nested fork. Generated cluster analysis and graph.html at graphify-godot/.tools/tiny-demons-map/ (1,015 aggregated communities); all outputs remain ignored/local.

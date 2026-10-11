@@ -1893,3 +1893,19 @@ Updated the in-game version and current-version markers in the versioning docs,
 then committed only those seven files/hunks as `8f49106` and pushed to `main`.
 The Web Pages workflow started for this commit and is still running. Local
 unrelated worktree edits were left unstaged.
+
+## Completed: Graphify upstream v8 sync
+
+**Updated:** 2026-10-11
+
+Merged upstream `v8` at `a5ba60d` / 0.9.86 into the graphify-godot fork's `v8` branch. The cache schema is 9 to combine the Godot UID/resource dependency facts and upstream Rust grouped-use semantics. Pushed merge commit `7e5aced` to the fork's `origin/v8`.
+
+Verification: changed-area regression modules passed (1,482 passed, 73 skipped, 2 deselected); Git for Windows `sh.exe` was on `PATH` for the hook tests. The two deselected cases need a writable `G:\tmp` path and optional PyYAML, both unavailable in this environment. `compileall` and `git diff --cached --check` passed. The documented `uv` command and optional `ruff` / `pyright` checks were unavailable because those executables are not on this shell's `PATH`. Existing unrelated outer Tiny Demons edits remain unstaged.
+
+## Completed: Tiny Demons graph and HTML
+
+**Updated:** 2026-10-11
+
+The local Tiny Demons map is at `graphify-godot/.tools/tiny-demons-map/`. It has 16,995 nodes and 19,443 links, with zero source paths inside the nested `graphify-godot/` folder. The root `.gitignore` rule `/graphify-godot/` is honored by Graphify and confirmed by `git check-ignore`.
+
+Ran `GRAPHIFY_OUT=<absolute map path> python -m graphify cluster-only .. --no-label` to generate cluster analysis and the HTML viewer without an LLM backend. The map directory now contains `graph.html` (626,281 bytes), `GRAPH_REPORT.md`, and `.graphify_analysis.json`; the HTML aggregates the 16,995 source nodes into 1,015 community nodes. All outputs remain local under ignored `.tools/`.
