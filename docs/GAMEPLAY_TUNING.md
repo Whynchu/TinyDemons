@@ -154,8 +154,8 @@ purchase; other shop stock remains seeded and stable.
 | Poison | Shadow | 20% per eligible hit | 6.0 s | 2% of target max HP per stack every 2 s (6% total per stack); cap 3 | Rising poison motes / 0.16 s |
 | Chill | Ice | 20% per eligible hit | 2.0 s | 15% movement and attack-speed reduction per stack; cap 3; multiplier floor 0.55 | Drifting frost crystals / 0.16 s |
 | Shocked | Electric | 10% per eligible hit | 6.0 s | 2% of target max HP per stack every 3 s (4% total per stack); immediate 0.2 s action lock on proc, then repeat every 1 s; each extra stack reduces repeat cadence by 0.05 s to a 0.5 s floor; cap 3 | Electric sparks every 0.12 s; sprite-only jolt for 0.2 s per lock |
-| Wet | Water | 25% per eligible hit | 3.0 s | Cap 2; each applied stack adds 35% Electric damage taken; divides Shocked cadence by 1.5 per stack (0.5 s interval floor); removes up to 3 applied Burn stacks when Wet is applied | Slow-rising bubbles / 0.22 s |
-| Freeze | Water + Ice mixture | Guaranteed when Wet and Chill coexist | 3.0 s NPC / 3.5 s player | Consumes applied Wet and Chill; locks movement; enemy attacks pause; player attacks/casts and animation pause; fresh player inputs shake and remove 0.12 s each; direct incoming damage +25%; Fire melts applied Freeze into Wet | Ice shards / 0.14 s; icy sprite tint fades while thawing |
+| Wet | Water | 25% per eligible hit | 3.0 s | Cap 2; each applied stack adds 35% Electric damage taken; divides Shocked cadence by 1.5 per stack (0.5 s interval floor); removes up to 3 applied Burn stacks when Wet is applied and blocks Burn while Wet remains active | Slow-rising bubbles / 0.22 s |
+| Freeze | Water + Ice mixture | Guaranteed when Wet and Chill coexist | 3.0 s NPC / 3.5 s player | Consumes applied Wet and Chill; locks voluntary movement; hit knockback remains active for players and enemies; enemy attacks pause; player attacks/casts and animation pause; fresh player inputs shake and remove 0.12 s each; direct incoming damage +25%; Fire melts applied Freeze into Wet | Ice shards / 0.14 s; icy sprite tint fades while thawing |
 
 ### Combat interaction coverage
 
@@ -305,6 +305,7 @@ These are code values (not inspector-exposed) that drive gear value:
 | Weapon scope | Swords and Blades only | `item_catalog.gd:SET_DEFINITIONS`, `LIVE_BASE_DEFINITIONS` |
 | Shield primary trade-offs | SPD penalties are part of the visible flat package; no hidden STR/SPD subtraction | `item_catalog.gd:DEFINITIONS`, `equipment_component.gd` |
 | Shield guard package | Positive guard durability/reduction lines gain +10% of their authored value per total Fusion step, including rarity promotions | `item_catalog.gd:shield_bonuses` |
+| Shield durability from DEF | Maximum durability gains 0.5 per point of effective player DEF, including DEF from the equipped shield | `player_guard_component.gd:durability_per_defense`, `combat_runtime_controller.gd` |
 | Gear scaling floor | Not used by the current flat-point model | `combat_stat_snapshot.gd` |
 | Health/damage rate package | Not currently part of the primary gear snapshot | `combat_stat_snapshot.gd` |
 | Enhancement flat point | 0.1 point per positive attribute lane per level; +1 per lane at +10 | `item_catalog.gd:enhancement_flat_points`, `item_catalog.gd:bonuses` |

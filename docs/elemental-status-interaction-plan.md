@@ -1,6 +1,7 @@
 # Elemental Status Interaction Plan
 
-Status: implemented in source; focused runtime verification pending
+Status: implemented in source; combat acceptance confirmed by the player on
+2026-10-11; focused smoke execution pending
 
 Updated: 2026-10-05
 
@@ -26,6 +27,7 @@ applied status or innate elemental affinity:
 
 | Target state before hit | Incoming element | Reaction | Status |
 |---|---|---|---|
+| Applied Wet | Burn status application | Reject Burn; keep Wet | Implemented in 0.3.89 |
 | Applied Burn | Ice | Consume Burn; apply Wet instead of Chill | Implemented |
 | Applied Freeze | Fire | Consume Freeze; apply Wet | Implemented |
 | Innate Fire affinity | Ice | Ice melts; apply Wet instead of Chill | Implemented |
@@ -66,7 +68,8 @@ minimum for a positive tick.
 2. **Add focused status-application coverage first.** Extend
    `tests/status_mixture_smoke.gd` or add a focused status-reaction smoke to
    prove each reaction, ingredient consumption, no unintended Chill/Burn,
-   repeated hits, and unaffected unlisted cases. Cover applied Burn/Freeze and
+    repeated hits, and unaffected unlisted cases. Cover Wet blocking Burn,
+    applied Burn/Freeze and
    innate Fire separately.
 3. **Implement reaction resolution at the narrow status boundary.** Keep
    status reactions in `StatusMixtureController` or a narrowly named
@@ -99,6 +102,8 @@ minimum for a positive tick.
 ## Acceptance criteria
 
 - Ice against applied Burn removes Burn and applies Wet, without adding Chill.
+- Wet and Burn never coexist: Wet removes existing Burn and blocks Burn while
+  active.
 - Fire against applied Freeze removes Freeze and applies Wet.
 - Ice against an innate Fire-affinity target applies Wet, not Chill; later Ice
   can still interact with Wet through the existing Freeze rule.
@@ -112,6 +117,8 @@ minimum for a positive tick.
   add hitstop, and Wet does not amplify their damage.
 - Freeze pauses enemy attack updates for its full duration and resumes the
   current attack animation afterward; boss movement-lock resistance applies.
+- Hit knockback continues for frozen players and enemies without restoring
+  voluntary movement or attacks.
 - Wet conductivity continues to amplify direct Electric damage and accelerate
   Shocked pulses as currently authored. Wet does not amplify Shocked damage
   ticks.

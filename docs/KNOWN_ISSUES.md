@@ -2,11 +2,11 @@
 
 Status: live register for the `0.3.x` cycle
 
-Updated: 2026-10-10
+Updated: 2026-10-11
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.3.88`. The current smoke inventory is 157 manifest
+Current release: version `0.3.90`. The current smoke inventory is 157 manifest
 rows / 155 runnable paths / 2 report rows / 45-path default gate; counts quoted
 in older sections below are historical snapshots. The authoring and verification
 sequence is in [`authoring-system-plan.md`](authoring-system-plan.md).
@@ -26,6 +26,18 @@ reports, reproduction notes, and acceptance criteria remain in
 “Implemented in source” means that a code path and focused assertions exist. It
 does not mean that cold-start timing, every display orientation, physical
 touch input, browser behavior, or a complete player journey has been verified.
+
+## 2026-10-11 combat fixes — 0.3.89
+
+Wet takes precedence over Burn: applying Wet removes up to three applied Burn
+stacks, and Burn cannot apply while Wet is active. Player and enemy hit
+knockback continues during Freeze while Freeze's voluntary movement and attack
+locks remain. Maximum shield durability increases by 0.5 per point of effective
+player DEF, including DEF from the equipped shield.
+
+The player confirmed the combat changes looked good. GitHub Pages run 371
+passed web export and deployment for commit `307bdd5`. Manual combat acceptance
+is recorded; the registered status and guard checks remain marked unverified.
 
 ## 2026-10-10 player health damage-fill animation — 0.3.88
 

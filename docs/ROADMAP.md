@@ -2,11 +2,11 @@
 
 Status: working roadmap derived from the accepted refactor route
 
-Updated: 2026-10-10
+Updated: 2026-10-11
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.3.88`; the authoring and verification sequence is
+Current release: version `0.3.90`; the authoring and verification sequence is
 now owned by [`authoring-system-plan.md`](authoring-system-plan.md).
 
 The 0.3.0 checkpoint closes the known start-position, controller Debug access,
@@ -64,7 +64,8 @@ Work should move through one narrow slice at a time:
 
 ## Accepted bounded gameplay slice — elemental status interactions
 
-Status: implemented in source; focused runtime verification pending. The
+Status: implemented in source; combat acceptance confirmed by the player on
+2026-10-11; focused smoke execution pending. The
 accepted reaction tree and source ownership are in
 [`elemental-status-interaction-plan.md`](elemental-status-interaction-plan.md).
 

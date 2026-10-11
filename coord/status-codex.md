@@ -2,20 +2,22 @@
 
 _Only codex writes this file._
 
-**Focus:** Release all current workspace edits as 0.3.89 and verify the GitHub Pages check.
-**Updated:** 2026-10-10
+**Focus:** Releasing completed enemy workbench geometry work as 0.3.90.
+**Updated:** 2026-10-11
+
+## Completed: Enemy workbench slime contact geometry
+
+Slime L/R rectangles are hidden and removed from Inspector edit targets. The red body polygon is labeled as attack contact and its outline uses ActorGeometry.body_polygon. Boss edits/handles/save/undo/redo now target the canonical boss scene rather than the regular family profile. Refresh preserves unsaved boss edits; size changes require saved edits. The existing preview lifecycle smoke now covers regular/boss separation, edit/refresh/undo/redo, and boss scene serialization preserving components.
+
+Verification: focused Godot 4.7.2 preview lifecycle passed including save/reload; MCP changed-script diagnostics and whitespace checks pass. The restored single editor reports boss preview_ready=true, native boss body polygon, and hidden legacy attack box. Full rendered acceptance remains open: runtime preview screenshot did not connect. Editor import also reports unrelated stale test parse errors in boss_movement_contact_smoke, spin_damage_smoke, and status_mixture_smoke. No full suite was run. Existing unrelated changes remain untouched.
 
 ## Completed: Wet precedence, Freeze knockback, and DEF-scaled shield durability
 
-Wet now prevents Burn from applying while active, including innate Wet. Hit knockback advances for frozen players and enemies while normal Freeze movement/attack locks remain. Shield maximum durability gains 0.5 per point of effective DEF, including shield DEF. Version markers are 0.3.89. Changed-script diagnostics and `git diff --check` pass; gameplay playtest is not run. GitHub Pages verification is in flight after the requested push.
-
-## In flight: 0.3.89 release
-
-Push all current workspace changes together as version 0.3.89 and confirm the GitHub Pages workflow passes. The Pages workflow and smoke-runner files remain under the existing opencode claim and are not being edited.
+Wet now prevents Burn from applying while active, including innate Wet. Hit knockback advances for frozen players and enemies while normal Freeze movement/attack locks remain. Shield maximum durability gains 0.5 per point of effective DEF, including shield DEF. Version markers are 0.3.89. Changed-script diagnostics and `git diff --check` passed. GitHub Pages run 371 passed export and deployment for commit `307bdd5`; the player confirmed the combat changes looked good.
 
 ## Completed: 0.3.88 player health damage-fill animation
 
-The fixed-step frame controller called a missing `HudController.advance_player_health_ui()`, leaving the displayed health and damage-hold timer unchanged. Added the state-only advance method and indexed it. Commit `0c94617` landed on `origin/main` while the 0.3.89 release was being prepared; the 0.3.89 work is being rebased on it.
+The fixed-step frame controller called a missing `HudController.advance_player_health_ui()`, leaving the displayed health and damage-hold timer unchanged. Added the state-only advance method and indexed it. The correction is included in the 0.3.89 release; browser animation retest remains open.
 
 ## Completed: 0.3.87 web startup parser failure
 

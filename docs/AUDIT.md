@@ -4,8 +4,9 @@ Status: current source-backed audit and refactor checkpoint.
 
 Updated: 2026-10-10
 
-Current release: `0.3.83`. This file retains the older `0.2.x` audit as
-historical context; the measured checkpoint below is the current source state.
+Current release: `0.3.90`. This file retains the older `0.2.x` audit as
+historical context; the measured checkpoint below is a `0.3.82` source snapshot
+and needs a fresh audit before its metrics describe the current codebase.
 
 ## Current measured snapshot (2026-10-10, version 0.3.82)
 

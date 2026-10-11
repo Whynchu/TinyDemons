@@ -1,7 +1,7 @@
 @tool
 extends Node2D
 
-## Factory-backed, presentation-only preview for one authored enemy variant at a time.
+## Factory-backed, presentation-only preview with runtime-authored body contact geometry.
 ## Animation frames come from the same visual component and frame library as
 ## gameplay; this node never starts enemy AI, combat, timers, or save services.
 
@@ -301,7 +301,15 @@ const EffectsSpawnerScript = preload("res://scripts/runtime/services/effects_spa
 
 @export_enum("Regular actor", "Boss actor") var preview_actor_size: int = PreviewActorSize.REGULAR:
 	set(value):
+		if is_node_ready() and _definition_is_dirty():
+			_set_definition_notice("Save edits before changing actor size.")
+			notify_property_list_changed()
+			return
 		preview_actor_size = clampi(value, PreviewActorSize.REGULAR, PreviewActorSize.BOSS)
+		_saved_family_geometry.clear()
+		_boss_geometry.clear()
+		_geometry_undo_stack.clear()
+		_geometry_redo_stack.clear()
 		if is_node_ready():
 			call_deferred("_build_preview")
 
@@ -348,6 +356,8 @@ const EffectsSpawnerScript = preload("res://scripts/runtime/services/effects_spa
 		show_collision_shape = value
 		_show_geometry()
 		queue_redraw()
+## Slimes use this same body polygon for incoming hits and melee attack contact.
+## Left/right attack rectangles are legacy guides and are not slime damage bounds.
 @export var show_body_hitbox := true:
 	set(value):
 		show_body_hitbox = value
@@ -425,6 +435,7 @@ var _original_variant_id: StringName = &""
 var _observed_definition_record: Dictionary = {}
 var _saved_definition_record: Dictionary = {}
 var _saved_family_geometry: Dictionary = {}
+var _boss_geometry: Dictionary = {}
 var _workbench_notice := ""
 var _geometry_drag_active := false
 var _geometry_drag_target := GeometryEditTarget.NONE
@@ -436,6 +447,13 @@ var _geometry_redo_stack: Array[Dictionary] = []
 
 
 func _validate_property(property: Dictionary) -> void:
+	if definition != null and definition.type_id == &"slime":
+		if property.name in [&"show_attack_guide_left", &"show_attack_guide_right"]:
+			property.usage = PROPERTY_USAGE_NONE
+			return
+		if property.name == "geometry_edit_target":
+			property.hint_string = "None,Actor Collision Boundary,Body Hitbox / Attack Contact,Body Collision Guide"
+
 	if property.name == "enemy_id":
 		property.usage = PROPERTY_USAGE_NONE
 		return
@@ -793,6 +811,8 @@ func save_selected_definition() -> void:
 		_set_definition_notice("Restore the original enemy ID before saving.")
 		return
 	var problems := definition.validate()
+	if not _geometry_is_valid():
+		problems.append("Preview geometry must enclose a valid area")
 	if not problems.is_empty():
 		_set_definition_notice("Cannot save: %s" % "; ".join(problems))
 		return
@@ -808,15 +828,17 @@ func save_selected_definition() -> void:
 	if save_error != OK:
 		_set_definition_notice("Could not save definition (error %d)." % save_error)
 		return
-	if geometry_profile.resource_path != "":
+	if _uses_boss_geometry():
+		save_error = _save_boss_geometry()
+	elif geometry_profile.resource_path != "":
 		save_error = ResourceSaver.save(geometry_profile, geometry_profile.resource_path)
-		if save_error != OK:
-			_set_definition_notice("Definition was saved, but family geometry profile could not be saved (error %d)." % save_error)
-			return
+	if save_error != OK:
+		_set_definition_notice("Definition saved, but geometry could not be saved (error %d)." % save_error)
+		return
 	definition.emit_changed()
 	_observed_definition_record = definition.to_record().duplicate(true)
 	_saved_definition_record = _observed_definition_record.duplicate(true)
-	_saved_family_geometry = geometry_profile.call("geometry_record").duplicate(true)
+	_saved_family_geometry = _capture_geometry()
 	SlimeVariantCatalogScript.invalidate_cache()
 	_workbench_notice = "Saved definition"
 	error_message = ""
@@ -887,6 +909,11 @@ func _build_preview() -> void:
 		queue_redraw()
 		return
 	_track_definition(definition)
+	if _uses_boss_geometry() and _boss_geometry.is_empty():
+		_boss_geometry = _boss_scene_geometry()
+		_saved_family_geometry = _capture_geometry()
+	elif _saved_family_geometry.is_empty():
+		_saved_family_geometry = _capture_geometry()
 
 	preview_actor = EnemyFactory.assemble(definition)
 	if preview_actor == null:
@@ -925,7 +952,7 @@ func _track_definition(value: EnemyDefinition) -> void:
 		_original_variant_id = value.variant_id
 		_observed_definition_record = value.to_record().duplicate(true)
 		_saved_definition_record = _observed_definition_record.duplicate(true)
-		_saved_family_geometry = EnemyFactory.geometry_profile(value).call("geometry_record").duplicate(true)
+		_saved_family_geometry = _capture_geometry()
 		_geometry_undo_stack.clear()
 		_geometry_redo_stack.clear()
 		_workbench_notice = ""
@@ -1028,7 +1055,7 @@ func _apply_definition_edits_to_preview() -> void:
 	var stats := preview_actor.get_node_or_null("Stats") as StatsComponent
 	if stats != null:
 		stats.apply_enemy_variant_profile(definition.base_stats, definition.growth_weights, _original_variant_id)
-	EnemyFactory.apply_geometry(preview_actor, definition)
+	_apply_preview_geometry()
 	_show_geometry()
 	SlimeVisualComponentScript.apply_palette_material(preview_actor)
 	_apply_preview_frame()
@@ -1068,11 +1095,11 @@ func handle_editor_canvas_input(event: InputEvent, workbench_position: Vector2) 
 
 
 func reset_selected_geometry() -> void:
-	if definition == null or geometry_edit_target == GeometryEditTarget.NONE:
+	if definition == null or geometry_edit_target == GeometryEditTarget.NONE or not _geometry_target_visible(geometry_edit_target):
 		return
 	var before := _capture_geometry()
 	var after := before.duplicate(true)
-	var defaults := EnemyDefinition.new().geometry_record()
+	var defaults := _boss_scene_geometry() if _uses_boss_geometry() else EnemyDefinition.new().geometry_record()
 	var field_name := _geometry_field_name(geometry_edit_target)
 	if field_name.is_empty():
 		return
@@ -1110,7 +1137,7 @@ func _begin_geometry_drag(workbench_position: Vector2) -> bool:
 	if target_name.is_empty():
 		return false
 	var handle := -1
-	var current_value = definition.get(target_name)
+	var current_value = _capture_geometry().get(target_name)
 	if current_value is PackedVector2Array:
 		handle = _nearest_polygon_handle(current_value, workbench_position)
 		if handle < 0:
@@ -1158,15 +1185,15 @@ func _update_geometry_drag(workbench_position: Vector2) -> void:
 		var points: PackedVector2Array = initial_value.duplicate()
 		if _geometry_drag_handle >= 0 and _geometry_drag_handle < points.size():
 			points[_geometry_drag_handle] = actor_position
-			definition.set(field_name, points)
+			_set_geometry_field(field_name, points)
 	elif initial_value is Rect2:
 		var updated_rect: Rect2 = initial_value
 		if _geometry_drag_handle < 0:
 			updated_rect.position = initial_value.position + _snap_geometry_point(actor_position - _geometry_drag_start)
 		else:
 			updated_rect = _resize_rect_from_handle(initial_value, _geometry_drag_handle, actor_position)
-		definition.set(field_name, updated_rect)
-	EnemyFactory.apply_geometry(preview_actor, definition)
+		_set_geometry_field(field_name, updated_rect)
+	_apply_preview_geometry()
 	_show_geometry()
 	_update_preview_status()
 	queue_redraw()
@@ -1198,8 +1225,8 @@ func _finish_geometry_drag() -> void:
 	if _geometry_drag_start_geometry != _capture_geometry():
 		_push_geometry_undo(_geometry_drag_start_geometry)
 		_geometry_redo_stack.clear()
-		var geometry_profile := EnemyFactory.geometry_profile(definition)
-		geometry_profile.emit_changed()
+		if not _uses_boss_geometry():
+			EnemyFactory.geometry_profile(definition).emit_changed()
 		_observed_definition_record = definition.to_record().duplicate(true)
 		_workbench_notice = ""
 	_geometry_drag_start_geometry.clear()
@@ -1216,10 +1243,12 @@ func _push_geometry_undo(snapshot: Dictionary) -> void:
 func _apply_geometry_snapshot(snapshot: Dictionary) -> void:
 	if definition == null:
 		return
-	var geometry_profile := EnemyFactory.geometry_profile(definition)
-	geometry_profile.call("apply_geometry_record", snapshot)
+	if _uses_boss_geometry():
+		_boss_geometry = snapshot.duplicate(true)
+	else:
+		EnemyFactory.geometry_profile(definition).call("apply_geometry_record", snapshot)
 	_observed_definition_record = definition.to_record().duplicate(true)
-	EnemyFactory.apply_geometry(preview_actor, definition)
+	_apply_preview_geometry()
 	_show_geometry()
 	_update_preview_status()
 	_workbench_notice = ""
@@ -1231,6 +1260,8 @@ func _apply_geometry_snapshot(snapshot: Dictionary) -> void:
 func _capture_geometry() -> Dictionary:
 	if definition == null:
 		return {}
+	if _uses_boss_geometry():
+		return _boss_geometry.duplicate(true)
 	return EnemyFactory.geometry_profile(definition).call("geometry_record").duplicate(true)
 
 
@@ -1265,6 +1296,8 @@ func _geometry_field_name(target: int) -> String:
 
 
 func _geometry_target_visible(target: int) -> bool:
+	if definition != null and definition.type_id == &"slime" and target in [GeometryEditTarget.ATTACK_LEFT, GeometryEditTarget.ATTACK_RIGHT]:
+		return false
 	if not show_geometry_guides:
 		return false
 	match target:
@@ -1379,6 +1412,74 @@ func _create_preview_shadow(visual: SlimeVisualComponent) -> void:
 	preview_actor.add_child(preview_shadow)
 
 
+func _uses_boss_geometry() -> bool:
+	return definition != null and definition.type_id == &"slime" and _is_boss_preview()
+
+
+func _boss_scene_geometry() -> Dictionary:
+	var authored := BOSS_SLIME_AUTHORING_SCENE.instantiate()
+	var record := _geometry_record_from_actor(authored)
+	authored.free()
+	return record
+
+
+func _geometry_record_from_actor(actor: Node) -> Dictionary:
+	var record: Dictionary = {}
+	for entry in {"collision_polygon": "CollisionPolygon", "body_hitbox_polygon": "BodyHitbox"}:
+		record[entry] = (actor.get_node(_geometry_node_path(entry)) as Polygon2D).polygon.duplicate()
+	for entry in {"collision_guide_rect": "CollisionGuide", "attack_guide_left_rect": "AttackGuideL", "attack_guide_right_rect": "AttackGuideR"}:
+		var guide := actor.get_node(_geometry_node_path(entry))
+		record[entry] = Rect2(guide.get("rect_position"), guide.get("rect_size"))
+	return record
+
+
+func _geometry_node_path(field: String) -> NodePath:
+	return NodePath({"collision_polygon": "CollisionPolygon", "body_hitbox_polygon": "BodyHitbox", "collision_guide_rect": "CollisionGuide", "attack_guide_left_rect": "AttackGuideL", "attack_guide_right_rect": "AttackGuideR"}[field])
+
+
+func _set_geometry_field(field: String, value: Variant) -> void:
+	if _uses_boss_geometry():
+		_boss_geometry[field] = value
+	else:
+		EnemyFactory.geometry_profile(definition).set(field, value)
+
+
+func _write_geometry_to_actor(actor: Node, record: Dictionary) -> void:
+	for field in record:
+		var node := actor.get_node(_geometry_node_path(field))
+		if record[field] is PackedVector2Array:
+			node.set("polygon", record[field])
+		else:
+			node.set("rect_position", record[field].position)
+			node.set("rect_size", record[field].size)
+
+
+func _apply_preview_geometry() -> void:
+	if _uses_boss_geometry():
+		_write_geometry_to_actor(preview_actor, _boss_geometry)
+	else:
+		EnemyFactory.apply_geometry(preview_actor, definition)
+
+
+func _pack_boss_geometry() -> PackedScene:
+	var authored := BOSS_SLIME_AUTHORING_SCENE.instantiate()
+	_write_geometry_to_actor(authored, _boss_geometry)
+	var packed := PackedScene.new()
+	var result := packed.pack(authored)
+	authored.free()
+	return packed if result == OK else null
+
+
+func _save_boss_geometry() -> Error:
+	var packed := _pack_boss_geometry()
+	if packed == null:
+		return ERR_CANT_CREATE
+	var result := ResourceSaver.save(packed, BOSS_SLIME_AUTHORING_SCENE.resource_path)
+	if result == OK:
+		BOSS_SLIME_AUTHORING_SCENE.set("_bundled", packed.get("_bundled"))
+	return result
+
+
 func _apply_boss_authoring_geometry() -> void:
 	var authored := BOSS_SLIME_AUTHORING_SCENE.instantiate()
 	if authored == null:
@@ -1397,6 +1498,7 @@ func _apply_boss_authoring_geometry() -> void:
 		if clone is CanvasItem:
 			(clone as CanvasItem).visible = false
 	authored.free()
+	_apply_preview_geometry()
 
 
 func _show_geometry() -> void:
@@ -1413,8 +1515,8 @@ func _show_geometry() -> void:
 		body_hitbox.visible = guides_enabled and show_body_hitbox
 	var guide_visibility := {
 		&"CollisionGuide": guides_enabled and show_collision_guide,
-		&"AttackGuideL": guides_enabled and show_attack_guide_left,
-		&"AttackGuideR": guides_enabled and show_attack_guide_right,
+		&"AttackGuideL": guides_enabled and show_attack_guide_left and definition.type_id != &"slime",
+		&"AttackGuideR": guides_enabled and show_attack_guide_right and definition.type_id != &"slime",
 	}
 	for guide_name: StringName in [&"CollisionGuide", &"AttackGuideL", &"AttackGuideR"]:
 		var guide := preview_actor.get_node_or_null(NodePath(guide_name)) as Node2D
@@ -1471,9 +1573,8 @@ func _geometry_is_valid() -> bool:
 		and body_hitbox != null \
 		and _has_area(collision_polygon.polygon) \
 		and _has_area(body_hitbox.polygon) \
-		and _rect_has_area(definition.collision_guide_rect) \
-		and _rect_has_area(definition.attack_guide_left_rect) \
-		and _rect_has_area(definition.attack_guide_right_rect)
+		and _rect_has_area(_capture_geometry().get("collision_guide_rect", Rect2())) \
+		and (definition.type_id == &"slime" or (_rect_has_area(definition.attack_guide_left_rect) and _rect_has_area(definition.attack_guide_right_rect)))
 
 
 func _has_area(points: PackedVector2Array) -> bool:
@@ -1725,7 +1826,7 @@ func get_preview_summary() -> Dictionary:
 		"frame_index": _current_frame,
 		"frame_count": _selected_frame_count(),
 		"playing": not playback_paused and not _animation_finished,
-		"geometry": EnemyFactory.geometry_profile(definition).call("geometry_record"),
+		"geometry": _capture_geometry(),
 		"geometry_valid": _geometry_is_valid(),
 		"ready": preview_ready,
 	}
@@ -1746,6 +1847,8 @@ func _draw() -> void:
 		_draw_pixel_label(self, Vector2(12, 45), "SELECT AN AUTHORED ENEMY TO BEGIN", PREVIEW_MUTED_TEXT_COLOR, 212)
 		return
 
+	if definition.type_id == &"slime":
+		_draw_pixel_label(self, Vector2(12, 130), "RED: BODY / ATTACK CONTACT", PREVIEW_ERROR_COLOR, 136)
 	var state_label: String = PREVIEW_STATE_LABELS[preview_state]
 	var frame_count := _selected_frame_count()
 	var playback_label := "PAUSED" if playback_paused else "PLAYING" if not _animation_finished else "FINISHED"
@@ -1958,10 +2061,19 @@ func _death_particle_texture(color: Color) -> Texture2D:
 func _draw_geometry_overlay(overlay: Node2D) -> void:
 	if not Engine.is_editor_hint():
 		return
-	if preview_actor == null or geometry_edit_target == GeometryEditTarget.NONE or not _geometry_target_visible(geometry_edit_target):
+	if preview_actor == null:
+		return
+	if definition.type_id == &"slime" and show_geometry_guides and show_body_hitbox:
+		var body_outline := PackedVector2Array()
+		for world_point in ActorGeometry.body_polygon(preview_actor, Vector2.ZERO):
+			body_outline.append(to_local(world_point))
+		if body_outline.size() >= 3:
+			body_outline.append(body_outline[0])
+			overlay.draw_polyline(body_outline, Color(1.0, 0.25, 0.2, 0.9), 1.0)
+	if geometry_edit_target == GeometryEditTarget.NONE or not _geometry_target_visible(geometry_edit_target):
 		return
 	var field_name := _geometry_field_name(geometry_edit_target)
-	var value = definition.get(field_name)
+	var value = _capture_geometry().get(field_name)
 	var points := PackedVector2Array()
 	var handle_points := PackedVector2Array()
 	if value is PackedVector2Array:

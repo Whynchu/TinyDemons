@@ -1362,3 +1362,17 @@ Fix status exclusivity and preserve hit knockback during Freeze for the player a
 2026-10-11T01:26:33Z | codex | done | Wet overrides Burn; frozen players and enemies retain hit knockback; shield durability scales with effective DEF.
 
 2026-10-11T01:31:54Z | codex | claim | Stage and push all current workspace edits with version 0.3.89, then verify the GitHub Pages workflow.
+
+2026-10-11T10:51:30Z | codex | done | Pushed 0.3.89 as 307bdd5; GitHub Pages run 371 passed export and deployment; the player confirmed combat looked good.
+
+## 2026-10-11 — codex — claim
+Enemy workbench body attack clarity and boss geometry edit/save parity.
+
+## 2026-10-11 — codex — done
+Enemy workbench slime body-contact clarity and boss geometry parity implemented. Focused lifecycle/save round-trip passes; MCP boss scene inspection ready. Rendered screenshot acceptance remains open.
+
+## 2026-10-11 — codex — claim
+Release the completed enemy workbench and documentation edits as 0.3.90; leave the unrelated project.godot renderer setting change unstaged.
+
+## 2026-10-11 — codex — done
+Version 0.3.90 prepared with enemy workbench geometry and documentation. Focused lifecycle test passed in the prior editor session; this shell has no Godot executable. Diff whitespace check passes.
