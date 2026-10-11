@@ -2,13 +2,20 @@
 
 _Only codex writes this file._
 
-**Focus:** Release 0.3.88 player health damage-fill animation fix
+**Focus:** Release all current workspace edits as 0.3.89 and verify the GitHub Pages check.
 **Updated:** 2026-10-10
 
-## In flight: 0.3.88 player health damage-fill animation release
+## Completed: Wet precedence, Freeze knockback, and DEF-scaled shield durability
 
-The fixed-step frame controller called a missing `HudController.advance_player_health_ui()`, leaving the displayed health and damage-hold timer unchanged. Added the state-only advance method and indexed it. The 0.3.88 release is being pushed so Pages can verify the web export; browser animation retest remains pending because Godot/MCP is off.
+Wet now prevents Burn from applying while active, including innate Wet. Hit knockback advances for frozen players and enemies while normal Freeze movement/attack locks remain. Shield maximum durability gains 0.5 per point of effective DEF, including shield DEF. Version markers are 0.3.89. Changed-script diagnostics and `git diff --check` pass; gameplay playtest is not run. GitHub Pages verification is in flight after the requested push.
 
+## In flight: 0.3.89 release
+
+Push all current workspace changes together as version 0.3.89 and confirm the GitHub Pages workflow passes. The Pages workflow and smoke-runner files remain under the existing opencode claim and are not being edited.
+
+## Completed: 0.3.88 player health damage-fill animation
+
+The fixed-step frame controller called a missing `HudController.advance_player_health_ui()`, leaving the displayed health and damage-hold timer unchanged. Added the state-only advance method and indexed it. Commit `0c94617` landed on `origin/main` while the 0.3.89 release was being prepared; the 0.3.89 work is being rebased on it.
 
 ## Completed: 0.3.87 web startup parser failure
 

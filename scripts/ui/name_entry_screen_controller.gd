@@ -27,10 +27,10 @@ var _cursor_left_gap := 10.0
 var _tween_owner: Node = null
 
 
-func build(parent: Node, view_size: Vector2, pixel_texture: Callable, finish: Callable, cancel: Callable, preview_texture: Callable, widget_factory: MenuWidgetFactory, prompt_factory: MenuPromptTextureFactory, cursor_animator: MenuCursorAnimator, cursor_left_gap: float, tween_owner: Node) -> Dictionary:
+func build(parent: Node, view_size: Vector2, pixel_texture: Callable, finish: Callable, cancel_action: Callable, preview_texture: Callable, widget_factory: MenuWidgetFactory, prompt_factory: MenuPromptTextureFactory, cursor_animator: MenuCursorAnimator, cursor_left_gap: float, tween_owner: Node) -> Dictionary:
 	_pixel_texture = pixel_texture
 	finish_callback = finish
-	cancel_callback = cancel
+	cancel_callback = cancel_action
 	_prompt_factory = prompt_factory
 	_cursor_animator = cursor_animator
 	_cursor_left_gap = cursor_left_gap

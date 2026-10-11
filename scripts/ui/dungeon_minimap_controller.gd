@@ -220,9 +220,9 @@ func is_map_open() -> bool:
 func small_map_screen_rect() -> Rect2:
 	if map_sprite == null or not is_instance_valid(map_sprite) or map_sprite.texture == null:
 		return Rect2()
-	var transform := map_sprite.get_global_transform_with_canvas()
+	var canvas_transform := map_sprite.get_global_transform_with_canvas()
 	var texture_size := Vector2(map_sprite.texture.get_width(), map_sprite.texture.get_height())
-	return Rect2(transform.origin, texture_size * map_sprite.scale)
+	return Rect2(canvas_transform.origin, texture_size * map_sprite.scale)
 
 
 func handle_input(root: Object) -> void:
@@ -551,10 +551,10 @@ func _map_overlay_position(room_id: StringName) -> Vector2:
 	if room == null:
 		return Vector2.ZERO
 	var image_size := Vector2(full_map_image.get_width(), full_map_image.get_height())
-	var scale := minf(MAP_OVERLAY_BACKDROP.size.x / image_size.x, MAP_OVERLAY_BACKDROP.size.y / image_size.y)
-	var scaled := image_size * scale
+	var map_scale := minf(MAP_OVERLAY_BACKDROP.size.x / image_size.x, MAP_OVERLAY_BACKDROP.size.y / image_size.y)
+	var scaled := image_size * map_scale
 	var offset := (MAP_OVERLAY_BACKDROP.size - scaled) * 0.5
-	return MAP_OVERLAY_BACKDROP.position + offset + Vector2(room.minimap_coordinate - full_map_origin) * scale
+	return MAP_OVERLAY_BACKDROP.position + offset + Vector2(room.minimap_coordinate - full_map_origin) * map_scale
 
 
 func _current_room_marker_color(room) -> Color:
@@ -586,8 +586,8 @@ func _add_hub_panel(panel_name: String) -> NinePatchRect:
 	panel.patch_margin_top = 3
 	panel.patch_margin_right = 3
 	panel.patch_margin_bottom = 3
-	panel.axis_stretch_horizontal = 1
-	panel.axis_stretch_vertical = 1
+	panel.axis_stretch_horizontal = NinePatchRect.AXIS_STRETCH_MODE_TILE
+	panel.axis_stretch_vertical = NinePatchRect.AXIS_STRETCH_MODE_TILE
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	map_overlay.add_child(panel)
 	return panel

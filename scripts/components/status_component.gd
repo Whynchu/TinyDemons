@@ -65,6 +65,9 @@ func apply_effect(definition: StatusEffectDefinition, source_element: int, arriv
 		return false
 	if definition.id == innate_status_id:
 		return false
+	# Wet always takes priority over Burn, including Water actors with innate Wet.
+	if definition.id == &"burn" and _active.has(&"wet"):
+		return false
 	var applied_duration := _applied_duration_for(definition)
 	var record := _active.get(definition.id) as StatusRecord
 	if record == null or record.origin != StatusRecord.Origin.APPLIED:

@@ -453,7 +453,7 @@ static func candidate_max_scroll(item_count: int) -> int:
 	# columns, but calculate the final window from rows rather than assuming the
 	# inventory always fills the last row.
 	var row_count := int(ceil(float(maxi(item_count, 0)) / float(CANDIDATE_COLUMN_COUNT)))
-	var visible_rows := int(CANDIDATE_VISIBLE_COUNT / CANDIDATE_COLUMN_COUNT)
+	var visible_rows := int(float(CANDIDATE_VISIBLE_COUNT) / float(CANDIDATE_COLUMN_COUNT))
 	return maxi(0, (row_count - visible_rows) * CANDIDATE_COLUMN_COUNT)
 
 
@@ -464,7 +464,7 @@ func _apply_candidate_scroll() -> void:
 	for index in candidate_buttons.size():
 		var button := candidate_buttons[index]
 		var native_rect := button.get_meta("equipment_native_rect", Rect2(button.position, button.size)) as Rect2
-		var row := int(index / CANDIDATE_COLUMN_COUNT)
+		var row := int(float(index) / float(CANDIDATE_COLUMN_COUNT))
 		var row_top := 5.0 + float(row) * 9.0 - offset_y
 		# Candidate labels stay at their compact authored 9px pitch, while each
 		# invisible tap target spans its full column and most of the row gap.

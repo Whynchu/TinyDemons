@@ -185,8 +185,6 @@ func tick_runtime(delta: float, is_dead: Callable, update_knockback: Callable, u
 	var action_delta := _action_delta(delta)
 	combat.cooldown = maxf(combat.cooldown - action_delta, 0.0)
 	if movement_locked:
-		combat.knockback_timer = 0.0
-		combat.knockback_velocity = Vector2.ZERO
 		var locked_brain := _brain_component
 		if locked_brain != null:
 			locked_brain.scoot_timer = 0.0
@@ -198,12 +196,12 @@ func tick_runtime(delta: float, is_dead: Callable, update_knockback: Callable, u
 		combat.status_stun_timer = maxf(combat.status_stun_timer - delta, 0.0)
 		combat.hitstun_timer = maxf(combat.hitstun_timer - delta, 0.0)
 		return
-	if status != null and status.is_attack_locked():
-		return
-	if not movement_locked and update_knockback.call(self, delta):
+	if update_knockback.call(self, delta):
 		var support := _support_component
 		if support != null:
 			support.call("cancel_cast", &"knockback")
+		return
+	if status != null and status.is_attack_locked():
 		return
 	combat.hitstun_timer = maxf(combat.hitstun_timer - delta, 0.0)
 	if combat.hitstun_timer > 0.0:
@@ -238,15 +236,13 @@ static func tick_legacy_runtime(actor: Sprite2D, delta: float, is_dead: Callable
 	var action_delta := _action_delta_for(actor, delta)
 	combat.cooldown = maxf(combat.cooldown - action_delta, 0.0)
 	if movement_locked:
-		combat.knockback_timer = 0.0
-		combat.knockback_velocity = Vector2.ZERO
 		var locked_brain := actor.get_node_or_null("Brain") as SlimeBrain
 		if locked_brain != null:
 			locked_brain.scoot_timer = 0.0
 			locked_brain.scoot_start = actor.position
 			locked_brain.scoot_target = actor.position
 		update_scoot.call(actor, 0.0)
-	if not movement_locked and bool(update_knockback.call(actor, delta)):
+	if bool(update_knockback.call(actor, delta)):
 		return
 	if status != null and status.is_attack_locked():
 		return

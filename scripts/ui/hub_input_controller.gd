@@ -128,7 +128,7 @@ func _handle_binding_input(root: GameplayState, state: HubMenuState, page: int, 
 	return true
 
 
-func _handle_fusion_input(root: GameplayState, state: HubMenuState, page: int, refresh_hub_ui: Callable) -> bool:
+func _handle_fusion_input(root: GameplayState, state: HubMenuState, page: int, _refresh_hub_ui: Callable) -> bool:
 	if page != HubMenuStateScript.HUB_PAGE_FUSION:
 		return false
 	if state.hub_fusion_state == 1:
@@ -287,7 +287,7 @@ func _handle_shop_input(root: GameplayState, state: HubMenuState, page: int, ref
 	return false
 
 
-func _handle_inventory_input(root: GameplayState, state: HubMenuState, page: int) -> void:
+func _handle_inventory_input(root: GameplayState, _state: HubMenuState, page: int) -> void:
 	if bool(root._is_menu_direction_just_pressed(&"ui_up")):
 		root._shift_hub_item(-1); root._play_sound("ui_hover", -6.0, 1.0)
 	elif bool(root._is_menu_direction_just_pressed(&"ui_down")):

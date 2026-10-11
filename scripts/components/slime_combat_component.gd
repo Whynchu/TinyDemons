@@ -155,12 +155,6 @@ func tick_attack(delta: float, actor: Sprite2D, tuning: SlimeTuning, frames: Arr
 func tick_knockback(delta: float, actor: Sprite2D, move_actor: Callable, reset_scoot: Callable) -> bool:
 	if knockback_timer <= 0.0:
 		return false
-	var status := actor.get_node_or_null("Status") as StatusComponent
-	if status != null and status.is_movement_locked():
-		knockback_timer = 0.0
-		knockback_velocity = Vector2.ZERO
-		reset_scoot.call(actor)
-		return true
 	var step_time := minf(delta, knockback_timer)
 	knockback_timer = maxf(knockback_timer - delta, 0.0)
 	var did_move := bool(move_actor.call(actor, knockback_velocity * step_time))

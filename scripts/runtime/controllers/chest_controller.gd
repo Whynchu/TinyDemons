@@ -56,7 +56,7 @@ func update_interaction(root: Object, interact_input_down: bool, interact_input_
 		root.set("interact_input_was_down", interact_input_down)
 		return
 	if interact_pressed:
-		var chest := root.get("chest") as Sprite2D
+		var _chest := root.get("chest") as Sprite2D
 		if bool(root.get("chest_unlocked")) and not bool(root.get("chest_claimed")) and bool(root.call("_can_interact_with_chest")):
 			root.set("chest_claimed", true)
 			var gameplay := root as GameplayState
@@ -139,7 +139,7 @@ func update_visuals_from_root(root: Object, delta: float) -> void:
 
 
 func start_evaporation(root: Object) -> void:
-	root.set("chest_evaporated", true); var room_controller := root.get("room_controller") as RoomController; if room_controller != null: room_controller.save_treasure_chest_state(root); (root.get("effects_spawner") as EffectsSpawner).spawn_chest_evaporation_from_root(root); (root.get("chest") as Sprite2D).visible = false; root.call("_set_door_active", true); root.call("_set_entrance_open", true)
+	root.set("chest_evaporated", true); var active_room_controller := root.get("room_controller") as RoomController; if active_room_controller != null: active_room_controller.save_treasure_chest_state(root); (root.get("effects_spawner") as EffectsSpawner).spawn_chest_evaporation_from_root(root); (root.get("chest") as Sprite2D).visible = false; root.call("_set_door_active", true); root.call("_set_entrance_open", true)
 	var overlay := root.get("chest_flash_overlay") as Sprite2D; if overlay != null: overlay.queue_free(); root.set("chest_flash_overlay", null)
 	var chest := root.get("chest") as Sprite2D; (root.get("collision_sprites") as Array[Sprite2D]).erase(chest); (root.get("depth_sprites") as Array[Sprite2D]).erase(chest); (root.get("occluder_sprites") as Array[Sprite2D]).erase(chest); var prompt := root.get("interact_prompt") as Sprite2D; if prompt != null: prompt.visible = false
 	if root.has_method("_on_chest_collected"):

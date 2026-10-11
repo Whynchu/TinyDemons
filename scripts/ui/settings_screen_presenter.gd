@@ -56,13 +56,13 @@ func build(parent: Node, view_size: Vector2, pixel_texture: Callable, adjust_cal
 		var label := widget_factory.create_sprite(overlay, "SettingsLabel%d" % index, pixel_texture.call(row_names[index], Color.WHITE) as Texture2D, Vector2(14, 23.0 + index * row_pitch + 3.0), false)
 		row_labels.append(label)
 		var options_for_row: Array[Button] = []
-		for option_index in authored_options[index].size():
-			var option_text: String = str(authored_options[index][option_index])
-			var option_button := widget_factory.make_retro_button(option_text, Vector2(option_start + option_index * 14.0, 23.0 + index * row_pitch), Vector2(12, 12), pixel_texture)
-			option_button.name = "SettingsOption%d_%d" % [index, option_index]
+		for choice_index in authored_options[index].size():
+			var option_text: String = str(authored_options[index][choice_index])
+			var option_button := widget_factory.make_retro_button(option_text, Vector2(option_start + choice_index * 14.0, 23.0 + index * row_pitch), Vector2(12, 12), pixel_texture)
+			option_button.name = "SettingsOption%d_%d" % [index, choice_index]
 			option_button.focus_mode = Control.FOCUS_NONE
 			if select_option_callback.is_valid():
-				option_button.pressed.connect(select_option_callback.bind(index, option_index))
+				option_button.pressed.connect(select_option_callback.bind(index, choice_index))
 			overlay.add_child(option_button)
 			options_for_row.append(option_button)
 		option_buttons.append(options_for_row)
@@ -122,9 +122,9 @@ func position_controls(view_size: Vector2) -> void:
 		if index < option_buttons.size():
 			var option_x := option_start
 			var option_gap := 1.0 if index >= 3 else 2.0
-			for option_index in option_buttons[index].size():
-				var option_button := option_buttons[index][option_index] as Button
-				var option_width := 12.0 if index >= 3 else maxf(26.0, str(option_labels[index][option_index]).length() * 6.0 + 8.0)
+			for choice_index in option_buttons[index].size():
+				var option_button := option_buttons[index][choice_index] as Button
+				var option_width := 12.0 if index >= 3 else maxf(26.0, str(option_labels[index][choice_index]).length() * 6.0 + 8.0)
 				option_button.position = Vector2(option_x, y)
 				option_button.size = Vector2(option_width, 12)
 				var option_text := option_button.get_child(0) as Sprite2D
@@ -154,9 +154,9 @@ func update_visuals(settings_service: SettingsService, pixel_texture: Callable, 
 		_widget_factory.set_archetype_button_state(right_buttons[index], false, highlight)
 		if index < option_buttons.size():
 			var selected_option := option_index(index, values)
-			for option_index in option_buttons[index].size():
-				var option_button := option_buttons[index][option_index] as Button
-				var active := option_index == selected_option and row == index
+			for choice_index in option_buttons[index].size():
+				var option_button := option_buttons[index][choice_index] as Button
+				var active := choice_index == selected_option and row == index
 				option_button.visible = true
 				option_button.focus_mode = Control.FOCUS_NONE
 				_widget_factory.set_archetype_button_state(option_button, active, highlight)

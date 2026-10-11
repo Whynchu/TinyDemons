@@ -110,7 +110,7 @@ func position_controls(view_size: Vector2) -> void:
 		_slot_buttons[index].position.x = (view_size.x - _slot_buttons[index].size.x) * 0.5
 	_update_cursor_anchor()
 	if _overwrite_prompt != null:
-		_overwrite_prompt.position.x = (view_size.x - (_overwrite_prompt.texture.get_width() if _overwrite_prompt.texture != null else 100.0)) * 0.5
+		_overwrite_prompt.position.x = (view_size.x - (float(_overwrite_prompt.texture.get_width()) if _overwrite_prompt.texture != null else 100.0)) * 0.5
 	if _overwrite_cursor != null:
 		_overwrite_cursor.position.x = (view_size.x - 42.0) * 0.5
 	if _overwrite_yes != null:

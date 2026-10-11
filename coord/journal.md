@@ -1355,3 +1355,10 @@ Repair the player health damage-fill animation, bump 0.3.88, and publish the web
 
 ## 2026-10-10T22:23:21Z — codex — done
 The published HUD controller lacked the state-advance method already called by the fixed-step frame controller. Added the missing method, updated the generated script index and release references, and pushed 0.3.88; Pages export/deployment verification is pending.
+
+## 2026-10-11T01:21:03Z — codex — claim
+Fix status exclusivity and preserve hit knockback during Freeze for the player and enemies.
+
+2026-10-11T01:26:33Z | codex | done | Wet overrides Burn; frozen players and enemies retain hit knockback; shield durability scales with effective DEF.
+
+2026-10-11T01:31:54Z | codex | claim | Stage and push all current workspace edits with version 0.3.89, then verify the GitHub Pages workflow.

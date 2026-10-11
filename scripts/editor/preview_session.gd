@@ -10,6 +10,8 @@ static var _stable_id_regex: RegEx
 var session_id: StringName = &""
 var content_kind: StringName = &""
 var content_id: StringName = &""
+# Preview session data is consumed by the external preview adapters.
+@warning_ignore("shadowed_global_identifier")
 var seed := 0
 var loadout: Dictionary = {}
 var arrival_socket_id: StringName = &""

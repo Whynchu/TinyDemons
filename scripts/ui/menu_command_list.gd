@@ -15,8 +15,8 @@ var _base_ys: Array[float] = []
 var row := 0
 
 
-func configure(buttons: Array[Button], base_ys: Array[float]) -> void:
-	_buttons = buttons
+func configure(command_buttons: Array[Button], base_ys: Array[float]) -> void:
+	_buttons = command_buttons
 	_base_ys = base_ys
 	normalize_row()
 

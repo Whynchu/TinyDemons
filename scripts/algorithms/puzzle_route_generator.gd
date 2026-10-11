@@ -164,8 +164,8 @@ static func generation_is_repair_free() -> bool:
 static func validate(layout, completed_runs: int, starter_flame: StringName = &"fire", bound_flame: StringName = &"") -> Array[String]:
 	if layout == null:
 		return ["generated route layout is missing"]
-	var is_risk_reward_layout: bool = layout.generation_mode == RISK_REWARD_GENERATION_MODE
-	var errors: Array[String] = LEGACY_GENERATOR.validate_risk_reward(layout, completed_runs, starter_flame, bound_flame) if is_risk_reward_layout else LEGACY_GENERATOR.validate(layout, completed_runs, starter_flame, bound_flame)
+	var uses_risk_reward_layout: bool = layout.generation_mode == RISK_REWARD_GENERATION_MODE
+	var errors: Array[String] = LEGACY_GENERATOR.validate_risk_reward(layout, completed_runs, starter_flame, bound_flame) if uses_risk_reward_layout else LEGACY_GENERATOR.validate(layout, completed_runs, starter_flame, bound_flame)
 	for room in layout.rooms:
 		if not _in_compact_bounds(room.minimap_coordinate):
 			errors.append("generated room %s falls outside the compact 35x35 map at %s" % [room.id, room.minimap_coordinate])
@@ -174,9 +174,9 @@ static func validate(layout, completed_runs: int, starter_flame: StringName = &"
 			errors.append("generated connection %s:%s falls outside the compact 35x35 map at %s" % [connection.source_room_id, connection.exit_socket, connection.minimap_coordinate])
 	var route_plan = ROUTE_PLAN.from_layout(layout)
 	errors.append_array(route_plan.validate_structure(MAP_SIZE))
-	if completed_runs == 6 and not is_risk_reward_layout and (layout.rooms.size() < 24 or layout.rooms.size() > 30):
+	if completed_runs == 6 and not uses_risk_reward_layout and (layout.rooms.size() < 24 or layout.rooms.size() > 30):
 		errors.append("legacy generated R7 route must contain 24-30 rooms, got %d" % layout.rooms.size())
-	if is_risk_reward_layout:
+	if uses_risk_reward_layout:
 		errors.append_array(PROGRESSION_PLANNER.validate_risk_reward(route_plan))
 		var risk_start_id: StringName = &""
 		for room in layout.rooms:
@@ -213,7 +213,7 @@ static func repair_progression(layout, completed_runs: int, starter_flame: Strin
 	return LEGACY_GENERATOR.repair_progression(layout, completed_runs, starter_flame, bound_flame)
 
 
-static func is_native_r7(completed_runs: int) -> bool:
+static func is_native_r7(_completed_runs: int) -> bool:
 	return false
 
 

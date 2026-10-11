@@ -107,10 +107,10 @@ static func _metrics(values: Array[int], spread_cap: int, ratio_enabled: bool) -
 	}
 
 
-static func _floor_deficit(values: Array[int], floor: int) -> int:
+static func _floor_deficit(values: Array[int], minimum_value: int) -> int:
 	var deficit := 0
 	for value in values:
-		deficit += maxi(floor - value, 0)
+		deficit += maxi(minimum_value - value, 0)
 	return deficit
 
 

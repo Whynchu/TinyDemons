@@ -239,7 +239,7 @@ func _input_snapshot(active: bool, actions: Dictionary = {}, just_pressed: Dicti
 	mouse_input.set("middle_button_pressed", _mouse_middle_button_pressed)
 	mouse_input.set("middle_click_just_pressed", _mouse_middle_click_pending)
 	mouse_input.set("middle_click_position", _mouse_middle_click_position)
-	var snapshot := {
+	var input_snapshot := {
 		"active": active,
 		"movement": _stick_vector if active else Vector2.ZERO,
 		"actions": actions,
@@ -250,7 +250,7 @@ func _input_snapshot(active: bool, actions: Dictionary = {}, just_pressed: Dicti
 	_mouse_left_click_pending = false
 	_mouse_right_click_pending = false
 	_mouse_middle_click_pending = false
-	return snapshot
+	return input_snapshot
 
 
 ## Testable input-provider seams. Real GUI events use the same methods.
@@ -316,7 +316,7 @@ func _compute_layout(window_logical: Vector2, content_size: Vector2, minimap_rec
 	var margin := clampf(unit * MARGIN_FRACTION, 2.0, 8.0)
 	var button := clampf(unit * BUTTON_FRACTION, BUTTON_MIN, BUTTON_MAX)
 	var gap := maxf(5.0, button * 0.30)
-	var step := button + gap
+	var _step := button + gap
 	var stick_diameter := clampf(unit * STICK_FRACTION, STICK_MIN, STICK_MAX)
 	# The stick owns the entire left half: a touch anywhere there relocates the
 	# stick to that point (the classic floating mobile joystick). Its resting
@@ -838,9 +838,9 @@ func _visible_sprite_at(node: Node, viewport_position: Vector2) -> bool:
 		var sprite := node as Sprite2D
 		if sprite.is_visible_in_tree() and sprite.texture != null:
 			var local_rect := sprite.get_rect()
-			var transform := sprite.get_global_transform_with_canvas()
-			var top_left := transform * local_rect.position
-			var bottom_right := transform * local_rect.end
+			var canvas_transform := sprite.get_global_transform_with_canvas()
+			var top_left := canvas_transform * local_rect.position
+			var bottom_right := canvas_transform * local_rect.end
 			if Rect2(top_left, bottom_right - top_left).abs().grow(1.0).has_point(viewport_position):
 				return true
 	for child in node.get_children():

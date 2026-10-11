@@ -366,14 +366,14 @@ func _apply_provisional_room_placements(placement_ids: Array[StringName], room_i
 		var authored_position: Vector2 = placement["position"]
 		var base_sprite := base_sprites_by_id.get(id) as Sprite2D
 		var specular_sprite := specular_sprites_by_id.get(id) as Sprite2D
-		var is_visible := placement_ids.has(id)
+		var placement_visible := placement_ids.has(id)
 		if base_sprite != null:
 			base_sprite.position = authored_position
-			base_sprite.visible = is_visible
+			base_sprite.visible = placement_visible
 		if specular_sprite != null:
 			specular_sprite.position = placement["specular_position"]
-			specular_sprite.visible = is_visible
-		if is_visible:
+			specular_sprite.visible = placement_visible
+		if placement_visible:
 			last_anchor_positions[id] = authored_position
 			last_positions[id] = authored_position
 
@@ -501,10 +501,10 @@ func placement_constraints_valid() -> bool:
 		var id: StringName = placement["id"]
 		if not last_positions.has(id):
 			continue
-		var position: Vector2 = last_positions[id]
-		if not _placement_fits(placement, position, occupied_points):
+		var placement_position: Vector2 = last_positions[id]
+		if not _placement_fits(placement, placement_position, occupied_points):
 			return false
-		_add_footprint_to_occupancy(id, position, occupied_points)
+		_add_footprint_to_occupancy(id, placement_position, occupied_points)
 	return true
 
 
@@ -930,32 +930,32 @@ func _is_crack_placement(placement_id: StringName) -> bool:
 	return String(placement_id).begins_with("WallCrack_")
 
 
-func _placement_fits(placement: Dictionary, position: Vector2, occupied_points: Dictionary) -> bool:
+func _placement_fits(placement: Dictionary, placement_position: Vector2, occupied_points: Dictionary) -> bool:
 	var id: StringName = placement["id"]
-	var static_fit_key := "%s|%s@%s" % [current_constraint_signature, id, position]
-	_cache_static_fit(placement, position, static_fit_key)
+	var static_fit_key := "%s|%s@%s" % [current_constraint_signature, id, placement_position]
+	_cache_static_fit(placement, placement_position, static_fit_key)
 	if not bool(placement_static_fit_cache[static_fit_key]):
 		return false
-	var points := _translated_footprint(id, position)
+	var points := _translated_footprint(id, placement_position)
 	for point in points:
 		if occupied_points.has(point):
 			return false
 	return true
 
 
-func _cache_static_fit(placement: Dictionary, position: Vector2, cache_key: String = "") -> void:
+func _cache_static_fit(placement: Dictionary, placement_position: Vector2, cache_key: String = "") -> void:
 	var resolved_key := cache_key
 	if resolved_key.is_empty():
-		resolved_key = "%s|%s@%s" % [current_constraint_signature, placement["id"], position]
+		resolved_key = "%s|%s@%s" % [current_constraint_signature, placement["id"], placement_position]
 	if not placement_static_fit_cache.has(resolved_key):
-		placement_static_fit_cache[resolved_key] = _placement_static_fit(placement, position)
+		placement_static_fit_cache[resolved_key] = _placement_static_fit(placement, placement_position)
 
 
-func _placement_static_fit(placement: Dictionary, position: Vector2) -> bool:
+func _placement_static_fit(placement: Dictionary, placement_position: Vector2) -> bool:
 	var id: StringName = placement["id"]
 	var surface: StringName = placement["surface"]
 	var side: StringName = placement["side"]
-	var points := _translated_footprint(id, position)
+	var points := _translated_footprint(id, placement_position)
 	for point in points:
 		if _point_is_blocked_by_door(point):
 			return false
@@ -1014,20 +1014,20 @@ func _distance_to_segment(point: Vector2, start: Vector2, end: Vector2) -> float
 	return point.distance_to(start + segment * fraction)
 
 
-func _translated_footprint(placement_id: StringName, position: Vector2) -> Array:
+func _translated_footprint(placement_id: StringName, placement_position: Vector2) -> Array:
 	var placement_cache := translated_footprint_cache.get(placement_id, {}) as Dictionary
-	if placement_cache.has(position):
-		return placement_cache[position] as Array
+	if placement_cache.has(placement_position):
+		return placement_cache[placement_position] as Array
 	var result: Array = []
 	for point in footprints_by_id.get(placement_id, []) as Array:
-		result.append(position + point)
-	placement_cache[position] = result
+		result.append(placement_position + point)
+	placement_cache[placement_position] = result
 	translated_footprint_cache[placement_id] = placement_cache
 	return result
 
 
-func _add_footprint_to_occupancy(placement_id: StringName, position: Vector2, occupied_points: Dictionary) -> void:
-	for point in _translated_footprint(placement_id, position):
+func _add_footprint_to_occupancy(placement_id: StringName, placement_position: Vector2, occupied_points: Dictionary) -> void:
+	for point in _translated_footprint(placement_id, placement_position):
 		occupied_points[point] = true
 
 
@@ -1133,7 +1133,7 @@ func _append_opaque_sprite_points(sprite: Sprite2D) -> void:
 func _make_sprite(
 	node_name: StringName,
 	texture_path: String,
-	position: Vector2,
+	placement_position: Vector2,
 	alpha: float,
 	z_index_value: int,
 ) -> Sprite2D:
@@ -1143,7 +1143,7 @@ func _make_sprite(
 	sprite.texture = load(texture_path) as Texture2D
 	if sprite.texture == null:
 		push_error("HubStoneAccentLayer could not load %s" % texture_path)
-	sprite.position = position
+	sprite.position = placement_position
 	sprite.self_modulate = _accent_modulate(alpha)
 	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	sprite.z_index = z_index_value

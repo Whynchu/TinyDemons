@@ -33,6 +33,8 @@ class_name ItemDefinition
 ## Optional always-on weapon element. Neutral keeps the normal physical weapon contract.
 @export_enum("Neutral", "Fire", "Water", "Electric", "Grass", "Shadow", "Ground", "Ice") var weapon_element := 0
 @export var set_id: StringName = &""
+# Serialized item-set field; keep the authored resource and consumer API stable.
+@warning_ignore("shadowed_variable_base_class")
 @export var set_name := ""
 @export var passive_id: StringName = &""
 @export var designer_notes := ""

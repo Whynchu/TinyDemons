@@ -6,3 +6,18 @@ daemon_auto_start = false
 [agents]
 enabled = true
 max_concurrent_threads_per_session = 1
+
+# Godot MCP Toolkit bridge. Both clients (opencode + codex) start their own
+# bridge process and both dial the same editor WebSocket, discovered through
+# the machine-wide port registry rather than a pinned port.
+[mcp_servers.godot-mcp-toolkit]
+command = "npx"
+args = ["-y", "@npgamedev/godot-mcp-server"]
+# Codex defaults to a 10s startup timeout, which the first `npx -y` package
+# fetch can exceed; playtests and scene opens also run past the 60s tool
+# default.
+startup_timeout_sec = 60
+tool_timeout_sec = 300
+
+[mcp_servers.godot-mcp-toolkit.env]
+GODOT_MCP_CONFIG_VERSION = "1"

@@ -8,6 +8,8 @@ const BLOCK_BAR_OFFSET := Vector2(1.0, 19.0)
 
 ## Editor-facing guard tuning.
 @export var max_durability := 8.0
+## Additional guard durability granted by each point of effective player DEF.
+@export var durability_per_defense := 0.5
 @export var damage_reduction := 0.80
 @export var regen_delay := 4.0
 @export var regen_rate := 1.6

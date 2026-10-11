@@ -1,7 +1,11 @@
 extends Node
 class_name ScreenStateController
 
+# Used by hub_flow_controller.gd and hub_screen_setup_controller.gd and other extracted controllers. Godot only checks this class for use.
+@warning_ignore("unused_signal")
 signal debug_page_requested
+# Used by hub_flow_controller.gd and hub_screen_setup_controller.gd and other extracted controllers. Godot only checks this class for use.
+@warning_ignore("unused_signal")
 signal debug_action_requested(action: StringName, amount: int)
 
 const ASPECT_CATALOG_SCRIPT = preload("res://scripts/content/aspect_catalog.gd")
@@ -56,7 +60,7 @@ const MENU_CIRCLE_TEXTURE: Texture2D = MenuPromptTextureFactoryScript.MENU_CIRCL
 const MENU_X_TEXTURE: Texture2D = MenuPromptTextureFactoryScript.MENU_X_TEXTURE
 const MENU_TRIANGLE_TEXTURE: Texture2D = MenuPromptTextureFactoryScript.MENU_TRIANGLE_TEXTURE
 const MENU_SQUARE_TEXTURE: Texture2D = MenuPromptTextureFactoryScript.MENU_SQUARE_TEXTURE
-const GAME_VERSION := "0.3.88"
+const GAME_VERSION := "0.3.89"
 const MENU_CURSOR_TEXTURE: Texture2D = preload("res://assets/artwork/cursor.png")
 const HUB_STAT_ADD_TEXTURE: Texture2D = HubStatsScreenPresenterScript.HUB_STAT_ADD_TEXTURE
 const HUB_STAT_SUBTRACT_TEXTURE: Texture2D = HubStatsScreenPresenterScript.HUB_STAT_SUBTRACT_TEXTURE
@@ -142,6 +146,8 @@ func _init() -> void:
 
 
 var state: StringName = &"gameplay"
+# Used by gameplay_state.gd and screen_state_flow_controller.gd. Godot only checks this class for use.
+@warning_ignore("unused_private_class_variable")
 var _title_particle_controller: TitleParticleController = TitleParticleControllerScript.new() as TitleParticleController
 var _screen_state_flow_controller = ScreenStateFlowControllerScript.new()
 var state_flow_controller: Variant = _screen_state_flow_controller
@@ -153,8 +159,12 @@ var layout_controller = _screen_layout_controller
 var _hub_screen_setup_controller = HubScreenSetupControllerScript.new()
 var _screen_assembly_controller = ScreenAssemblyControllerScript.new()
 var assembly_controller = _screen_assembly_controller
+# Used by gameplay_state.gd and cloud_save_panel.gd and other extracted controllers. Godot only checks this class for use.
+@warning_ignore("unused_private_class_variable")
 var _menu_widget_factory: MenuWidgetFactory = MenuWidgetFactoryScript.new() as MenuWidgetFactory
 var _menu_cursor_animator: MenuCursorAnimator = MenuCursorAnimatorScript.new() as MenuCursorAnimator
+# Used by screen_assembly_controller.gd. Godot only checks this class for use.
+@warning_ignore("unused_private_class_variable")
 var _loading_screen_presenter: LoadingScreenPresenter = LoadingScreenPresenterScript.new() as LoadingScreenPresenter
 var _menu_prompt_texture_factory: MenuPromptTextureFactory = MenuPromptTextureFactoryScript.new() as MenuPromptTextureFactory
 var _name_entry_screen_controller: NameEntryScreenController = NameEntryScreenControllerScript.new() as NameEntryScreenController
@@ -180,26 +190,50 @@ var run_complete_presenter: RunCompleteScreenPresenter:
 	get: return _run_complete_screen_presenter
 var _pause_screen_presenter: PauseScreenPresenter = PauseScreenPresenterScript.new() as PauseScreenPresenter
 var _hub_stats_presenter: HubStatsScreenPresenter = HubStatsScreenPresenterScript.new() as HubStatsScreenPresenter
+# Used by hub_screen_render_controller.gd. Godot only checks this class for use.
+@warning_ignore("unused_private_class_variable")
 var _hub_stats_interaction_presenter: HubStatsInteractionPresenter = HubStatsInteractionPresenterScript.new() as HubStatsInteractionPresenter
 var _hub_page_visibility_presenter: HubPageVisibilityPresenter = HubPageVisibilityPresenterScript.new() as HubPageVisibilityPresenter
 var _hub_command_shell_presenter: HubCommandShellPresenter = HubCommandShellPresenterScript.new() as HubCommandShellPresenter
 var _hub_responsive_layout_presenter: HubResponsiveLayoutPresenter = HubResponsiveLayoutPresenterScript.new() as HubResponsiveLayoutPresenter
+# Used by screen_layout_controller.gd. Godot only checks this class for use.
+@warning_ignore("unused_private_class_variable")
 var _hub_responsive_layout_context: HubResponsiveLayoutContext = HubResponsiveLayoutContextScript.new() as HubResponsiveLayoutContext
+# Used by hub_screen_render_controller.gd and hub_screen_setup_controller.gd. Godot only checks this class for use.
+@warning_ignore("unused_private_class_variable")
 var _hub_item_visibility_presenter: HubItemVisibilityPresenter = HubItemVisibilityPresenterScript.new() as HubItemVisibilityPresenter
+# Used by hub_screen_render_controller.gd. Godot only checks this class for use.
+@warning_ignore("unused_private_class_variable")
 var _hub_item_visibility_context: HubItemVisibilityContext = HubItemVisibilityContextScript.new() as HubItemVisibilityContext
 var _hub_menu_state: HubMenuState = HubMenuStateScript.new() as HubMenuState
 var _pause_menu_state: PauseMenuState = PauseMenuStateScript.new() as PauseMenuState
+# Used by screen_route_controller.gd. Godot only checks this class for use.
+@warning_ignore("unused_private_class_variable")
 var _pause_menu_input_controller: PauseMenuInputController = PauseMenuInputControllerScript.new() as PauseMenuInputController
 var _hub_screen_render_controller = HubScreenRenderControllerScript.new()
 var _hub_legacy_inventory_presenter = HubLegacyInventoryPresenterScript.new()
+# Used by hub_screen_setup_controller.gd. Godot only checks this class for use.
+@warning_ignore("unused_private_class_variable")
 var _hub_legacy_widget_builder = HubLegacyWidgetBuilderScript.new()
 var _hub_input_controller: HubInputController = HubInputControllerScript.new() as HubInputController
+# Used by hub_legacy_inventory_presenter.gd and hub_screen_render_controller.gd. Godot only checks this class for use.
+@warning_ignore("unused_private_class_variable")
 var _hub_equipment_menu_presenter: HubEquipmentMenuPresenter = HubEquipmentMenuPresenterScript.new() as HubEquipmentMenuPresenter
+# Used by hub_screen_render_controller.gd. Godot only checks this class for use.
+@warning_ignore("unused_private_class_variable")
 var _hub_equipment_menu_context: HubEquipmentMenuContext = HubEquipmentMenuContextScript.new() as HubEquipmentMenuContext
+# Used by hub_screen_render_controller.gd. Godot only checks this class for use.
+@warning_ignore("unused_private_class_variable")
 var _hub_transaction_menu_presenter: HubTransactionMenuPresenterScript = HubTransactionMenuPresenterScript.new() as HubTransactionMenuPresenterScript
+# Used by hub_screen_render_controller.gd. Godot only checks this class for use.
+@warning_ignore("unused_private_class_variable")
 var _hub_transaction_menu_context: HubTransactionMenuContextScript = HubTransactionMenuContextScript.new() as HubTransactionMenuContextScript
+# Used by hub_screen_setup_controller.gd. Godot only checks this class for use.
+@warning_ignore("unused_private_class_variable")
 var _hub_menu_signal_binder: HubMenuSignalBinderScript = HubMenuSignalBinderScript.new() as HubMenuSignalBinderScript
 var _hub_legacy_widget_visibility_presenter: HubLegacyWidgetVisibilityPresenterScript = HubLegacyWidgetVisibilityPresenterScript.new() as HubLegacyWidgetVisibilityPresenterScript
+# Used by hub_list_scroll_controller.gd. Godot only checks this class for use.
+@warning_ignore("unused_private_class_variable")
 var _hub_legacy_widget_scroll_presenter: HubLegacyWidgetScrollPresenterScript = HubLegacyWidgetScrollPresenterScript.new() as HubLegacyWidgetScrollPresenterScript
 var _menu_world_hidden := false
 var _menu_world_background_visible := true
@@ -663,6 +697,8 @@ const NAME_ENTRY_COLUMNS := NameEntryWidgetPresenterScript.NAME_ENTRY_COLUMNS
 const NAME_ENTRY_ROWS := NameEntryWidgetPresenterScript.NAME_ENTRY_ROWS
 var player_palette_name := "blue"
 var display_view_size := Vector2(DisplayLayout.NATIVE_SIZE)
+# Used by screen_layout_controller.gd. Godot only checks this class for use.
+@warning_ignore("unused_private_class_variable")
 var _display_layout_refreshing := false
 
 

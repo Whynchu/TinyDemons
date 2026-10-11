@@ -118,11 +118,11 @@ func apply_display_layout(root: Object) -> void:
 			player_status.position = Vector2.ZERO
 		_set_layout_position(player_hud.get_node_or_null("GoldDisplay") as Node2D, &"gold")
 		_set_layout_position(player_hud.get_node_or_null("SoulDisplay") as Node2D, &"souls")
-		var inventory_chest := player_hud.get_node_or_null("InventoryChest") as Node2D
-		var inventory_chest_receiving := player_hud.get_node_or_null("InventoryChestReceiving") as Node2D
-		_set_layout_position(inventory_chest, &"inventory_chest")
-		var chest_base_position: Vector2 = inventory_chest.get_meta("display_layout_base_position", inventory_chest.position) as Vector2 if inventory_chest != null else Vector2.INF
-		_set_layout_position(inventory_chest_receiving, &"inventory_chest", chest_base_position)
+		var chest_sprite := player_hud.get_node_or_null("InventoryChest") as Node2D
+		var receiving_chest_sprite := player_hud.get_node_or_null("InventoryChestReceiving") as Node2D
+		_set_layout_position(chest_sprite, &"inventory_chest")
+		var chest_base_position: Vector2 = chest_sprite.get_meta("display_layout_base_position", chest_sprite.position) as Vector2 if chest_sprite != null else Vector2.INF
+		_set_layout_position(receiving_chest_sprite, &"inventory_chest", chest_base_position)
 		_set_layout_position(player_hud.get_node_or_null("RunTimer") as Sprite2D, &"run_timer")
 	_set_layout_position(combo_label, &"combo")
 	_set_layout_position(combo_base, &"combo")
@@ -379,7 +379,7 @@ func _acknowledge_chroma_reaction(color: Color) -> void:
 		Callable(self, "_finish_chroma_delivery_reaction"))
 
 
-func _update_chroma_delivery_reaction(progress: float) -> void:
+func _update_chroma_delivery_reaction(_progress: float) -> void:
 	if chroma_highlight_target != null and is_instance_valid(chroma_highlight_target):
 		# The highlight is a health-style transition fill behind the regular bar.
 		# Its visibility and clipped region are owned by set_chroma_bar_values;
@@ -481,16 +481,13 @@ func update_target_ui(target: Sprite2D, target_name: Sprite2D, target_bar: Sprit
 
 
 func update_player_health_ui(health: float, display_health: float, damage_hold: float, delta: float, _regen_speed: float, drain_speed: float, max_health: float, fill: Sprite2D, damage_fill: Sprite2D, fill_size: Vector2, health_text: Sprite2D, pixel_number: Callable, set_values: Callable, status_component: StatusComponent = null) -> Dictionary:
-	# Bar speeds are %-relative: they scale with max HP so the bar fills/drains at
-	# the same visual rate regardless of how large the pool is.
-	var scale := max_health / 100.0
-	if health > display_health: display_health = move_toward(display_health, health, drain_speed * scale * delta)
-	if damage_hold > 0.0: damage_hold = maxf(damage_hold - delta, 0.0)
-	elif display_health > health: display_health = move_toward(display_health, health, drain_speed * scale * delta)
+	var state := advance_player_health_ui(health, display_health, damage_hold, delta, drain_speed, max_health)
+	display_health = float(state["display_health"])
+	damage_hold = float(state["damage_hold"])
 	set_values.call(fill, damage_fill, fill_size, health, display_health, max_health)
 	if health_text != null: health_text.texture = pixel_number.call("%d/%d" % [ceili(health), ceili(max_health)], Color.WHITE)
 	update_player_status_marks(fill, status_component, pixel_number)
-	return {"display_health": display_health, "damage_hold": damage_hold}
+	return state
 
 
 func advance_player_health_ui(health: float, display_health: float, damage_hold: float, delta: float, drain_speed: float, max_health: float) -> Dictionary:
@@ -572,7 +569,7 @@ func status_badge_texture(definition: StatusEffectDefinition, pixel_text: Callab
 	if badge == null or badge.is_empty():
 		return null
 	badge = badge.duplicate() as Image
-	var icon_origin := Vector2i((badge.get_width() - image.get_width()) / 2, (badge.get_height() - image.get_height()) / 2)
+	var icon_origin := Vector2i(int(float(badge.get_width() - image.get_width()) / 2.0), int(float(badge.get_height() - image.get_height()) / 2.0))
 	for y in image.get_height():
 		for x in image.get_width():
 			var color := image.get_pixel(x, y)
@@ -591,7 +588,7 @@ func _legacy_status_badge_image(definition: StatusEffectDefinition, pixel_text: 
 	if glyph_texture == null:
 		return image
 	var glyph := glyph_texture.get_image()
-	var glyph_origin := Vector2i((7 - glyph.get_width()) / 2, (7 - glyph.get_height()) / 2)
+	var glyph_origin := Vector2i(int(float(7 - glyph.get_width()) / 2.0), int(float(7 - glyph.get_height()) / 2.0))
 	for y in glyph.get_height():
 		for x in glyph.get_width():
 			if glyph.get_pixel(x, y).a > 0.0:
@@ -646,16 +643,21 @@ func _consume_status_transmission_flash(actor: Sprite2D, status_id: StringName) 
 func set_fill_ratio(fill: Sprite2D, fill_size: Vector2, ratio: float) -> void:
 	if fill == null:
 		return
-	fill.region_enabled = true
+	if not fill.region_enabled:
+		fill.region_enabled = true
 	var clamped_ratio := clampf(ratio, 0.0, 1.0)
 	var track_start := float(fill.get_meta("fill_track_start_x", -1.0))
 	if track_start >= 0.0:
 		var track_width := maxf(float(fill.get_meta("fill_track_width", fill_size.x - track_start)), 0.0)
 		var source_width := maxf(track_start + track_width, track_start)
 		var visible_width := clampf(track_start + roundf(track_width * clamped_ratio), 0.0, source_width)
-		fill.region_rect = Rect2(Vector2.ZERO, Vector2(visible_width, fill_size.y))
+		var track_region := Rect2(Vector2.ZERO, Vector2(visible_width, fill_size.y))
+		if fill.region_rect != track_region:
+			fill.region_rect = track_region
 		return
-	fill.region_rect = Rect2(Vector2.ZERO, Vector2(fill_size.x * clamped_ratio, fill_size.y))
+	var full_region := Rect2(Vector2.ZERO, Vector2(fill_size.x * clamped_ratio, fill_size.y))
+	if fill.region_rect != full_region:
+		fill.region_rect = full_region
 
 
 func set_chroma_bar_values(main_fill: Sprite2D, transition_fill: Sprite2D, fill_size: Vector2, chroma: float, display_chroma: float, max_chroma: float) -> void:
@@ -708,26 +710,26 @@ func update_overhead_bars(
 			continue
 		var hidden := (is_hidden_for.is_valid() and bool(is_hidden_for.call(slime))) or bool(slime.get_meta("boss_jump_ui_suppressed", false))
 		if is_dead_for.call(slime) or hidden:
-			frame.visible = false
-			damage_fill.visible = false
-			fill.visible = false
-			aggro_marker.visible = false
-			elite_symbol.visible = false
+			if frame.visible: frame.visible = false
+			if damage_fill.visible: damage_fill.visible = false
+			if fill.visible: fill.visible = false
+			if aggro_marker.visible: aggro_marker.visible = false
+			if elite_symbol.visible: elite_symbol.visible = false
 			for status_marker in status_markers:
-				status_marker.visible = false
+				if status_marker.visible: status_marker.visible = false
 			continue
 		var max_health := float(max_health_for.call(slime))
 		var health := float(health_for.call(slime))
 		var is_aggroed := bool(is_aggroed_for.call(slime))
 		var should_show := health < max_health or is_aggroed
 		var is_elite := bool(slime.get_meta("is_elite", false))
-		frame.visible = should_show
-		damage_fill.visible = should_show
-		fill.visible = should_show
-		elite_symbol.visible = is_elite
-		fill.self_modulate = Color.WHITE
-		damage_fill.self_modulate = Color.WHITE
-		aggro_marker.visible = is_aggroed
+		if frame.visible != should_show: frame.visible = should_show
+		if damage_fill.visible != should_show: damage_fill.visible = should_show
+		if fill.visible != should_show: fill.visible = should_show
+		if elite_symbol.visible != is_elite: elite_symbol.visible = is_elite
+		if fill.self_modulate != Color.WHITE: fill.self_modulate = Color.WHITE
+		if damage_fill.self_modulate != Color.WHITE: damage_fill.self_modulate = Color.WHITE
+		if aggro_marker.visible != is_aggroed: aggro_marker.visible = is_aggroed
 		var fill_size := target_overhead_fill_sizes.get(slime, Vector2.ZERO) as Vector2
 		var overhead_offset := target_overhead_offsets.get(slime, Vector2.ZERO) as Vector2
 		if not is_aggroed:
@@ -735,28 +737,28 @@ func update_overhead_bars(
 		var overhead_position := slime.global_position + overhead_offset + Vector2(0, -2)
 		if float(slime.get_meta("encounter_scale", 1.0)) > 1.0:
 			overhead_position = ActorGeometry.boss_slime_overhead_origin(slime, fill_size)
-		frame.global_position = overhead_position
-		frame.global_scale = Vector2.ONE
-		frame.z_index = overwold_ui_z
-		damage_fill.global_position = overhead_position
-		damage_fill.global_scale = Vector2.ONE
-		damage_fill.z_index = overwold_ui_z + 1
-		fill.global_position = overhead_position
-		fill.global_scale = Vector2.ONE
-		fill.z_index = overwold_ui_z + 2
+		if frame.global_position != overhead_position: frame.global_position = overhead_position
+		if frame.global_scale != Vector2.ONE: frame.global_scale = Vector2.ONE
+		if frame.z_index != overwold_ui_z: frame.z_index = overwold_ui_z
+		if damage_fill.global_position != overhead_position: damage_fill.global_position = overhead_position
+		if damage_fill.global_scale != Vector2.ONE: damage_fill.global_scale = Vector2.ONE
+		if damage_fill.z_index != overwold_ui_z + 1: damage_fill.z_index = overwold_ui_z + 1
+		if fill.global_position != overhead_position: fill.global_position = overhead_position
+		if fill.global_scale != Vector2.ONE: fill.global_scale = Vector2.ONE
+		if fill.z_index != overwold_ui_z + 2: fill.z_index = overwold_ui_z + 2
 		var symbol_size := elite_symbol.texture.get_size() if elite_symbol.texture != null else Vector2.ZERO
 		var symbol_position := ActorGeometry.slime_head_overhead_origin(slime, symbol_size)
 		if should_show:
 			# Once the damage/aggro bar is present, keep the elite symbol attached
 			# to the bar rather than letting it collide with the slime's head.
 			symbol_position = overhead_position + Vector2((fill_size.x - symbol_size.x) * 0.5, -symbol_size.y - ActorGeometry.ELITE_OVERHEAD_SYMBOL_GAP)
-		elite_symbol.top_level = true
-		elite_symbol.global_position = symbol_position
-		elite_symbol.global_scale = Vector2.ONE
-		elite_symbol.z_index = overwold_ui_z + 4
+		if not elite_symbol.top_level: elite_symbol.top_level = true
+		if elite_symbol.global_position != symbol_position: elite_symbol.global_position = symbol_position
+		if elite_symbol.global_scale != Vector2.ONE: elite_symbol.global_scale = Vector2.ONE
+		if elite_symbol.z_index != overwold_ui_z + 4: elite_symbol.z_index = overwold_ui_z + 4
 		var status_component := slime.get_node_or_null("Status") as StatusComponent
 		_update_actor_status_markers(slime, status_component, status_markers, overhead_position + Vector2(fill_size.x + 2.0, -1.0), pixel_text)
-		aggro_marker.top_level = true
+		if not aggro_marker.top_level: aggro_marker.top_level = true
 		var aggro_offset := target_overhead_aggro_offsets.get(slime, Vector2.ZERO) as Vector2
 		if float(slime.get_meta("encounter_scale", 1.0)) > 1.0:
 			# Match the regular-slime layout: the marker's right edge touches the
@@ -767,8 +769,8 @@ func update_overhead_bars(
 		else:
 			# Skeletons use the same authored HUD bar layout as regular slimes.
 			aggro_marker.global_position = slime.global_position + aggro_offset + Vector2(0, -2)
-		aggro_marker.global_scale = Vector2.ONE
-		aggro_marker.z_index = overwold_ui_z + 3
+		if aggro_marker.global_scale != Vector2.ONE: aggro_marker.global_scale = Vector2.ONE
+		if aggro_marker.z_index != overwold_ui_z + 3: aggro_marker.z_index = overwold_ui_z + 3
 		if should_show:
 			set_values.call(fill, damage_fill, fill_size, health, float(display_health_for.call(slime)), max_health)
 
@@ -776,7 +778,6 @@ func update_overhead_bars(
 func _update_actor_status_markers(actor: Sprite2D, status_component: StatusComponent, markers: Array, origin: Vector2, pixel_text: Callable) -> void:
 	if actor == null or not is_instance_valid(actor):
 		return
-	_prune_status_markers(markers)
 	var records := status_component.presentation_records() if status_component != null and is_instance_valid(status_component) else []
 	if status_component != null and is_instance_valid(status_component):
 		_connect_status_transmission(actor, status_component)
@@ -789,19 +790,22 @@ func _update_actor_status_markers(actor: Sprite2D, status_component: StatusCompo
 		if marker == null:
 			continue
 		if index >= records.size():
-			marker.visible = false
+			if marker.visible: marker.visible = false
 			continue
 		var record := records[index]
 		var badge_texture := status_badge_texture(record.definition, pixel_text)
 		if marker.texture != badge_texture:
 			marker.texture = badge_texture
-		marker.global_position = origin + Vector2(float(index) * 8.0, 0.0)
-		marker.scale = Vector2.ONE * (1.25 if _consume_status_transmission_flash(actor, record.definition.id) else 1.0)
-		marker.global_scale = Vector2.ONE
+		var marker_position := origin + Vector2(float(index) * 8.0, 0.0)
+		if marker.global_position != marker_position: marker.global_position = marker_position
+		var is_flashing := not _status_transmission_flash_actors.is_empty() and _consume_status_transmission_flash(actor, record.definition.id)
+		var marker_scale := Vector2.ONE * (1.25 if is_flashing else 1.0)
+		if marker.scale != marker_scale: marker.scale = marker_scale
+		if marker.global_scale != Vector2.ONE: marker.global_scale = Vector2.ONE
 		var status_z := actor.z_index - 1
 		if marker.z_index != status_z:
 			marker.z_index = status_z
-		marker.visible = true
+		if not marker.visible: marker.visible = true
 
 
 func _prune_status_markers(markers: Array) -> void:
@@ -946,7 +950,7 @@ func _magic_cooldown_available(chroma: Node) -> bool:
 	return mode != ChromaComponentScript.AbilityMode.ELEMENTAL or bool(chroma.call("can_use_elemental_ability"))
 
 
-func _imbue_cooldown_available(root: Object, chroma: Node) -> bool:
+func _imbue_cooldown_available(_root: Object, chroma: Node) -> bool:
 	if chroma == null or not is_instance_valid(chroma):
 		return false
 	var element := ElementCatalogScript.element_for_aspect(int(chroma.get("current_aspect")))
@@ -1318,31 +1322,31 @@ func build_world_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Ca
 	if layout == null:
 		gold_amount.position = Vector2(72, 2)
 		parent.add_child(gold_amount)
-	var inventory_chest := layout.get_node_or_null("InventoryChest") as Sprite2D if layout != null else null
-	if inventory_chest == null:
-		inventory_chest = Sprite2D.new()
-		inventory_chest.name = "InventoryChest"
-		hud_parent.add_child(inventory_chest)
-		inventory_chest.position = Vector2(190, 2)
-	inventory_chest.centered = false
-	inventory_chest.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	inventory_chest.z_index = 2
-	if inventory_chest.texture == null:
-		inventory_chest.texture = INVENTORY_CHEST_IDLE_TEXTURE
-	var inventory_chest_receiving := layout.get_node_or_null("InventoryChestReceiving") as Sprite2D if layout != null else null
-	if inventory_chest_receiving == null:
-		inventory_chest_receiving = Sprite2D.new()
-		inventory_chest_receiving.name = "InventoryChestReceiving"
-		hud_parent.add_child(inventory_chest_receiving)
-		inventory_chest_receiving.position = inventory_chest.position
-	inventory_chest_receiving.centered = false
-	inventory_chest_receiving.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	inventory_chest_receiving.z_index = 3
-	inventory_chest_receiving.texture = INVENTORY_CHEST_RECEIVING_TEXTURE
-	inventory_chest_receiving.visible = false
-	self.inventory_chest = inventory_chest
-	self.inventory_chest_receiving = inventory_chest_receiving
-	inventory_chest_base_scale = inventory_chest.scale
+	var chest_sprite := layout.get_node_or_null("InventoryChest") as Sprite2D if layout != null else null
+	if chest_sprite == null:
+		chest_sprite = Sprite2D.new()
+		chest_sprite.name = "InventoryChest"
+		hud_parent.add_child(chest_sprite)
+		chest_sprite.position = Vector2(190, 2)
+	chest_sprite.centered = false
+	chest_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	chest_sprite.z_index = 2
+	if chest_sprite.texture == null:
+		chest_sprite.texture = INVENTORY_CHEST_IDLE_TEXTURE
+	var receiving_chest_sprite := layout.get_node_or_null("InventoryChestReceiving") as Sprite2D if layout != null else null
+	if receiving_chest_sprite == null:
+		receiving_chest_sprite = Sprite2D.new()
+		receiving_chest_sprite.name = "InventoryChestReceiving"
+		hud_parent.add_child(receiving_chest_sprite)
+		receiving_chest_sprite.position = chest_sprite.position
+	receiving_chest_sprite.centered = false
+	receiving_chest_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	receiving_chest_sprite.z_index = 3
+	receiving_chest_sprite.texture = INVENTORY_CHEST_RECEIVING_TEXTURE
+	receiving_chest_sprite.visible = false
+	self.inventory_chest = chest_sprite
+	self.inventory_chest_receiving = receiving_chest_sprite
+	inventory_chest_base_scale = chest_sprite.scale
 	var soul_display := layout.get_node_or_null("SoulDisplay") as Node2D if layout != null else null
 	if soul_display == null:
 		soul_display = Node2D.new()
@@ -1486,7 +1490,7 @@ func build_world_hud(parent: Node, library: SpriteFrameLibrary, load_texture: Ca
 	player_text.z_index = 3
 	player_text.position = player_fill.position + player_fill.texture.get_size() * 0.5 + Vector2(0, -1)
 	if layout == null: parent.add_child(player_text)
-	return {"room": room_number, "dungeon_run": dungeon_run, "gold": gold, "gold_amount": gold_amount, "soul": soul_icon, "soul_amount": soul_amount, "inventory_chest": inventory_chest, "inventory_chest_receiving": inventory_chest_receiving, "timer": run_timer, "gold_frames": gold_frames, "buttons": buttons, "ability_prompts": ability_prompts, "cooldowns": cooldowns, "combo_label": combo["label"], "combo_base": combo["base"], "combo_fill": combo["fill"], "target_text": target_text, "focus_label": focus_label, "focus_label_base": focus_label_base, "player_text": player_text}
+	return {"room": room_number, "dungeon_run": dungeon_run, "gold": gold, "gold_amount": gold_amount, "soul": soul_icon, "soul_amount": soul_amount, "inventory_chest": chest_sprite, "inventory_chest_receiving": receiving_chest_sprite, "timer": run_timer, "gold_frames": gold_frames, "buttons": buttons, "ability_prompts": ability_prompts, "cooldowns": cooldowns, "combo_label": combo["label"], "combo_base": combo["base"], "combo_fill": combo["fill"], "target_text": target_text, "focus_label": focus_label, "focus_label_base": focus_label_base, "player_text": player_text}
 
 func update_aggro_markers(markers: Dictionary, _palette_name: String, _pixel_particle: Callable) -> void:
 	var marker_texture := _aggro_marker_texture(_palette_name)

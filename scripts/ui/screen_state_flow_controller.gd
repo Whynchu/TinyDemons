@@ -206,7 +206,7 @@ func select_archetype_menu_row(root: GameplayState, row: int) -> void:
 
 
 func update_archetype_screen(root: GameplayState) -> void:
-	var display := root.get("display_controller") as DisplayController
+	var _display := root.get("display_controller") as DisplayController
 	var view_width: float = screen.layout_controller.layout_view_size().x
 	var flame: StringName = screen.ASPECT_CATALOG_SCRIPT.STARTER_FLAMES[screen.archetype_presenter.starter_flame_index]
 	var flame_name: String = screen.ASPECT_CATALOG_SCRIPT.display_name(flame)
@@ -237,7 +237,7 @@ func update_archetype_preview_animation(root: GameplayState) -> void:
 	var frame_time: float = maxf(root.player_tuning.idle_frame_time, 0.01)
 	var frame_index: int = posmod(int(screen.archetype_presenter.frame_timer / frame_time), screen.archetype_presenter.preview_frames.size())
 	screen.archetype_presenter.preview.texture = screen.archetype_presenter.preview_frames[frame_index]
-	var display := root.get("display_controller") as DisplayController
+	var _display := root.get("display_controller") as DisplayController
 	var view_width: float = screen.layout_controller.layout_view_size().x
 	screen.archetype_presenter.preview.position = Vector2((view_width - screen.archetype_presenter.preview.texture.get_width() * screen.archetype_presenter.preview.scale.x) * 0.5, 48)
 

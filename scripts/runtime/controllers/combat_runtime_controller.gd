@@ -882,7 +882,9 @@ func configure_equipment_transmutations(root: Object) -> void:
 	var guard := root.get("player_guard_component") as PlayerGuardComponent
 	if guard != null:
 		var snapshot: CombatStatSnapshot = root.call("_player_stat_snapshot")
-		var shield_maximum := guard.max_durability + equipment.guard_durability_bonus
+		# Effective DEF includes the shield's own DEF points and the player's other stats/gear.
+		var defense_durability_bonus := maxf(snapshot.def, 0.0) * guard.durability_per_defense
+		var shield_maximum := guard.max_durability + equipment.guard_durability_bonus + defense_durability_bonus
 		guard.set_maximum_durability(transmutation.guard_maximum_durability(shield_maximum, snapshot.def), true)
 
 
