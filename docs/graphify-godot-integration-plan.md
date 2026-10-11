@@ -195,10 +195,10 @@ recovery errors are retained on the file metadata and in Graphify's
 `parse_errors` field. A read-only corpus sweep found 605 scripts, 4,068
 top-level properties, and 6,222 methods; seven files have grammar recovery
 errors, including known valid semicolon-separated statements. These counts are
-coverage evidence, not complete GDScript support. Literal resource dependencies,
-signals, enums, constants, type-reference resolution, and cross-file calls are
-still unimplemented at this phase; `.tres`, `.tscn`, and `project.godot` are
-added in later phases.
+coverage evidence, not complete GDScript support. Literal resource dependencies
+and unique global-class references are covered by the later Phase 4 slice;
+signals, enums, constants, broader type resolution, and cross-file calls remain
+open. `.tres` and `.tscn` parsing are covered by Phases 2 and 3.
 
 ### Phase 2: shared text parser and `.tres` resources
 
@@ -288,6 +288,18 @@ Godot code. Build project-local global-class, preload alias, UID, and scene
 attachment indexes. Resolve explicit types, `.new()` constructors, inherited
 members, `self/super`, and known autoload receivers.
 
+Initial cross-file slice implemented on the fork (2026-10-11): literal
+`preload`, `load`, and `ResourceLoader.load` references to indexed `.gd`,
+`.tres`, and `.tscn` files resolve through the project resource index. Explicit
+type, constructor, inheritance, and class-receiver references resolve only to a
+unique project `class_name`; missing resources and duplicate global classes
+remain diagnostics. Recognized test-inventory CSVs expose bounded row nodes and
+link each row to its sibling GDScript test; the PowerShell extractor follows
+`Import-Csv` when its path is a literal or a `Join-Path $PSScriptRoot` binding.
+The runner → manifest → test → explicit game dependency chain is now available
+in the local Tiny Demons graph. `project.godot` autoload parsing, typed member
+calls, scene attachments, and dynamic boundaries remain open.
+
 Add bounded handling for `$Node`, `%UniqueName`, `get_node`, literal
 `call/call_deferred`, and signal `connect/emit` patterns. Resolve only when a
 scene/type binding is proven. A script may attach to several scenes with
@@ -336,6 +348,9 @@ Minimum adoption questions, each checked against source spans:
 5. Can a fixture with a removed statically resolvable method produce a missing
    target diagnostic? A dynamic root call must remain unresolved unless its
    receiver is established; the graph is not a replacement for Godot diagnostics.
+6. Which gameplay scripts/resources do smoke tests exercise? Follow the runner's
+   manifest edge to a test entry, then follow only explicit resource and
+   global-class references; dynamically selected targets remain unresolved.
 
 Acceptance: reviewed answers for those questions, valid final graph, no silent
 Godot-file skips, reproducible full/incremental output, and repeat indexing does

@@ -1430,3 +1430,9 @@ Replacing generic Tiny Demons Graphify community labels with deterministic hub n
 
 ## 2026-10-11 - codex - done
 Regenerated the ignored Tiny Demons map with deterministic hub labels: 1,015 labeled communities, no Community N placeholders in graph.html, and zero graph source paths inside the nested graphify-godot fork.
+
+## 2026-10-11 - codex - claim
+Adding explicit test-to-source and test-runner relationships to Graphify Godot so Tiny Demons smoke tests are navigable in its graph. The current map has 159 test files and zero direct test-to-game-script edges.
+
+## 2026-10-11 - codex - done
+Connected all 157 manifest entries to GDScript tests, linked all 157 tests to explicit gameplay references (615 edges), and connected run_all_smoke.ps1 to manifest.csv. Refreshed ignored aggregate and focused HTML; focused Graphify tests passed 395/19.

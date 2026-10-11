@@ -2,17 +2,40 @@
 
 _Only codex writes this file._
 
-**Focus:** Completed `.tres`/`.tscn` parsing, Godot resource links, and the local Tiny Demons map.
+**Focus:** Completed GDScript smoke-test links and the local Tiny Demons verification map.
 **Updated:** 2026-10-11
+
+## Completed: Smoke-test verification graph (2026-10-11)
+
+GDScript now links literal `preload`, `load`, and `ResourceLoader.load`
+references to indexed scripts, resources, and scenes; explicit type,
+constructor, inheritance, and class-receiver references resolve to unique
+project `class_name` definitions. Recognized verification-inventory CSVs expose
+bounded row nodes with role/state metadata and link them to sibling test
+scripts. PowerShell links the runner's `Import-Csv` input to that manifest.
+
+The Tiny Demons map contains 157 manifest rows for 157 test scripts. All 157
+tests now have explicit links to gameplay code (615 edges: 203 preload, 57
+load, 351 global-class references, and 4 inheritance links); the runner points
+to `tests/manifest.csv`. The ignored graph has 17,165 nodes / 21,766 edges from
+1,010 source files, including 605 `.gd`, 65 `.tres`, 29 `.tscn`, one test
+manifest, and 13 `.ps1` files. The focused browser view at
+`graphify-godot/.tools/tiny-demons-map/verification/graph.html` contains 800
+nodes / 1,777 edges so individual runner, inventory, test, and code links are
+visible. The aggregate `graph.html` has 761 labeled communities, no
+`Community N` placeholders, and no paths into the nested Graphify fork.
+
+Verification: 395 focused Graphify tests passed, 19 skipped; `compileall`,
+`git diff --check`, and both Graphify map refreshes passed.
 
 ## Completed: Readable Tiny Demons community map (2026-10-11)
 
 Regenerated the ignored local map at
 `graphify-godot/.tools/tiny-demons-map/` with Graphify's deterministic
-structural hub labels. All 1,015 communities have labels (1,004 unique, 0
-`Community N` placeholders). The graph has 16,995 nodes and 19,443 links, and
+structural hub labels. All 761 communities have labels (754 unique, 0
+`Community N` placeholders). The graph has 17,165 nodes and 21,766 links, and
 no source paths inside the nested `graphify-godot/` fork. The refreshed
-`GRAPH_REPORT.md`, `.graphify_analysis.json`, and 664 KB `graph.html` are all
+`GRAPH_REPORT.md`, `.graphify_analysis.json`, and 847 KB `graph.html` are all
 present; the HTML contains no generic community names. No LLM backend was
 configured, so labeling made no external calls.
 
@@ -24,7 +47,7 @@ serialized signals, and relative NodePath links. Typed arrays now report item
 counts without mistaking vector arguments for collection sizes. Incremental
 resolution retains facts from unchanged resources. The Tiny Demons map is
 available locally at ignored `graphify-godot/.tools/tiny-demons-map/`:
-16,995 nodes / 19,443 edges from 605 `.gd`, 65 `.tres`, and 29 `.tscn` files;
+17,165 nodes / 21,766 edges from 605 `.gd`, 65 `.tres`, and 29 `.tscn` files;
 the map contains 165 script attachments, 468 resource-property links, 19
 scene-instance links, and 28 NodePath links. Its 194 unresolved references
 point to excluded PNG and shader assets.
@@ -34,11 +57,12 @@ Focused tests: 87 passed, 8 skipped; hook tests with Git for Windows `sh` on
 skipped, 34 failed due to missing optional `tree_sitter_hcl`, `build`, and
 PyYAML dependencies, a POSIX `/tmp` assumption, and two failures in unchanged
 path-memoization code on Windows. `compileall`, `git diff --check`, and both
-Graphify code-map refreshes pass. The fork map is 20,129 nodes / 41,926 edges.
+Graphify code-map refreshes pass. The fork map is 20,386 nodes / 41,774 edges.
 
-Handoff: Phase 4 remains open for `project.godot`, autoload, and cross-file
-GDScript resolution. Keep the local Tiny Demons map ignored; do not stage the
-outer worktree's existing `project.godot` or enemy preview scene edits.
+Handoff: Phase 4 remains open for `project.godot` autoload parsing, typed member
+calls, scene attachments, and dynamic boundaries. Keep the local Tiny Demons map
+ignored; do not stage the outer worktree's existing `project.godot` or enemy
+preview scene edits.
 
 
 ## Completed: First GDScript extraction slice
@@ -1917,6 +1941,6 @@ Verification: changed-area regression modules passed (1,482 passed, 73 skipped, 
 
 **Updated:** 2026-10-11
 
-The local Tiny Demons map is at `graphify-godot/.tools/tiny-demons-map/`. It has 16,995 nodes and 19,443 links, with zero source paths inside the nested `graphify-godot/` folder. The root `.gitignore` rule `/graphify-godot/` is honored by Graphify and confirmed by `git check-ignore`.
+The local Tiny Demons map is at `graphify-godot/.tools/tiny-demons-map/`. It now has 17,165 nodes and 21,766 links, with zero source paths inside the nested `graphify-godot/` folder. The root `.gitignore` rule `/graphify-godot/` is honored by Graphify and confirmed by `git check-ignore`.
 
-Ran `GRAPHIFY_OUT=<absolute map path> python -m graphify cluster-only .. --no-label` to generate cluster analysis and the HTML viewer without an LLM backend. The map directory now contains `graph.html` (626,281 bytes), `GRAPH_REPORT.md`, and `.graphify_analysis.json`; the HTML aggregates the 16,995 source nodes into 1,015 community nodes. All outputs remain local under ignored `.tools/`.
+Ran `GRAPHIFY_OUT=<absolute map path> python -m graphify cluster-only .. --no-label` to generate cluster analysis and the HTML viewer without an LLM backend. The map directory contains `graph.html` (847,408 bytes), `GRAPH_REPORT.md`, and `.graphify_analysis.json`; the HTML aggregates the 17,165 source nodes into 761 named communities. `verification/graph.html` provides a focused 800-node view of the runner, test inventory, test scripts, and explicit code dependencies. All outputs remain local under ignored `.tools/`.
