@@ -1412,3 +1412,6 @@ Implementing the shared Godot text-resource parser and resource-link resolution 
 
 ## 2026-10-11T20:17Z - codex - done
 Added Godot text-resource parsing and links, validated focused coverage, refreshed the fork graph, and generated the ignored Tiny Demons code map. The upstream full suite reported 6,628 passed, 388 skipped, and 34 environment or unchanged-code failures.
+
+## 2026-10-11T20:23Z - codex - done
+Fast-forwarded the Godot support commits to the graphify-godot fork default v8 branch at ea4fdc4, pushed it, and removed the temporary godot-support branch. Updated the integration plan and status.

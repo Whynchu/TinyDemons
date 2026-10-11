@@ -19,8 +19,9 @@ Use deterministic local parsing for the structural graph. Optional semantic
 document analysis can follow once the structural graph is trustworthy.
 
 The inspected Graphify checkout is `b4e6307`, package version `0.9.85`, on `v8`.
-The local implementation branch is `godot-support`. Refresh this baseline before
-implementing against upstream changes.
+Godot support is now on the fork's default `v8` branch at `ea4fdc4`; the
+temporary `godot-support` branch was removed. Refresh `origin/v8` before the
+next implementation phase.
 
 | Existing surface | Integration consequence |
 | --- | --- |
@@ -185,18 +186,19 @@ produce valid symbols; comments and strings do not create calls; overload-like
 names in unrelated classes stay distinct; parse errors are visible; repeat and
 parallel runs produce the same normalized facts.
 
-Initial implementation (2026-10-11, local fork branch `godot-support`): `.gd`
-is in code discovery and dispatch, with a helpful `[godot]` missing-grammar
-hint. The extractor records one script-class node per file, global `class_name`
-and `extends` facts, top-level property types/annotations/export flags, and
-class-scoped method ownership. Tree-sitter recovery errors are retained on the
-file metadata and in Graphify's `parse_errors` field. The focused extractor and
-registry tests pass. A read-only corpus sweep found 605 scripts, 4,068
+Initial implementation (2026-10-11, now on the fork's default `v8` branch):
+`.gd` is in code discovery and dispatch, with a helpful `[godot]`
+missing-grammar hint. The extractor records one script-class node per file,
+global `class_name` and `extends` facts, top-level property
+types/annotations/export flags, and class-scoped method ownership. Tree-sitter
+recovery errors are retained on the file metadata and in Graphify's
+`parse_errors` field. A read-only corpus sweep found 605 scripts, 4,068
 top-level properties, and 6,222 methods; seven files have grammar recovery
 errors, including known valid semicolon-separated statements. These counts are
 coverage evidence, not complete GDScript support. Literal resource dependencies,
 signals, enums, constants, type-reference resolution, and cross-file calls are
-still unimplemented; `.tres`, `.tscn`, and `project.godot` are not yet routed.
+still unimplemented at this phase; `.tres`, `.tscn`, and `project.godot` are
+added in later phases.
 
 ### Phase 2: shared text parser and `.tres` resources
 
@@ -233,8 +235,8 @@ connection resolves to the correct method when attachment/type evidence exists.
 Inherited or dynamically created nodes remain explicitly unresolved where
 effective composition is required.
 
-Initial implementation (2026-10-11, local fork branch `godot-support`): the
-shared section/value reader now handles Godot 4 `.tres` and `.tscn` text,
+Initial implementation (2026-10-11, pushed to the fork's default `v8` branch
+at `ea4fdc4`): the shared section/value reader handles Godot 4 `.tres` and `.tscn` text,
 including multiline balanced values, comments, quoted strings, StringName and
 NodePath constructors, typed arrays, bounded property summaries, and explicit
 ExtResource/SubResource/Resource references. It resolves project-local
