@@ -1375,4 +1375,7 @@ Enemy workbench slime body-contact clarity and boss geometry parity implemented.
 Release the completed enemy workbench and documentation edits as 0.3.90; leave the unrelated project.godot renderer setting change unstaged.
 
 ## 2026-10-11 — codex — done
+Slime combat hit geometry now comes from CollisionGuide; the workbench displays and edits that rectangle as the slime hitbox. Version 0.3.91 prepared. Changed-script diagnostics and whitespace checks pass; gameplay smoke remains unrun.
+
+## 2026-10-11 — codex — done
 Version 0.3.90 prepared with enemy workbench geometry and documentation. Focused lifecycle test passed in the prior editor session; this shell has no Godot executable. Diff whitespace check passes.

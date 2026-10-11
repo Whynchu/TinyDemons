@@ -766,16 +766,19 @@ Before calling a content addition ready, record:
 
 ### Slime workbench geometry (2026-10-11)
 
-In `scenes/authoring/previews/enemy_preview_workbench.tscn`, the red Body Hitbox
-is also the melee attack contact polygon. Slime attacks use body contact during
-the lunge; legacy left/right attack rectangles are hidden and cannot be edited
-as slime attack ranges. Skeleton directional attack guides remain available.
-This design preview shows geometry and animation, not a simulated combat hit.
+The slime `CollisionGuide` rectangle is the shared combat hitbox. The runtime
+uses it for player attacks, target selection, spell overlap, and melee
+attack contact. The separate `BodyHitbox` polygon is retained in the scenes for
+compatibility and authoring history, but does not define slime combat bounds.
+The workbench marks the collision guide in red when **Body Hitbox** display is
+enabled; choose **Slime Hitbox (Collision Guide)** to edit its rectangle.
+Legacy left/right attack rectangles are hidden and are not slime damage bounds.
+Skeleton directional attack guides remain available.
 
 Regular actor edits use `resources/definitions/geometry/slime.tres`, shared by
 all regular slime variants. Boss actor edits use the native 32px geometry in
 `scenes/authoring/previews/boss_slime_authoring.tscn`, the scene consumed by
-`RoomController._apply_authored_boss_geometry`. Body handles, undo/redo,
-refresh, validation, and Save Enemy Changes all use the selected size's source.
-Save edits before switching size. Boss geometry is shared across boss variants;
-it does not overwrite the regular family profile.
+`RoomController._apply_authored_boss_geometry`. Collision-guide handles,
+undo/redo, refresh, validation, and Save Enemy Changes all use the selected
+size's source. Save edits before switching size. Boss geometry is shared across
+boss variants; it does not overwrite the regular family profile.

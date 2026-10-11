@@ -75,6 +75,11 @@ func _initialize() -> void:
 			var marker_width := boss_aggro_marker.texture.get_size().x if boss_aggro_marker.texture != null else 0.0
 			_expect(boss_aggro_marker.global_position.is_equal_approx(Vector2(boss_bar.global_position.x - marker_width, boss_bar.global_position.y)), "boss aggro marker is flush to the health bar's left edge", failures)
 		var body := gameplay.call("_slime_body_polygon", boss) as PackedVector2Array
+		for slime in slimes:
+			var collision_guide := slime.get_node("CollisionGuide") as Node2D
+			var expected_hitbox := _guide_polygon(collision_guide)
+			var actual_hitbox := gameplay.call("_slime_body_polygon", slime) as PackedVector2Array
+			_expect(actual_hitbox == expected_hitbox, "slime combat hitbox uses its authored CollisionGuide rectangle", failures)
 		var body_rect := _bounds(body)
 		var foot_polygon := gameplay.call("_slime_collision_polygon", boss) as PackedVector2Array
 		var foot_rect := _bounds(foot_polygon)
@@ -215,6 +220,17 @@ func _bounds(points: PackedVector2Array) -> Rect2:
 	for point in points:
 		result = result.expand(point)
 	return result
+
+
+func _guide_polygon(collision_guide: Node2D) -> PackedVector2Array:
+	var rect_position: Vector2 = collision_guide.get("rect_position")
+	var rect_size: Vector2 = collision_guide.get("rect_size")
+	return PackedVector2Array([
+		collision_guide.to_global(rect_position),
+		collision_guide.to_global(rect_position + Vector2(rect_size.x, 0.0)),
+		collision_guide.to_global(rect_position + rect_size),
+		collision_guide.to_global(rect_position + Vector2(0.0, rect_size.y)),
+	])
 
 
 func _finish(failures: Array[String]) -> void:

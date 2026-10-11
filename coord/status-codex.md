@@ -2,8 +2,22 @@
 
 _Only codex writes this file._
 
-**Focus:** Releasing completed enemy workbench geometry work as 0.3.90.
+**Focus:** Completed slime CollisionGuide hitbox correction for 0.3.91.
 **Updated:** 2026-10-11
+
+## Completed: Slime CollisionGuide is the combat hitbox
+
+`ActorGeometry.body_polygon()` now uses the authored CollisionGuide rectangle,
+so player attacks, targeting, spell overlap, boss contact, and slime attack
+reach share that shape. Contact spacing also measures the guide bounds. The
+workbench shows the collision guide in red as the slime hitbox and routes the
+slime hitbox edit target to that rectangle. BodyHitbox remains for compatibility
+but no longer defines slime combat bounds. Added boss-room smoke coverage for
+regular and boss slimes.
+
+Godot script diagnostics pass for the geometry, workbench, smoke, and version
+scripts; `git diff --check` passes. The gameplay smoke itself was not run in
+this shell. Version markers are 0.3.91; release push is pending.
 
 ## Completed: Enemy workbench slime contact geometry
 

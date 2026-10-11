@@ -137,6 +137,20 @@ static func collision_polygon(slime: Sprite2D, actor_foot_offset: Vector2, reque
 
 
 static func body_polygon(slime: Sprite2D, actor_foot_offset: Vector2) -> PackedVector2Array:
+	var collision_guide := slime.get_node_or_null("CollisionGuide") as Node2D
+	if collision_guide != null:
+		var rect_position: Vector2 = collision_guide.get("rect_position")
+		var rect_size: Vector2 = collision_guide.get("rect_size")
+		var corners := PackedVector2Array([
+			rect_position,
+			rect_position + Vector2(rect_size.x, 0.0),
+			rect_position + rect_size,
+			rect_position + Vector2(0.0, rect_size.y),
+		])
+		var guide_polygon := PackedVector2Array()
+		for point in corners:
+			guide_polygon.append(collision_guide.to_global(point))
+		return guide_polygon
 	var hitbox := slime.get_node_or_null("BodyHitbox") as Polygon2D
 	if hitbox == null or hitbox.polygon.size() < 3:
 		return collision_polygon(slime, actor_foot_offset)
@@ -150,6 +164,8 @@ static func contact_radius(actor: Sprite2D, chest: Sprite2D, guide_bounds: Rect2
 	if actor == chest:
 		return 5.5
 	var body := actor.get_node_or_null("BodyHitbox") as Polygon2D
+	if body != null and guide_bounds.has_area():
+		return maxf(guide_bounds.size.x * 0.5, 2.0)
 	if body != null and body.polygon.size() >= 3:
 		var minimum_x := body.polygon[0].x
 		var maximum_x := minimum_x

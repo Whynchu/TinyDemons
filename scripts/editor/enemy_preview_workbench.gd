@@ -356,8 +356,8 @@ const EffectsSpawnerScript = preload("res://scripts/runtime/services/effects_spa
 		show_collision_shape = value
 		_show_geometry()
 		queue_redraw()
-## Slimes use this same body polygon for incoming hits and melee attack contact.
-## Left/right attack rectangles are legacy guides and are not slime damage bounds.
+## Slimes use the Collision Guide rectangle for incoming hits and melee attack contact.
+## Left/right attack rectangles and BodyHitbox are not slime damage bounds.
 @export var show_body_hitbox := true:
 	set(value):
 		show_body_hitbox = value
@@ -452,7 +452,7 @@ func _validate_property(property: Dictionary) -> void:
 			property.usage = PROPERTY_USAGE_NONE
 			return
 		if property.name == "geometry_edit_target":
-			property.hint_string = "None,Actor Collision Boundary,Body Hitbox / Attack Contact,Body Collision Guide"
+			property.hint_string = "None,Actor Collision Boundary,Legacy Body Hitbox (unused),Slime Hitbox (Collision Guide),Left Attack Range,Right Attack Range"
 
 	if property.name == "enemy_id":
 		property.usage = PROPERTY_USAGE_NONE
@@ -1296,7 +1296,7 @@ func _geometry_field_name(target: int) -> String:
 
 
 func _geometry_target_visible(target: int) -> bool:
-	if definition != null and definition.type_id == &"slime" and target in [GeometryEditTarget.ATTACK_LEFT, GeometryEditTarget.ATTACK_RIGHT]:
+	if definition != null and definition.type_id == &"slime" and target in [GeometryEditTarget.BODY_HITBOX, GeometryEditTarget.ATTACK_LEFT, GeometryEditTarget.ATTACK_RIGHT]:
 		return false
 	if not show_geometry_guides:
 		return false
@@ -1306,7 +1306,7 @@ func _geometry_target_visible(target: int) -> bool:
 		GeometryEditTarget.BODY_HITBOX:
 			return show_body_hitbox
 		GeometryEditTarget.COLLISION_GUIDE:
-			return show_collision_guide
+			return show_collision_guide or (definition.type_id == &"slime" and show_body_hitbox)
 		GeometryEditTarget.ATTACK_LEFT:
 			return show_attack_guide_left
 		GeometryEditTarget.ATTACK_RIGHT:
@@ -1512,9 +1512,9 @@ func _show_geometry() -> void:
 	var body_hitbox := preview_actor.get_node_or_null("BodyHitbox") as Polygon2D
 	if body_hitbox != null:
 		body_hitbox.color = Color(1.0, 0.25, 0.2, 0.18)
-		body_hitbox.visible = guides_enabled and show_body_hitbox
+		body_hitbox.visible = guides_enabled and show_body_hitbox and definition.type_id != &"slime"
 	var guide_visibility := {
-		&"CollisionGuide": guides_enabled and show_collision_guide,
+		&"CollisionGuide": guides_enabled and (show_collision_guide or (definition.type_id == &"slime" and show_body_hitbox)),
 		&"AttackGuideL": guides_enabled and show_attack_guide_left and definition.type_id != &"slime",
 		&"AttackGuideR": guides_enabled and show_attack_guide_right and definition.type_id != &"slime",
 	}
@@ -1522,6 +1522,9 @@ func _show_geometry() -> void:
 		var guide := preview_actor.get_node_or_null(NodePath(guide_name)) as Node2D
 		if guide == null:
 			continue
+		if guide_name == &"CollisionGuide" and definition.type_id == &"slime":
+			guide.set("fill_color", Color(1.0, 0.25, 0.2, 0.18))
+			guide.set("outline_color", Color(1.0, 0.25, 0.2, 0.9))
 		guide.set("draw_in_game", true)
 		guide.visible = guide_visibility[guide_name]
 		guide.queue_redraw()
@@ -1848,7 +1851,7 @@ func _draw() -> void:
 		return
 
 	if definition.type_id == &"slime":
-		_draw_pixel_label(self, Vector2(12, 130), "RED: BODY / ATTACK CONTACT", PREVIEW_ERROR_COLOR, 136)
+		_draw_pixel_label(self, Vector2(12, 130), "RED: COLLISION GUIDE HITBOX", PREVIEW_ERROR_COLOR, 140)
 	var state_label: String = PREVIEW_STATE_LABELS[preview_state]
 	var frame_count := _selected_frame_count()
 	var playback_label := "PAUSED" if playback_paused else "PLAYING" if not _animation_finished else "FINISHED"
