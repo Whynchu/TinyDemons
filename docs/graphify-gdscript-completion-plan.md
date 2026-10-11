@@ -1,6 +1,6 @@
 # Graphify GDScript completion and viewer plan
 
-Status: proposed implementation sequence; no implementation in this change
+Status: implementation in progress; GDScript, project/scene resolution, and main-HTML source-group filtering have landed as partial support in the ignored Graphify fork
 
 Updated: 2026-10-11
 
@@ -11,23 +11,29 @@ That document owns resource/scene formats and project identity. This plan owns
 the remaining GDScript semantics, their completion gates, and source-group
 navigation in the exported viewer. Tiny Demons is the integration corpus.
 
-## Goal and current evidence
+Implementation evidence and limits are tracked in the fork's
+[Godot support matrix](https://github.com/Whynchu/graphify-godot/blob/v8/docs/godot-support.md).
+This plan remains the staged acceptance contract; a supported feature is not
+considered complete just because one Tiny Demons query links successfully.
+
+## Goal and baseline evidence
 
 Make dependency chains explain which methods call which owners, which authored
 properties are consumed, and which tests reference those systems. Allow users
 to hide entire source groups without changing the indexed graph.
 
-Current source evidence lives in the fork's `graphify/extractors/gdscript.py`,
-`graphify/godot_resolution.py`, and `graphify/exporters/html.py`:
+Before implementation, source evidence lived in the fork's
+`graphify/extractors/gdscript.py`, `graphify/godot_resolution.py`, and
+`graphify/exporters/html.py`:
 
 - Script classes, scoped methods, top-level variables/types/exports, literal
   source-resource loads, and unique project global-class references exist.
 - Resource/scene parsing, attachments, resource properties, scene instances,
   NodePaths, and serialized signal connections exist.
-- The viewer has community checkboxes and label search, but no source-group
-  controls. Search currently uses all exported nodes; community handlers write
-  node visibility directly. Adding a second independent visibility writer would
-  let one filter accidentally undo the other.
+- The initial viewer had community checkboxes and label search but no
+  source-group controls. V1 now routes both filters through one visibility
+  predicate; see the support matrix for implemented behavior and deferred
+  viewer surfaces.
 - The local map contains 17,165 nodes and 21,766 edges. Seven of the 605 scanned
   GDScript files reported grammar recovery. These are baseline observations,
   not a declaration of language completeness or successful runtime execution.
@@ -48,22 +54,21 @@ evidence; silently missing behavior does not satisfy completion.
 
 ## Delivery sequence
 
-| Stage | Work | Acceptance |
-| --- | --- | --- |
-| V1: source-group filters | Classify exported nodes and add group checkboxes using one shared visibility predicate. | Docs/tests/scripts can be independently hidden and restored; community filters, search, edges, and selection remain consistent. |
-| G1: declaration and syntax coverage | Signals, enums/members, constants, nested-class ownership, static methods, parameter/return types, annotations, accessors, lambdas and Callable ownership; investigate known recovery spans. | Small fixtures cover each supported construct, duplicate names remain scoped, and valid unsupported syntax is reported honestly. |
-| G2: local calls | Same-script calls, explicit `self`, local binding/shadowing, constructors, preload aliases and supported static calls. | Exact caller-to-method edges, no calls from strings/comments, and negative fixtures prevent name-only matches. |
-| G3: typed cross-file calls | Parameters, members, return types, supported inferred assignments, inherited methods, `super`, nested types and typed collections. | Follow calls through known receivers; duplicate classes, overrides, unknown types and reassignment remain safe and diagnosed. |
-| G4: property consumption | Record property reads/writes through resolved owners, including supported getters/setters and definition-resource receivers. | Distinguish declaration, serialized assignment, runtime read and runtime write; demonstrate a used and an unconsumed authored property without claiming dynamic absence proves dead data. |
-| G5: script signal wiring | Declarations/emits, signal `.connect`, supported legacy forms, method Callables and literal callback names. | Wiring and emission remain separate facts; callbacks resolve only with receiver evidence; inherited signals and ambiguous callbacks have fixtures. |
-| G6: Godot context | Parse main scene/autoload/plugin settings; resolve supported `$Path`, `%UniqueName`, `get_node` and scene-attached receivers. Add a separate bounded slice for inherited scenes. | Project/nested-project isolation; autoload types connect calls; distinguish one script attached to several scenes; unknown runtime nodes stay unresolved. |
-| G7: dynamic boundary reporting | `call`, `call_deferred`, computed loads, groups, runtime injection and unresolved callbacks. | Bounded source records identify why a target is unknown; literals resolve only when receiver evidence exists. |
-| R1: release proof | Supported-version/platform matrix, clean installs, full/incremental parity, rename/delete invalidation, export/query metadata and documented limitations. | Windows/Linux gates pass with Godot extra; missing grammar gives actionable diagnostics; representative end-to-end queries have reviewed answers. |
+| Stage | Work | Status | Acceptance |
+| --- | --- | --- | --- |
+| V1: source-group filters | Classify exported nodes and add group checkboxes using one shared visibility predicate. | Implemented for main HTML; tree/callflow views deferred. | Docs/tests/scripts can be independently hidden and restored; community filters, search, edges, and selection remain consistent. |
+| G1: declaration and syntax coverage | Signals, enums/members, constants, nested-class ownership, static methods, parameter/return types, annotations, accessors, lambdas and Callable ownership; investigate known recovery spans. | Partial; lambdas and broader grammar coverage remain. | Small fixtures cover each supported construct, duplicate names remain scoped, and valid unsupported syntax is reported honestly. |
+| G2: local calls | Same-script calls, explicit `self`, local binding/shadowing, constructors, preload aliases and supported static calls. | Partial; preload aliases and literal dynamic calls are newly covered. | Exact caller-to-method edges, no calls from strings/comments, and negative fixtures prevent name-only matches. |
+| G3: typed cross-file calls | Parameters, members, return types, supported inferred assignments, inherited methods, `super`, nested types and typed collections. | Partial; typed collections, inheritance and `super` have bounded support. | Follow calls through known receivers; duplicate classes, overrides, unknown types and reassignment remain safe and diagnosed. |
+| G4: property consumption | Record property reads/writes through resolved owners, including supported getters/setters and definition-resource receivers. | Partial; typed cross-script reads/writes, script properties, and serialized assignments are covered. | Distinguish declaration, serialized assignment, runtime read and runtime write; demonstrate a used and an unconsumed authored property without claiming dynamic absence proves dead data. |
+| G5: script signal wiring | Declarations/emits, signal `.connect`, supported legacy forms, method Callables and literal callback names. | Partial; declaration, emit/connect and narrow local callbacks are covered. | Wiring and emission remain separate facts; callbacks resolve only with receiver evidence; inherited signals and ambiguous callbacks have fixtures. |
+| G6: Godot context | Parse main scene/autoload/plugin settings; resolve supported `$Path`, `%UniqueName`, `get_node` and scene-attached receivers. Add a separate bounded slice for inherited scenes. | Partial; project settings, literal node paths and root inherited scenes are covered. | Project/nested-project isolation; autoload types connect calls; distinguish one script attached to several scenes; unknown runtime nodes stay unresolved. |
+| G7: dynamic boundary reporting | `call`, `call_deferred`, computed loads, groups, runtime injection and unresolved callbacks. | Partial; common dynamic boundaries now receive source diagnostics. | Bounded source records identify why a target is unknown; literals resolve only when receiver evidence exists. |
+| R1: release proof | Supported-version/platform matrix, clean installs, full/incremental parity, rename/delete invalidation, export/query metadata and documented limitations. | In progress; focused Windows fixtures cover parity and rename behavior. | Windows/Linux gates pass with Godot extra; missing grammar gives actionable diagnostics; representative end-to-end queries have reviewed answers. |
 
-V1 can land independently and should be first because it makes the current map
-easier to inspect. G1-G3 deliver the largest improvement in executable chains.
-G4-G5 build on receiver ownership; G6 uses the existing text parser and resolver.
-Split stages into bounded commits rather than one resolver rewrite. Refresh the
+V1 is implemented on the main HTML export and remains partial until auxiliary
+tree/callflow views can expose equivalent controls. G1-G7 are intentionally
+partial; use the support matrix to pick bounded follow-up work. Refresh the
 fork's own graph after code changes as required by its contributor instructions.
 
 ## V1: source-group filtering contract

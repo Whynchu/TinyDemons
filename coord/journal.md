@@ -1442,3 +1442,12 @@ Plan GDScript completion and source-group filters; documentation and coordinatio
 
 ## 2026-10-11 — codex — done
 Added GDScript completion and viewer filter plan with staged acceptance gates. Next implementation: V1 source-group filters in the Graphify fork.
+
+## 2026-10-11 — codex — claim
+Implement Graphify source-group viewer filters and continue GDScript support in the nested fork. Existing outer project file changes remain untouched.
+
+## 2026-10-11T23:20Z - codex - done
+Completed the first Graphify Godot support implementation slice. V1 main-HTML filters, GDScript call/property resolution, project and inherited-scene links, dynamic-boundary diagnostics, docs, tests, and both Tiny Demons graph views are refreshed. Follow-up release gates remain in status-codex.md and docs/graphify-gdscript-completion-plan.md.
+
+## 2026-10-11T23:24Z - codex - done
+Committed and pushed Graphify Godot support commit b697a64 to origin/v8. The Tiny Demons map outputs remain local and ignored; R1 release-proof work remains open.

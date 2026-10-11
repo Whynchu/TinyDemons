@@ -1,6 +1,6 @@
 # Graphify Godot integration plan
 
-Status: implementation in progress; parser packaging is locally verified and the first GDScript extractor slice is implemented on the fork branch
+Status: partial Godot support is implemented in the fork; completion and release proof remain in progress
 
 Updated: 2026-10-11
 
@@ -10,6 +10,17 @@ integration corpus and adoption owner.
 Follow-on execution: [GDScript completion and viewer plan](graphify-gdscript-completion-plan.md)
 defines the remaining language semantics, release proof, and source-group filters.
 This integration plan retains ownership of the Godot file-format contract.
+
+## Current implementation snapshot
+
+The fork now discovers `.gd`, `.tres`, `.tscn`, and `.godot` project settings;
+extracts scoped GDScript declarations and supported call/property/signal facts;
+resolves project-local resources, UIDs, autoloads, literal NodePaths, and root
+inherited-scene trees; and exports intersecting source-group/community filters
+in the main HTML view. These are static facts with explicit dynamic boundaries,
+not complete Godot runtime or language support. Tested details and current
+limits live in the fork's
+[Godot support matrix](https://github.com/Whynchu/graphify-godot/blob/v8/docs/godot-support.md).
 
 Goal: answer dependency and ownership questions across GDScript, authored
 resources, scenes, and project configuration with links to the source evidence.
@@ -22,10 +33,10 @@ files. Godot 3 compatibility and binary resource decoding are later work.
 Use deterministic local parsing for the structural graph. Optional semantic
 document analysis can follow once the structural graph is trustworthy.
 
-The inspected Graphify checkout is `b4e6307`, package version `0.9.85`, on `v8`.
-Godot support is now on the fork's default `v8` branch at `ea4fdc4`; the
-temporary `godot-support` branch was removed. Refresh `origin/v8` before the
-next implementation phase.
+The original integration inspected Graphify `b4e6307`, package version
+`0.9.85`, on `v8`. Godot support is now developed on the fork's default `v8`
+branch. Upstream synchronization and branch state are recorded in the matching
+`coord/status-codex.md` entry; check it before the next integration release.
 
 | Existing surface | Integration consequence |
 | --- | --- |

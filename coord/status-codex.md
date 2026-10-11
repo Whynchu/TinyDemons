@@ -2,8 +2,45 @@
 
 _Only codex writes this file._
 
-**Focus:** Planned GDScript completion and source-group viewer filters.
+**Focus:** Graphify Godot support; the first implementation slice is complete and release-proof work remains open.
 **Updated:** 2026-10-11
+
+## Completed: Graphify Godot support implementation slice (2026-10-11)
+
+In the ignored `graphify-godot` fork, added composable source-group and
+community filters to the main HTML viewer; extended GDScript extraction and
+resolution for preload aliases, typed and collection receivers, cross-script
+property reads/writes, literal dynamic calls, signal boundaries, project
+settings, and root inherited-scene NodePaths. Bumped the AST cache schema so
+existing files are re-extracted with the new facts. Added a tested support
+matrix and updated both Graphify plans.
+
+Verification: 98 changed-area tests pass; adding the cache-key module brings
+the focused run to 102 passing, with 9 cache-root-switch warnings from the
+shared Windows test process. `compileall`, CLI help, and `git diff --check`
+pass. The full fork suite ran before the final typed-property/cache-schema
+changes and completed with 6,760 passed, 409 skipped, and 60 failures across
+shell-dependent hooks, optional language/tooling, and Windows path-sensitive
+tests. The 605-script Tiny Demons sweep had 0 extractor
+crashes, 1,138 normalized semicolon splits, and 7 remaining parser-recovery
+files.
+
+Committed and pushed the fork change as `b697a64` to `Whynchu/graphify-godot`
+branch `v8`. Tiny Demons' game version stays unchanged; the fork package stays
+at `0.9.86` until the R1 release gates pass.
+
+Refreshed both ignored Tiny Demons views: the full graph is 20,039 nodes /
+43,869 edges / 743 communities, with no paths into `graphify-godot/`; the
+focused verification HTML remains 800 nodes / 1,777 edges. Both HTML exports
+contain source-group controls. Key graph facts now include 8,573 script calls,
+9,264 property reads/writes, 157 manifest-to-test links, and 20 serialized
+NodePath links.
+
+Handoff: support remains partial. Linux clean-install proof, grammar coverage
+for the seven recovery files and lambda syntax, ordinary nested-scene
+flattening, plugin configuration targets, and equivalent filters in tree and
+callflow viewers remain open. See `docs/graphify-gdscript-completion-plan.md`
+and the fork's `docs/godot-support.md`.
 
 ## Completed: GDScript completion and viewer plan (2026-10-11)
 
@@ -13,9 +50,8 @@ calls and receiver types, property usage, signals, Godot context, dynamic
 diagnostics, release proof, and source-group filters with intersecting community
 visibility, search/selection behavior, export limits and URL persistence.
 
-Next: implement V1 in the fork's `graphify/exporters/html.py` with classification
-fixtures and viewer checks, then regenerate/inspect both local Tiny Demons maps.
-No extractor or viewer implementation changed in this planning task.
+The plan is now under execution; the implementation slice and remaining release
+gates are recorded above and in the support matrix.
 
 ## Completed: Smoke-test verification graph (2026-10-11)
 
