@@ -1436,3 +1436,9 @@ Adding explicit test-to-source and test-runner relationships to Graphify Godot s
 
 ## 2026-10-11 - codex - done
 Connected all 157 manifest entries to GDScript tests, linked all 157 tests to explicit gameplay references (615 edges), and connected run_all_smoke.ps1 to manifest.csv. Refreshed ignored aggregate and focused HTML; focused Graphify tests passed 395/19.
+
+## 2026-10-11 — codex — claim
+Plan GDScript completion and source-group filters; documentation and coordination only.
+
+## 2026-10-11 — codex — done
+Added GDScript completion and viewer filter plan with staged acceptance gates. Next implementation: V1 source-group filters in the Graphify fork.

@@ -2,8 +2,20 @@
 
 _Only codex writes this file._
 
-**Focus:** Completed GDScript smoke-test links and the local Tiny Demons verification map.
+**Focus:** Planned GDScript completion and source-group viewer filters.
 **Updated:** 2026-10-11
+
+## Completed: GDScript completion and viewer plan (2026-10-11)
+
+Added `docs/graphify-gdscript-completion-plan.md` and linked it from the
+integration plan and documentation map. Covers declaration/syntax coverage,
+calls and receiver types, property usage, signals, Godot context, dynamic
+diagnostics, release proof, and source-group filters with intersecting community
+visibility, search/selection behavior, export limits and URL persistence.
+
+Next: implement V1 in the fork's `graphify/exporters/html.py` with classification
+fixtures and viewer checks, then regenerate/inspect both local Tiny Demons maps.
+No extractor or viewer implementation changed in this planning task.
 
 ## Completed: Smoke-test verification graph (2026-10-11)
 

@@ -7,6 +7,10 @@ Updated: 2026-10-11
 Owner: developer tooling in `Whynchu/graphify-godot`; Tiny Demons is the
 integration corpus and adoption owner.
 
+Follow-on execution: [GDScript completion and viewer plan](graphify-gdscript-completion-plan.md)
+defines the remaining language semantics, release proof, and source-group filters.
+This integration plan retains ownership of the Godot file-format contract.
+
 Goal: answer dependency and ownership questions across GDScript, authored
 resources, scenes, and project configuration with links to the source evidence.
 The first useful release must connect these file types, not just list symbols.

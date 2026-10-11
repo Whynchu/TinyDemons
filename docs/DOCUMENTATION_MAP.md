@@ -17,6 +17,10 @@ Developer tooling: [`graphify-godot-integration-plan.md`](graphify-godot-integra
 plans GDScript, resource, scene, and project extraction in the Graphify fork,
 followed by measured Tiny Demons adoption.
 
+[`graphify-gdscript-completion-plan.md`](graphify-gdscript-completion-plan.md)
+defines the remaining language-resolution gates and source-group checkbox filters
+for the Graphify HTML viewer.
+
 For an external product/design review, use the curated [`review/00-astra-review-index.md`](review/00-astra-review-index.md) package. It consolidates current reality, the ratified interview contract, production state, presentation rubric, and staged agent instructions.
 
 1. [`README.md`](../README.md) — project entry point and verification commands.
