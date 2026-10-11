@@ -2,8 +2,32 @@
 
 _Only codex writes this file._
 
-**Focus:** Next slice: shared `.tres`/`.tscn` parsing and Godot resource links.
+**Focus:** Completed `.tres`/`.tscn` parsing, Godot resource links, and the local Tiny Demons map.
 **Updated:** 2026-10-11
+
+## Completed: Godot text resources and links
+
+Added bounded parsing for `.tres` and `.tscn`, resource/subresource/scene
+entities, `res://` and UID links, script attachments, scene instances,
+serialized signals, and relative NodePath links. Typed arrays now report item
+counts without mistaking vector arguments for collection sizes. Incremental
+resolution retains facts from unchanged resources. The Tiny Demons map is
+available locally at ignored `graphify-godot/.tools/tiny-demons-map/`:
+16,995 nodes / 19,443 edges from 605 `.gd`, 65 `.tres`, and 29 `.tscn` files;
+the map contains 165 script attachments, 468 resource-property links, 19
+scene-instance links, and 28 NodePath links. Its 194 unresolved references
+point to excluded PNG and shader assets.
+
+Focused tests: 87 passed, 8 skipped; hook tests with Git for Windows `sh` on
+`PATH`: 218 passed, 8 skipped. The upstream full suite: 6,628 passed, 388
+skipped, 34 failed due to missing optional `tree_sitter_hcl`, `build`, and
+PyYAML dependencies, a POSIX `/tmp` assumption, and two failures in unchanged
+path-memoization code on Windows. `compileall`, `git diff --check`, and both
+Graphify code-map refreshes pass. The fork map is 20,129 nodes / 41,926 edges.
+
+Handoff: Phase 4 remains open for `project.godot`, autoload, and cross-file
+GDScript resolution. Keep the local Tiny Demons map ignored; do not stage the
+outer worktree's existing `project.godot` or enemy preview scene edits.
 
 
 ## Completed: First GDScript extraction slice

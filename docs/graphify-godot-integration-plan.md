@@ -233,6 +233,50 @@ connection resolves to the correct method when attachment/type evidence exists.
 Inherited or dynamically created nodes remain explicitly unresolved where
 effective composition is required.
 
+Initial implementation (2026-10-11, local fork branch `godot-support`): the
+shared section/value reader now handles Godot 4 `.tres` and `.tscn` text,
+including multiline balanced values, comments, quoted strings, StringName and
+NodePath constructors, typed arrays, bounded property summaries, and explicit
+ExtResource/SubResource/Resource references. It resolves project-local
+`res://` paths, resource UIDs, and adjacent `.uid` sidecars after extraction.
+The graph includes resource roots/subresources, scene roots/nodes, authored
+parent-child edges, script attachments, scene instances, and serialized signal
+connections. A callback resolves to a GDScript method only when the receiving
+scene node has an explicit script attachment; otherwise the graph preserves the
+connection to the destination node and records an unresolved diagnostic.
+Incremental extraction reuses reference facts persisted on unchanged file
+nodes. Relative NodePaths resolve from the owning scene node; unsupported
+absolute, escaping, or missing paths produce diagnostics without invented
+nodes. Typed-array summaries count collection entries and do not label vector
+constructor arguments as collection sizes. Focused resource/scene tests cover
+nested references, strings that look like resource constructors, cyclic
+`.tres` files, UID resolution, nested scene instances, relative and unresolved
+NodePaths, callback methods, graph assembly, and incremental resolution.
+
+Current limits: project settings/autoload/plugin parsing remains Phase 4;
+inherited scenes are not flattened; external assets excluded from the indexed
+code corpus remain diagnostics; and dynamically created nodes or untyped signal
+callbacks are not guessed.
+
+Tiny Demons code-only map (2026-10-11): generated locally at the ignored path
+`graphify-godot/.tools/tiny-demons-map/` with no clustering or LLM pass. It
+contains 16,995 nodes and 19,443 edges from 605 `.gd`, 65 `.tres`, and 29
+`.tscn` files. Godot links include 165 script attachments, 468 resource
+property references, 19 scene instances, and 28 resolved NodePaths. The corpus
+has no serialized scene signal connections; their method resolution is covered
+by the synthetic fixture. All 194 corpus diagnostics are references to
+dependencies excluded from the code-only index (190 PNG textures and four
+`.gdshader` files); there are no Godot text parse errors.
+
+Verification: focused Godot text, GDScript, registry, and cache tests pass
+(87 passed, 8 skipped); hook coverage passes with Git for Windows' shell on
+`PATH` (218 passed, 8 skipped). The entire upstream suite collected 7,042
+cases: 6,628 passed, 388 skipped, and 34 failed. Those failures are outside the
+Godot changes: 29 Terraform cases need the missing `tree_sitter_hcl` extra; the
+wheel-content case needs the `build` dev dependency; the Swift fixture assumes
+POSIX `/tmp`; Markdown nested frontmatter needs PyYAML; and two path-memoization
+tests fail in unchanged resolver code on this Windows environment.
+
 ### Phase 4: project context and cross-file resolution
 
 Parse `project.godot` for main scene, autoloads (including `*` singleton prefix),

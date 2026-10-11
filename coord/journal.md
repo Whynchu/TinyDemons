@@ -1406,3 +1406,9 @@ Begin Phase 0/1 in graphify-godot: select the pinned GDScript grammar and implem
 
 ## 2026-10-11 - codex - done
 Added the pinned optional GDScript extra and initial .gd discovery/extraction in the local godot-support branch. Five focused tests pass; 605 Tiny Demons scripts have zero extractor exceptions and seven grammar-recovery files. Refreshed the fork code graph. Next: .tres/.tscn parsing and resource resolution.
+
+## 2026-10-11T19:30Z — codex — claim
+Implementing the shared Godot text-resource parser and resource-link resolution in the local Graphify fork. Files: graphify-godot/graphify and graphify-godot/tests.
+
+## 2026-10-11T20:17Z - codex - done
+Added Godot text-resource parsing and links, validated focused coverage, refreshed the fork graph, and generated the ignored Tiny Demons code map. The upstream full suite reported 6,628 passed, 388 skipped, and 34 environment or unchanged-code failures.
