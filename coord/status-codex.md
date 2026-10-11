@@ -2,8 +2,45 @@
 
 _Only codex writes this file._
 
-**Focus:** Released the active-frame regen-lock call fix as 0.3.92.
+**Focus:** Next slice: shared `.tres`/`.tscn` parsing and Godot resource links.
 **Updated:** 2026-10-11
+
+
+## Completed: First GDScript extraction slice
+
+The optional `godot` extra is pinned to `tree-sitter-gdscript==6.1.0` and
+resolves with Graphify's Tree-sitter 0.25.2 runtime in the local Windows x64
+environment. `.gd` discovery/dispatch now emits script-class nodes, class-owned
+methods, top-level properties with types/export annotations, and parser recovery
+diagnostics.
+The valid semicolon-separated line in Tiny Demons' `slime_brain.gd` is a known
+grammar coverage gap and remains marked as partial extraction.
+
+Verification: `tests/test_gdscript.py` and `tests/test_extractors_registry.py`
+pass (5 tests); `uv lock --check`, `compileall`, and `git diff --check` pass. A
+read-only sweep of 605 Tiny Demons scripts found 0 extractor errors and 7
+grammar-recovery files. `graphify update .` refreshed the fork's own graph to
+20,060 nodes and 40,883 edges. This is local work on `godot-support`, not pushed.
+
+Handoff: next implement the shared Godot text parser for `.tres` and `.tscn`,
+then resolve `res://` script/resource references against project roots and UID
+sidecars. Calls, constants, signals/enums, project settings, and Godot platform
+CI remain open.
+
+## Completed: Local Graphify checkout
+
+Integration planning: `docs/graphify-godot-integration-plan.md` records the
+inspected 0.9.85 dispatch/resolver/cache seams, Godot parsing contract, six
+implementation phases, fixture acceptance, and Tiny Demons adoption questions.
+The documentation map links the active implementation plan and its staged
+acceptance gates.
+
+Cloned upstream Graphify into `graphify-godot/` and added the directory to the
+Tiny Demons `.gitignore`. The local base was Graphify `b4e6307` (package
+`0.9.85`); implementation is now on the separate `godot-support` branch. The
+clone's `origin` is `Whynchu/graphify-godot`, with `Graphify-Labs/graphify` as
+`upstream`; `remote.pushDefault` points pushes to the fork. The checkout remains
+local and has not been pushed.
 
 ## Completed: Slime CollisionGuide is the combat hitbox
 

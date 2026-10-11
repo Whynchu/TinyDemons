@@ -13,6 +13,10 @@ forward to the current authority.
 
 ## Start here
 
+Developer tooling: [`graphify-godot-integration-plan.md`](graphify-godot-integration-plan.md)
+plans GDScript, resource, scene, and project extraction in the Graphify fork,
+followed by measured Tiny Demons adoption.
+
 For an external product/design review, use the curated [`review/00-astra-review-index.md`](review/00-astra-review-index.md) package. It consolidates current reality, the ratified interview contract, production state, presentation rubric, and staged agent instructions.
 
 1. [`README.md`](../README.md) — project entry point and verification commands.

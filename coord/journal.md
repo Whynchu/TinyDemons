@@ -1382,3 +1382,27 @@ Version 0.3.90 prepared with enemy workbench geometry and documentation. Focused
 
 ## 2026-10-11 — codex — done
 Active gameplay frame now calls the existing static regen-lock helper. Script diagnostics and whitespace checks pass; version 0.3.92 prepared for release.
+
+## 2026-10-11 - codex - claim
+Clone Graphify upstream under graphify-godot/, add the local checkout to .gitignore, and prepare the Godot-focused fork.
+
+## 2026-10-11 - codex - done
+Cloned Graphify into ignored graphify-godot/ and verified the upstream v8 checkout. The hosted fork was created later in the task sequence.
+
+## 2026-10-11 - codex - claim
+Connect the ignored Graphify checkout to Whynchu/graphify-godot and verify the fork remotes.
+
+## 2026-10-11 - codex - done
+Connected Whynchu/graphify-godot as origin and retained Graphify-Labs/graphify as upstream. Configured pushes to use origin.
+
+## 2026-10-11 - codex - claim
+Prepare a source-backed Graphify Godot integration plan and link it in the documentation map.
+
+## 2026-10-11 - codex - done
+Wrote the Graphify Godot integration plan with parser/resolver boundaries, fixture acceptance, and Tiny Demons adoption gates; linked it in the documentation map.
+
+## 2026-10-11 - codex - claim
+Begin Phase 0/1 in graphify-godot: select the pinned GDScript grammar and implement its smallest reliable integration boundary.
+
+## 2026-10-11 - codex - done
+Added the pinned optional GDScript extra and initial .gd discovery/extraction in the local godot-support branch. Five focused tests pass; 605 Tiny Demons scripts have zero extractor exceptions and seven grammar-recovery files. Refreshed the fork code graph. Next: .tres/.tscn parsing and resource resolution.

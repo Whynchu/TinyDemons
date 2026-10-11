@@ -32,6 +32,7 @@ node_modules/
 analysis/
 sfx analysis/
 assets/sounds/generated_ui/
+/graphify-godot/
 
 # Godot import artifacts for the test manifest (read by the runner directly,
 # not as a Godot translation resource)
