@@ -2,8 +2,18 @@
 
 _Only codex writes this file._
 
-**Focus:** Graphify gap-closure plan is ready; the first implementation slice is receiver reassignment safety.
+**Focus:** Executing Graphify Godot completion plan in its separate repository; first slice is receiver inference and diagnostics.
 **Updated:** 2026-10-11
+
+## In flight: Graphify Godot completion
+
+User authorized executing the seven-batch completion plan, with the goal of
+completion. Graphify fork (`graphify-godot/`) and Tiny Demons are separate Git
+repositories; commit/push boundaries must remain separate. Current work starts
+with receiver reassignment safety, then continues through parser, semantic,
+scene, viewer, performance and release gates. Preserve unrelated Tiny Demons
+worktree edits. Follow the Graphify fork's own instructions to refresh its map
+after code changes.
 
 ## Completed: Graphify remaining-gap execution plan (2026-10-11)
 

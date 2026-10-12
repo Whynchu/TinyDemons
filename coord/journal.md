@@ -1469,3 +1469,6 @@ Plan remaining Graphify Godot gaps in completion plan and documentation map; coo
 
 ## 2026-10-12T00:32Z - codex - done
 Extended Graphify completion plan with seven bounded gap-closure batches, acceptance gates, and batch-refresh cadence. Docs only; implementation starts with receiver reassignment safety.
+
+## 2026-10-12T00:36Z - codex - claim
+Executing Graphify completion plan in its separate repository, starting with receiver inference and diagnostics. Preserve Tiny Demons unrelated edits; keep commits separate.
