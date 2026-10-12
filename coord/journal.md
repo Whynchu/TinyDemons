@@ -1383,4 +1383,118 @@ Version 0.3.90 prepared with enemy workbench geometry and documentation. Focused
 ## 2026-10-11 â€” codex â€” done
 Active gameplay frame now calls the existing static regen-lock helper. Script diagnostics and whitespace checks pass; version 0.3.92 prepared for release.
 
-2026-10-12 | codex | done | Review-only composition cleanup plan and full map census; no runtime changes or deletion.
+## 2026-10-11 - codex - claim
+Clone Graphify upstream under graphify-godot/, add the local checkout to .gitignore, and prepare the Godot-focused fork.
+
+## 2026-10-11 - codex - done
+Cloned Graphify into ignored graphify-godot/ and verified the upstream v8 checkout. The hosted fork was created later in the task sequence.
+
+## 2026-10-11 - codex - claim
+Connect the ignored Graphify checkout to Whynchu/graphify-godot and verify the fork remotes.
+
+## 2026-10-11 - codex - done
+Connected Whynchu/graphify-godot as origin and retained Graphify-Labs/graphify as upstream. Configured pushes to use origin.
+
+## 2026-10-11 - codex - claim
+Prepare a source-backed Graphify Godot integration plan and link it in the documentation map.
+
+## 2026-10-11 - codex - done
+Wrote the Graphify Godot integration plan with parser/resolver boundaries, fixture acceptance, and Tiny Demons adoption gates; linked it in the documentation map.
+
+## 2026-10-11 - codex - claim
+Begin Phase 0/1 in graphify-godot: select the pinned GDScript grammar and implement its smallest reliable integration boundary.
+
+## 2026-10-11 - codex - done
+Added the pinned optional GDScript extra and initial .gd discovery/extraction in the local godot-support branch. Five focused tests pass; 605 Tiny Demons scripts have zero extractor exceptions and seven grammar-recovery files. Refreshed the fork code graph. Next: .tres/.tscn parsing and resource resolution.
+
+## 2026-10-11T19:30Z — codex — claim
+Implementing the shared Godot text-resource parser and resource-link resolution in the local Graphify fork. Files: graphify-godot/graphify and graphify-godot/tests.
+
+## 2026-10-11T20:17Z - codex - done
+Added Godot text-resource parsing and links, validated focused coverage, refreshed the fork graph, and generated the ignored Tiny Demons code map. The upstream full suite reported 6,628 passed, 388 skipped, and 34 environment or unchanged-code failures.
+
+## 2026-10-11T20:23Z - codex - done
+Fast-forwarded the Godot support commits to the graphify-godot fork default v8 branch at ea4fdc4, pushed it, and removed the temporary godot-support branch. Updated the integration plan and status.
+
+## 2026-10-11 â€” codex â€” claim
+Syncing latest Graphify upstream v8 into graphify-godot v8, reconciling the cache schema, verifying focused regressions, and pushing the fork branch if they pass. No overlap with opencode's smoke workflow claim.
+
+## 2026-10-11 - codex - claim
+Verifying the existing Tiny Demons Graphify map excludes the entire nested graphify-godot folder; will add an explicit ignore rule only if the current Git/Graphify ignore configuration does not already guarantee exclusion.
+
+## 2026-10-11 - codex - done
+Verified Graphify honors the root /graphify-godot/ ignore rule and the Tiny Demons map has no source paths inside the nested fork. Generated cluster analysis and graph.html at graphify-godot/.tools/tiny-demons-map/ (1,015 aggregated communities); all outputs remain ignored/local.
+
+## 2026-10-11 - codex - claim
+Replacing generic Tiny Demons Graphify community labels with deterministic hub names and regenerating the report and HTML. The nested graphify-godot fork remains excluded.
+
+## 2026-10-11 - codex - done
+Regenerated the ignored Tiny Demons map with deterministic hub labels: 1,015 labeled communities, no Community N placeholders in graph.html, and zero graph source paths inside the nested graphify-godot fork.
+
+## 2026-10-11 - codex - claim
+Adding explicit test-to-source and test-runner relationships to Graphify Godot so Tiny Demons smoke tests are navigable in its graph. The current map has 159 test files and zero direct test-to-game-script edges.
+
+## 2026-10-11 - codex - done
+Connected all 157 manifest entries to GDScript tests, linked all 157 tests to explicit gameplay references (615 edges), and connected run_all_smoke.ps1 to manifest.csv. Refreshed ignored aggregate and focused HTML; focused Graphify tests passed 395/19.
+
+## 2026-10-11 — codex — claim
+Plan GDScript completion and source-group filters; documentation and coordination only.
+
+## 2026-10-11 — codex — done
+Added GDScript completion and viewer filter plan with staged acceptance gates. Next implementation: V1 source-group filters in the Graphify fork.
+
+## 2026-10-11 — codex — claim
+Implement Graphify source-group viewer filters and continue GDScript support in the nested fork. Existing outer project file changes remain untouched.
+
+## 2026-10-11T23:20Z - codex - done
+Completed the first Graphify Godot support implementation slice. V1 main-HTML filters, GDScript call/property resolution, project and inherited-scene links, dynamic-boundary diagnostics, docs, tests, and both Tiny Demons graph views are refreshed. Follow-up release gates remain in status-codex.md and docs/graphify-gdscript-completion-plan.md.
+
+## 2026-10-11T23:24Z - codex - done
+Committed and pushed Graphify Godot support commit b697a64 to origin/v8. The Tiny Demons map outputs remain local and ignored; R1 release-proof work remains open.
+
+## 2026-10-11T23:52Z - codex - claim
+Enable project-scoped Graphify assistant guidance and a Tiny Demons map wrapper; own AGENTS.md, tools/graphify.ps1, .codex Graphify integration, and integration docs.
+
+## 2026-10-12T00:05Z - codex - done
+Installed project-scoped Graphify assistant guidance with a local fork/map wrapper and a safe no-op Codex hook. Queries, environment restoration, and exclusions verified; main map refreshed to 20,046 nodes / 43,875 edges / 742 communities. Godot support correctness and release gates remain open.
+
+## 2026-10-12T00:13Z - codex - claim
+Record accepted batch-refresh policy in assistant instructions and integration docs.
+
+## 2026-10-12T00:13Z - codex - done
+Recorded graph queries during work and one refresh after each completed code batch and verification; current source confirms changed files. Documentation/instruction-only changes need no refresh.
+
+## 2026-10-12T00:31Z - codex - claim
+Plan remaining Graphify Godot gaps in completion plan and documentation map; coordination status only. No implementation.
+
+## 2026-10-12T00:32Z - codex - done
+Extended Graphify completion plan with seven bounded gap-closure batches, acceptance gates, and batch-refresh cadence. Docs only; implementation starts with receiver reassignment safety.
+
+## 2026-10-12T00:36Z - codex - claim
+Executing Graphify completion plan in its separate repository, starting with receiver inference and diagnostics. Preserve Tiny Demons unrelated edits; keep commits separate.
+
+## 2026-10-12T01:28Z - codex - done
+Completed Graphify fork batches 1â€“3 in commits `28ee0e4` and `f3fff95`; focused GDScript/Godot, export and cache suites pass (182 passed, 8 skipped). Continuing the same claim with nested scene context, viewer accuracy, provenance and release gates.
+
+## 2026-10-12T01:45Z - codex - claim
+Continuing Graphify completion in the separate fork. Batch 4 is committed as f9b4e00; now implementing source-group visibility and accurate filtered summaries across graph, tree, and callflow HTML views.
+2026-10-12T02:05Z claim codex: Graphify fork B6 timing, provenance, benchmark, and parity gates.
+
+2026-10-12T02:45Z done codex: B6 committed as 41ca4b1; exporter/cache regression suite passed 677 tests, 17 skipped; fork graph refreshed to 20,512 nodes / 42,205 edges.
+2026-10-12T02:45Z claim codex: B7/R1 release proof, clean package install CI, full suite, invalidation and query acceptance in graphify-godot.
+
+2026-10-12T04:02Z blocker codex: Graphify fork v8 commit d424821 has zero GitHub Actions runs. Windows wheel/sdist and invalidation checks pass; Linux hosted CI remains unverified until the fork workflow is enabled or dispatched.
+
+## 2026-10-12T04:27Z - codex - blocker
+The refreshed Tiny Demons graph counts are reconciled in the query review. Fork v8 still has zero Actions runs; the connected GitHub tool is read-only for dispatch and no browser is available in this session.
+
+## 2026-10-12T04:28Z - codex - done
+Reconciled and verified the Tiny Demons map/query documentation. The Graphify fork remains a separate clean repository at d424821; only outer documentation and coordination files are ready for the Tiny Demons commit.
+
+2026-10-12 | codex | claim | Whole-map composition cleanup proposal and census; planning only, preserve unrelated edits.
+
+2026-10-12 | codex | done | Composition cleanup review proposal and complete graph/file census; source-reviewed enemy seam, asset/SFX investigation gates; plan-only review branch, no implementation.
+
+2026-10-12 | codex | claim | Reconcile detailed extraction ledger against current source and add to review-only plan.
+
+2026-10-12 | codex | done | Added source-reconciled extraction ledger; corrected stale build_hub and HubMenuState notes; updated review branch documentation.

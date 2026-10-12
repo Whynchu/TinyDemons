@@ -1,13 +1,266 @@
 # codex — status
 
-## 2026-10-12 composition cleanup proposal
-
-Plan and census pushed on review/composition-cleanup-plan. Awaiting owner review; no runtime changes or deletion. Audit describes local 39950b8 plus the existing working tree, with graph built at 78320ff. Existing main history remains separate.
-
 _Only codex writes this file._
 
-**Focus:** Released the active-frame regen-lock call fix as 0.3.92.
-**Updated:** 2026-10-11
+**Focus:** Explicit extraction ledger reconciled against current code and active workstream plans; update pushed Tiny Demons review branch. Docs only; no runtime changes or deletions. Main history and unrelated worktree edits remain separate.
+**Updated:** 2026-10-12
+
+## In flight: Hosted Graphify R1 CI gate
+
+The fork candidate is pushed to Whynchu/graphify-godot, branch v8, as
+`d424821` (package 0.9.87). Tiny Demons and graphify-godot remain separate Git
+repositories. Local Windows verification is complete: wheel/sdist builds and
+clean installs with the Godot extra, missing-grammar guidance, raw/clustered
+rename-delete parity tests, full-suite triage, and refreshed Tiny Demons graph
+and query review. Tiny Demons game version remains 0.3.89; unrelated game
+worktree edits remain untouched.
+
+The GitHub Actions API reports zero runs filtered by commit `d424821` and
+branch `v8`. The only remaining R1 gate is hosted CI, including Linux. The
+fork's Actions page must have a run before R1 can be closed:
+https://github.com/Whynchu/graphify-godot/actions?query=branch%3Av8
+
+The connected GitHub fetch tool is read-only for Actions, and no browser is
+available in this session to enable or dispatch a workflow. The current branch
+run query still returns `total_count: 0`; hosted CI remains an external blocker.
+
+### Completed batch 3 — script semantics
+
+Committed fork changes as `f3fff95 feat(godot): resolve accessors callables and resources`.
+This adds collision-safe GDScript member IDs, nested class/generic typing,
+bounded static factory return inference, inline accessor nodes and body links,
+literal/dynamic get/set facts, literal `.tres` receiver inference, scoped lambda
+ownership, inline lambda callbacks, and typed Callable receiver resolution.
+Verification: 182 tests passed, 8 skipped across GDScript/Godot text, export and
+cache suites; `compileall`, `git diff --check`, and fork graph refresh passed.
+
+### Completed batch 4 - nested scene context
+
+Committed fork change as `f9b4e00 feat(godot): resolve nested scene contexts safely`.
+Nested scene paths now resolve attached scripts in host-scene context; inherited
+node overrides replace base attachments. Cycles and depth beyond 64 are
+diagnosed; enabled project plugins link to indexed plugin.cfg targets.
+Verification: 42 GDScript/Godot-text tests and 146 export/cache tests passed
+(8 skipped); `compileall`, `git diff --check`, and map refresh passed. Map: 20,466
+nodes, 42,935 edges.
+
+### Completed batch 5 — source-group filters
+
+Committed fork change `86d06c7`. Main graph, tree and callflow HTML exports have
+source-group filters with truthful filtered counts and group-scoped summaries.
+Aggregate graph summaries remain bounded and are documented in the support
+matrix.
+
+### Completed batch 6 — timing, provenance and benchmark
+
+Committed fork change `41ca4b1`. Added analyzer/target provenance, resolver
+substage timing, a Windows worker cap, incremental/full parity coverage and the
+repeatable Godot benchmark. The fork graph refreshed to 20,512 nodes / 42,205
+edges / 1,113 communities. The selected exporter/cache regression run passed
+677 tests with 17 skipped; the local R1 portion is now complete.
+
+### Completed locally: batch 7 / R1
+
+The pushed 0.9.87 candidate passed Windows wheel/sdist builds, isolated installs
+with Godot support, and the no-extra diagnostic smoke. Full suite: 6,790 passed,
+409 skipped, 60 known environment failures; no GDScript, Godot resolver, or CLI
+export tests failed. The raw and clustered rename/delete parity tests passed.
+Tiny Demons map and six source queries were refreshed/reviewed; the seventh
+fork-specific check ran in the fork suite. The remaining handoff is to enable or
+dispatch the fork's GitHub Actions workflow and confirm the Linux lane.
+
+## Completed: Graphify remaining-gap execution plan (2026-10-11)
+
+Extended `docs/graphify-gdscript-completion-plan.md` with seven bounded batches:
+correctness, parser recovery, script semantics, scene/resource context, viewer
+filters, maintenance/provenance, and release proof. Each has ownership,
+dependencies and acceptance criteria. The plan records the seven observed
+recovery files, current corpus evidence and incomplete full-suite proof.
+
+Handoff: begin with a failing inferred-receiver reassignment fixture, then
+conservative binding invalidation. Missing-method diagnostics and valid project
+headers are separate reviewable fixes in the first batch. No implementation or
+tests ran for this documentation task; no graph refresh or version bump needed.
+
+## Completed: Persistent Graphify assistant integration (2026-10-11)
+
+Accepted maintenance policy: query the existing graph during work, check
+changed files against current source, and refresh once after a completed code
+batch and verification, before handoff. Ordinary questions and individual edits
+use the existing map. Documentation/instruction-only changes need no refresh;
+explicit user requests for a fresh graph take precedence. The policy is recorded
+in root `AGENTS.md` and the integration plan.
+
+Ran the fork's `codex install --project`, then customized root `AGENTS.md`
+and the installed skill/references for the existing Tiny Demons graph. Added
+`tools/graphify.ps1` to select the local fork/environment, set the output path,
+and restore the caller's directory and environment. The Codex compatibility
+hook implements the intentional no-op directly so working-directory changes
+or a missing fork cannot break it. Copied skill files carry upstream license
+and attribution; `.graphifyignore` excludes them from the game graph.
+
+Verified real ActorGeometry and EnemyDefinition queries from the repo root
+and an outside working directory, wrapper environment/location restoration,
+and the exact installed no-op hook's zero exit and empty output. Confirmed
+existing contributor instructions are preserved and ignored fork/skill files
+contribute no graph nodes. Wrapper `update .` completed and refreshed the
+main JSON, HTML and report: 20,046 nodes / 43,875 edges / 742 communities.
+This single cached update took about 495 seconds; it is an observed maintenance
+cost, not a completed performance benchmark or an established budget.
+The focused verification view's source scope is unchanged.
+
+Handoff: use the wrapper for graph queries in this repo; graph support remains
+partial. The evaluation found unsafe inferred receiver reassignment, missing
+known-receiver method diagnostics, false project-header parse errors, and
+mixed-community filter limitations. Full-map update performance also needs
+measurement before enabling more automatic maintenance. None of these support
+issues is fixed by assistant installation.
+
+## Completed: Graphify Godot support implementation slice (2026-10-11)
+
+In the ignored `graphify-godot` fork, added composable source-group and
+community filters to the main HTML viewer; extended GDScript extraction and
+resolution for preload aliases, typed and collection receivers, cross-script
+property reads/writes, literal dynamic calls, signal boundaries, project
+settings, and root inherited-scene NodePaths. Bumped the AST cache schema so
+existing files are re-extracted with the new facts. Added a tested support
+matrix and updated both Graphify plans.
+
+Verification: 98 changed-area tests pass; adding the cache-key module brings
+the focused run to 102 passing, with 9 cache-root-switch warnings from the
+shared Windows test process. `compileall`, CLI help, and `git diff --check`
+pass. The full fork suite ran before the final typed-property/cache-schema
+changes and completed with 6,760 passed, 409 skipped, and 60 failures across
+shell-dependent hooks, optional language/tooling, and Windows path-sensitive
+tests. The 605-script Tiny Demons sweep had 0 extractor
+crashes, 1,138 normalized semicolon splits, and 7 remaining parser-recovery
+files.
+
+Committed and pushed the fork change as `b697a64` to `Whynchu/graphify-godot`
+branch `v8`. Tiny Demons' game version stays unchanged; the fork package stays
+at `0.9.86` until the R1 release gates pass.
+
+Refreshed both ignored Tiny Demons views: the full graph is 20,039 nodes /
+43,869 edges / 743 communities, with no paths into `graphify-godot/`; the
+focused verification HTML remains 800 nodes / 1,777 edges. Both HTML exports
+contain source-group controls. Key graph facts now include 8,573 script calls,
+9,264 property reads/writes, 157 manifest-to-test links, and 20 serialized
+NodePath links.
+
+Handoff: support remains partial. Linux clean-install proof, grammar coverage
+for the seven recovery files and lambda syntax, ordinary nested-scene
+flattening, plugin configuration targets, and equivalent filters in tree and
+callflow viewers remain open. See `docs/graphify-gdscript-completion-plan.md`
+and the fork's `docs/godot-support.md`.
+
+## Completed: GDScript completion and viewer plan (2026-10-11)
+
+Added `docs/graphify-gdscript-completion-plan.md` and linked it from the
+integration plan and documentation map. Covers declaration/syntax coverage,
+calls and receiver types, property usage, signals, Godot context, dynamic
+diagnostics, release proof, and source-group filters with intersecting community
+visibility, search/selection behavior, export limits and URL persistence.
+
+The plan is now under execution; the implementation slice and remaining release
+gates are recorded above and in the support matrix.
+
+## Completed: Smoke-test verification graph (2026-10-11)
+
+GDScript now links literal `preload`, `load`, and `ResourceLoader.load`
+references to indexed scripts, resources, and scenes; explicit type,
+constructor, inheritance, and class-receiver references resolve to unique
+project `class_name` definitions. Recognized verification-inventory CSVs expose
+bounded row nodes with role/state metadata and link them to sibling test
+scripts. PowerShell links the runner's `Import-Csv` input to that manifest.
+
+The Tiny Demons map contains 157 manifest rows for 157 test scripts. All 157
+tests now have explicit links to gameplay code (615 edges: 203 preload, 57
+load, 351 global-class references, and 4 inheritance links); the runner points
+to `tests/manifest.csv`. The ignored graph has 17,165 nodes / 21,766 edges from
+1,010 source files, including 605 `.gd`, 65 `.tres`, 29 `.tscn`, one test
+manifest, and 13 `.ps1` files. The focused browser view at
+`graphify-godot/.tools/tiny-demons-map/verification/graph.html` contains 800
+nodes / 1,777 edges so individual runner, inventory, test, and code links are
+visible. The aggregate `graph.html` has 761 labeled communities, no
+`Community N` placeholders, and no paths into the nested Graphify fork.
+
+Verification: 395 focused Graphify tests passed, 19 skipped; `compileall`,
+`git diff --check`, and both Graphify map refreshes passed.
+
+## Completed: Readable Tiny Demons community map (2026-10-11)
+
+Regenerated the ignored local map at
+`graphify-godot/.tools/tiny-demons-map/` with Graphify's deterministic
+structural hub labels. All 761 communities have labels (754 unique, 0
+`Community N` placeholders). The graph has 17,165 nodes and 21,766 links, and
+no source paths inside the nested `graphify-godot/` fork. The refreshed
+`GRAPH_REPORT.md`, `.graphify_analysis.json`, and 847 KB `graph.html` are all
+present; the HTML contains no generic community names. No LLM backend was
+configured, so labeling made no external calls.
+
+## Completed: Godot text resources and links
+
+Added bounded parsing for `.tres` and `.tscn`, resource/subresource/scene
+entities, `res://` and UID links, script attachments, scene instances,
+serialized signals, and relative NodePath links. Typed arrays now report item
+counts without mistaking vector arguments for collection sizes. Incremental
+resolution retains facts from unchanged resources. The Tiny Demons map is
+available locally at ignored `graphify-godot/.tools/tiny-demons-map/`:
+17,165 nodes / 21,766 edges from 605 `.gd`, 65 `.tres`, and 29 `.tscn` files;
+the map contains 165 script attachments, 468 resource-property links, 19
+scene-instance links, and 28 NodePath links. Its 194 unresolved references
+point to excluded PNG and shader assets.
+
+Focused tests: 87 passed, 8 skipped; hook tests with Git for Windows `sh` on
+`PATH`: 218 passed, 8 skipped. The upstream full suite: 6,628 passed, 388
+skipped, 34 failed due to missing optional `tree_sitter_hcl`, `build`, and
+PyYAML dependencies, a POSIX `/tmp` assumption, and two failures in unchanged
+path-memoization code on Windows. `compileall`, `git diff --check`, and both
+Graphify code-map refreshes pass. The fork map is 20,386 nodes / 41,774 edges.
+
+Handoff: Phase 4 remains open for `project.godot` autoload parsing, typed member
+calls, scene attachments, and dynamic boundaries. Keep the local Tiny Demons map
+ignored; do not stage the outer worktree's existing `project.godot` or enemy
+preview scene edits.
+
+
+## Completed: First GDScript extraction slice
+
+The optional `godot` extra is pinned to `tree-sitter-gdscript==6.1.0` and
+resolves with Graphify's Tree-sitter 0.25.2 runtime in the local Windows x64
+environment. `.gd` discovery/dispatch now emits script-class nodes, class-owned
+methods, top-level properties with types/export annotations, and parser recovery
+diagnostics.
+The valid semicolon-separated line in Tiny Demons' `slime_brain.gd` is a known
+grammar coverage gap and remains marked as partial extraction.
+
+Verification: `tests/test_gdscript.py` and `tests/test_extractors_registry.py`
+pass (5 tests); `uv lock --check`, `compileall`, and `git diff --check` pass. A
+read-only sweep of 605 Tiny Demons scripts found 0 extractor errors and 7
+grammar-recovery files. `graphify update .` refreshed the fork's own graph to
+20,060 nodes and 40,883 edges. This initial GDScript slice is included on the
+pushed default `v8` branch at `ea4fdc4`.
+
+Handoff: next implement the shared Godot text parser for `.tres` and `.tscn`,
+then resolve `res://` script/resource references against project roots and UID
+sidecars. Calls, constants, signals/enums, project settings, and Godot platform
+CI remain open.
+
+## Completed: Local Graphify checkout
+
+Integration planning: `docs/graphify-godot-integration-plan.md` records the
+inspected 0.9.85 dispatch/resolver/cache seams, Godot parsing contract, six
+implementation phases, fixture acceptance, and Tiny Demons adoption questions.
+The documentation map links the active implementation plan and its staged
+acceptance gates.
+
+Cloned upstream Graphify into `graphify-godot/` and added the directory to the
+Tiny Demons `.gitignore`. The local base was Graphify `b4e6307` (package
+`0.9.85`). The clone's `origin` is `Whynchu/graphify-godot`, with
+`Graphify-Labs/graphify` as `upstream`; `remote.pushDefault` points pushes to
+the fork. Godot support is pushed to the fork's default `v8` branch at
+`ea4fdc4`; the temporary `godot-support` branch was deleted after the
+fast-forward.
 
 ## Completed: Slime CollisionGuide is the combat hitbox
 
@@ -1834,3 +2087,19 @@ Updated the in-game version and current-version markers in the versioning docs,
 then committed only those seven files/hunks as `8f49106` and pushed to `main`.
 The Web Pages workflow started for this commit and is still running. Local
 unrelated worktree edits were left unstaged.
+
+## Completed: Graphify upstream v8 sync
+
+**Updated:** 2026-10-11
+
+Merged upstream `v8` at `a5ba60d` / 0.9.86 into the graphify-godot fork's `v8` branch. The cache schema is 9 to combine the Godot UID/resource dependency facts and upstream Rust grouped-use semantics. Pushed merge commit `7e5aced` to the fork's `origin/v8`.
+
+Verification: changed-area regression modules passed (1,482 passed, 73 skipped, 2 deselected); Git for Windows `sh.exe` was on `PATH` for the hook tests. The two deselected cases need a writable `G:\tmp` path and optional PyYAML, both unavailable in this environment. `compileall` and `git diff --cached --check` passed. The documented `uv` command and optional `ruff` / `pyright` checks were unavailable because those executables are not on this shell's `PATH`. Existing unrelated outer Tiny Demons edits remain unstaged.
+
+## Completed: Tiny Demons graph and HTML
+
+**Updated:** 2026-10-11
+
+The local Tiny Demons map is at `graphify-godot/.tools/tiny-demons-map/`. It now has 17,165 nodes and 21,766 links, with zero source paths inside the nested `graphify-godot/` folder. The root `.gitignore` rule `/graphify-godot/` is honored by Graphify and confirmed by `git check-ignore`.
+
+Ran `GRAPHIFY_OUT=<absolute map path> python -m graphify cluster-only .. --no-label` to generate cluster analysis and the HTML viewer without an LLM backend. The map directory contains `graph.html` (847,408 bytes), `GRAPH_REPORT.md`, and `.graphify_analysis.json`; the HTML aggregates the 17,165 source nodes into 761 named communities. `verification/graph.html` provides a focused 800-node view of the runner, test inventory, test scripts, and explicit code dependencies. All outputs remain local under ignored `.tools/`.

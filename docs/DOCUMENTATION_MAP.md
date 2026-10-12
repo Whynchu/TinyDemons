@@ -2,11 +2,12 @@
 
 Review proposal: [Composition and repository cleanup](composition-cleanup-review-plan.md)
 and its [whole-map census](composition-map-census.json). This is awaiting owner
-review; existing approved composition and authoring plans remain authoritative.
+review; see the [initial extraction ledger](composition-extraction-ledger.md).
+Existing approved composition and authoring plans remain authoritative.
 
 Status: current navigation guide for the `0.3.x` cycle
 
-Updated: 2026-10-10
+Updated: 2026-10-11
 
 The repository contains design history, implementation handoffs, audits, and
 active plans. Use this page to choose the right authority before changing code.
@@ -16,6 +17,15 @@ remain useful for compatibility and design rationale, but they must link
 forward to the current authority.
 
 ## Start here
+
+Developer tooling: [`graphify-godot-integration-plan.md`](graphify-godot-integration-plan.md)
+plans GDScript, resource, scene, and project extraction in the Graphify fork,
+followed by measured Tiny Demons adoption.
+
+[`graphify-gdscript-completion-plan.md`](graphify-gdscript-completion-plan.md)
+defines the remaining language-resolution gates and source-group checkbox filters
+for the Graphify HTML viewer. Its remaining-gap execution plan orders correctness,
+parser, semantics, scene, viewer, performance and release work into seven batches.
 
 For an external product/design review, use the curated [`review/00-astra-review-index.md`](review/00-astra-review-index.md) package. It consolidates current reality, the ratified interview contract, production state, presentation rubric, and staged agent instructions.
 
