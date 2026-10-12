@@ -48,6 +48,13 @@ runs from the Tiny Demons root, and sets `GRAPHIFY_OUT` to the ignored
 `graphify-godot/.tools/tiny-demons-map/` directory for that invocation. It
 restores the caller's directory and environment afterward. Queries use the
 existing graph; partial parser/resolver support still requires source checks.
+Query that existing map during work, then refresh once after a completed batch
+of code changes and verification, before handoff. Check changed files against
+current source while the map awaits that refresh. Individual edits, ordinary
+questions and documentation/instruction-only changes use the existing map;
+explicit requests for a fresh graph take precedence. This policy reflects a
+single local cached update of approximately 495 seconds; broader maintenance
+benchmarks and optimization remain open.
 Use the full HTML in that directory or `verification/graph.html` for the
 focused test view. Copied Graphify skill/reference files are excluded from
 indexing so assistant setup does not dominate the game map.

@@ -183,8 +183,12 @@ Rules:
   and fixtures directly. Also honor explicit user requests to skip the graph.
 - If the local fork/environment/map is unavailable, state that briefly and
   use the ownership docs and source; do not install unrelated upstream tooling.
-- After code changes, run the wrapper with `update .` to refresh the Tiny
-  Demons graph. Regenerate the main HTML/report when needed with
+- Query the existing map during work and check current source for files changed
+  since its build. Refresh once after a completed batch of code changes and
+  verification, before handoff, using the wrapper with `update .`. Individual
+  edits and ordinary questions use the existing map; explicit user requests
+  for a fresh graph take precedence. Documentation/instruction-only changes
+  do not require a refresh. Regenerate the main HTML/report when needed with
   `cluster-only . --no-label`. Keep maps and caches under the ignored fork.
 - When changing Graphify itself, follow `graphify-godot/AGENTS.md` and also
   refresh the fork's own graph; this repository wrapper selects Tiny Demons.

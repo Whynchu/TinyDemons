@@ -1457,3 +1457,9 @@ Enable project-scoped Graphify assistant guidance and a Tiny Demons map wrapper;
 
 ## 2026-10-12T00:05Z - codex - done
 Installed project-scoped Graphify assistant guidance with a local fork/map wrapper and a safe no-op Codex hook. Queries, environment restoration, and exclusions verified; main map refreshed to 20,046 nodes / 43,875 edges / 742 communities. Godot support correctness and release gates remain open.
+
+## 2026-10-12T00:13Z - codex - claim
+Record accepted batch-refresh policy in assistant instructions and integration docs.
+
+## 2026-10-12T00:13Z - codex - done
+Recorded graph queries during work and one refresh after each completed code batch and verification; current source confirms changed files. Documentation/instruction-only changes need no refresh.

@@ -7,6 +7,13 @@ _Only codex writes this file._
 
 ## Completed: Persistent Graphify assistant integration (2026-10-11)
 
+Accepted maintenance policy: query the existing graph during work, check
+changed files against current source, and refresh once after a completed code
+batch and verification, before handoff. Ordinary questions and individual edits
+use the existing map. Documentation/instruction-only changes need no refresh;
+explicit user requests for a fresh graph take precedence. The policy is recorded
+in root `AGENTS.md` and the integration plan.
+
 Ran the fork's `codex install --project`, then customized root `AGENTS.md`
 and the installed skill/references for the existing Tiny Demons graph. Added
 `tools/graphify.ps1` to select the local fork/environment, set the output path,
