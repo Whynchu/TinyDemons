@@ -1490,3 +1490,7 @@ The refreshed Tiny Demons graph counts are reconciled in the query review. Fork 
 
 ## 2026-10-12T04:28Z - codex - done
 Reconciled and verified the Tiny Demons map/query documentation. The Graphify fork remains a separate clean repository at d424821; only outer documentation and coordination files are ready for the Tiny Demons commit.
+
+2026-10-12 | codex | claim | Whole-map composition cleanup proposal and census; planning only, preserve unrelated edits.
+
+2026-10-12 | codex | done | Composition cleanup review proposal and complete graph/file census; source-reviewed enemy seam, asset/SFX investigation gates; plan-only review branch, no implementation.

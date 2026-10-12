@@ -2,7 +2,7 @@
 
 _Only codex writes this file._
 
-**Focus:** Local R1 checks and Tiny Demons map/query review are complete. The separate fork still has no hosted GitHub Actions run for v8.
+**Focus:** Composition cleanup proposal and whole-map census complete; push a plan-only review branch. No runtime changes or deletions. Thorn reviewed enemy ownership and family replacement. Existing main history and unrelated worktree edits remain separate.
 **Updated:** 2026-10-12
 
 ## In flight: Hosted Graphify R1 CI gate
