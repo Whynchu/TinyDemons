@@ -2,7 +2,7 @@
 
 _Only codex writes this file._
 
-**Focus:** Composition cleanup proposal and whole-map census complete; push a plan-only review branch. No runtime changes or deletions. Thorn reviewed enemy ownership and family replacement. Existing main history and unrelated worktree edits remain separate.
+**Focus:** Explicit extraction ledger reconciled against current code and active workstream plans; update pushed Tiny Demons review branch. Docs only; no runtime changes or deletions. Main history and unrelated worktree edits remain separate.
 **Updated:** 2026-10-12
 
 ## In flight: Hosted Graphify R1 CI gate

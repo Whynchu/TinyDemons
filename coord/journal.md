@@ -1494,3 +1494,7 @@ Reconciled and verified the Tiny Demons map/query documentation. The Graphify fo
 2026-10-12 | codex | claim | Whole-map composition cleanup proposal and census; planning only, preserve unrelated edits.
 
 2026-10-12 | codex | done | Composition cleanup review proposal and complete graph/file census; source-reviewed enemy seam, asset/SFX investigation gates; plan-only review branch, no implementation.
+
+2026-10-12 | codex | claim | Reconcile detailed extraction ledger against current source and add to review-only plan.
+
+2026-10-12 | codex | done | Added source-reconciled extraction ledger; corrected stale build_hub and HubMenuState notes; updated review branch documentation.

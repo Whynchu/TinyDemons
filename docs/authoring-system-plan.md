@@ -28,7 +28,7 @@ and the factory/definition contract in
 not change the T1/T3 direction, the product contract, or the explicit frame
 schedule.
 
-Updated: 2026-09-27
+Updated: 2026-10-12
 
 > **Family geometry decision (2026-09-27):** collision, body-hitbox, and attack
 > guide geometry is family-authored. Editing any elemental variant updates the
@@ -1125,9 +1125,10 @@ Work items:
   (`_hide_legacy_equipment_presenter`, `_hide_legacy_shop_presenter`) and dead
   compatibility nodes (`HUB_PAGE_STATUS`, `HubPanel8Piece`, hidden settings
   controls) once their callers are typed.
-- [ ] Remove the 33-argument `build_hub` packet
-  (`screen_state_controller.gd:1194`, unpacked at
-  `hub_flow_controller.gd:49-120`) in favor of typed route wiring.
+- [x] Replace the positional `build_hub` packet with typed route wiring.
+  Current source exposes `build_hub(parent, pixel_texture,
+  actions: HubScreenActions)`; the separate route-registry and overlay work
+  below remains open.
 - [ ] Unify input dispatch so the frame controller's visibility if/else chain
   (`gameplay_frame_controller.gd:426-511`) calls route handlers instead of
   overlay checks.

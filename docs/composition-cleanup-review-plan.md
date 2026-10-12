@@ -65,6 +65,10 @@ audit of the enemy seam and selected cross-system owners. It is not a manual
 review of all 21,073 symbols. Phase P0 requires disposition of every community
 and unmapped file before claiming the full audit finished. The ledger makes
 that remaining work finite and reviewable rather than hiding it behind a sampled map.
+The [initial extraction ledger](composition-extraction-ledger.md) reconciles
+known in-progress work against current source, marks stale plan details, and
+records what must be characterized before each handoff can close. It is the
+first P0 deliverable, not a disposition of all graph communities.
 
 Graph queries use vocabulary expansion: `enemy`, `slime`, `actor`, `component`,
 `runtime`, `catalog`, `resource`, `sound`, `audio`, `asset`, `test`, `profile`.
