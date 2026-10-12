@@ -71,6 +71,203 @@ tree/callflow views can expose equivalent controls. G1-G7 are intentionally
 partial; use the support matrix to pick bounded follow-up work. Refresh the
 fork's own graph after code changes as required by its contributor instructions.
 
+## Remaining-gap execution plan
+
+The batches below turn G1-G7, V1 and R1 into bounded follow-up work. All are
+planned, not completed. Implement them in `graphify-godot/`; Tiny Demons remains
+a read-only integration corpus. Update the fork's support matrix with fixture
+names and limitations as each batch lands.
+
+### Current evidence (2026-10-11)
+
+- The refreshed Tiny Demons map has 20,046 nodes, 43,875 edges and 742
+  communities. The earlier counts above describe the pre-implementation baseline.
+- A synthetic receiver reassignment still resolves a call to the initial class.
+  A nonexistent method on a known typed receiver retains a call fact but produces
+  neither a target edge nor a resolution diagnostic.
+- Eight `project.godot` parse diagnostics concern valid semicolon comments and
+  the pre-section `config_version` assignment.
+- Seven of 605 GDScript files still report parser recovery. These files contain
+  important runtime owners, so successful extraction elsewhere is insufficient.
+- Main-HTML filters work for individual nodes. Aggregated communities mix source
+  groups and retain contributions from hidden members; auxiliary views remain open.
+- One cached update took approximately 495 seconds. This is a single observation,
+  not a benchmark budget. Focused fork verification last reported 102 passes;
+  the earlier full-suite run reported 6,760 passes, 409 skips and 60 failures
+  before the final implementation changes. R1 must establish a fresh baseline
+  and triage those failures rather than assume they are harmless.
+
+### Batch 1: prevent misleading relationships (G2-G4, G7)
+
+**Owners:** `graphify/extractors/gdscript.py`, `graphify/godot_resolution.py`,
+`graphify/extractors/godot_text.py`, and their focused fork tests.
+
+1. Add failing fixtures for inferred receiver reassignment, missing methods on
+   typed receivers, and standard Godot project headers.
+2. Invalidate inferred bindings when reassignment makes their type uncertain.
+   Resolve sequential reassignment only with sufficient evidence. Cover member
+   access as well as calls, shadowing, branches and assignments inside loops.
+3. Emit distinct missing, ambiguous, excluded-dependency and dynamic diagnostics.
+   Distinguish known engine methods and unknown engine inheritance from missing
+   project methods. Keep diagnostic truncation visible when per-file caps apply.
+4. Handle comments and pre-section assignments according to the input format.
+   Preserve quoted semicolons, multiline values and real malformed-input errors;
+   do not relax scene/resource validation indiscriminately.
+
+**Acceptance:** `First.new(); receiver = Second.new(); receiver.ping()` must
+never retain an edge to First based on its initial binding. A missing project
+method has a source diagnostic without a fabricated target. A valid
+`project.godot` header has no bogus parse errors and settings still resolve.
+Expected and forbidden edges survive final graph assembly and export.
+
+**First implementation slice:** the receiver reassignment regression and
+conservative binding invalidation. Land the diagnostic and config fixes as
+separate reviewable changes within this batch.
+
+### Batch 2: close parser recovery gaps (G1)
+
+**Owners:** GDScript extractor, grammar dependency/configuration, syntax fixtures.
+
+Minimize each recovery into a standalone fixture before choosing a grammar fix
+or narrowly validated source normalization. Preserve original line/column
+locations; do not rewrite game scripts to accommodate the analyzer.
+
+| Current corpus recovery | Observed line |
+| --- | --- |
+| `scripts/runtime/state/gameplay_state.gd` | 1453 |
+| `scripts/ui/screen_route_controller.gd` | 215 |
+| `scripts/ui/cloud_save_panel.gd` | 75 |
+| `scripts/ui/hub_input_controller.gd` | 210 |
+| `scripts/runtime/controllers/room_controller.gd` | 1116 |
+| `scripts/runtime/controllers/gameplay.gd` | 181 |
+| `scripts/components/slime_visual_component.gd` | 399 |
+
+These are observed locations, not permanent identifiers. Include compact
+compound control flow, semicolon statements, lambdas, accessors, annotations and
+nested classes in the syntax inventory. Record exactly which declarations,
+calls and properties should remain extractable around any unsupported span.
+
+**Acceptance:** zero recoveries for supported valid syntax in the 605-file
+corpus, plus positive and negative extraction assertions for minimized fixtures.
+Any remaining unsupported construct must have an exact diagnostic span and
+documented limitation; it keeps the corresponding completion gate open.
+
+### Batch 3: extend script semantics safely (G3-G5, G7)
+
+**Owners:** GDScript extractor/resolver and support matrix. Depends on Batch 1;
+lambda/accessor extraction depends on the relevant Batch 2 syntax fixtures.
+
+Deliver separate slices for:
+
+1. Return-value inference, nested generic types and nested-class type spellings.
+2. Accessor bodies, dynamic property get/set with literal names, and resource
+   receivers inferred from supported literal `.tres` loads and attached scripts.
+3. Lambda/Callable ownership, callbacks on typed receivers, inherited signals
+   and supported connect/emit forms.
+4. Boundary diagnostics for computed loads/callbacks, groups, reflection and
+   runtime script/node injection. Keep unsupported runtime relationships explicit.
+
+**Acceptance:** each slice has expected and forbidden edges for duplicate names,
+unknown types and ambiguous ownership. Declaration, serialized assignment,
+runtime read/write, signal wiring and emission remain distinct facts. Never
+infer a target through name-only matching. A lack of statically observed reads
+does not label an authored field unused at runtime.
+
+### Batch 4: complete bounded scene/resource context (G6)
+
+**Owners:** Godot text extractor, project/resource identity and scene resolver.
+Depends on Batch 1; typed script edges use Batch 3 where required.
+
+Resolve ordinary nested instanced scenes, inherited overrides and supported
+NodePath cases within a documented static scene model. Keep context specific
+when the same script attaches to several scenes. Cover root/parent paths,
+unique names, duplicate node names, cyclic instances and unresolved runtime
+nodes. Model literal plugin configuration resource targets where supported.
+
+**Acceptance:** nested attached-script calls and resource references follow the
+correct scene context. Overrides replace the appropriate inherited binding;
+ambiguous contexts produce evidence rather than arbitrary targets. Project
+boundaries and excluded dependencies remain respected. Rename/delete and
+scene-override updates invalidate dependent edges in unchanged scripts.
+
+### Batch 5: make source filters accurate in every view (V1)
+
+**Owners:** main HTML exporter and tree/callflow exporters, with viewer fixtures.
+Can proceed after Batch 1 independently of script semantics.
+
+First choose and document an aggregation design: retain member/edge source
+provenance and recompute visible summaries, or provide a bounded detailed
+drill-down with explicit aggregate limitations. Measure payload size and browser
+cost before selecting the design; do not embed the entire graph without a cap.
+An aggregate edge must not imply hidden-source contributions remain visible.
+Then add equivalent source-group controls to tree/callflow views.
+
+**Acceptance:** a mixed Docs/Tests/Scripts community accurately changes its
+visible membership, counts and link contributions when groups are disabled.
+Source and community filters compose with AND; search, neighbors, selection,
+URL restoration and pan/zoom obey the same visibility contract. Restore groups
+without losing data. Verify both aggregated and individual-node exports, along
+with explicit total/included counts for capped exports.
+
+### Batch 6: measure maintenance and preserve provenance
+
+**Owners:** fork update/extraction/resolution/export pipeline and metadata;
+`tools/graphify.ps1` only if integration changes are necessary.
+
+Capture a baseline during Batch 1, then optimize after the relevant semantics
+stabilize. Time discovery, extraction, resolution, graph assembly, clustering,
+reporting and HTML export separately. Benchmark cold, unchanged, one-GDScript,
+one-resource and one-scene updates with consistent inputs; record wall time,
+peak memory, cache state and corpus configuration. Set budgets from measurements
+and optimize the demonstrated bottleneck while preserving normalized parity.
+
+Record analyzer package version/revision separately from target project
+revision/dirty state. Verify installed distribution metadata agrees with the
+package being used; output-directory placement must not select the fork commit
+as the Tiny Demons source revision.
+
+**Acceptance:** repeatable measurements explain update cost, incremental edits
+match a full build, and metadata identifies both analyzer and analyzed checkout.
+Keep query speed and update speed as separate measurements.
+
+### Batch 7: prove and release supported Godot coverage (R1)
+
+**Owners:** fork CI, packaging/lockfile, integration fixtures and support matrix.
+Depends on the preceding completion gates; CI fixtures can be added earlier.
+
+- Declare supported Godot syntax/version, Python and operating-system lanes.
+  Test clean wheel/sdist installs with the Godot extra on Windows and Linux;
+  require grammar availability so skipped extraction tests cannot create a false
+  green result. Include a missing-grammar lane with actionable diagnostics.
+- Compare baseline and final full-suite failures. Fix regressions and document
+  genuine platform/optional-dependency exclusions with explicit gate scope.
+- Verify final CLI graph equivalence for full/incremental builds, UID and path
+  renames/deletes, autoload/attachment/override changes, and cache-schema changes.
+  Confirm distinct evidence and metadata survive assembly, export and queries.
+- Review all seven useful queries below against current source. Static test
+  references describe dependencies, not execution coverage.
+- Only after these gates pass, bump the fork package and lockfile, publish the
+  support matrix/limitations and refresh Tiny Demons JSON, HTML and report.
+  Documentation and tooling work require no Tiny Demons game version bump.
+
+**Acceptance:** clean supported-platform gates, reviewed useful-query evidence,
+reproducible install/update/export steps, and no unexplained regressions. Keep
+partial status for any unfulfilled language or viewer contract.
+
+### Working cadence and handoff
+
+For each code slice: claim paths, add focused regression evidence, implement,
+run focused fork checks and the required regressions, then update support status.
+Refresh the affected graph once after a completed code batch and verification,
+before handoff. Use the existing map during individual edits and ordinary
+questions; check changed source directly. Documentation-only work needs no
+refresh. An explicit fresh-map request overrides that cadence.
+
+Use parser/resolver/viewer tests for this work; do not run Godot gameplay smoke
+suites to validate the analyzer. Keep the entire `graphify-godot/` directory
+excluded from the Tiny Demons corpus. Fork code commits and Tiny Demons
+documentation commits remain separate.
+
 ## V1: source-group filtering contract
 
 Use a new namespaced role field such as `source_group`; preserve existing

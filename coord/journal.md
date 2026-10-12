@@ -1463,3 +1463,9 @@ Record accepted batch-refresh policy in assistant instructions and integration d
 
 ## 2026-10-12T00:13Z - codex - done
 Recorded graph queries during work and one refresh after each completed code batch and verification; current source confirms changed files. Documentation/instruction-only changes need no refresh.
+
+## 2026-10-12T00:31Z - codex - claim
+Plan remaining Graphify Godot gaps in completion plan and documentation map; coordination status only. No implementation.
+
+## 2026-10-12T00:32Z - codex - done
+Extended Graphify completion plan with seven bounded gap-closure batches, acceptance gates, and batch-refresh cadence. Docs only; implementation starts with receiver reassignment safety.

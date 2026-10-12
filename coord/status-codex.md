@@ -2,8 +2,21 @@
 
 _Only codex writes this file._
 
-**Focus:** Project-scoped Graphify assistant guidance is enabled. Godot support correctness and release-proof work remain open.
+**Focus:** Graphify gap-closure plan is ready; the first implementation slice is receiver reassignment safety.
 **Updated:** 2026-10-11
+
+## Completed: Graphify remaining-gap execution plan (2026-10-11)
+
+Extended `docs/graphify-gdscript-completion-plan.md` with seven bounded batches:
+correctness, parser recovery, script semantics, scene/resource context, viewer
+filters, maintenance/provenance, and release proof. Each has ownership,
+dependencies and acceptance criteria. The plan records the seven observed
+recovery files, current corpus evidence and incomplete full-suite proof.
+
+Handoff: begin with a failing inferred-receiver reassignment fixture, then
+conservative binding invalidation. Missing-method diagnostics and valid project
+headers are separate reviewable fixes in the first batch. No implementation or
+tests ran for this documentation task; no graph refresh or version bump needed.
 
 ## Completed: Persistent Graphify assistant integration (2026-10-11)
 
