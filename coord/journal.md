@@ -1472,3 +1472,6 @@ Extended Graphify completion plan with seven bounded gap-closure batches, accept
 
 ## 2026-10-12T00:36Z - codex - claim
 Executing Graphify completion plan in its separate repository, starting with receiver inference and diagnostics. Preserve Tiny Demons unrelated edits; keep commits separate.
+
+## 2026-10-12T01:28Z - codex - done
+Completed Graphify fork batches 1–3 in commits `28ee0e4` and `f3fff95`; focused GDScript/Godot, export and cache suites pass (182 passed, 8 skipped). Continuing the same claim with nested scene context, viewer accuracy, provenance and release gates.

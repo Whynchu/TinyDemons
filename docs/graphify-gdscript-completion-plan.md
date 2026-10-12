@@ -1,6 +1,6 @@
 # Graphify GDScript completion and viewer plan
 
-Status: implementation in progress; GDScript, project/scene resolution, and main-HTML source-group filtering have landed as partial support in the ignored Graphify fork
+Status: implementation in progress; batches 1–3 are complete in the separate Graphify fork. Scene context, viewer aggregation, maintenance/provenance, and release proof remain open.
 
 Updated: 2026-10-11
 
@@ -80,22 +80,28 @@ names and limitations as each batch lands.
 
 ### Current evidence (2026-10-11)
 
-- The refreshed Tiny Demons map has 20,046 nodes, 43,875 edges and 742
-  communities. The earlier counts above describe the pre-implementation baseline.
-- A synthetic receiver reassignment still resolves a call to the initial class.
-  A nonexistent method on a known typed receiver retains a call fact but produces
-  neither a target edge nor a resolution diagnostic.
-- Eight `project.godot` parse diagnostics concern valid semicolon comments and
-  the pre-section `config_version` assignment.
-- Seven of 605 GDScript files still report parser recovery. These files contain
-  important runtime owners, so successful extraction elsewhere is insufficient.
-- Main-HTML filters work for individual nodes. Aggregated communities mix source
-  groups and retain contributions from hidden members; auxiliary views remain open.
+- The older Tiny Demons map has 20,046 nodes, 43,875 edges and 742 communities;
+  it has not yet been refreshed against the completed semantic batches.
+- Batch 1 now updates or invalidates reassigned inferred receivers, reports
+  missing/ambiguous project methods, and accepts valid project headers/comments.
+- Batch 2's sweep parsed all 605 Tiny Demons `.gd` files with zero recovery
+  diagnostics after source-preserving normalization of the seven observed files.
+- Batch 3 now covers nested class/generic receiver types, bounded static factory
+  returns, inline accessors, literal/dynamic property access, literal-loaded
+  `.tres` receivers, scoped lambda calls/callbacks, and typed Callable receivers.
+  Fork commit: `f3fff95` (`feat(godot): resolve accessors callables and resources`).
+- Batch 3 verification: 182 passed, 8 skipped across GDScript, Godot text,
+  export and cache suites; `compileall` and `git diff --check` passed. The
+  14 cache-root-switch warnings in the GDScript/Godot tests are the existing
+  same-process multi-root warning. Graphify's own map refreshed to 20,458 nodes
+  and 42,896 edges with `--no-cluster`.
+- Main-HTML filters work for individual nodes. Aggregated communities still mix
+  source groups and retain contributions from hidden members; auxiliary views
+  remain open.
 - One cached update took approximately 495 seconds. This is a single observation,
-  not a benchmark budget. Focused fork verification last reported 102 passes;
-  the earlier full-suite run reported 6,760 passes, 409 skips and 60 failures
-  before the final implementation changes. R1 must establish a fresh baseline
-  and triage those failures rather than assume they are harmless.
+  not a benchmark budget. The earlier full-suite baseline reported 6,760 passes,
+  409 skips and 60 failures before final implementation changes. R1 must establish
+  a fresh baseline and triage those failures rather than assume they are harmless.
 
 ### Batch 1: prevent misleading relationships (G2-G4, G7)
 
@@ -172,6 +178,13 @@ unknown types and ambiguous ownership. Declaration, serialized assignment,
 runtime read/write, signal wiring and emission remain distinct facts. Never
 infer a target through name-only matching. A lack of statically observed reads
 does not label an authored field unused at runtime.
+
+**Status (2026-10-11): complete in Graphify commit `f3fff95`.** The fork now
+extracts nested class-qualified and nested collection receiver types, resolves
+the supported static factory return subset, connects inline accessor bodies,
+reports computed `get`/`set`, follows literal `.tres` loads to attached scripts,
+and gives lambdas and typed Callable receivers scoped ownership. The focused
+GDScript/Godot, export, and cache suites passed (182 passed, 8 skipped).
 
 ### Batch 4: complete bounded scene/resource context (G6)
 

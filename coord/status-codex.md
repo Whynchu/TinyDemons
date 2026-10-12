@@ -2,18 +2,34 @@
 
 _Only codex writes this file._
 
-**Focus:** Executing Graphify Godot completion plan in its separate repository; first slice is receiver inference and diagnostics.
+**Focus:** Executing Graphify Godot completion plan in its separate repository; batches 1–3 are committed and the next slice is nested scene context.
 **Updated:** 2026-10-11
 
 ## In flight: Graphify Godot completion
 
 User authorized executing the seven-batch completion plan, with the goal of
 completion. Graphify fork (`graphify-godot/`) and Tiny Demons are separate Git
-repositories; commit/push boundaries must remain separate. Current work starts
-with receiver reassignment safety, then continues through parser, semantic,
-scene, viewer, performance and release gates. Preserve unrelated Tiny Demons
-worktree edits. Follow the Graphify fork's own instructions to refresh its map
-after code changes.
+repositories; commit/push boundaries must remain separate. Batches 1–3 are
+complete in fork commits `28ee0e4` and `f3fff95`. Next: bounded nested-scene and
+inherited-override resolution, then viewer aggregation/auxiliary filters,
+measurement/provenance, and R1 release proof. Preserve unrelated Tiny Demons
+worktree edits. Refresh the fork's own map after completed code batches.
+
+### Completed batch 3 — script semantics
+
+Committed fork changes as `f3fff95 feat(godot): resolve accessors callables and resources`.
+This adds collision-safe GDScript member IDs, nested class/generic typing,
+bounded static factory return inference, inline accessor nodes and body links,
+literal/dynamic get/set facts, literal `.tres` receiver inference, scoped lambda
+ownership, inline lambda callbacks, and typed Callable receiver resolution.
+Verification: 182 tests passed, 8 skipped across GDScript/Godot text, export and
+cache suites; `compileall`, `git diff --check`, and fork graph refresh passed.
+
+### Next
+
+Trace scene instance and inherited override ownership in `godot_resolution.py`
+with focused fixtures, then move to source-group visibility for aggregates and
+tree/callflow exports. Keep all fork commits independent from Tiny Demons docs.
 
 ## Completed: Graphify remaining-gap execution plan (2026-10-11)
 
