@@ -2,8 +2,35 @@
 
 _Only codex writes this file._
 
-**Focus:** Graphify Godot support; the first implementation slice is complete and release-proof work remains open.
+**Focus:** Project-scoped Graphify assistant guidance is enabled. Godot support correctness and release-proof work remain open.
 **Updated:** 2026-10-11
+
+## Completed: Persistent Graphify assistant integration (2026-10-11)
+
+Ran the fork's `codex install --project`, then customized root `AGENTS.md`
+and the installed skill/references for the existing Tiny Demons graph. Added
+`tools/graphify.ps1` to select the local fork/environment, set the output path,
+and restore the caller's directory and environment. The Codex compatibility
+hook implements the intentional no-op directly so working-directory changes
+or a missing fork cannot break it. Copied skill files carry upstream license
+and attribution; `.graphifyignore` excludes them from the game graph.
+
+Verified real ActorGeometry and EnemyDefinition queries from the repo root
+and an outside working directory, wrapper environment/location restoration,
+and the exact installed no-op hook's zero exit and empty output. Confirmed
+existing contributor instructions are preserved and ignored fork/skill files
+contribute no graph nodes. Wrapper `update .` completed and refreshed the
+main JSON, HTML and report: 20,046 nodes / 43,875 edges / 742 communities.
+This single cached update took about 495 seconds; it is an observed maintenance
+cost, not a completed performance benchmark or an established budget.
+The focused verification view's source scope is unchanged.
+
+Handoff: use the wrapper for graph queries in this repo; graph support remains
+partial. The evaluation found unsafe inferred receiver reassignment, missing
+known-receiver method diagnostics, false project-header parse errors, and
+mixed-community filter limitations. Full-map update performance also needs
+measurement before enabling more automatic maintenance. None of these support
+issues is fixed by assistant installation.
 
 ## Completed: Graphify Godot support implementation slice (2026-10-11)
 

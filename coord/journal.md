@@ -1451,3 +1451,9 @@ Completed the first Graphify Godot support implementation slice. V1 main-HTML fi
 
 ## 2026-10-11T23:24Z - codex - done
 Committed and pushed Graphify Godot support commit b697a64 to origin/v8. The Tiny Demons map outputs remain local and ignored; R1 release-proof work remains open.
+
+## 2026-10-11T23:52Z - codex - claim
+Enable project-scoped Graphify assistant guidance and a Tiny Demons map wrapper; own AGENTS.md, tools/graphify.ps1, .codex Graphify integration, and integration docs.
+
+## 2026-10-12T00:05Z - codex - done
+Installed project-scoped Graphify assistant guidance with a local fork/map wrapper and a safe no-op Codex hook. Queries, environment restoration, and exclusions verified; main map refreshed to 20,046 nodes / 43,875 edges / 742 communities. Godot support correctness and release gates remain open.

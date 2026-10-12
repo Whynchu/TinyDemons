@@ -26,6 +26,46 @@ Goal: answer dependency and ownership questions across GDScript, authored
 resources, scenes, and project configuration with links to the source evidence.
 The first useful release must connect these file types, not just list symbols.
 
+## Assistant integration in Tiny Demons
+
+Project-scoped Codex integration is installed in `.codex/skills/graphify/`
+and `.codex/hooks.json`. The root `AGENTS.md` supplies persistent graph-first
+guidance to Codex and other assistants that read that file. Codex's
+`hook-check` is intentionally a no-op; it does not enforce graph usage.
+
+Use the repository wrapper from the Tiny Demons root:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/graphify.ps1 query "ActorGeometry" --budget 1500
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/graphify.ps1 path "ActorGeometry" "SlimeActor"
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/graphify.ps1 explain "EnemyDefinition"
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/graphify.ps1 update .
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/graphify.ps1 cluster-only . --no-label
+```
+
+The wrapper selects `graphify-godot/.venv`, imports the local fork explicitly,
+runs from the Tiny Demons root, and sets `GRAPHIFY_OUT` to the ignored
+`graphify-godot/.tools/tiny-demons-map/` directory for that invocation. It
+restores the caller's directory and environment afterward. Queries use the
+existing graph; partial parser/resolver support still requires source checks.
+Use the full HTML in that directory or `verification/graph.html` for the
+focused test view. Copied Graphify skill/reference files are excluded from
+indexing so assistant setup does not dominate the game map.
+
+For a fresh Windows checkout, prepare the ignored fork and its environment:
+
+```powershell
+git clone https://github.com/Whynchu/graphify-godot.git graphify-godot
+python -m venv graphify-godot/.venv
+& .\graphify-godot\.venv\Scripts\python.exe -m pip install -e './graphify-godot[godot]'
+```
+
+Generate the graph using the adoption procedure below when no local map exists.
+The upstream equivalent installation command is
+`graphify codex install --project`. Running the fork's installer again writes
+generic `graphify-out/` instructions and a bare `graphify` hook command; retain
+this repository's customized paths and wrapper when refreshing that install.
+
 ## 1. Scope and evidence
 
 Implement Godot 4 support first, including Tiny Demons' current 4.7-era text

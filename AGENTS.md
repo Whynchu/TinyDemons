@@ -149,3 +149,45 @@ Start with the feature owner above. If behavior crosses three or more owners,
 define a typed command/result or signal at the boundary before adding coordinator
 logic. If no owner is obvious, update `docs/ARCHITECTURE.md` and `docs/AUDIT.md`
 before implementing the feature.
+
+## graphify
+
+Tiny Demons' local knowledge graph is at
+`graphify-godot/.tools/tiny-demons-map/graph.json`; its full HTML and report are
+in the same directory. The focused verification HTML is at
+`graphify-godot/.tools/tiny-demons-map/verification/graph.html`.
+
+Run Graphify through the repository wrapper so it uses the Godot fork's local
+Python environment and this project's map:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/graphify.ps1 query "<question>" --budget 1500
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/graphify.ps1 path "<A>" "<B>"
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/graphify.ps1 explain "<concept>"
+```
+
+When the user invokes `/graphify`, read `.codex/skills/graphify/SKILL.md` and
+apply its Tiny Demons configuration. The wrapper also works from other working
+directories when invoked by its absolute path.
+
+Rules:
+- For codebase and ownership questions, first run a scoped graph query when
+  the graph exists, then inspect the relevant source spans to verify the answer.
+  Use path/explain for focused relationship and symbol questions.
+- Consult `GRAPH_REPORT.md` for broad architecture review. If a wiki exists
+  under the map directory, use it for broad navigation.
+- The graph has partial GDScript/Godot support. Missing edges do not prove a
+  method/property is unused. Check parser diagnostics, dynamic boundaries and
+  current source before concluding that a dependency is absent.
+- For questions about the graph's correctness or freshness, inspect source
+  and fixtures directly. Also honor explicit user requests to skip the graph.
+- If the local fork/environment/map is unavailable, state that briefly and
+  use the ownership docs and source; do not install unrelated upstream tooling.
+- After code changes, run the wrapper with `update .` to refresh the Tiny
+  Demons graph. Regenerate the main HTML/report when needed with
+  `cluster-only . --no-label`. Keep maps and caches under the ignored fork.
+- When changing Graphify itself, follow `graphify-godot/AGENTS.md` and also
+  refresh the fork's own graph; this repository wrapper selects Tiny Demons.
+- Codex's installed `hook-check` intentionally emits no guidance; this
+  `AGENTS.md` section carries the persistent query-first instructions for
+  Codex and other assistants that read this file.
