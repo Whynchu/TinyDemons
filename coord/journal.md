@@ -1475,3 +1475,18 @@ Executing Graphify completion plan in its separate repository, starting with rec
 
 ## 2026-10-12T01:28Z - codex - done
 Completed Graphify fork batches 1–3 in commits `28ee0e4` and `f3fff95`; focused GDScript/Godot, export and cache suites pass (182 passed, 8 skipped). Continuing the same claim with nested scene context, viewer accuracy, provenance and release gates.
+
+## 2026-10-12T01:45Z - codex - claim
+Continuing Graphify completion in the separate fork. Batch 4 is committed as f9b4e00; now implementing source-group visibility and accurate filtered summaries across graph, tree, and callflow HTML views.
+2026-10-12T02:05Z claim codex: Graphify fork B6 timing, provenance, benchmark, and parity gates.
+
+2026-10-12T02:45Z done codex: B6 committed as 41ca4b1; exporter/cache regression suite passed 677 tests, 17 skipped; fork graph refreshed to 20,512 nodes / 42,205 edges.
+2026-10-12T02:45Z claim codex: B7/R1 release proof, clean package install CI, full suite, invalidation and query acceptance in graphify-godot.
+
+2026-10-12T04:02Z blocker codex: Graphify fork v8 commit d424821 has zero GitHub Actions runs. Windows wheel/sdist and invalidation checks pass; Linux hosted CI remains unverified until the fork workflow is enabled or dispatched.
+
+## 2026-10-12T04:27Z - codex - blocker
+The refreshed Tiny Demons graph counts are reconciled in the query review. Fork v8 still has zero Actions runs; the connected GitHub tool is read-only for dispatch and no browser is available in this session.
+
+## 2026-10-12T04:28Z - codex - done
+Reconciled and verified the Tiny Demons map/query documentation. The Graphify fork remains a separate clean repository at d424821; only outer documentation and coordination files are ready for the Tiny Demons commit.

@@ -1,8 +1,8 @@
 # Graphify GDScript completion and viewer plan
 
-Status: implementation in progress; batches 1–3 are complete in the separate Graphify fork. Scene context, viewer aggregation, maintenance/provenance, and release proof remain open.
+Status: batches 1–7 are landed in the separate Graphify fork at 0.9.87. Local R1 gates are complete; hosted CI has no run on v8 yet. G1–G7 remain partial where the support matrix says so.
 
-Updated: 2026-10-11
+Updated: 2026-10-12
 
 Owner: `Whynchu/graphify-godot`, default branch `v8`.
 
@@ -56,7 +56,7 @@ evidence; silently missing behavior does not satisfy completion.
 
 | Stage | Work | Status | Acceptance |
 | --- | --- | --- | --- |
-| V1: source-group filters | Classify exported nodes and add group checkboxes using one shared visibility predicate. | Implemented for main HTML; tree/callflow views deferred. | Docs/tests/scripts can be independently hidden and restored; community filters, search, edges, and selection remain consistent. |
+| V1: source-group filters | Classify exported nodes and add group checkboxes using one shared visibility predicate. | Implemented across graph, tree, and callflow HTML. | Docs/tests/scripts can be independently hidden and restored; community filters, search, edges, and selection remain consistent. |
 | G1: declaration and syntax coverage | Signals, enums/members, constants, nested-class ownership, static methods, parameter/return types, annotations, accessors, lambdas and Callable ownership; investigate known recovery spans. | Partial; lambdas and broader grammar coverage remain. | Small fixtures cover each supported construct, duplicate names remain scoped, and valid unsupported syntax is reported honestly. |
 | G2: local calls | Same-script calls, explicit `self`, local binding/shadowing, constructors, preload aliases and supported static calls. | Partial; preload aliases and literal dynamic calls are newly covered. | Exact caller-to-method edges, no calls from strings/comments, and negative fixtures prevent name-only matches. |
 | G3: typed cross-file calls | Parameters, members, return types, supported inferred assignments, inherited methods, `super`, nested types and typed collections. | Partial; typed collections, inheritance and `super` have bounded support. | Follow calls through known receivers; duplicate classes, overrides, unknown types and reassignment remain safe and diagnosed. |
@@ -64,24 +64,28 @@ evidence; silently missing behavior does not satisfy completion.
 | G5: script signal wiring | Declarations/emits, signal `.connect`, supported legacy forms, method Callables and literal callback names. | Partial; declaration, emit/connect and narrow local callbacks are covered. | Wiring and emission remain separate facts; callbacks resolve only with receiver evidence; inherited signals and ambiguous callbacks have fixtures. |
 | G6: Godot context | Parse main scene/autoload/plugin settings; resolve supported `$Path`, `%UniqueName`, `get_node` and scene-attached receivers. Add a separate bounded slice for inherited scenes. | Partial; project settings, literal node paths and root inherited scenes are covered. | Project/nested-project isolation; autoload types connect calls; distinguish one script attached to several scenes; unknown runtime nodes stay unresolved. |
 | G7: dynamic boundary reporting | `call`, `call_deferred`, computed loads, groups, runtime injection and unresolved callbacks. | Partial; common dynamic boundaries now receive source diagnostics. | Bounded source records identify why a target is unknown; literals resolve only when receiver evidence exists. |
-| R1: release proof | Supported-version/platform matrix, clean installs, full/incremental parity, rename/delete invalidation, export/query metadata and documented limitations. | In progress; focused Windows fixtures cover parity and rename behavior. | Windows/Linux gates pass with Godot extra; missing grammar gives actionable diagnostics; representative end-to-end queries have reviewed answers. |
+| R1: release proof | Supported-version/platform matrix, clean installs, full/incremental parity, rename/delete invalidation, export/query metadata and documented limitations. | Local Windows full suite, clean wheel/sdist installs, missing-extra diagnostics, parity and rename checks complete; hosted CI is unverified. | Windows/Linux gates pass with Godot extra; missing grammar gives actionable diagnostics; representative end-to-end queries have reviewed answers. |
 
-V1 is implemented on the main HTML export and remains partial until auxiliary
-tree/callflow views can expose equivalent controls. G1-G7 are intentionally
-partial; use the support matrix to pick bounded follow-up work. Refresh the
-fork's own graph after code changes as required by its contributor instructions.
+V1 is implemented across graph, tree, and callflow HTML. G1-G7 remain partial;
+use the support matrix to choose bounded follow-up work. The only unverified
+R1 gate is the hosted CI result for the pushed fork commit. Refresh the fork's
+own graph after code changes as required by its contributor instructions.
 
 ## Remaining-gap execution plan
 
-The batches below turn G1-G7, V1 and R1 into bounded follow-up work. All are
-planned, not completed. Implement them in `graphify-godot/`; Tiny Demons remains
-a read-only integration corpus. Update the fork's support matrix with fixture
-names and limitations as each batch lands.
+The batches below record the staged implementation and remaining bounded
+follow-ups for G1-G7 and V1. Batches 1-7 have landed, but they do not satisfy
+every language/viewer contract. Implement follow-ups in `graphify-godot/`;
+Tiny Demons remains a read-only integration corpus. Keep the fork support
+matrix aligned with fixture evidence and explicit limitations.
 
-### Current evidence (2026-10-11)
+### Current evidence (2026-10-12)
 
-- The older Tiny Demons map has 20,046 nodes, 43,875 edges and 742 communities;
-  it has not yet been refreshed against the completed semantic batches.
+- The Tiny Demons integration map was refreshed on 2026-10-12: 21,073 nodes,
+  46,226 edges and 727 communities. Its HTML and GRAPH_REPORT.md were rebuilt;
+  all nine source-group filters are present. It contains 1,016 source paths and
+  zero paths inside `graphify-godot/`, which remains excluded by the root
+  `.gitignore` rule.
 - Batch 1 now updates or invalidates reassigned inferred receivers, reports
   missing/ambiguous project methods, and accepts valid project headers/comments.
 - Batch 2's sweep parsed all 605 Tiny Demons `.gd` files with zero recovery
@@ -95,13 +99,33 @@ names and limitations as each batch lands.
   14 cache-root-switch warnings in the GDScript/Godot tests are the existing
   same-process multi-root warning. Graphify's own map refreshed to 20,458 nodes
   and 42,896 edges with `--no-cluster`.
-- Main-HTML filters work for individual nodes. Aggregated communities still mix
-  source groups and retain contributions from hidden members; auxiliary views
-  remain open.
-- One cached update took approximately 495 seconds. This is a single observation,
-  not a benchmark budget. The earlier full-suite baseline reported 6,760 passes,
-  409 skips and 60 failures before final implementation changes. R1 must establish
-  a fresh baseline and triage those failures rather than assume they are harmless.
+- Batch 4 is complete in fork commit `f9b4e00`: bounded nested scene context,
+  inherited attachment overrides, cycle/depth diagnostics, and indexed plugin
+  configuration targets. Its focused verification passed 188 tests, 8 skipped.
+- Batch 5 is complete in fork commit `86d06c7`: source-group filters and visible
+  summaries now work across graph, tree, and callflow exports. Aggregate detail
+  remains bounded and is documented in the fork support matrix.
+- Batch 6 is complete in fork commit `41ca4b1`: analyzer/target provenance,
+  stage timing, Windows worker cap, incremental parity regression, and a
+  repeatable Godot corpus benchmark. The fork map refreshed to 20,512 nodes,
+  42,205 edges and 1,113 communities. Benchmark measurements and scope are in
+  `graphify-godot/BENCHMARKS.md`.
+- Batch 6's exporter/cache regression modules passed 677 tests, with 17 skipped.
+- Batch 7/R1 is pushed in fork commit `d424821` as package version 0.9.87.
+  The final local full-suite run reported 6,790 passed, 409 skipped, and 60
+  failures in the existing Windows environment categories; no GDScript, Godot
+  resolver, or CLI export tests failed. The recorded categories include missing
+  shell tools, optional Terraform/PyYAML dependencies, a non-writable Windows
+  `/tmp` mapping, and the build module (installed afterward for artifact checks).
+- Built the 0.9.87 wheel and sdist on Windows. Fresh isolated installs passed
+  the Godot extraction smoke for both formats; the base wheel passed the
+  actionable missing-grammar check. The focused raw and clustered rename/delete
+  regression passed both cases. `compileall` and `git diff --check` passed.
+- GitHub Actions currently reports zero runs for both commit `d424821` and
+  branch `v8` ([fork Actions](https://github.com/Whynchu/graphify-godot/actions?query=branch%3Av8)).
+  Windows package checks are verified locally; Linux CI remains unverified.
+- The Tiny Demons map took approximately 495 seconds to refresh in one earlier
+  run. This is a single observation, not a benchmark budget.
 
 ### Batch 1: prevent misleading relationships (G2-G4, G7)
 
@@ -203,6 +227,11 @@ ambiguous contexts produce evidence rather than arbitrary targets. Project
 boundaries and excluded dependencies remain respected. Rename/delete and
 scene-override updates invalidate dependent edges in unchanged scripts.
 
+**Status (2026-10-12): complete in Graphify commit `f9b4e00`.** Fixtures cover
+ordinary nested scene instances, inherited attachment replacement, cycles,
+depth limits and plugin configuration references. Absolute NodePaths and other
+engine-specific runtime override behavior remain outside the documented model.
+
 ### Batch 5: make source filters accurate in every view (V1)
 
 **Owners:** main HTML exporter and tree/callflow exporters, with viewer fixtures.
@@ -221,6 +250,11 @@ Source and community filters compose with AND; search, neighbors, selection,
 URL restoration and pan/zoom obey the same visibility contract. Restore groups
 without losing data. Verify both aggregated and individual-node exports, along
 with explicit total/included counts for capped exports.
+
+**Status (2026-10-12): complete in Graphify commit `86d06c7`.** Graph, tree and
+callflow filters share source-group classification and preserve truthful
+filtered summaries. Aggregate graph communities remain summary nodes; their
+bounded per-group counts are documented in `docs/godot-support.md`.
 
 ### Batch 6: measure maintenance and preserve provenance
 
@@ -243,6 +277,12 @@ as the Tiny Demons source revision.
 match a full build, and metadata identifies both analyzer and analyzed checkout.
 Keep query speed and update speed as separate measurements.
 
+**Status (2026-10-12): complete in Graphify commit `41ca4b1`.** The benchmark
+records separate update/query/export costs, sampled process-tree memory, cache
+state, stage timing and normalized full/incremental topology. Its Windows sample
+and limits are recorded in `BENCHMARKS.md`; it is not a full-map performance
+budget.
+
 ### Batch 7: prove and release supported Godot coverage (R1)
 
 **Owners:** fork CI, packaging/lockfile, integration fixtures and support matrix.
@@ -259,13 +299,22 @@ Depends on the preceding completion gates; CI fixtures can be added earlier.
   Confirm distinct evidence and metadata survive assembly, export and queries.
 - Review all seven useful queries below against current source. Static test
   references describe dependencies, not execution coverage.
-- Only after these gates pass, bump the fork package and lockfile, publish the
-  support matrix/limitations and refresh Tiny Demons JSON, HTML and report.
+- Package version 0.9.87 and the lockfile are in the pushed candidate commit;
+  the support matrix and limitations are published in the fork. Wait to tag or
+  publish a package release until the hosted Linux CI result is available.
   Documentation and tooling work require no Tiny Demons game version bump.
 
 **Acceptance:** clean supported-platform gates, reviewed useful-query evidence,
 reproducible install/update/export steps, and no unexplained regressions. Keep
 partial status for any unfulfilled language or viewer contract.
+
+**R1 status (2026-10-12):** The fork candidate is pushed as `d424821` on `v8`.
+Windows wheel/sdist clean installs, the base-wheel missing-grammar diagnostic,
+the two raw/clustered incremental invalidation cases, and the reviewed Tiny
+Demons source queries pass. The Actions API reports zero workflow runs for the
+commit and branch, so the hosted Linux lane is still unverified; do not mark R1
+fully closed until a run is available. Tiny Demons remains at game version
+0.3.89.
 
 ### Working cadence and handoff
 

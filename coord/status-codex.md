@@ -2,18 +2,27 @@
 
 _Only codex writes this file._
 
-**Focus:** Executing Graphify Godot completion plan in its separate repository; batches 1–3 are committed and the next slice is nested scene context.
-**Updated:** 2026-10-11
+**Focus:** Local R1 checks and Tiny Demons map/query review are complete. The separate fork still has no hosted GitHub Actions run for v8.
+**Updated:** 2026-10-12
 
-## In flight: Graphify Godot completion
+## In flight: Hosted Graphify R1 CI gate
 
-User authorized executing the seven-batch completion plan, with the goal of
-completion. Graphify fork (`graphify-godot/`) and Tiny Demons are separate Git
-repositories; commit/push boundaries must remain separate. Batches 1–3 are
-complete in fork commits `28ee0e4` and `f3fff95`. Next: bounded nested-scene and
-inherited-override resolution, then viewer aggregation/auxiliary filters,
-measurement/provenance, and R1 release proof. Preserve unrelated Tiny Demons
-worktree edits. Refresh the fork's own map after completed code batches.
+The fork candidate is pushed to Whynchu/graphify-godot, branch v8, as
+`d424821` (package 0.9.87). Tiny Demons and graphify-godot remain separate Git
+repositories. Local Windows verification is complete: wheel/sdist builds and
+clean installs with the Godot extra, missing-grammar guidance, raw/clustered
+rename-delete parity tests, full-suite triage, and refreshed Tiny Demons graph
+and query review. Tiny Demons game version remains 0.3.89; unrelated game
+worktree edits remain untouched.
+
+The GitHub Actions API reports zero runs filtered by commit `d424821` and
+branch `v8`. The only remaining R1 gate is hosted CI, including Linux. The
+fork's Actions page must have a run before R1 can be closed:
+https://github.com/Whynchu/graphify-godot/actions?query=branch%3Av8
+
+The connected GitHub fetch tool is read-only for Actions, and no browser is
+available in this session to enable or dispatch a workflow. The current branch
+run query still returns `total_count: 0`; hosted CI remains an external blocker.
 
 ### Completed batch 3 — script semantics
 
@@ -25,11 +34,40 @@ ownership, inline lambda callbacks, and typed Callable receiver resolution.
 Verification: 182 tests passed, 8 skipped across GDScript/Godot text, export and
 cache suites; `compileall`, `git diff --check`, and fork graph refresh passed.
 
-### Next
+### Completed batch 4 - nested scene context
 
-Trace scene instance and inherited override ownership in `godot_resolution.py`
-with focused fixtures, then move to source-group visibility for aggregates and
-tree/callflow exports. Keep all fork commits independent from Tiny Demons docs.
+Committed fork change as `f9b4e00 feat(godot): resolve nested scene contexts safely`.
+Nested scene paths now resolve attached scripts in host-scene context; inherited
+node overrides replace base attachments. Cycles and depth beyond 64 are
+diagnosed; enabled project plugins link to indexed plugin.cfg targets.
+Verification: 42 GDScript/Godot-text tests and 146 export/cache tests passed
+(8 skipped); `compileall`, `git diff --check`, and map refresh passed. Map: 20,466
+nodes, 42,935 edges.
+
+### Completed batch 5 — source-group filters
+
+Committed fork change `86d06c7`. Main graph, tree and callflow HTML exports have
+source-group filters with truthful filtered counts and group-scoped summaries.
+Aggregate graph summaries remain bounded and are documented in the support
+matrix.
+
+### Completed batch 6 — timing, provenance and benchmark
+
+Committed fork change `41ca4b1`. Added analyzer/target provenance, resolver
+substage timing, a Windows worker cap, incremental/full parity coverage and the
+repeatable Godot benchmark. The fork graph refreshed to 20,512 nodes / 42,205
+edges / 1,113 communities. The selected exporter/cache regression run passed
+677 tests with 17 skipped; the local R1 portion is now complete.
+
+### Completed locally: batch 7 / R1
+
+The pushed 0.9.87 candidate passed Windows wheel/sdist builds, isolated installs
+with Godot support, and the no-extra diagnostic smoke. Full suite: 6,790 passed,
+409 skipped, 60 known environment failures; no GDScript, Godot resolver, or CLI
+export tests failed. The raw and clustered rename/delete parity tests passed.
+Tiny Demons map and six source queries were refreshed/reviewed; the seventh
+fork-specific check ran in the fork suite. The remaining handoff is to enable or
+dispatch the fork's GitHub Actions workflow and confirm the Linux lane.
 
 ## Completed: Graphify remaining-gap execution plan (2026-10-11)
 
