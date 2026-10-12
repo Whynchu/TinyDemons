@@ -1498,3 +1498,7 @@ Reconciled and verified the Tiny Demons map/query documentation. The Graphify fo
 2026-10-12 | codex | claim | Reconcile detailed extraction ledger against current source and add to review-only plan.
 
 2026-10-12 | codex | done | Added source-reconciled extraction ledger; corrected stale build_hub and HubMenuState notes; updated review branch documentation.
+
+2026-10-12 | codex | claim | Complete P0: disposition every mapped graph community and tracked file unmapped by the census with owners, evidence and risks.
+
+2026-10-12 | codex | done | Completed and validated P0 dispositions for all 727 Graphify communities and 2,110 unmapped paths; reconciled both P0 outputs and census.

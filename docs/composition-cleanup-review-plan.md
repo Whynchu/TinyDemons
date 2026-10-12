@@ -7,9 +7,13 @@ organization, asset and SFX lifecycle; staged implementation after prerequisite 
 
 Owner: repository architecture and gameplay systems
 
-Current code: audit of local `39950b8` plus the existing working tree; graph
-built at `78320ff`. Uncommitted `project.godot` and enemy preview scene changes
-are outside this deliverable. Counts below describe the audit snapshot, not a release.
+Current code: tracked-tree snapshot `85c9f071`; graph built at `78320ffb`.
+Committed `scripts/`, `resources/`, `scenes/`, `assets/`, and `tests/` paths did
+not change between those snapshots. Later documentation/tool/config paths are
+listed in the P0 inventory. Pre-existing uncommitted edits to `project.godot`
+and `scenes/authoring/previews/enemy_preview_workbench.tscn` are identified but
+their contents are outside the captured graph. Counts describe the audit
+snapshot, not a release.
 
 Verification: reproducible graph/file census, focused source inspection and
 read-only enemy architecture review. No Godot execution or game tests performed.
@@ -44,15 +48,19 @@ after review, through bounded slices of the existing workstreams.
 ## 2. Whole-map coverage and evidence limits
 
 The checked-in [census](composition-map-census.json) enumerates **every community
-and mapped source path**, plus tracked files missing from the graph. It contains
-community names, memberships, top connected nodes, cross-community edge
-incidents, relation counts, audio inventory and byte-identical audio sets.
+and mapped source path**, plus tracked files missing from the graph. The
+[P0 disposition review](composition-p0-review.md) summarizes the completed
+whole-map triage; the complete per-community and per-file records are in the
+[machine-readable inventory](composition-p0-disposition.json). The census and
+inventory contain community names, memberships, top connected nodes,
+cross-community edge incidents, relation counts, path dispositions, audio
+inventory and byte-identical audio sets.
 
 | Snapshot measure | Count |
 | --- | ---: |
 | Graph nodes / links | 21,073 / 46,226 |
 | Communities / unique mapped source files | 727 / 1,016 |
-| Tracked repository files, excluding the nested Graphify repo | 3,121 |
+| Tracked paths in the P0 inventory, excluding the nested Graphify repo | 3,126 |
 | Tracked GDScript files, including tests and addons | 605 |
 | Files under `assets/` and `Artwork/`, including import sidecars | 1,389 |
 | Audio files (`wav`, `ogg`, `mp3`) | 335 |
@@ -62,13 +70,14 @@ incidents, relation counts, audio inventory and byte-identical audio sets.
 
 Coverage is **full enumeration plus domain-level triage**, with detailed source
 audit of the enemy seam and selected cross-system owners. It is not a manual
-review of all 21,073 symbols. Phase P0 requires disposition of every community
-and unmapped file before claiming the full audit finished. The ledger makes
-that remaining work finite and reviewable rather than hiding it behind a sampled map.
-The [initial extraction ledger](composition-extraction-ledger.md) reconciles
-known in-progress work against current source, marks stale plan details, and
-records what must be characterized before each handoff can close. It is the
-first P0 deliverable, not a disposition of all graph communities.
+review of all 21,073 symbols. P0 completed on 2026-10-12: all 727 communities
+and all 2,110 paths absent from the graph now have conservative dispositions,
+owners, evidence, confidence, risks and next actions. The path count is 3,124
+tracked paths at source commit `85c9f07` plus the two P0 review artifacts. No
+deletion is approved. The [extraction ledger](composition-extraction-ledger.md)
+reconciles known in-progress work against current source and records the proof
+needed to close each handoff; it complements rather than replaces the full P0
+inventory.
 
 Graph queries use vocabulary expansion: `enemy`, `slime`, `actor`, `component`,
 `runtime`, `catalog`, `resource`, `sound`, `audio`, `asset`, `test`, `profile`.
@@ -191,8 +200,8 @@ documentation work, but it blocks claiming risky affected-runtime work accepted.
 
 | Phase | Depends on | Deliverable and acceptance bar |
 | --- | --- | --- |
-| P0 — finish audit ledger | Owner review of this proposal | Disposition every community and unmapped tracked file: retain, investigate, migrate, archive, removal candidate or vendor. Findings carry owner, source evidence, runtime/authoring consumers, confidence, risk and dependency. Resolve stale baseline/version claims; no deletion. |
-| P1 — establish migration floor | P0 findings for affected seam | Record current mixed-family behavior, actual room/profile restore, preview lifecycle, exported manifest/PCK load and UID status. Characterize slime → skeleton → slime replacement within one slot: HUD/health bindings, stale targets, caches, position and slot identity. Confirm current test failures and live editor availability. Reproduce mixed-enemy performance baseline under its existing plan. |
+| P0 — complete whole-map disposition | This proposal and the tracked source snapshot | **Complete 2026-10-12.** The [P0 review](composition-p0-review.md) and [full inventory](composition-p0-disposition.json) cover all 727 communities and 2,110 unmatched paths, with owner, evidence, confidence, risk, dependency and next action. No deletion is approved; graph edges and missing text references are not proof of runtime use or non-use. |
+| P1 — establish migration floor | Owner review of this proposal and relevant P0 findings | Record current mixed-family behavior, actual room/profile restore, preview lifecycle, exported manifest/PCK load and UID status. Characterize slime → skeleton → slime replacement within one slot: HUD/health bindings, stale targets, caches, position and slot identity. Confirm current test failures and live editor availability. Reproduce mixed-enemy performance baseline under its existing plan. |
 | P2 — generic enemy identity and roster | P1 mixed-family/save proof | Introduce EnemyActor sibling contract; coordinate factory, room services, collision/targeting and preview migration through small compatible packages. Add common group lifecycle, including in-slot family replacement; preserve stable IDs/slots/scheduler and balanced stats. Compatibility adapter shares one roster. |
 | P3 — reusable enemy behaviors | P2 and relevant performance evidence | Extract one locomotion/attack strategy at a time, remove parent discovery, inject services, attach optional components by recipe. Split tuning by actual consumers. Prove mixed room, support/boss lifecycle and independent sibling. |
 | P4 — catalog and content authority | P2; authoring M1 lifecycle evidence | Migrate mixed-family registry API; finish consumed enemy field authority. Coordinate item/element/room work under authoring Slices 2–3. No new parallel registries. Preserve old resource paths until references migrate. |
@@ -200,8 +209,9 @@ documentation work, but it blocks claiming risky affected-runtime work accepted.
 | P6 — retirement and file organization | Replacement accepted for each candidate | Remove obsolete adapters/fields/tests/files in small commits. Asset/SFX dispositions need the evidence below. Godot-aware moves preserve UIDs; regenerate manifests/indexes and repair docs. |
 | P7 — closeout | P0–P6 findings resolved or explicitly deferred | Rebuild Tiny Demons-only map and HTML, compare ownership/consumer paths, run applicable gates, record remaining exceptions and update canonical docs. Human can add content through the documented workflow. |
 
-Recommended first correction after review: P0/P1 around the enemy seam, then
-P2. Do not start with mass renaming, directory moves or deleting low-degree nodes.
+Recommended first correction after review: P1 characterization around the
+enemy seam, then P2. Do not start with mass renaming, directory moves or
+deleting low-degree nodes.
 The known unresolved element catalog UID, open exported-PCK/manifest lifecycle
 evidence, mixed-enemy frame-rate incident and current UI/runtime acceptance
 remain owned by their existing plans. Resolve only the relevant blocker before

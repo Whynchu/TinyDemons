@@ -2,8 +2,21 @@
 
 _Only codex writes this file._
 
-**Focus:** Explicit extraction ledger reconciled against current code and active workstream plans; update pushed Tiny Demons review branch. Docs only; no runtime changes or deletions. Main history and unrelated worktree edits remain separate.
+**Focus:** P0 inventory and review-branch update complete. No runtime edits/deletions. Existing main history and unrelated worktree edits remain separate.
 **Updated:** 2026-10-12
+
+## Completed: Composition cleanup P0 dispositions
+
+Published a human-readable P0 review, a complete per-community/per-file JSON
+inventory, and reconciled the whole-map census and asset/SFX audit on
+`review/composition-cleanup-plan`. Validation matches all 3,126 inventory paths
+against 3,124 source-commit paths plus the two P0 artifacts; all 727 communities
+and 2,110 unmatched paths have non-empty dispositions and evidence fields. No
+deletion is approved. The source Graphify map remains at `78320ff`; its
+committed code/asset/scene/test paths match the tracked snapshot at `85c9f07`.
+The pre-existing `project.godot` and enemy preview scene edits remain outside
+this review. Local main's unrelated Graphify integration commits were not
+included in the review-branch update.
 
 ## In flight: Hosted Graphify R1 CI gate
 
