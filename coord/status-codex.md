@@ -1,5 +1,9 @@
 # codex — status
 
+## 2026-10-12 composition cleanup proposal
+
+Plan and census pushed on review/composition-cleanup-plan. Awaiting owner review; no runtime changes or deletion. Audit describes local 39950b8 plus the existing working tree, with graph built at 78320ff. Existing main history remains separate.
+
 _Only codex writes this file._
 
 **Focus:** Released the active-frame regen-lock call fix as 0.3.92.

@@ -1,5 +1,9 @@
 # Tiny Demons Documentation Map
 
+Review proposal: [Composition and repository cleanup](composition-cleanup-review-plan.md)
+and its [whole-map census](composition-map-census.json). This is awaiting owner
+review; existing approved composition and authoring plans remain authoritative.
+
 Status: current navigation guide for the `0.3.x` cycle
 
 Updated: 2026-10-10

@@ -1382,3 +1382,5 @@ Version 0.3.90 prepared with enemy workbench geometry and documentation. Focused
 
 ## 2026-10-11 — codex — done
 Active gameplay frame now calls the existing static regen-lock helper. Script diagnostics and whitespace checks pass; version 0.3.92 prepared for release.
+
+2026-10-12 | codex | done | Review-only composition cleanup plan and full map census; no runtime changes or deletion.
