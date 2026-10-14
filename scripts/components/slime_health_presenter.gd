@@ -5,6 +5,10 @@ var display_health := 0.0
 var damage_fill_hold_timer := 0.0
 
 
+func displayed_value() -> float:
+	return display_health
+
+
 func update(delta: float, health: HealthComponent, max_health: float, tuning: SlimeTuning, in_combat: bool = false) -> void:
 	if health == null:
 		return

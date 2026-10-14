@@ -26,15 +26,16 @@ func tick_actor_statuses(root: GameplayState, actor: Sprite2D, delta: float, is_
 		return
 	if not is_player and not actor_is_known_alive and root._is_slime_dead(actor):
 		return
-	var slime_actor := actor as SlimeActor
+	var slime_actor := actor as EnemyActor
 	var component: StatusComponent = slime_actor._status_component if slime_actor != null and is_instance_valid(slime_actor._status_component) else actor.get_node_or_null("Status") as StatusComponent
 	if component == null:
 		return
-	for result in component.advance(delta):
-		if result.kind == StatusTickResult.Kind.DAMAGE:
-			_apply_status_damage_tick(root, actor, result, is_player, result.status_id != &"shocked")
-		elif result.kind == StatusTickResult.Kind.STUN_PULSE:
-			_apply_status_stun_pulse(root, actor, result, is_player)
+	if component.has_active_records():
+		for result in component.advance(delta):
+			if result.kind == StatusTickResult.Kind.DAMAGE:
+				_apply_status_damage_tick(root, actor, result, is_player, result.status_id != &"shocked")
+			elif result.kind == StatusTickResult.Kind.STUN_PULSE:
+				_apply_status_stun_pulse(root, actor, result, is_player)
 	var aura: ElementAuraComponent = slime_actor._aura_component if slime_actor != null and is_instance_valid(slime_actor._aura_component) else actor.get_node_or_null("ElementAura") as ElementAuraComponent
 	if aura != null and is_instance_valid(aura):
 		_ensure_status_visual_callbacks(root)

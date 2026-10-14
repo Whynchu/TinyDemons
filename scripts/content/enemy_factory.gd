@@ -14,7 +14,7 @@ const TYPE_SLIME: StringName = &"slime"
 const TYPE_SKELETON: StringName = &"skeleton"
 
 
-static func assemble(enemy_definition: EnemyDefinition) -> SlimeActor:
+static func assemble(enemy_definition: EnemyDefinition) -> EnemyActor:
 	if enemy_definition == null:
 		return null
 	var actor := _new_actor_for_type(enemy_definition.type_id)
@@ -26,10 +26,11 @@ static func assemble(enemy_definition: EnemyDefinition) -> SlimeActor:
 		actor.offset = SkeletonActor.FRAME_OFFSET
 	actor.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	configure_actor(actor, enemy_definition)
+	actor.add_to_group(&"enemies")
 	return actor
 
 
-static func _new_actor_for_type(type_id: StringName) -> SlimeActor:
+static func _new_actor_for_type(type_id: StringName) -> EnemyActor:
 	match type_id:
 		TYPE_SLIME:
 			return SlimeActor.new()
@@ -38,7 +39,7 @@ static func _new_actor_for_type(type_id: StringName) -> SlimeActor:
 	return null
 
 
-static func configure_actor(actor: SlimeActor, enemy_definition: EnemyDefinition) -> void:
+static func configure_actor(actor: EnemyActor, enemy_definition: EnemyDefinition) -> void:
 	if actor == null or enemy_definition == null:
 		return
 	if enemy_definition.type_id not in [TYPE_SLIME, TYPE_SKELETON]:
@@ -49,6 +50,9 @@ static func configure_actor(actor: SlimeActor, enemy_definition: EnemyDefinition
 		(actor as SkeletonActor).apply_authored_visuals()
 	apply_geometry(actor, enemy_definition)
 	actor.variant = String(enemy_definition.variant_id)
+	actor.enemy_definition_id = enemy_definition.variant_id
+	actor.enemy_variant_id = enemy_definition.variant_id
+	actor.enemy_type_id = enemy_definition.type_id
 	actor.combat_element = enemy_definition.element
 	actor.set_meta("element", enemy_definition.element)
 	actor.set_meta("damage_contract", String(enemy_definition.damage_contract))
@@ -163,7 +167,7 @@ static func family_geometry_profile(type_id: StringName) -> Resource:
 	return SLIME_VARIANT_CATALOG_SCRIPT.family_geometry_profile(type_id)
 
 
-static func apply_geometry(actor: SlimeActor, enemy_definition: EnemyDefinition) -> void:
+static func apply_geometry(actor: EnemyActor, enemy_definition: EnemyDefinition) -> void:
 	if actor == null or enemy_definition == null:
 		return
 	var geometry: Resource = geometry_profile(enemy_definition)

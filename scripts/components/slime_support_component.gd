@@ -257,7 +257,7 @@ func _select_heal_target(context: SlimeSupportContext, actor: Sprite2D, tuning: 
 		var candidate_foot: Vector2 = context.actor_foot.call(candidate)
 		var distance_squared := actor_foot.distance_squared_to(candidate_foot)
 		if needs_alert_check and distance_squared <= nearby_alert_radius_squared:
-			var brain := candidate.get_node_or_null("Brain") as SlimeBrain
+			var brain := candidate.get_node_or_null("Brain") as EnemyBrain
 			var is_noticing := brain != null and (brain.is_noticing() or (brain.notice_started and not brain.notice_animation_finished))
 			if is_noticing or (context.is_aggroed.is_valid() and bool(context.is_aggroed.call(candidate))):
 				has_nearby_alerted_ally = true
@@ -340,7 +340,7 @@ func has_nearby_alerted_ally(context: SlimeSupportContext, actor: Sprite2D, tuni
 		var candidate_foot: Vector2 = context.actor_foot.call(candidate)
 		if actor_foot.distance_squared_to(candidate_foot) > radius_squared:
 			continue
-		var brain := candidate.get_node_or_null("Brain") as SlimeBrain
+		var brain := candidate.get_node_or_null("Brain") as EnemyBrain
 		var is_noticing := brain != null and (brain.is_noticing() or (brain.notice_started and not brain.notice_animation_finished))
 		if is_noticing or (context.is_aggroed.is_valid() and bool(context.is_aggroed.call(candidate))):
 			return true
@@ -399,7 +399,7 @@ func _finish_cast(context: SlimeSupportContext, actor: Sprite2D) -> void:
 
 
 func _support_animation_frame_count(actor: Sprite2D, phase: StringName) -> int:
-	var visual := SlimeActor.component(actor, "Visual", SlimeVisualComponent) as SlimeVisualComponent
+	var visual := EnemyActor.component(actor, "Visual", SlimeVisualComponent) as SlimeVisualComponent
 	if visual == null:
 		return 0
 	return visual.support_spell_frames.size() if phase == SPELL_PHASE else visual.support_casting_frames.size()

@@ -248,12 +248,12 @@ func _update_player_palette_flash(delta: float) -> void:
 			if timer >= PLAYER_PALETTE_FADE_OUT: overlay.queue_free(); player_palette_flash_overlay = null; player_palette_flash_phase = 0; player_palette_flash_timer = 0.0
 			else: player_palette_flash_timer = timer
 func _snap_half_pixel(world_position: Vector2) -> Vector2: return Vector2(snappedf(world_position.x, 0.5), snappedf(world_position.y, 0.5))
-func _slime_brain(slime: Sprite2D) -> SlimeBrain: return SlimeActor.component(slime, "Brain", SlimeBrain) as SlimeBrain
-func _slime_combat(slime: Sprite2D) -> SlimeCombatComponent: return SlimeActor.component(slime, "Combat", SlimeCombatComponent) as SlimeCombatComponent
+func _enemy_brain(slime: Sprite2D) -> EnemyBrain: return EnemyActor.component(slime, "Brain", EnemyBrain) as EnemyBrain
+func _slime_combat(slime: Sprite2D) -> SlimeCombatComponent: return EnemyActor.component(slime, "Combat", SlimeCombatComponent) as SlimeCombatComponent
 func _slime_stats(slime: Sprite2D) -> StatsComponent: return slime.get_node_or_null("Stats") as StatsComponent
-func _slime_visual(slime: Sprite2D) -> SlimeVisualComponent: return SlimeActor.component(slime, "Visual", SlimeVisualComponent) as SlimeVisualComponent
-func _slime_animation(slime: Sprite2D) -> SlimeAnimationComponent: return SlimeActor.component(slime, "Animation", SlimeAnimationComponent) as SlimeAnimationComponent
-func _slime_health_presenter(slime: Sprite2D) -> SlimeHealthPresenter: return SlimeActor.component(slime, "HealthPresenter", SlimeHealthPresenter) as SlimeHealthPresenter
+func _slime_visual(slime: Sprite2D) -> SlimeVisualComponent: return EnemyActor.component(slime, "Visual", SlimeVisualComponent) as SlimeVisualComponent
+func _slime_animation(slime: Sprite2D) -> SlimeAnimationComponent: return EnemyActor.component(slime, "Animation", SlimeAnimationComponent) as SlimeAnimationComponent
+func _slime_health_presenter(slime: Sprite2D) -> SlimeHealthPresenter: return EnemyActor.component(slime, "HealthPresenter", SlimeHealthPresenter) as SlimeHealthPresenter
 func _slime_health(slime: Sprite2D) -> HealthComponent: return slime.get_node_or_null("Health") as HealthComponent
 func _load_health_bar_texture(path: String) -> Texture2D:
 	if health_bar_texture_cache.has(path): return health_bar_texture_cache[path] as Texture2D

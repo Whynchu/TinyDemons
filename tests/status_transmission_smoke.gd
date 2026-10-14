@@ -5,6 +5,9 @@ const SpellFormCatalogScript = preload("res://scripts/content/spell_form_catalog
 const SpellFormDefinitionScript = preload("res://scripts/content/spell_form_definition.gd")
 const StatusTransmissionControllerScript = preload("res://scripts/runtime/controllers/status_transmission_controller.gd")
 const StatusContactPairScript = preload("res://scripts/content/status_contact_pair.gd")
+const GameplayStateScript = preload("res://scripts/runtime/state/gameplay_state.gd")
+const SlimeRuntimeControllerScript = preload("res://scripts/runtime/controllers/slime_runtime_controller.gd")
+const ActorCollisionSystemScript = preload("res://scripts/actors/actor_collision_system.gd")
 
 var _finished := false
 
@@ -23,6 +26,7 @@ func _initialize() -> void:
 	root.add_child(source)
 	root.add_child(middle)
 	root.add_child(end_actor)
+	await process_frame
 	(source.get_node("Status") as StatusComponent).apply_effect(burn, ElementCatalogScript.Element.FIRE)
 	var chain_contacts: Array[StatusContactPair] = [
 		_contact(source, middle),
@@ -98,18 +102,57 @@ func _initialize() -> void:
 	root.add_child(shadow_target)
 	var shadow_poison := ElementCatalogScript.status_effect_for_element(ElementCatalogScript.Element.SHADOW)
 	_expect(shadow_poison != null and shadow_poison.id == &"poison", "Shadow resolves to its single Poison status", failures)
+	_expect(shadow_poison != null and not shadow_poison.can_transmit_by_contact(), "Shadow Poison follows its authored non-transmissible contact policy", failures)
 	var shadow_form := SpellFormCatalogScript.form_for_element(ElementCatalogScript.Element.SHADOW)
 	_expect(int(shadow_form.get("projectile_shape")) == SpellFormDefinitionScript.ProjectileShape.HEX, "Shadow keeps the Hex projectile shape", failures)
 	(shadow_source.get_node("Status") as StatusComponent).apply_effect(shadow_poison, ElementCatalogScript.Element.SHADOW)
 	var shadow_pair: Array[StatusContactPair] = [_contact(shadow_source, shadow_target)]
 	controller.process_contacts(shadow_pair, 0.016, &"room_d", rng)
 	var shadow_target_status := shadow_target.get_node("Status") as StatusComponent
-	_expect(shadow_target_status.stacks_for(&"poison") == 1, "Shadow Poison transmits as the only Shadow status", failures)
+	_expect(shadow_target_status.stacks_for(&"poison") == 0, "Shadow Poison does not transmit through contact", failures)
+	_assert_contact_snapshot_reuse(failures)
 
 	for actor in [source, middle, end_actor, zero_proc_source, immune_target, immune_source, generation_source, generation_target, suppressed_source, suppressed_target, shadow_source, shadow_target]:
 		actor.queue_free()
 	await process_frame
 	_finish(failures)
+
+
+func _assert_contact_snapshot_reuse(failures: Array[String]) -> void:
+	var gameplay := GameplayStateScript.new() as GameplayState
+	gameplay.slime_runtime_controller = SlimeRuntimeControllerScript.new()
+	var collision_system := ActorCollisionSystemScript.new() as ActorCollisionSystem
+	var actor_a := Sprite2D.new()
+	actor_a.name = "ContactReuseA"
+	var actor_b := Sprite2D.new()
+	actor_b.name = "ContactReuseB"
+	actor_b.position = Vector2(1.0, 0.0)
+	gameplay.slimes.append(actor_a)
+	gameplay.slimes.append(actor_b)
+	root.add_child(actor_a)
+	root.add_child(actor_b)
+	var actor_foot := Callable(gameplay, "_actor_foot")
+	var snapshot := collision_system.capture_status_contact_pairs(gameplay.slimes, null, gameplay, actor_foot, Callable(), Callable())
+	_expect(snapshot.size() == 1, "overlapping actors produce one status contact", failures)
+	var pair_id := snapshot[0].get_instance_id() if not snapshot.is_empty() else 0
+	var repeated_snapshot := collision_system.capture_status_contact_pairs(gameplay.slimes, null, gameplay, actor_foot, Callable(), Callable())
+	_expect(repeated_snapshot.size() == 1, "repeated overlap remains in the contact snapshot", failures)
+	if not repeated_snapshot.is_empty():
+		_expect(repeated_snapshot[0].get_instance_id() == pair_id, "repeated contact reuses its pair object", failures)
+	actor_b.position = Vector2(256.0, 0.0)
+	var cleared_snapshot := collision_system.capture_status_contact_pairs(gameplay.slimes, null, gameplay, actor_foot, Callable(), Callable())
+	_expect(cleared_snapshot.is_empty(), "separated actors clear the current contact snapshot", failures)
+	_expect(snapshot.is_empty(), "the shared snapshot reference drops stale contacts", failures)
+	actor_b.position = Vector2(1.0, 0.0)
+	var restored_snapshot := collision_system.capture_status_contact_pairs(gameplay.slimes, null, gameplay, actor_foot, Callable(), Callable())
+	_expect(restored_snapshot.size() == 1, "re-entering contact repopulates the snapshot", failures)
+	if not restored_snapshot.is_empty():
+		_expect(restored_snapshot[0].get_instance_id() == pair_id, "re-entering contact reuses the pooled pair", failures)
+	actor_a.queue_free()
+	actor_b.queue_free()
+	collision_system.free()
+	gameplay.slime_runtime_controller.free()
+	gameplay.free()
 
 
 func _new_actor(actor_name: String) -> Sprite2D:

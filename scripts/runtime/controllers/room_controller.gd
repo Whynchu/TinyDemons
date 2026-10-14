@@ -3,7 +3,6 @@ class_name RoomController
 
 const ASPECT_CATALOG_SCRIPT = preload("res://scripts/content/aspect_catalog.gd")
 const SLIME_VARIANT_CATALOG_SCRIPT = preload("res://scripts/content/slime_variant_catalog.gd")
-const ENEMY_FACTORY_SCRIPT = preload("res://scripts/content/enemy_factory.gd")
 const DEBUG_BOSS_STRESS_BUILDER = preload("res://scripts/content/debug_boss_stress_encounter_builder.gd")
 const ENCOUNTER_SCALING = preload("res://scripts/content/enemy_encounter_scaling.gd")
 const ROOM_TRANSITION_RESULT_SCRIPT = preload("res://scripts/runtime/contexts/room_transition_result.gd")
@@ -235,7 +234,7 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 	elif definition.matchup_policy == EncounterDefinition.POLICY_RUN_DEFAULT and progression_run_number >= 3:
 		if primary_variant != "grey":
 			variant_pool.append({"variant": primary_variant, "weight": _preferred_variant_weight(primary_variant)})
-		for elemental_variant in ENEMY_FACTORY_SCRIPT.variants_for_type(&"slime"):
+		for elemental_variant in EnemyFactory.variants_for_type(&"slime"):
 			var elemental_definition := SLIME_VARIANT_CATALOG_SCRIPT.definition_resource(elemental_variant)
 			if elemental_definition.encounter_role != &"matchup" or elemental_definition.matchup_weight <= 0.0 or elemental_variant == StringName(primary_variant):
 				continue
@@ -250,7 +249,7 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 	var skeleton_variant_pool: Array[Dictionary] = []
 	var force_debug_enemy := not debug_enemy_variant.is_empty() and EnemyFactory.is_variant(debug_enemy_variant)
 	if progression_run_number >= SKELETON_FIRST_RUN_NUMBER:
-		skeleton_variant_pool = ENEMY_FACTORY_SCRIPT.weighted_variants_for_type(&"skeleton")
+		skeleton_variant_pool = EnemyFactory.weighted_variants_for_type(&"skeleton")
 	if allow_shadow and progression_run_rank >= definition.shadow_min_rank and not definition.is_shadow_bound():
 		# Purple is a rare pressure spike, not a normal member of the enemy
 		# rotation. A small weight keeps it available without making most later
@@ -280,7 +279,7 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 		# A Shadow Slime is never itself a popcorn roll. That keeps the shadow
 		# pressure spike intact while guaranteeing every actual popcorn slot in a
 		# shadow encounter is a Normal Slime.
-		var selected_definition := ENEMY_FACTORY_SCRIPT.definition(StringName(selected))
+		var selected_definition := EnemyFactory.definition(StringName(selected))
 		var is_popcorn := not force_debug_enemy and selected != "purple" and selected_definition != null and selected_definition.type_id == &"slime" and encounter_rng.randf() < ENCOUNTER_SCALING.popcorn_chance(_room_definition(), progression_run_rank)
 		popcorn_flags.append(is_popcorn)
 		popcorn_types.append(ROOM_POPCORN if is_popcorn else "")
@@ -328,7 +327,7 @@ func _preferred_variant_or_grey(candidate: String) -> String:
 	if not SLIME_VARIANT_CATALOG_SCRIPT.is_variant(candidate_id):
 		return "grey"
 	var definition := SLIME_VARIANT_CATALOG_SCRIPT.definition_resource(candidate_id)
-	return candidate if definition != null and ENEMY_FACTORY_SCRIPT.variant_is_type(candidate_id, &"slime") and definition.allow_preferred and definition.preferred_weight > 0.0 else "grey"
+	return candidate if definition != null and EnemyFactory.variant_is_type(candidate_id, &"slime") and definition.allow_preferred and definition.preferred_weight > 0.0 else "grey"
 
 
 func _preferred_variant_weight(variant: String) -> float:
@@ -1432,7 +1431,7 @@ func begin_boss_jump_phase_popcorn(root: Object, boss: Sprite2D, anchor: Vector2
 		var popcorn := _acquire_boss_jump_phase_slot(root)
 		if popcorn == null:
 			continue
-		var actor := popcorn as SlimeActor
+		var actor := popcorn as EnemyActor
 		popcorn.set_meta("encounter_scale", 1.0)
 		popcorn.set_meta("is_elite", false)
 		popcorn.set_meta("is_popcorn", true)
@@ -1454,7 +1453,9 @@ func begin_boss_jump_phase_popcorn(root: Object, boss: Sprite2D, anchor: Vector2
 			presenter.damage_fill_hold_timer = 0.0
 		root.call("_prepare_slime_idle_visual", popcorn)
 		popcorn.visible = true
-		if not (root.get("slimes") as Array[Sprite2D]).has(popcorn): (root.get("slimes") as Array[Sprite2D]).append(popcorn)
+		var enemy_roster := enemy_spawn_services.enemy_roster if enemy_spawn_services != null else null
+		if enemy_roster != null: enemy_roster.append(popcorn)
+		elif not (root.get("slimes") as Array[Sprite2D]).has(popcorn): (root.get("slimes") as Array[Sprite2D]).append(popcorn)
 		(root.get("actor_sprites") as Array[Sprite2D]).append(popcorn)
 		(root.get("collision_sprites") as Array[Sprite2D]).append(popcorn)
 		(root.get("depth_sprites") as Array[Sprite2D]).append(popcorn)
@@ -1489,7 +1490,7 @@ func initialize_boss_jump_phase_pool(root: Object) -> void:
 		return
 	var parent := template.get_parent()
 	for index in 3:
-		var popcorn := ENEMY_FACTORY_SCRIPT.assemble(ENEMY_FACTORY_SCRIPT.definition(&"grey"))
+		var popcorn := EnemyFactory.assemble(EnemyFactory.definition(&"grey"))
 		if popcorn == null:
 			continue
 		popcorn.name = "BossJumpPhasePool%d" % index
@@ -1501,12 +1502,15 @@ func initialize_boss_jump_phase_pool(root: Object) -> void:
 			health.healed.connect(Callable(root, "_on_slime_health_healed").bind(popcorn))
 			health.health_changed.connect(Callable(root, "_on_slime_health_changed").bind(popcorn))
 		_deactivate_boss_jump_phase_slot(popcorn)
+	var enemy_roster := enemy_spawn_services.enemy_roster if enemy_spawn_services != null else null
 	var slimes := root.get("slimes") as Array[Sprite2D]
 	for popcorn in boss_jump_phase_pool:
-		slimes.append(popcorn)
+		if enemy_roster != null: enemy_roster.append(popcorn)
+		else: slimes.append(popcorn)
 	root.call("_build_slime_direction_textures")
 	for popcorn in boss_jump_phase_pool:
-		slimes.erase(popcorn)
+		if enemy_roster != null: enemy_roster.remove(popcorn)
+		else: slimes.erase(popcorn)
 	var hud := root.get("hud_controller") as HudController
 	if hud != null:
 		for popcorn in boss_jump_phase_pool:
@@ -1520,17 +1524,19 @@ func prepare_boss_jump_phase_pool(services: RoomEnemySpawnServices, variant: Str
 		services.configure_slime_variant(popcorn, variant)
 		popcorn.set_meta("encounter_scale", 1.0)
 		popcorn.set_meta("prepared_boss_variant", variant)
-		services.slimes.append(popcorn)
+		if services.enemy_roster != null: services.enemy_roster.append(popcorn)
+		else: services.slimes.append(popcorn)
 	services.prepare_enemy_visuals_direct()
 	for popcorn in boss_jump_phase_pool:
-		services.slimes.erase(popcorn)
+		if services.enemy_roster != null: services.enemy_roster.remove(popcorn)
+		else: services.slimes.erase(popcorn)
 
 
 func _acquire_boss_jump_phase_slot(root: Object) -> Sprite2D:
 	if boss_jump_phase_pool.is_empty():
 		return null
 	var popcorn: Sprite2D = boss_jump_phase_pool.pop_back() as Sprite2D
-	var actor := popcorn as SlimeActor
+	var actor := popcorn as EnemyActor
 	if actor != null:
 		actor.reset_runtime_state(popcorn.position, root.call("_nearest_slime_walkable_point", root.call("_actor_foot", popcorn)), 0.5, 0.2, 0.0, 0.5)
 	return popcorn
@@ -1913,8 +1919,8 @@ func _spawn_enemy_slot(context: RoomEnemyContext, state: Dictionary, slime_index
 		occluder_sprites.erase(slime)
 		return false
 	occupied.append(spawn_foot)
-	var actor := slime as SlimeActor
-	var brain: SlimeBrain = services.slime_brain(slime)
+	var actor := slime as EnemyActor
+	var brain: EnemyBrain = services.enemy_brain(slime)
 	# The spawn solver returns a world-space position because it validates against
 	# the world-space floor outline. Actors are children of the offset Actors
 	# node, so assign through global_position instead of treating that point as a

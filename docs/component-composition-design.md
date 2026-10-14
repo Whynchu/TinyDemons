@@ -79,9 +79,13 @@ be refined through its owning slice, not treated as proof of composition.
   `tick_regeneration`, `is_dead`;
 - zero `root.call/get/set` sites.
 
-`SlimeCombatComponent`, `SlimeAnimationComponent`, `SlimeBrain`,
-`CombatMomentumComponent`, `EnemyTacticsComponent`, `StatsComponent`, and
-`EquipmentComponent` also meet the contract.
+`EnemyBrain` is still a migration seam: steering uses an injected
+`EnemySteeringWorld`, while target acquisition retains a gameplay-root
+parameter. `SlimeBrainBehaviorComponent` and
+`SkeletonBrainBehaviorComponent` receive typed steering values and hold their
+family-specific preferred-range rules. `SlimeCombatComponent`,
+`SlimeAnimationComponent`, `CombatMomentumComponent`, `EnemyTacticsComponent`,
+`StatsComponent`, and `EquipmentComponent` also meet the contract.
 
 ### Adapters to refine (measured 2026-09-16)
 

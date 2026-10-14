@@ -1502,3 +1502,6 @@ Reconciled and verified the Tiny Demons map/query documentation. The Graphify fo
 2026-10-12 | codex | claim | Complete P0: disposition every mapped graph community and tracked file unmapped by the census with owners, evidence and risks.
 
 2026-10-12 | codex | done | Completed and validated P0 dispositions for all 727 Graphify communities and 2,110 unmapped paths; reconciled both P0 outputs and census.
+
+## 2026-10-14 - codex - done
+User accepted the shared EnemyBrain architecture and current Slime/Skeleton behavior. P3 focused smoke rows remain unverified and are non-blocking for this acceptance.

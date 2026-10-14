@@ -18,8 +18,12 @@ func set_actor_visual_scale(root: Object, actor: Sprite2D, visual_scale: Vector2
 
 func build_depth_lists(root: Object) -> void:
 	var lists := (root.get("depth_sorter") as DepthSorter).visible_lists(root.get("player") as Sprite2D, root.get("slimes") as Array[Sprite2D], root.get("chest") as Sprite2D, root.get("rest_fire") as Sprite2D, root.get("cloaked_demon") as Sprite2D, Callable(root, "_is_slime_dead"))
-	root.set("depth_sprites", lists["depth"] as Array[Sprite2D])
-	root.set("occluder_sprites", lists["occluders"] as Array[Sprite2D])
+	var depth_sprites := root.get("depth_sprites") as Array[Sprite2D]
+	depth_sprites.clear()
+	depth_sprites.append_array(lists["depth"] as Array[Sprite2D])
+	var occluder_sprites := root.get("occluder_sprites") as Array[Sprite2D]
+	occluder_sprites.clear()
+	occluder_sprites.append_array(lists["occluders"] as Array[Sprite2D])
 	for torch in root.get("puzzle_torches") as Array[Sprite2D]:
 		if is_instance_valid(torch) and torch.visible and not (root.get("depth_sprites") as Array[Sprite2D]).has(torch):
 			(root.get("depth_sprites") as Array[Sprite2D]).append(torch)
@@ -421,6 +425,14 @@ func _actor_base_visual_offset(root: Object, actor: Sprite2D) -> Vector2:
 func sync_actor_geometry_offset(root: Object, actor: Sprite2D) -> void:
 	if not (root.get("slimes") as Array[Sprite2D]).has(actor):
 		return
+	var offset := Vector2.ZERO if actor is SkeletonActor else _actor_base_visual_offset(root, actor)
+	var gameplay := root as GameplayState
+	var walkable_area: WalkableArea = gameplay.walkable_area if gameplay != null else null
+	var geometry_revision := walkable_area.geometry_revision if walkable_area != null else -1
+	var synced_revision := int(actor.get_meta("actor_geometry_sync_revision", -2))
+	var synced_offset: Vector2 = actor.get_meta("actor_geometry_sync_offset", Vector2.INF)
+	if synced_revision == geometry_revision and synced_offset == offset:
+		return
 	for node_name in [&"CollisionGuide", &"CollisionPolygon", &"BodyHitbox", &"AttackGuideL", &"AttackGuideR"]:
 		var geometry := actor.get_node_or_null(NodePath(node_name)) as Node2D
 		if geometry == null:
@@ -432,5 +444,6 @@ func sync_actor_geometry_offset(root: Object, actor: Sprite2D) -> void:
 		# the shared floor anchor. Its collision guides are authored in that same
 		# anchored coordinate space, so shifting them with Sprite2D.offset moves
 		# the feet and body hitbox away from the visible artwork.
-		var geometry_offset := _actor_base_visual_offset(root, actor)
-		geometry.position = authored_position if actor is SkeletonActor else authored_position + geometry_offset
+		geometry.position = authored_position + offset
+	actor.set_meta("actor_geometry_sync_revision", geometry_revision)
+	actor.set_meta("actor_geometry_sync_offset", offset)

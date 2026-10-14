@@ -3,14 +3,11 @@
 Review proposal: [Composition and repository cleanup](composition-cleanup-review-plan.md)
 and its [whole-map census](composition-map-census.json). P0 dispositions are
 complete; see the [human-readable P0 review](composition-p0-review.md) and
-[full disposition inventory](composition-p0-disposition.json). The proposal is
-awaiting owner review; the [extraction ledger](composition-extraction-ledger.md)
-records the in-progress source extractions. Existing approved composition and
-authoring plans remain authoritative.
+[full disposition inventory](composition-p0-disposition.json). The [extraction ledger](composition-extraction-ledger.md) records remaining source work. The [P3 steering injection](composition-p3-steering-injection.md) and [P3 family brain behavior](composition-p3-family-brain-behavior.md) describe the shared EnemyBrain implementation. Acceptance lives in the composition plan; focused smoke rows remain unverified. Existing approved composition and authoring plans remain authoritative.
 
 Status: current navigation guide for the `0.3.x` cycle
 
-Updated: 2026-10-12
+Updated: 2026-10-14
 
 The repository contains design history, implementation handoffs, audits, and
 active plans. Use this page to choose the right authority before changing code.

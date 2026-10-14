@@ -22,6 +22,7 @@ var occlusion_renderer: OcclusionRenderer = null
 var player: Sprite2D = null
 var chest: Sprite2D = null
 var slimes: Array[Sprite2D] = []
+var enemy_roster: EnemyRoster = null
 var collision_rect: Callable = Callable()
 var actor_sprites: Array[Sprite2D] = []
 var collision_sprites: Array[Sprite2D] = []
@@ -72,12 +73,12 @@ func current_chest_rect() -> Rect2:
 	return collision_rect.call(chest) as Rect2
 
 
-func slime_brain(slime: Sprite2D) -> SlimeBrain:
-	return SlimeActor.component(slime, "Brain", SlimeBrain) as SlimeBrain
+func enemy_brain(slime: Sprite2D) -> EnemyBrain:
+	return EnemyActor.component(slime, "Brain", EnemyBrain) as EnemyBrain
 
 
 func slime_combat(slime: Sprite2D) -> SlimeCombatComponent:
-	return SlimeActor.component(slime, "Combat", SlimeCombatComponent) as SlimeCombatComponent
+	return EnemyActor.component(slime, "Combat", SlimeCombatComponent) as SlimeCombatComponent
 
 
 func slime_health(slime: Sprite2D) -> HealthComponent:
@@ -85,7 +86,7 @@ func slime_health(slime: Sprite2D) -> HealthComponent:
 
 
 func slime_health_presenter(slime: Sprite2D) -> SlimeHealthPresenter:
-	return SlimeActor.component(slime, "HealthPresenter", SlimeHealthPresenter) as SlimeHealthPresenter
+	return EnemyActor.component(slime, "HealthPresenter", SlimeHealthPresenter) as SlimeHealthPresenter
 
 
 func is_slime_dead(slime: Sprite2D) -> bool:
@@ -96,10 +97,10 @@ func is_slime_dead(slime: Sprite2D) -> bool:
 func slime_spawn(slime: Sprite2D) -> Node:
 	if slime == null or not is_instance_valid(slime):
 		return null
-	var actor := slime as SlimeActor
+	var actor := slime as EnemyActor
 	if actor != null:
 		return actor.get_node_or_null("Spawn") as Node
-	return SlimeActor.component(slime, "Spawn", load("res://scripts/components/slime_spawn_component.gd")) as Node
+	return EnemyActor.component(slime, "Spawn", load("res://scripts/components/slime_spawn_component.gd")) as Node
 
 
 func is_slime_spawn_locked(slime: Sprite2D) -> bool:
@@ -119,7 +120,7 @@ func configure_slime_variant(slime: Sprite2D, variant: String) -> void:
 	slime.set_meta("element", definition.element)
 	slime.set_meta("damage_contract", String(definition.damage_contract))
 	slime.set_meta("visual_source", definition.visual_source)
-	var actor := slime as SlimeActor
+	var actor := slime as EnemyActor
 	if actor != null:
 		EnemyFactory.configure_actor(actor, definition)
 	var stats := slime.get_node_or_null("Stats") as StatsComponent
@@ -133,9 +134,9 @@ func configure_slime_variant(slime: Sprite2D, variant: String) -> void:
 func _replace_actor_family_for_definition(current_actor: Sprite2D, definition: EnemyDefinition) -> Sprite2D:
 	if current_actor == null or definition == null:
 		return current_actor
-	var current_slime := current_actor as SlimeActor
+	var current_slime := current_actor as EnemyActor
 	if current_slime == null:
-		push_error("Enemy roster slot '%s' is not a SlimeActor." % current_actor.name)
+		push_error("Enemy roster slot '%s' is not an EnemyActor." % current_actor.name)
 		return null
 	var needs_skeleton_actor := definition.type_id == &"skeleton"
 	if (current_slime is SkeletonActor) == needs_skeleton_actor:
@@ -163,10 +164,18 @@ func _replace_actor_family_for_definition(current_actor: Sprite2D, definition: E
 	var old_sibling_index := current_actor.get_index()
 	parent.add_child(replacement)
 	parent.move_child(replacement, old_sibling_index)
-	if slime_tuning != null:
-		replacement.tuning = slime_tuning
 	_transfer_enemy_hud_children(current_actor, replacement)
-	_replace_actor_reference(slimes, current_actor, replacement)
+	if enemy_roster != null:
+		if enemy_roster.replace(current_actor, replacement) < 0:
+			push_error("Enemy roster no longer contains replacement slot '%s'." % current_actor.name)
+			return null
+	else:
+		var old_enemy := current_actor as EnemyActor
+		var new_enemy := replacement as EnemyActor
+		if old_enemy != null and new_enemy != null:
+			new_enemy.roster_slot_id = old_enemy.roster_slot_id
+		current_actor.remove_from_group(&"enemies")
+		_replace_actor_reference(slimes, current_actor, replacement)
 	_replace_actor_reference(actor_sprites, current_actor, replacement)
 	_replace_actor_reference(collision_sprites, current_actor, replacement)
 	_replace_actor_reference(depth_sprites, current_actor, replacement)
@@ -191,7 +200,7 @@ func _transfer_enemy_hud_children(old_actor: Sprite2D, new_actor: Sprite2D) -> v
 			new_actor.add_child(child)
 
 
-func _bind_enemy_health_signals(actor: SlimeActor) -> void:
+func _bind_enemy_health_signals(actor: EnemyActor) -> void:
 	var health := actor.get_node_or_null("Health") as HealthComponent
 	if health == null:
 		return
@@ -245,7 +254,7 @@ func clear_slime_without_effects(slime: Sprite2D) -> void:
 	var spawn := slime_spawn(slime)
 	if spawn != null:
 		spawn.call("cancel")
-	var brain := slime_brain(slime)
+	var brain := enemy_brain(slime)
 	if brain != null:
 		brain.attack_cooldown = 0.0
 		brain.aggroed = false

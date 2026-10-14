@@ -52,6 +52,10 @@ func reset_for_spawn() -> void:
 	_emit_status_changed()
 
 
+func has_active_records() -> bool:
+	return not _active.is_empty()
+
+
 func _install_innate_record() -> void:
 	if innate_status_id.is_empty() or _innate_definition == null or status_immunities.has(innate_status_id):
 		return

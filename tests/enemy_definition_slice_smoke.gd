@@ -32,7 +32,7 @@ func _initialize() -> void:
 
 	var recolor_sources: Array[StringName] = [&"grey", &"purple", &"yellow", &"orange", &"aquamarine"]
 	for variant: StringName in recolor_sources:
-		_expect(EnemyDefinition.from_variant(variant).visual_source == "green", "%s recolor-only variant shares the green base art sheet" % variant, failures)
+		_expect(EnemyDefinition.from_variant(variant).visual_source == String(variant), "%s definition names its authored palette source" % variant, failures)
 	for variant: StringName in [&"red", &"blue", &"green"]:
 		_expect(EnemyDefinition.from_variant(variant).visual_source == String(variant), "%s art-sheet variant names its own source" % variant, failures)
 
@@ -60,7 +60,7 @@ func _initialize() -> void:
 		_expect(bool(summary.get("ready", false)), "%s preview workbench is ready" % variant, failures)
 		_expect(String(summary.get("id", "")) == String(variant), "%s preview keeps the stable id" % variant, failures)
 		_expect(bool(summary.get("geometry_valid", false)), "%s preview exposes valid geometry" % variant, failures)
-		var preview_actor := preview.get("preview_actor") as SlimeActor
+		var preview_actor := preview.get("preview_actor") as EnemyActor
 		_expect(preview_actor != null and bool(preview_actor.get_meta("content_materialized", false)), "%s preview uses the factory materialization path" % variant, failures)
 		_expect(preview_actor != null and preview_actor.texture != null, "%s preview has a renderable source texture" % variant, failures)
 		preview.queue_free()

@@ -715,6 +715,8 @@ func tick(root: GameplayState, delta: float) -> void:
 	var capture_service: Node = root.performance_capture_service as Node if OS.is_debug_build() else null
 	if capture_service != null and not bool(capture_service.get("scope_capture_enabled")):
 		capture_service = null
+	var capture_scopes_active := capture_service != null and bool(capture_service.get("capturing"))
+	var phase_started_usec := 0
 	if not bool(root.get("room_transition_locked")):
 		ProfileSaveService.flush_deferred_save(false, capture_service)
 	var aspect_ability := root.player_aspect_ability_component
@@ -761,6 +763,7 @@ func tick(root: GameplayState, delta: float) -> void:
 		if root.effects_spawner != null:
 			root.effects_spawner.resolve_item_acquisition_deliveries_if_blocked()
 		return
+	phase_started_usec = Time.get_ticks_usec() if capture_scopes_active else 0
 	var player_frozen := _update_player_freeze(root, player_status)
 	if root._is_pause_input_just_pressed():
 		root._open_pause_menu()
@@ -805,6 +808,9 @@ func tick(root: GameplayState, delta: float) -> void:
 	root.magic_runtime_controller.tick_magic_animation(magic_context(root), delta)
 	if not player_frozen and root.player_animation_component != null:
 		root.player_animation_component.tick_coordinator_animation(animation_context(root), delta)
+	if capture_scopes_active:
+		capture_service.call("record_scope", &"frame_player_core", Time.get_ticks_usec() - phase_started_usec)
+	phase_started_usec = Time.get_ticks_usec() if capture_scopes_active else 0
 	root._tick_run_telemetry(delta)
 	var debug_session := _debug_session(root)
 	if debug_session == null or not bool(debug_session.get("enemies_paused")):
@@ -815,13 +821,22 @@ func tick(root: GameplayState, delta: float) -> void:
 	var room_clear_runtime := root.combat_runtime_controller as CombatRuntimeController
 	if room_clear_runtime != null:
 		room_clear_runtime.reconcile_empty_combat_room(root)
+	if capture_scopes_active:
+		capture_service.call("record_scope", &"frame_enemy_runtime", Time.get_ticks_usec() - phase_started_usec)
+	phase_started_usec = Time.get_ticks_usec() if capture_scopes_active else 0
 	root._update_magic_projectiles(delta)
+	if capture_scopes_active:
+		capture_service.call("record_scope", &"frame_projectiles", Time.get_ticks_usec() - phase_started_usec)
+	phase_started_usec = Time.get_ticks_usec() if capture_scopes_active else 0
 	root._update_damage_numbers(delta)
 	if root.feedback_animation_registry != null:
 		root.feedback_animation_registry.tick(delta)
 	root.effects_spawner.update_pixel_particles_from_root(root, delta)
 	equipment_visual.tick(equipment_visual_context(root), delta)
+	if capture_scopes_active:
+		capture_service.call("record_scope", &"frame_feedback", Time.get_ticks_usec() - phase_started_usec)
 	if not dialogue_was_active:
+		phase_started_usec = Time.get_ticks_usec() if capture_scopes_active else 0
 		var chest_controller := root.chest_controller; chest_controller.update_interaction(root, root._is_interact_input_pressed(), root.interact_input_was_down, GameplayState.CHEST_REWARD_GOLD, GameplayState.CHEST_COLLECT_FLASH_TIME, delta); chest_controller.update_visuals_from_root(root, delta); root._update_world_item_drops(delta); root._update_chroma_pickups(delta); root._update_soul_pickups(delta); root.pickup_runtime_controller.update_gold_pickups(root, delta); root.pickup_runtime_controller.flush_pending_profile_save(root); root._update_rest_fire_animation(delta); root._update_cloaked_demon_animation(delta)
 		# A door crossing is the one place a whole room is mounted, laid out, and
 		# activated inside a single tick. Time it here so the capture can separate
@@ -836,6 +851,9 @@ func tick(root: GameplayState, delta: float) -> void:
 		# animation component has deliberately hidden it.
 		var attack_visual_active := root.player_is_attacking and root.player_anim_name != "charge"
 		root.player_animation_component.update_attack_visual(root.player, root.player_attack_visual, attack_visual_active, Vector2(-10, -10), root.player.z_index)
+		if capture_scopes_active:
+			capture_service.call("record_scope", &"frame_world_interactions", Time.get_ticks_usec() - phase_started_usec)
+	phase_started_usec = Time.get_ticks_usec() if capture_scopes_active else 0
 	var now_attacking: bool = root.player_is_attacking
 	var anim := root.player_animation_component
 	if previous_attacking and not now_attacking:
@@ -872,6 +890,8 @@ func tick(root: GameplayState, delta: float) -> void:
 	# render their final state once in present().
 	_advance_player_health_state(root, delta)
 	_advance_player_mp_state(root, delta)
+	if capture_scopes_active:
+		capture_service.call("record_scope", &"frame_player_finish", Time.get_ticks_usec() - phase_started_usec)
 
 
 func _stabilize(root: GameplayState) -> void:

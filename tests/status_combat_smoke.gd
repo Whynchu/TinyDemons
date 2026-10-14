@@ -29,7 +29,9 @@ func _initialize() -> void:
 	actor.add_child(health)
 	health.reset(100.0)
 	var status := StatusComponent.new()
+	status.name = "Status"
 	status.health_component = health
+	health.name = "Health"
 	actor.add_child(status)
 	status.apply_effect(ElementCatalogScript.status_effect_for_id(&"burn"), ElementCatalogScript.Element.FIRE)
 	var controller := CombatRuntimeController.new()
