@@ -105,6 +105,7 @@
 "run1_map_contract_smoke","owner","unverified","dungeon topology","Run 1 map contract","pure",""
 "run1_minimap_smoke","owner","verified","dungeon topology","Run 1 minimap landmark and discovery visibility","pure","focused run 2026-09-13; Orb/boss/flame landmarks visible, ordinary rooms hidden"
 "run1_orb_door_scene_smoke","owner","unverified","dungeon topology","Run 1 orb door sockets","main",""
+"script_check_identity_smoke","gate","verified","MCP Toolkit","in-memory class_name self-type false-positive filter","pure","2026-10-13 Godot 4.7.1 headless pass; recognizes only matching self-class/same-URI argument errors and preserves different-class, different-URI, assignment, genuine, and mixed failures"
 "six_stat_calculator_smoke","owner","verified","player combat","six-stat combat calculator","pure","starter band updated for zero-power plain starters 2026-09-13; passes"
 "six_stat_equipment_smoke","owner","verified","gear & fusion","six-stat equipment contracts","pure","test aggregate fixed; product ladder regression fixed 2026-09-13 (per-track enhancement)"
 "six_stat_menu_scene_smoke","owner","verified","hub & menus","six-stat menu scene","main","2026-09-27 focused headless pass after adding the full-boot flag"

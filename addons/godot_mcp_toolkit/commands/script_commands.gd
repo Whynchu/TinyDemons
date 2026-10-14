@@ -332,8 +332,13 @@ static func _validate_gdscript(source: String) -> Dictionary:
 	# with the already-registered global class. Blanking the line preserves
 	# line numbers so any real errors still report correct positions.
 	var lines := source.split("\n")
+	var declared_class_name := ""
 	for i in lines.size():
-		if lines[i].strip_edges().begins_with("class_name "):
+		var class_line := lines[i].strip_edges()
+		if class_line.begins_with("class_name "):
+			var class_parts := class_line.split(" ", false)
+			if class_parts.size() > 1:
+				declared_class_name = class_parts[1]
 			lines[i] = ""
 			break
 	# Snapshot LogBuffer position so we can scan errors produced by reload().
@@ -343,6 +348,18 @@ static func _validate_gdscript(source: String) -> Dictionary:
 	var script := GDScript.new()
 	script.source_code = "\n".join(lines)
 	var is_valid := script.reload(false) == OK
+	if not is_valid and not declared_class_name.is_empty():
+		var error_log: Dictionary = Modules.LogBuffer.get_entries(512, ["error"], pre_id)
+		var error_entries: Array = error_log.get("entries", [])
+		var error_count := int(error_log.get("total_lines", error_entries.size()))
+		if error_count == error_entries.size() and _only_self_identity_errors(error_entries, declared_class_name):
+			return {
+				"valid": true,
+				"diagnostics": [{
+					"severity": "warning",
+					"message": "Ignored %d in-memory self-type diagnostic(s): this script declares class_name %s, but GDScript.new().reload() assigns self a synthetic gdscript:// identity. Headless project validation remains authoritative." % [error_entries.size(), declared_class_name],
+				}],
+			}
 
 	var diagnostics: Array = []
 	if not is_valid:
@@ -370,6 +387,51 @@ static func _validate_gdscript(source: String) -> Dictionary:
 				"message": hint,
 			})
 	return MCPToolkitSuccess.ok({"valid": is_valid, "diagnostics": diagnostics})
+
+
+## The in-memory script used by script_check is anonymous after class_name is
+## stripped. Godot then reports its own class as gdscript://<id>, which is not
+## assignable to the already-registered class_name type. Ignore only when every
+## captured error from this reload has that exact self-class / same-URI shape.
+static func _only_self_identity_errors(error_entries: Array, declared_class_name: String) -> bool:
+	if declared_class_name.is_empty() or error_entries.is_empty():
+		return false
+	var reload_uri := ""
+	for value in error_entries:
+		if not (value is Dictionary):
+			return false
+		var entry: Dictionary = value
+		if str(entry.get("level", "")) != "error":
+			return false
+		var entry_uri := _self_identity_error_uri(str(entry.get("message", "")), declared_class_name)
+		if entry_uri.is_empty():
+			return false
+		if reload_uri.is_empty():
+			reload_uri = entry_uri
+		elif entry_uri != reload_uri:
+			return false
+	return true
+
+
+static func _self_identity_error_uri(message: String, declared_class_name: String) -> String:
+	if declared_class_name.is_empty():
+		return ""
+	if not message.contains("Invalid argument for ") or not message.contains(" function: argument "):
+		return ""
+	var expected_type_marker := ' should be "%s" but is "' % declared_class_name
+	var marker_position := message.find(expected_type_marker)
+	if marker_position < 0:
+		return ""
+	var path_start := marker_position + expected_type_marker.length()
+	var path_end := message.find('"', path_start)
+	if path_end < 0:
+		return ""
+	var actual_type := message.substr(path_start, path_end - path_start)
+	if not actual_type.begins_with("gdscript://"):
+		return ""
+	if not message.contains("at: GDScript::reload (%s:" % actual_type):
+		return ""
+	return actual_type
 
 
 ## Version-aware compile-error diagnostic message. editor_get_console surfaces editor
