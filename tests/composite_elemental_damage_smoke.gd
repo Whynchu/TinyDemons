@@ -2,7 +2,6 @@ extends SceneTree
 
 const ElementCatalogScript = preload("res://scripts/content/element_catalog.gd")
 const CombatDamageRequestScript = preload("res://scripts/content/combat_damage_request.gd")
-const SlimeVariantCatalogScript = preload("res://scripts/content/slime_variant_catalog.gd")
 
 class CombatRoot extends Node:
 	var player_stats: StatsComponent

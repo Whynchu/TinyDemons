@@ -233,8 +233,10 @@ both remaining levers:
   configured / 12 both of 20.
 - **Definition surfaces moved from code dictionaries to editor-inspectable
   `Resource` + `.tres` files** (the T2 migration), one per catalog:
-  - `SlimeVariantCatalog` loads `resources/definitions/slime_variant_catalog.tres`
-    (via `SlimeVariantCatalogData`), keeping its static lookup API.
+  - `EnemyCatalog` owns the mixed-family lookup API. The historical
+    `SlimeVariantCatalog` script forwards to it, and it loads
+    `resources/definitions/slime_variant_catalog.tres` (via the preserved
+    `SlimeVariantCatalogData` class).
   - `ElementCatalog` loads `resources/definitions/element_catalog.tres` (via
     `ElementCatalogData`); the stable `Element` enum stays in code, the lookup
     tables and matchup policy move to the resource. The retired const accessors

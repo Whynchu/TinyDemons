@@ -47,7 +47,8 @@ be designed as explicit extensions rather than branches hidden in palette code.
 
 ## 2. Canonical roster
 
-`SlimeVariantCatalog` remains the identity authority. `ElementCatalog` remains
+`EnemyCatalog` is the identity authority; `SlimeVariantCatalog` forwards its
+historical API to the same registry. `ElementCatalog` remains
 the combat matchup authority. Normal is the player-facing slime family name;
 Neutral is its combat element. There is no Neutral flame.
 
@@ -275,8 +276,8 @@ playtests.
 
 ## 11. Encounter generation
 
-Production boss selection consumes `SlimeVariantCatalog.variants()`, which is
-derived from the typed catalog definitions. The selection
+Production boss selection consumes `EnemyCatalog.ids()`, which is derived from
+the typed catalog definitions. The selection
 policy may use run rank, authored curriculum, weights, or exclusions, but the
 implementation path must support every entry.
 
@@ -296,7 +297,7 @@ Requirements:
 
 | Concern | Owner |
 | --- | --- |
-| Variant, name, element, stats | `slime_variant_catalog.gd` |
+| Variant, name, element, stats | `enemy_catalog.gd` (`slime_variant_catalog.gd` is the legacy adapter) |
 | Matchup calculation | `element_catalog.gd`, combat calculator/runtime |
 | Boss phase timing and flight | `boss_jump_slam_component.gd` |
 | Regular/boss movement decisions | `slime_brain.gd` |

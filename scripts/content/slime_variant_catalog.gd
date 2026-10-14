@@ -1,124 +1,71 @@
 extends RefCounted
 class_name SlimeVariantCatalog
 
-## Editor-inspectable slime variant registry. The authored data lives in
-## resources/definitions as typed EnemyDefinition resources: the historical
-## catalog sub-resources plus standalone one-file definitions. This class is
-## the narrow runtime lookup API over both forms.
+## Historical API kept for saved scripts and older fixtures. New runtime and
+## authoring code should use EnemyCatalog; both surfaces share one registry.
 
-const DATA := preload("res://resources/definitions/slime_variant_catalog.tres")
-const CATALOG_RESOURCE_PATH := "res://resources/definitions/slime_variant_catalog.tres"
-const SLIME_GEOMETRY_PROFILE: Resource = preload("res://resources/definitions/geometry/slime.tres")
-const SKELETON_GEOMETRY_PROFILE: Resource = preload("res://resources/definitions/geometry/skeleton.tres")
-static var _cache_loaded := false
-static var _definition_cache: Dictionary = {}
-static var _variant_cache: Array[StringName] = []
+const ENEMY_CATALOG_SCRIPT := preload("res://scripts/content/enemy_catalog.gd")
 
-
-static func _ensure_cache() -> void:
-	if _cache_loaded:
-		return
-	for enemy_definition in DATA.authored_definitions():
-		_definition_cache[enemy_definition.variant_id] = enemy_definition
-		_variant_cache.append(enemy_definition.variant_id)
-	_cache_loaded = true
 
 static func definitions() -> Dictionary:
-	_ensure_cache()
-	return _definition_cache
+	return ENEMY_CATALOG_SCRIPT.definitions()
 
 
 static func variants() -> Array[StringName]:
-	_ensure_cache()
-	return _variant_cache
+	return ENEMY_CATALOG_SCRIPT.ids()
 
 
 static func validate() -> Array[String]:
-	return DATA.validate()
+	return ENEMY_CATALOG_SCRIPT.validate()
 
 
 static func variant_ids() -> Array[StringName]:
-	return variants()
+	return ENEMY_CATALOG_SCRIPT.ids()
 
 
 static func is_variant(variant_id: StringName) -> bool:
-	return definitions().has(variant_id)
+	return ENEMY_CATALOG_SCRIPT.contains_id(variant_id)
 
 
 static func invalidate_cache() -> void:
-	_cache_loaded = false
-	_definition_cache.clear()
-	_variant_cache.clear()
+	ENEMY_CATALOG_SCRIPT.invalidate_cache()
 
 
 static func save_definition(enemy_definition: EnemyDefinition) -> Error:
-	if enemy_definition == null:
-		return ERR_INVALID_PARAMETER
-	if enemy_definition.resource_path.is_empty():
-		return ERR_FILE_NOT_FOUND
-	if enemy_definition.resource_path.contains("::"):
-		return ResourceSaver.save(DATA, CATALOG_RESOURCE_PATH)
-	var save_error := ResourceSaver.save(enemy_definition, enemy_definition.resource_path)
-	if save_error != OK:
-		return save_error
-	if not DATA.definitions.has(enemy_definition):
-		DATA.definitions.append(enemy_definition)
-		return ResourceSaver.save(DATA, CATALOG_RESOURCE_PATH)
-	return OK
+	return ENEMY_CATALOG_SCRIPT.save_definition(enemy_definition)
 
 
 static func register_definition(enemy_definition: EnemyDefinition) -> Error:
-	if enemy_definition == null or enemy_definition.resource_path.is_empty():
-		return ERR_INVALID_PARAMETER
-	if DATA.definitions.has(enemy_definition):
-		return OK
-	if definition_resource(enemy_definition.variant_id) != null:
-		return ERR_ALREADY_EXISTS
-	DATA.definitions.append(enemy_definition)
-	var save_error := ResourceSaver.save(DATA, CATALOG_RESOURCE_PATH)
-	if save_error != OK:
-		DATA.definitions.erase(enemy_definition)
-	return save_error
+	return ENEMY_CATALOG_SCRIPT.register_definition(enemy_definition)
 
 
 static func definition_source_path(enemy_definition: EnemyDefinition) -> String:
-	if enemy_definition.resource_path.contains("::"):
-		return CATALOG_RESOURCE_PATH
-	return enemy_definition.resource_path
+	return ENEMY_CATALOG_SCRIPT.definition_source_path(enemy_definition)
 
 
 static func definition_resource(variant_id: StringName) -> EnemyDefinition:
-	var enemy_definition := definitions().get(variant_id) as EnemyDefinition
-	return enemy_definition
+	return ENEMY_CATALOG_SCRIPT.definition_resource(variant_id)
 
 
 static func family_geometry_profile(type_id: StringName) -> Resource:
-	match type_id:
-		&"slime":
-			return SLIME_GEOMETRY_PROFILE
-		&"skeleton":
-			return SKELETON_GEOMETRY_PROFILE
-	return null
+	return ENEMY_CATALOG_SCRIPT.family_geometry_profile(type_id)
 
 
 static func definition(variant_id: StringName) -> Dictionary:
-	var definition_resource_value := definition_resource(variant_id)
-	if definition_resource_value == null:
-		definition_resource_value = definition_resource(&"grey")
-	return definition_resource_value.to_record() if definition_resource_value != null else {}
+	return ENEMY_CATALOG_SCRIPT.record_for_id(variant_id)
 
 
 static func element_for_variant(variant_id: StringName) -> int:
-	return int(definition(variant_id)["element"])
+	return ENEMY_CATALOG_SCRIPT.element_for_id(variant_id)
 
 
 static func display_name_for_variant(variant_id: StringName) -> String:
-	return str(definition(variant_id)["display_name"])
+	return ENEMY_CATALOG_SCRIPT.display_name_for_id(variant_id)
 
 
 static func damage_contract_for_variant(variant_id: StringName) -> StringName:
-	return StringName(str(definition(variant_id).get("damage_contract", "physical")))
+	return ENEMY_CATALOG_SCRIPT.damage_contract_for_id(variant_id)
 
 
 static func is_elemental_variant(variant_id: StringName) -> bool:
-	return damage_contract_for_variant(variant_id) == &"elemental_slime"
+	return ENEMY_CATALOG_SCRIPT.has_elemental_damage_contract(variant_id)

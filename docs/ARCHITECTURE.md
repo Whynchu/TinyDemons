@@ -63,7 +63,9 @@ Encrypted-vault deployment and operational verification are documented in
 - **Enemies**: `enemy_actor`, shared `EnemyBrain` (kept at the historical
   `slime_brain.gd` resource path), family brain behaviors
   (`slime_brain_behavior_component`, `skeleton_brain_behavior_component`),
-  `slime_actor`, `slime_combat_component`, `slime_animation_component`, `slime_visual_component`,
+  `enemy_catalog` (historical `slime_variant_catalog.gd` forwards to it),
+  `enemy_factory`, `slime_actor`, `slime_combat_component`,
+  `slime_animation_component`, `slime_visual_component`,
   `slime_health_presenter`, `slime_ambush_component`,
   `enemy_tactics_component`. The shared Normal and eight-element boss behavior,
   presentation, performance, and verification contract is defined in

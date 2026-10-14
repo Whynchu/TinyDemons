@@ -6,15 +6,15 @@ const PALETTE_LIBRARY_SCRIPT = preload("res://scripts/services/palette_library.g
 const STATUS_EFFECT_DEFINITION_SCRIPT = preload("res://scripts/content/status_effect_definition.gd")
 
 ## Typed, editor-inspectable enemy content contract. Definitions may remain
-## embedded in SlimeVariantCatalogData for compatibility or live in standalone
-## .tres files discovered by the same catalog; runtime assembly reads this
-## typed contract in either case.
+## embedded in the historical SlimeVariantCatalogData resource or live in
+## standalone .tres files discovered by EnemyCatalog; runtime assembly reads
+## this typed contract in either case.
 
 ## `id` is the stable ID for this concrete enemy variant. Keep the serialized
 ## property name for existing resources; use `variant_id` in new code.
 @export var id: StringName = &""
-## The actor family selected by EnemyFactory. Current catalog entries are slime
-## variants, so they all use `slime` here.
+## The actor family selected by EnemyFactory. Slime and Skeleton are currently
+## supported; another ID also needs catalog validation and factory assembly.
 @export var type_id: StringName = &"slime"
 @export var display_name := ""
 @export var element := 0
@@ -24,9 +24,9 @@ const STATUS_EFFECT_DEFINITION_SCRIPT = preload("res://scripts/content/status_ef
 @export var behavior_id: StringName = &""
 @export var base_stats: Dictionary = {}
 @export var growth_weights: Dictionary = {}
-## Palette ID applied to the shared slime frame set. Variant identity and
-## visual palette are independent, so recolor-only variants can share an ID's
-## combat behavior while choosing a separate supported palette.
+## Palette ID used by families whose renderer supports shared recolor sheets.
+## Variant identity and visual palette are independent, so recolor-only Slime
+## variants can share combat behavior while choosing a separate supported palette.
 @export var visual_source := "green"
 ## Encounter metadata belongs to the enemy definition so adding a variant does
 ## not require a RoomController branch or a parallel allowlist.
@@ -38,8 +38,9 @@ const STATUS_EFFECT_DEFINITION_SCRIPT = preload("res://scripts/content/status_ef
 @export var allow_preferred := false
 @export var status_immunities: Array[StringName] = []
 
-## Actor-local combat geometry. EnemyFactory applies the same data to editor
-## previews and live pooled actors so tuning here changes both consumers.
+## Legacy serialized geometry projection retained for resource round-trips.
+## Runtime and preview geometry comes from the family profile selected by
+## EnemyFactory; these per-definition fields do not override it.
 @export_group("Geometry")
 @export var collision_guide_rect := Rect2(Vector2(3.5, 7.5), Vector2(9.0, 4.0))
 @export var collision_polygon := PackedVector2Array([
@@ -65,7 +66,7 @@ static func from_variant(requested_variant_id: StringName) -> EnemyDefinition:
 	# Use a runtime load here instead of a compile-time preload. The catalog
 	# itself owns the authored .tres resource, so preloading it from this script
 	# creates a cold-start cycle when the definition validator scans resources.
-	var catalog = load("res://scripts/content/slime_variant_catalog.gd")
+	var catalog = load("res://scripts/content/enemy_catalog.gd")
 	var definition := catalog.definition_resource(requested_variant_id) as EnemyDefinition
 	if definition != null:
 		return definition

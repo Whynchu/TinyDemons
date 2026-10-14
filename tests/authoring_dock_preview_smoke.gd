@@ -3,7 +3,7 @@ extends SceneTree
 ## Headless contract for the enemy actions and selector exposed by the dock.
 
 const AuthoringDockScript := preload("res://addons/tiny_demons_authoring/authoring_dock.gd")
-const SlimeVariantCatalogScript := preload("res://scripts/content/slime_variant_catalog.gd")
+const EnemyCatalogScript := preload("res://scripts/content/enemy_catalog.gd")
 
 var _design_id: StringName = &""
 var _interactive_id: StringName = &""
@@ -30,13 +30,13 @@ func _run() -> void:
 		for index in picker.item_count:
 			var value: Variant = picker.get_item_metadata(index)
 			actual_ids.append(value as StringName if value is StringName else StringName(str(value)))
-		var expected_ids := SlimeVariantCatalogScript.variants()
+		var expected_ids := EnemyCatalogScript.ids()
 		var all_ids_present := actual_ids.size() == expected_ids.size()
 		for expected_variant_id in expected_ids:
 			all_ids_present = all_ids_present and expected_variant_id in actual_ids
 		_expect(all_ids_present, "dock selector preserves the full registered enemy ID set", failures)
 		var expected_id: StringName = &""
-		if SlimeVariantCatalogScript.is_variant(&"guard_slime"):
+		if EnemyCatalogScript.contains_id(&"guard_slime"):
 			expected_id = &"guard_slime"
 		elif not actual_ids.is_empty():
 			expected_id = actual_ids[0]

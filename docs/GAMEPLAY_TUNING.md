@@ -249,8 +249,9 @@ Until that plan's final tuning phase is complete, live boss constants and
 temporary multipliers should not be treated as the approved feel targets.
 
 The stateless catalogs are the source of truth for enemy identity and typed
-damage. `scripts/slime_variant_catalog.gd` owns the visual variant, display
-name, element, level-one base stats, and growth weights. `StatsComponent`
+damage. `scripts/content/enemy_catalog.gd` owns enemy identity and definition
+lookup; `scripts/content/slime_variant_catalog.gd` is a legacy adapter.
+`StatsComponent`
 replays its existing deterministic growth rolls with the variant token folded
 into the seed.
 

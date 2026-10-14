@@ -2,7 +2,7 @@ extends Node
 class_name RoomController
 
 const ASPECT_CATALOG_SCRIPT = preload("res://scripts/content/aspect_catalog.gd")
-const SLIME_VARIANT_CATALOG_SCRIPT = preload("res://scripts/content/slime_variant_catalog.gd")
+const ENEMY_CATALOG_SCRIPT = preload("res://scripts/content/enemy_catalog.gd")
 const DEBUG_BOSS_STRESS_BUILDER = preload("res://scripts/content/debug_boss_stress_encounter_builder.gd")
 const ENCOUNTER_SCALING = preload("res://scripts/content/enemy_encounter_scaling.gd")
 const ROOM_TRANSITION_RESULT_SCRIPT = preload("res://scripts/runtime/contexts/room_transition_result.gd")
@@ -235,7 +235,7 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 		if primary_variant != "grey":
 			variant_pool.append({"variant": primary_variant, "weight": _preferred_variant_weight(primary_variant)})
 		for elemental_variant in EnemyFactory.variants_for_type(&"slime"):
-			var elemental_definition := SLIME_VARIANT_CATALOG_SCRIPT.definition_resource(elemental_variant)
+			var elemental_definition := ENEMY_CATALOG_SCRIPT.definition_resource(elemental_variant)
 			if elemental_definition.encounter_role != &"matchup" or elemental_definition.matchup_weight <= 0.0 or elemental_variant == StringName(primary_variant):
 				continue
 			variant_pool.append({"variant": String(elemental_variant), "weight": elemental_definition.matchup_weight})
@@ -247,7 +247,7 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 		count = mini(count + 2, count_cap)
 	variant_pool.append_array(definition.late_pool_entries(progression_run_number))
 	var skeleton_variant_pool: Array[Dictionary] = []
-	var force_debug_enemy := not debug_enemy_variant.is_empty() and EnemyFactory.is_variant(debug_enemy_variant)
+	var force_debug_enemy := not debug_enemy_variant.is_empty() and ENEMY_CATALOG_SCRIPT.contains_id(debug_enemy_variant)
 	if progression_run_number >= SKELETON_FIRST_RUN_NUMBER:
 		skeleton_variant_pool = EnemyFactory.weighted_variants_for_type(&"skeleton")
 	if allow_shadow and progression_run_rank >= definition.shadow_min_rank and not definition.is_shadow_bound():
@@ -324,19 +324,19 @@ func _variant_pool_has(pool: Array[Dictionary], variant: String) -> bool:
 
 func _preferred_variant_or_grey(candidate: String) -> String:
 	var candidate_id := StringName(candidate)
-	if not SLIME_VARIANT_CATALOG_SCRIPT.is_variant(candidate_id):
+	if not ENEMY_CATALOG_SCRIPT.contains_id(candidate_id):
 		return "grey"
-	var definition := SLIME_VARIANT_CATALOG_SCRIPT.definition_resource(candidate_id)
+	var definition := ENEMY_CATALOG_SCRIPT.definition_resource(candidate_id)
 	return candidate if definition != null and EnemyFactory.variant_is_type(candidate_id, &"slime") and definition.allow_preferred and definition.preferred_weight > 0.0 else "grey"
 
 
 func _preferred_variant_weight(variant: String) -> float:
-	var definition := SLIME_VARIANT_CATALOG_SCRIPT.definition_resource(StringName(variant))
+	var definition := ENEMY_CATALOG_SCRIPT.definition_resource(StringName(variant))
 	return definition.preferred_weight if definition != null and definition.preferred_weight > 0.0 else 0.75
 
 func _generate_boss_encounter(generation_seed: int, room_depth: int) -> Dictionary:
 	var boss_level := ENCOUNTER_SCALING.base_level(progression_run_rank)
-	if not debug_enemy_variant.is_empty() and EnemyFactory.is_variant(debug_enemy_variant):
+	if not debug_enemy_variant.is_empty() and ENEMY_CATALOG_SCRIPT.contains_id(debug_enemy_variant):
 		return EnemyFactory.single_variant_encounter(debug_enemy_variant, mini(boss_level, ENCOUNTER_SCALING.level_cap(progression_run_rank)))
 	if debug_boss_stress_encounter:
 		return _generate_debug_boss_stress_encounter(generation_seed, boss_level)

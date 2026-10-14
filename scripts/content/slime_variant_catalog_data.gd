@@ -2,9 +2,9 @@
 extends Resource
 class_name SlimeVariantCatalogData
 
-## Editor-inspectable enemy definitions. The generated content manifest keeps
-## standalone definition resources reachable in exported PCKs and supplies the
-## same authored set to runtime and editor lookup.
+## Historical serialized class name for the mixed-family enemy definition
+## resource. The generated manifest keeps standalone definitions reachable in
+## exports and supplies the same authored set to EnemyCatalog and the editor.
 
 @export var definitions: Array[Resource] = []
 
@@ -28,10 +28,10 @@ func validate() -> Array[String]:
 	var problems: Array[String] = []
 	var candidates := _definition_candidates()
 	if candidates.is_empty():
-		problems.append("slime variant definitions are empty")
+		problems.append("enemy definitions are empty")
 	for entry in definitions:
 		if entry as EnemyDefinition == null:
-			problems.append("slime variant catalog contains a non-EnemyDefinition entry")
+			problems.append("enemy catalog contains a non-EnemyDefinition entry")
 	var seen_sources_by_id: Dictionary = {}
 	for candidate in candidates:
 		var definition := candidate["definition"] as EnemyDefinition

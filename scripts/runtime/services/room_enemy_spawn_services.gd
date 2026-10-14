@@ -1,7 +1,6 @@
 extends RefCounted
 class_name RoomEnemySpawnServices
 
-const SLIME_VARIANT_CATALOG_SCRIPT = preload("res://scripts/content/slime_variant_catalog.gd")
 
 ## Explicit services used by room enemy spawn/respawn workflows.
 ##

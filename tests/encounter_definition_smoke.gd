@@ -1,6 +1,6 @@
 extends SceneTree
 
-const CatalogScript = preload("res://scripts/content/slime_variant_catalog.gd")
+const CatalogScript = preload("res://scripts/content/enemy_catalog.gd")
 const EnemyFactoryScript = preload("res://scripts/content/enemy_factory.gd")
 const CombatRuntimeControllerScript = preload("res://scripts/runtime/controllers/combat_runtime_controller.gd")
 const EnemySpawnServicesScript = preload("res://scripts/runtime/services/room_enemy_spawn_services.gd")
@@ -35,7 +35,7 @@ func _initialize() -> void:
 	_expect(late_run_1.is_empty(), "no late elemental families below run five", failures)
 	var late_run_5 := definition.late_pool_entries(5)
 	var authored_late_count := 0
-	for variant in CatalogScript.variants():
+	for variant in CatalogScript.ids():
 		var authored_definition := CatalogScript.definition_resource(variant)
 		if authored_definition != null and authored_definition.encounter_role == &"late" and authored_definition.encounter_min_run_number <= 5 and authored_definition.encounter_weight > 0.0:
 			authored_late_count += 1

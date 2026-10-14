@@ -4,7 +4,7 @@ class_name CombatRuntimeController
 const SKELETON_KNOCKBACK_MULTIPLIER := 1.2
 
 const ProgressionControllerScript = preload("res://scripts/runtime/controllers/progression_controller.gd")
-const SlimeVariantCatalogScript = preload("res://scripts/content/slime_variant_catalog.gd")
+const EnemyCatalogScript = preload("res://scripts/content/enemy_catalog.gd")
 const ElementCatalogScript = preload("res://scripts/content/element_catalog.gd")
 const CombatDamageRequestScript = preload("res://scripts/content/combat_damage_request.gd")
 const ActorStatusRuntimeControllerScript = preload("res://scripts/runtime/controllers/actor_status_runtime_controller.gd")
@@ -583,7 +583,7 @@ func slime_attack_damage_result(root: Object, slime: Sprite2D) -> CombatCalculat
 	var element := slime_element(slime)
 	var variant := StringName(str(slime.get("variant")))
 	var request: RefCounted
-	if element != ElementCatalogScript.Element.NEUTRAL and SlimeVariantCatalogScript.is_elemental_variant(variant):
+	if element != ElementCatalogScript.Element.NEUTRAL and EnemyCatalogScript.has_elemental_damage_contract(variant):
 		var player_defense_element := ElementCatalogScript.Element.NEUTRAL
 		if root.has_method("_current_player_element"):
 			player_defense_element = ElementCatalogScript.normalize(int(root.call("_current_player_element"))) as ElementCatalogScript.Element

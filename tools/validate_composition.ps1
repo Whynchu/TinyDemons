@@ -194,7 +194,7 @@ function Get-EditorComposition([string]$ScriptsDir, [string]$ProjectRoot) {
 	$definitionScripts = @(
 		"item_catalog.gd",
 		"element_catalog.gd",
-		"slime_variant_catalog.gd",
+		"enemy_catalog.gd",
 		"palette_library.gd",
 		"encounter_definition.gd",
 		"room_definition.gd",

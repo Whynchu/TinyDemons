@@ -11,7 +11,7 @@ const ROOM_DEFINITION_SCRIPT = preload("res://scripts/content/room_definition.gd
 const GENERATION_POLICY_SCRIPT = preload("res://scripts/algorithms/dungeon_generation_policy.gd")
 const REWARD_DEFINITION_SCRIPT = preload("res://scripts/content/reward_definition.gd")
 const ITEM_CATALOG_SCRIPT = preload("res://scripts/content/item_catalog.gd")
-const SLIME_VARIANT_CATALOG_SCRIPT = preload("res://scripts/content/slime_variant_catalog.gd")
+const ENEMY_CATALOG_SCRIPT = preload("res://scripts/content/enemy_catalog.gd")
 
 var _failures: Array[String] = []
 
@@ -22,7 +22,7 @@ func _initialize() -> void:
 func _run() -> void:
 	print("=== TINY DEMONS DEFINITION CATALOG REPORT ===")
 	_report_items()
-	_report_slime_variants()
+	_report_enemies()
 	_report_encounter_definition()
 	_report_room_definition()
 	_report_generation_policy()
@@ -54,12 +54,12 @@ func _report_items() -> void:
 	print("  ids: %s" % ", ".join(ids.map(func(id): return String(id))))
 
 
-func _report_slime_variants() -> void:
+func _report_enemies() -> void:
 	var ids: Array[String] = []
-	for variant in SLIME_VARIANT_CATALOG_SCRIPT.variants():
-		ids.append(String(variant))
+	for enemy_id in ENEMY_CATALOG_SCRIPT.ids():
+		ids.append(String(enemy_id))
 	ids.sort()
-	print("slime_variant_catalog: %d variants" % ids.size())
+	print("enemy_catalog: %d definitions" % ids.size())
 	print("  ids: %s" % ", ".join(ids))
 
 

@@ -50,7 +50,7 @@ func _preview_session_errors(session: RefCounted) -> Array[String]:
 	if String(loadout.get("preset", "")) != "starter":
 		errors.append("Enemy preview mode requires the starter loadout preset.")
 	var content_id := session.get("content_id") as StringName
-	if not EnemyFactory.is_variant(content_id):
+	if not EnemyCatalog.contains_id(content_id):
 		errors.append("Unknown enemy content ID '%s'." % content_id)
 	return errors
 

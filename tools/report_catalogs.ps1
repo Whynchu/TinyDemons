@@ -30,6 +30,6 @@ if ($LASTEXITCODE -ne 0) {
 & $GodotBin --headless --audio-driver Dummy --user-data-dir $userDataDir --path $ProjectRoot --log-file $logFile -s "res://tools/report_catalogs.gd"
 $exitCode = $LASTEXITCODE
 if (Test-Path $logFile) {
-    Get-Content $logFile | Select-String "===|item_catalog|slime_variant_catalog|encounter_definition|room_definition|dungeon_generation_policy|dungeon_layout_run|puzzle_map|LOAD_FAILED|ERROR" | ForEach-Object { Write-Host $_.Line.Trim() }
+    Get-Content $logFile | Select-String "===|item_catalog|enemy_catalog|slime_variant_catalog|encounter_definition|room_definition|dungeon_generation_policy|dungeon_layout_run|puzzle_map|LOAD_FAILED|ERROR" | ForEach-Object { Write-Host $_.Line.Trim() }
 }
 exit $exitCode

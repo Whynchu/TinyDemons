@@ -6,7 +6,8 @@ extends SceneTree
 ## and its factory output is genuinely distinct from the migrated variant.
 
 const ElementCatalogScript = preload("res://scripts/content/element_catalog.gd")
-const CatalogScript = preload("res://scripts/content/slime_variant_catalog.gd")
+const CatalogScript = preload("res://scripts/content/enemy_catalog.gd")
+const LegacyCatalogScript = preload("res://scripts/content/slime_variant_catalog.gd")
 const PREVIEW_SCENE := preload("res://scenes/authoring/previews/enemy_preview_workbench.tscn")
 
 var _finished := false
@@ -23,7 +24,10 @@ func _initialize() -> void:
 
 	var crimson_definition := EnemyFactory.definition(&"crimson")
 	_expect(crimson_definition != null and crimson_definition.id == &"crimson", "crimson resolves to a typed EnemyDefinition", failures)
-	_expect(EnemyFactory.is_variant(&"crimson"), "crimson is registered in the variant catalog", failures)
+	_expect(CatalogScript.contains_id(&"crimson"), "crimson is registered in the enemy catalog", failures)
+	_expect(EnemyFactory.is_variant(&"crimson"), "factory compatibility lookup resolves the registered ID", failures)
+	_expect(LegacyCatalogScript.is_variant(&"crimson"), "legacy catalog adapter resolves the same registered ID", failures)
+	_expect(LegacyCatalogScript.definition_resource(&"crimson") == CatalogScript.definition_resource(&"crimson"), "legacy catalog adapter shares the canonical definition resource", failures)
 	_expect(crimson_definition.element == ElementCatalogScript.Element.FIRE, "crimson is a Fire-aspect variant", failures)
 	_expect(crimson_definition.damage_contract == &"elemental_slime", "crimson uses the elemental slime damage contract", failures)
 	_expect(crimson_definition.visual_source == "red", "crimson reuses the fire artwork sheet via its definition", failures)
@@ -51,7 +55,7 @@ func _initialize() -> void:
 	# The preview contract iterates the registry rather than naming a fixed set.
 	# A new standalone definition therefore gains preview coverage without a
 	# test edit of its own.
-	for variant: StringName in CatalogScript.variants():
+	for variant: StringName in CatalogScript.ids():
 		var preview := PREVIEW_SCENE.instantiate()
 		preview.set("enemy_id", variant)
 		root.add_child(preview)

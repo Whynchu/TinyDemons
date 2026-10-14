@@ -7,7 +7,7 @@
 [ext_resource type="Resource" uid="uid://dp7qwt6ubqrrm" path="res://resources/tuning/status_shocked.tres" id="5"]
 [ext_resource type="Resource" path="res://resources/tuning/status_wet.tres" id="6"]
 [ext_resource type="Resource" path="res://resources/tuning/status_freeze.tres" id="7"]
-[ext_resource type="Script" uid="uid://dp1awiv5kxpmh" path="res://scripts/content/status_mixture_definition.gd" id="8"]
+[ext_resource type="Script" uid="uid://watericemixturedefinition20261004" path="res://scripts/content/status_mixture_definition.gd" id="8"]
 
 [sub_resource type="Resource" id="StatusMixtureDefinition_water_ice"]
 script = ExtResource("8")

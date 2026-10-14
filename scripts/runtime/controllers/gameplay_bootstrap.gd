@@ -6,6 +6,7 @@ const SOUL_PICKUP_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers
 const GOLD_PICKUP_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/gold_pickup_controller.gd")
 const FEEDBACK_ANIMATION_REGISTRY_SCRIPT = preload("res://scripts/services/feedback_animation_registry.gd")
 const PLAYER_ASPECT_ABILITY_COMPONENT_SCRIPT = preload("res://scripts/components/player_aspect_ability_component.gd")
+const ENEMY_CATALOG_SCRIPT = preload("res://scripts/content/enemy_catalog.gd")
 const PROFILE_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/profile_runtime_controller.gd")
 const PICKUP_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/pickup_runtime_controller.gd")
 const RUN_FLOW_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/run_flow_controller.gd")
@@ -431,7 +432,7 @@ func _preview_session_errors(session: RefCounted) -> Array[String]:
 	if String(loadout.get("preset", "")) != "starter":
 		errors.append("Enemy preview mode requires the starter loadout preset.")
 	var content_id := session.get("content_id") as StringName
-	if not EnemyFactory.is_variant(content_id):
+	if not ENEMY_CATALOG_SCRIPT.contains_id(content_id):
 		errors.append("Unknown enemy content ID '%s'." % content_id)
 	return errors
 

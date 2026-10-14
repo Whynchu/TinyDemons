@@ -263,12 +263,17 @@ behavior until that isolated workbench lands in the authoring plan.
 
 Current owners:
 
-- actor behavior and lifecycle: `slime_actor.gd`;
-- decision-making: `slime_brain.gd`;
+- shared actor identity and lifecycle: `enemy_actor.gd`;
+- family actor hooks: `slime_actor.gd` and `skeleton_actor.gd`;
+- shared decision state: `EnemyBrain` (historical resource path:
+  `slime_brain.gd`);
+- family brain behavior: `slime_brain_behavior_component.gd` and
+  `skeleton_brain_behavior_component.gd`;
 - combat and attack timing: `slime_combat_component.gd`;
 - spawn placement: `slime_spawn_component.gd` and room encounter ownership;
-- visual variant mapping: `slime_variant_catalog.gd` and
-  `slime_visual_component.gd`; and
+- enemy definition registry: `enemy_catalog.gd` (the historical
+  `slime_variant_catalog.gd` path is a forwarding adapter); visual palette
+  application remains in `slime_visual_component.gd`; and
 - balance values: `slime_tuning.gd` and combat tuning.
 
 Workflow (current, typed enemy-definition path):
@@ -293,12 +298,12 @@ Workflow (current, typed enemy-definition path):
    generation: `encounter_role` (`baseline`, `matchup`, `late`, `shadow`, or `support`),
    `encounter_weight`, `encounter_min_run_number`, and any preferred/matchup weight.
    `EncounterDefinition` and `RoomController` consume these fields at runtime.
-4. Do not add a `VARIANTS` entry, a `RoomController` constant, a scene-authored
-   roster slot, or a count-table expectation. The registry discovers the typed
-   entry with `ResourceLoader.list_directory`, `EnemyFactory` materializes it,
-   and the runtime pool configures the selected slot from the definition. The
-   shared catalog validator checks distinct embedded and standalone sources for
-   duplicate stable IDs and reports both paths before export.
+4. Do not add a second ID list, a `RoomController` constant, a scene-authored
+   roster slot, or a count-table expectation. `EnemyCatalog` combines embedded
+   definitions from the historical `slime_variant_catalog.tres` with
+   standalone paths from the generated enemy manifest. `EnemyFactory`
+   materializes the selected definition, and the shared validator reports
+   duplicate stable IDs with both source paths before export.
 5. If the variant introduces a genuinely new palette or behavior, extend that
    narrow owner and add a focused golden assertion. Reusing an existing
    `visual_source` is data-only; invalid palette IDs fail enemy-definition
@@ -383,9 +388,13 @@ polygon arrays:
 The separate `Add Enemy Family` section marks the family boundary. The
 workbench can create variants for a registered family; a new runtime family
 still needs a family definition and a supported actor route in `EnemyFactory`
-before it can be previewed or spawned. Skeleton is the current second family
-proof. The family workflow remains: create the family (stable ID, display name,
-actor route), create its first variant from that family, and add sibling
+before it can be previewed or spawned. `EnemyFactory` selects the actor family
+from `type_id`; the selected actor's component hook installs its family brain
+behavior, including for scene-authored actors. Share a
+`slime_*` component when its contract is family-neutral; keep behavior that
+defines a family's role in that family's component. Skeleton is the current
+second family proof. The family workflow remains: create the family (stable ID,
+display name, actor route), create its first variant from that family, and add sibling
 variants as needed.
 
 Edits appear in the preview as you make them. The workbench marks unsaved edits
@@ -406,7 +415,8 @@ Godot's regular undo history. Geometry edits resolve to the family profile:
 `resources/definitions/geometry/slime.tres` for Slime and
 `resources/definitions/geometry/skeleton.tres` for Skeleton. `EnemyFactory`
 applies that same authored family geometry to every variant's preview and
-runtime actor.
+runtime actor. `EnemyDefinition` still serializes per-variant geometry fields
+for resource round-trips, but runtime and preview assembly do not consume them.
 
 `healer_slime` is the first `support` encounter-role variant. Its
 `behavior_id = support_caster` composes ally healing onto the normal Slime

@@ -8,7 +8,7 @@ class_name EncounterDefinition
 ## is immutable and reusable across rooms and runs.
 
 const DEFAULT_DATA_PATH := "res://resources/definitions/encounter_definition.tres"
-const SLIME_VARIANT_CATALOG_SCRIPT = preload("res://scripts/content/slime_variant_catalog.gd")
+const ENEMY_CATALOG_SCRIPT = preload("res://scripts/content/enemy_catalog.gd")
 const SAVED_ROOM_SUPPORT_ROLL_SALT := 0x48534C4D
 
 
@@ -220,7 +220,7 @@ static func constrain_roster_to_theme(variants: Array[String], theme: Array[int]
 	var errors: Array[String] = []
 	for slot in constrained.size():
 		var old_id := StringName(constrained[slot])
-		if not EnemyFactory.is_variant(old_id):
+		if not ENEMY_CATALOG_SCRIPT.contains_id(old_id):
 			errors.append("unknown enemy variant '%s' at slot %d" % [String(old_id), slot])
 			continue
 		var old_definition := EnemyFactory.definition(old_id)
@@ -307,7 +307,7 @@ static func constrain_generated_roster(
 static func select_boss_variant(candidate: StringName, theme: Array[int], run_number: int, run_seed: int, rng: RandomNumberGenerator) -> Dictionary:
 	if run_number <= 1 and candidate == &"purple":
 		candidate = &"grey"
-	var definition := SLIME_VARIANT_CATALOG_SCRIPT.definition_resource(candidate)
+	var definition := ENEMY_CATALOG_SCRIPT.definition_resource(candidate)
 	var has_explicit_variant := definition != null and definition.type_id == &"slime"
 	if has_explicit_variant:
 		if definition.element != ElementCatalog.Element.NEUTRAL and not theme.has(definition.element):
@@ -366,7 +366,7 @@ static func validate_roster_theme(variants: Array, theme: Array[int], _run_numbe
 	var non_normal_elements: Dictionary = {}
 	for value in variants:
 		var variant_id := StringName(str(value))
-		if not EnemyFactory.is_variant(variant_id):
+		if not ENEMY_CATALOG_SCRIPT.contains_id(variant_id):
 			problems.append("unknown roster variant '%s'" % String(variant_id))
 			continue
 		var definition := EnemyFactory.definition(variant_id)
@@ -390,7 +390,7 @@ static func validate_run_rosters(room_states: Dictionary, theme: Array[int]) -> 
 			problems.append("room '%s': %s" % [str(room_id), problem])
 		for value in variants:
 			var variant_id := StringName(str(value))
-			if EnemyFactory.is_variant(variant_id):
+			if ENEMY_CATALOG_SCRIPT.contains_id(variant_id):
 				var element := EnemyFactory.definition(variant_id).element
 				if element != ElementCatalog.Element.NEUTRAL:
 					run_elements[element] = true
@@ -406,7 +406,7 @@ static func legacy_theme_for_rosters(room_states: Dictionary, run_seed: int, run
 			continue
 		for value in (state_value as Dictionary).get("enemy_variants", []) as Array:
 			var variant_id := StringName(str(value))
-			if not EnemyFactory.is_variant(variant_id):
+			if not ENEMY_CATALOG_SCRIPT.contains_id(variant_id):
 				continue
 			var element := EnemyFactory.definition(variant_id).element
 			if element != ElementCatalog.Element.NEUTRAL:
@@ -461,8 +461,8 @@ static func migrate_cached_rosters(room_states: Dictionary, theme: Array[int], r
 ## Late-run weighted entries that enter once the run rank passes their gate.
 func late_pool_entries(run_number: int) -> Array[Dictionary]:
 	var entries: Array[Dictionary] = []
-	for variant in SLIME_VARIANT_CATALOG_SCRIPT.variants():
-		var definition := SLIME_VARIANT_CATALOG_SCRIPT.definition_resource(variant)
+	for variant in ENEMY_CATALOG_SCRIPT.ids():
+		var definition := ENEMY_CATALOG_SCRIPT.definition_resource(variant)
 		if definition == null or definition.encounter_role != &"late":
 			continue
 		if run_number >= definition.encounter_min_run_number and definition.encounter_weight > 0.0:

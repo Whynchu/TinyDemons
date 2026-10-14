@@ -1,6 +1,6 @@
 # Composition and repository cleanup — review proposal
 
-Status: proposed; awaiting owner review. No implementation or deletion approved.
+Status: P3 was accepted on 2026-10-14. P1/P2 implementation remains in place; current-source smoke acceptance, rebuilt-Web runtime proof, and the curated gate remain open. P4 catalog migration is in progress. Performance acceptance is deferred from the current owner priority sequence. No deletion is approved.
 
 Scope: whole-repository composition, generic ownership, deprecated code, file
 organization, asset and SFX lifecycle; staged implementation after prerequisite proof
@@ -122,11 +122,11 @@ existing authority records the issue and needs current consumer confirmation;
 | E2 confirmed | `SlimeActor.ensure_components` attaches Brain, Combat, Animation, Visual, Spawn, HealthPresenter and BossJumpSlam (`scripts/actors/slime_actor.gd:69–84`). | Shared required capabilities plus optional family/behavior recipes. | Component lifecycle/reset ownership. |
 | E3 confirmed | Slime runtime owns targetability, movement, separation, status transmission and skeleton projectiles (`scripts/runtime/controllers/slime_runtime_controller.gd:161,251,355,636,741,869,1089`). | Shared enemy lifecycle coordinator; family locomotion and attack executors. | E1, stable services, performance baseline. |
 | E4 confirmed | Targeting reads `root.slimes`; bootstrap mirrors factory actors into several arrays; collision tests `actor is SlimeActor` (`targeting_runtime_controller.gd:24,30,60`, `gameplay_bootstrap.gd:270–275,613–641`, `actor_collision_system.gd:39`). | Ordered enemy roster and common `enemies` membership. | Save slot/order contract and cleanup policy. |
-| E5 confirmed | Brain discovers gameplay through parents and consumes world/collision services (`scripts/components/slime_brain.gd:193–208,252,271–278`); combat reads metadata and mixed tuning (`slime_combat_component.gd:100–128`). | Inject narrow movement, perception, neighbor and attack contexts. | Typed interfaces with real callers; no global-root context wrapper. |
+| E5 confirmed | `EnemyBrain.aggro_target()` still receives the gameplay root while steering consumes `EnemySteeringWorld`; combat reads metadata and mixed tuning (`scripts/components/slime_brain.gd`, `slime_combat_component.gd:100–128`). | Inject narrow movement, perception, neighbor and attack contexts. | Typed interfaces with real callers; no global-root context wrapper. |
 | E6 confirmed | `SlimeTuning` spans movement, shared spawn/aggro, boss, support and health presentation (`scripts/content/slime_tuning.gd:4–84`); player HUD reads its drain speed (`gameplay_frame_controller.gd:584`). | Shared enemy defaults, family/behavior tuning and HUD presentation tuning. | Field-to-consumer/default ledger; preserve balance. |
 | E7 confirmed | Room persistence uses stable variant IDs and slot-keyed runtime state (`scripts/runtime/controllers/room_controller.gd:1331–1363`). | Preserve serialized IDs, slots, alive/position/health/chroma restore. | Actual file-based restore characterization, not only in-memory roundtrip. |
-| E8 confirmed | Mixed-family catalog is `SlimeVariantCatalog` (`scripts/content/slime_variant_catalog.gd:95–100`). | `EnemyCatalog` public ownership with temporary compatibility adapters. | Factory/roster migration; all script/resource/editor consumers enumerated. |
-| D1 confirmed | Component guide calls `SlimeBrain` blind while source performs root discovery; architecture recommends slime component reuse for new families. | Correct current-state documentation alongside each migration. | Keep approved target contract distinct from actual implementation. |
+| E8 confirmed | The mixed-family definition set is now served by `EnemyCatalog`; `SlimeVariantCatalog` and `SlimeVariantCatalogData` remain at their historical script/class/resource paths. | `EnemyCatalog` owns the public API; preserve the old script as a temporary forwarding adapter. | Runtime, editor, report, and ordinary smoke callers migrated; one compatibility test remains. Finish consumed-field authority and M1 lifecycle evidence. |
+| D1 confirmed | Component guide described `SlimeBrain` as blind while source still performed root discovery; architecture recommended slime component reuse for new families. The shared brain now consumes factory-wired family behavior for preferred attack distance. | Correct current-state documentation alongside each migration. | Keep approved target contract distinct from actual implementation. |
 | R1 documented | Generator policy fields and item `visual_id` have no authoritative consumer according to `CONTENT_AUTHORING.md` trap table. Item catalog still writes `visual_id` (`scripts/content/item_catalog.gd:246,307–308`). | Complete consumption or deliberately retire schema fields through authoring Slices 2–3. | Refresh source consumer proof; previews and exports agree. |
 | R2 confirmed | Item catalog has retained IDs/tombstones and PlayerProfile compatibility aliases (`scripts/content/item_catalog.gd:49–65`, `scripts/runtime/state/player_profile.gd:7,60,72`). | Separate compatibility from current runtime API. | Supported save versions and migration tests; tombstones are not dead code. |
 | A1 confirmed | Sound paths are concatenated; `preferred_audio_path` selects an existing `.ogg` sibling (`scripts/content/sound_clip_catalog.gd:7–13,75–83`). | Asset/audio usage resolver that understands derived paths. | Resolve fallback behavior before deduplication. |
@@ -162,6 +162,10 @@ ordered roster → scheduled runtime services.
 - `EnemyActor`: identity, shared health/status references, spawn/death lifecycle,
   reset contract and typed capability references. No slime attack, skeleton
   projectile, boss scale heuristics or player/HUD tuning.
+- `EnemyBrain`: shared decision host with a typed family behavior component;
+  the Slime and Skeleton components currently own their preferred attack
+  distance and approach response. Move additional family decisions only when
+  their call paths can be characterized independently.
 - `SlimeActor` and `SkeletonActor`: siblings; family visuals and assembly hooks.
   Prefer injected strategies/components when inheritance would add behavior.
 - Required capabilities: health, geometry, presentation and lifecycle as needed
@@ -201,21 +205,20 @@ documentation work, but it blocks claiming risky affected-runtime work accepted.
 | Phase | Depends on | Deliverable and acceptance bar |
 | --- | --- | --- |
 | P0 — complete whole-map disposition | This proposal and the tracked source snapshot | **Complete 2026-10-12.** The [P0 review](composition-p0-review.md) and [full inventory](composition-p0-disposition.json) cover all 727 communities and 2,110 unmatched paths, with owner, evidence, confidence, risk, dependency and next action. No deletion is approved; graph edges and missing text references are not proof of runtime use or non-use. |
-| P1 — establish migration floor | Owner review of this proposal and relevant P0 findings | Record current mixed-family behavior, actual room/profile restore, preview lifecycle, exported manifest/PCK load and UID status. Characterize slime → skeleton → slime replacement within one slot: HUD/health bindings, stale targets, caches, position and slot identity. Confirm current test failures and live editor availability. Reproduce mixed-enemy performance baseline under its existing plan. |
-| P2 — generic enemy identity and roster | P1 mixed-family/save proof | Introduce EnemyActor sibling contract; coordinate factory, room services, collision/targeting and preview migration through small compatible packages. Add common group lifecycle, including in-slot family replacement; preserve stable IDs/slots/scheduler and balanced stats. Compatibility adapter shares one roster. |
-| P3 — reusable enemy behaviors | P2 generic actor and roster boundary | **Accepted 2026-10-14.** The user confirms Slime and Skeleton behavior works as intended and accepts the shared EnemyBrain architecture. Steering uses an injected world context; family range rules live in typed Slime/Skeleton behavior components. Focused smoke rows remain unverified, not blockers for this acceptance. See the [steering injection](composition-p3-steering-injection.md) and [family behavior](composition-p3-family-brain-behavior.md) notes. |
-| P4 — catalog and content authority | P2; authoring M1 lifecycle evidence | Migrate mixed-family registry API; finish consumed enemy field authority. Coordinate item/element/room work under authoring Slices 2–3. No new parallel registries. Preserve old resource paths until references migrate. |
+| P1 - migration floor | Owner review and relevant P0 findings | **Implementation present; acceptance partial.** Functional family replacement, recovery, and preview evidence is in [P1 characterization](composition-p1-characterization.md). Current-source focused smoke reruns, rebuilt-Web content/runtime proof, and the curated 45-path gate remain open. Performance acceptance is owner-deferred and recorded separately; it does not block the current catalog slice. |
+| P2 - generic enemy identity and roster | P1 mixed-family/save proof | **Implementation present.** The user reports Slime and Skeleton behavior works; P3 was accepted on 2026-10-14. Prior swap, recovery, and preview evidence is in [P1 characterization](composition-p1-characterization.md). Current-source focused reruns and the curated gate remain open. |
+| P3 — reusable enemy behaviors | P2 generic actor and roster boundary | **Accepted 2026-10-14.** The user confirms Slime and Skeleton behavior works as intended and accepts the shared `EnemyBrain` architecture. Steering uses an injected world context; family range rules live in typed Slime/Skeleton behavior components. Focused smoke rows remain unverified, not blockers for this acceptance. See the [steering injection](composition-p3-steering-injection.md) and [family behavior](composition-p3-family-brain-behavior.md) notes. |
+| P4 - catalog and content authority | P2; authoring M1 lifecycle evidence | **In progress.** `EnemyCatalog` owns the mixed-family lookup/save API; the historical `SlimeVariantCatalog` script forwards to it and the saved resource identity/path stays intact. Runtime, editor, report, and ordinary smoke callers use the generic API; one focused test covers adapter parity. Per-definition geometry remains serialized and validated, while family profiles are runtime authority. M1 add/move/delete lifecycle evidence and remaining field-authority decisions stay open. |
 | P5 — cross-system ownership | Relevant P1/P4 contract evidence | Follow domain queue: one state boundary, complete screen or shared mechanism per slice. Keep C4 deferred until current UI acceptance; retain feature-specific specializations. Demonstrate cheaper second consumer and no performance regression. |
 | P6 — retirement and file organization | Replacement accepted for each candidate | Remove obsolete adapters/fields/tests/files in small commits. Asset/SFX dispositions need the evidence below. Godot-aware moves preserve UIDs; regenerate manifests/indexes and repair docs. |
 | P7 — closeout | P0–P6 findings resolved or explicitly deferred | Rebuild Tiny Demons-only map and HTML, compare ownership/consumer paths, run applicable gates, record remaining exceptions and update canonical docs. Human can add content through the documented workflow. |
 
-Recommended first correction after review: P1 characterization around the
-enemy seam, then P2. Do not start with mass renaming, directory moves or
-deleting low-degree nodes.
-The known unresolved element catalog UID, open exported-PCK/manifest lifecycle
-evidence, mixed-enemy frame-rate incident and current UI/runtime acceptance
-remain owned by their existing plans. Resolve only the relevant blocker before
-touching its seam; do not require every unrelated product issue to close first.
+The first P2 package is the generic actor and roster slice described above.
+Do not start with mass renaming, directory moves or deleting low-degree nodes.
+The element catalog UID issue is corrected. Rebuilt-Web browser/runtime evidence,
+the mixed-enemy strict frame-time target, and curated release gate remain owned
+by their existing plans. Resolve only the relevant blocker before touching its
+seam; do not require every unrelated product issue to close first.
 
 ### Slice contract
 
@@ -318,7 +321,9 @@ evidence. Pause a slice for contract review if new cross-owner coupling, unknown
 save semantics, unresolved dynamic consumers or a required failed gate appears.
 Do not delegate the entire engine rewrite as one task.
 
-Owner review should settle:
+The owner approved staged P1/P2 implementation on 2026-10-13. This does not
+approve deletions or gameplay balance changes. The remaining review decisions
+are:
 
 - EnemyActor/ordered-roster direction and proposed `enemies` group lifetime.
 - Priority of P2/P3 relative to current enemy authoring and performance work.
