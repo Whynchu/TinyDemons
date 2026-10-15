@@ -783,22 +783,53 @@ func create_authored_variant() -> void:
 		return
 	new_definition.apply_geometry_record(EnemyFactory.geometry_profile(definition).call("geometry_record"))
 	var source_variant_name := definition.display_name
+	var previous_variant_id := definition.variant_id
 	new_definition.id = authored_id
 	new_definition.display_name = _new_variant_display_name(candidate_id)
 	new_definition.resource_name = new_definition.display_name
-	var save_error := ResourceSaver.save(new_definition, resource_path)
+	var save_error := EnemyCatalogScript.create_authored_definition(new_definition, resource_path)
 	if save_error != OK:
 		_set_workbench_error("Could not create %s (error %d)" % [resource_path, save_error])
 		return
-	save_error = EnemyCatalogScript.register_definition(new_definition)
-	if save_error != OK:
-		_set_workbench_error("Could not register %s (error %d)" % [candidate_id, save_error])
+	var undo_redo: EditorUndoRedoManager = EditorInterface.get_editor_undo_redo()
+	if undo_redo == null:
+		var rollback_error := EnemyCatalogScript.remove_authored_definition(new_definition, resource_path)
+		_set_workbench_error("Could not create an undoable editor action (error %d; rollback %d)" % [ERR_UNAVAILABLE, rollback_error])
 		return
 
+	var catalog_action = EnemyCatalogScript.new()
+	var workbench_ref: WeakRef = weakref(self)
+	undo_redo.create_action("Create Enemy Variant", 0, EnemyCatalogScript.DATA)
+	undo_redo.add_do_method(
+		catalog_action,
+		"redo_authored_definition_action",
+		new_definition,
+		resource_path,
+		authored_id,
+		source_variant_name,
+		workbench_ref,
+	)
+	undo_redo.add_undo_method(
+		catalog_action,
+		"undo_authored_definition_action",
+		new_definition,
+		resource_path,
+		previous_variant_id,
+		workbench_ref,
+	)
+	undo_redo.add_do_reference(new_definition)
+	undo_redo.add_undo_reference(new_definition)
+	undo_redo.add_do_reference(catalog_action)
+	undo_redo.add_undo_reference(catalog_action)
+	undo_redo.commit_action(false)
+	_select_variant_after_catalog_change(authored_id, "Created variant %s from %s" % [candidate_id, source_variant_name])
+
+
+func _select_variant_after_catalog_change(variant_id_value: StringName, notice: String) -> void:
 	EnemyCatalogScript.invalidate_cache()
-	enemy_id = authored_id
+	enemy_id = variant_id_value
 	new_variant_id = ""
-	_workbench_notice = "Created variant %s from %s" % [candidate_id, source_variant_name]
+	_workbench_notice = notice
 	notify_property_list_changed()
 	queue_redraw()
 

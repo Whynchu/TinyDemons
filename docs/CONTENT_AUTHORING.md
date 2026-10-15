@@ -9,11 +9,10 @@ the checked-in manifests from the dock and CLI, and definition preflight rejects
 stale manifests.
 Each kind manifest is a static export dependency, and editor catalog loads
 replace the cached kind manifest after refresh. The all-resource manifest feeds
-preflight and freshness checks. Actual exported-PCK loading and add/move/delete
-lifecycle acceptance remain open M1 evidence. Read the trap table below before
+preflight and freshness checks. The enemy workbench create action now couples its standalone resource, catalog entry, and generated manifests; a focused headless smoke passes create/undo/redo through the catalog action adapter. Live EditorUndoRedoManager, move, and exported-PCK acceptance remain open M1 evidence. Read the trap table below before
 editing any `.tres`.
 
-Updated: 2026-09-29
+Updated: 2026-10-14
 
 Owner: the feature owner listed in [`FEATURE_MAP.md`](FEATURE_MAP.md). The
 content guide describes current boundaries; it does not authorize a new data
@@ -374,6 +373,9 @@ encounter settings into a new standalone definition, derives its initial name
 from the ID, and selects it for editing. The Inspector presents the selected
 definition as editable sections instead of exposing its raw dictionaries and
 polygon arrays:
+
+Create, undo, and redo treat the standalone definition, catalog registration,
+and generated manifests as one editor action.
 
 - `Identity & Appearance`: display name, element, damage type, and appearance
   palette.
