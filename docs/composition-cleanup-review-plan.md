@@ -7,7 +7,7 @@ organization, asset and SFX lifecycle; staged implementation after prerequisite 
 
 Owner: repository architecture and gameplay systems
 
-Current code: tracked-tree snapshot `85c9f071`; graph built at `78320ffb`.
+Audit baseline: tracked-tree snapshot `85c9f071`; original graph built at `78320ffb`. The P0 census remains tied to that audit snapshot. The review graph was refreshed from this worktree on 2026-10-14: 21,235 nodes, 46,655 edges, 779 communities.
 Committed `scripts/`, `resources/`, `scenes/`, `assets/`, and `tests/` paths did
 not change between those snapshots. Later documentation/tool/config paths are
 listed in the P0 inventory. Pre-existing uncommitted edits to `project.godot`
@@ -15,8 +15,7 @@ and `scenes/authoring/previews/enemy_preview_workbench.tscn` are identified but
 their contents are outside the captured graph. Counts describe the audit
 snapshot, not a release.
 
-Verification: reproducible graph/file census, focused source inspection and
-read-only enemy architecture review. No Godot execution or game tests performed.
+Audit proposal evidence: reproducible graph/file census, focused source inspection, and read-only enemy architecture review. Current P4 and composition verification is recorded in the phase table and coordination status.
 
 Supersedes: none. Extends [the approved composition plan](composition-plan-2026.md)
 with generic enemy ownership and repository retirement gates; preserves the
@@ -24,7 +23,7 @@ with generic enemy ownership and repository retirement gates; preserves the
 [authoring milestones](authoring-system-plan.md), and
 [roadmap stopping rules](ROADMAP.md#added-workstream--architecture-cleanup-03x).
 
-Updated: 2026-10-12
+Updated: 2026-10-14
 
 ## 1. Outcome and boundaries
 
@@ -208,7 +207,7 @@ documentation work, but it blocks claiming risky affected-runtime work accepted.
 | P1 - migration floor | Owner review and relevant P0 findings | **Implementation present; acceptance partial.** Functional family replacement, recovery, and preview evidence is in [P1 characterization](composition-p1-characterization.md). Current-source focused smoke reruns, rebuilt-Web content/runtime proof, and the curated 45-path gate remain open. Performance acceptance is owner-deferred and recorded separately; it does not block the current catalog slice. |
 | P2 - generic enemy identity and roster | P1 mixed-family/save proof | **Implementation present.** The user reports Slime and Skeleton behavior works; P3 was accepted on 2026-10-14. Prior swap, recovery, and preview evidence is in [P1 characterization](composition-p1-characterization.md). Current-source focused reruns and the curated gate remain open. |
 | P3 — reusable enemy behaviors | P2 generic actor and roster boundary | **Accepted 2026-10-14.** The user confirms Slime and Skeleton behavior works as intended and accepts the shared `EnemyBrain` architecture. Steering uses an injected world context; family range rules live in typed Slime/Skeleton behavior components. Focused smoke rows remain unverified, not blockers for this acceptance. See the [steering injection](composition-p3-steering-injection.md) and [family behavior](composition-p3-family-brain-behavior.md) notes. |
-| P4 - catalog and content authority | P2; authoring M1 lifecycle evidence | **In progress.** `EnemyCatalog` owns mixed-family lookup/save; the historical script/resource identities remain compatible. Runtime, editor, report, and smoke callers use the generic API. Family profiles own runtime geometry; per-definition geometry is a validated serialized projection, with removal deferred to P6. M1 lifecycle proof and item/element/room authority work remain open. |
+| P4 - catalog and content authority | P2; authoring M1 lifecycle evidence | **In progress.** EnemyCatalog owns mixed-family lookup/save; historical resource identities remain compatible. Enemy create/undo/redo updates the definition, catalog, and manifests; the focused lifecycle smoke passed 2026-10-14. ElementCatalog.element_for_palette() now reads authored palette keys. Live editor history/export proof, the focused element lookup smoke/schema validation, item data, and room authority remain open. |
 | P5 — cross-system ownership | Relevant P1/P4 contract evidence | Follow domain queue: one state boundary, complete screen or shared mechanism per slice. Keep C4 deferred until current UI acceptance; retain feature-specific specializations. Demonstrate cheaper second consumer and no performance regression. |
 | P6 — retirement and file organization | Replacement accepted for each candidate | Remove obsolete adapters/fields/tests/files in small commits. Asset/SFX dispositions need the evidence below. Godot-aware moves preserve UIDs; regenerate manifests/indexes and repair docs. |
 | P7 — closeout | P0–P6 findings resolved or explicitly deferred | Rebuild Tiny Demons-only map and HTML, compare ownership/consumer paths, run applicable gates, record remaining exceptions and update canonical docs. Human can add content through the documented workflow. |

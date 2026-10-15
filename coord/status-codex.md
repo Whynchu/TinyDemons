@@ -2116,3 +2116,15 @@ Verification: changed-area regression modules passed (1,482 passed, 73 skipped, 
 The local Tiny Demons map is at `graphify-godot/.tools/tiny-demons-map/`. It now has 17,165 nodes and 21,766 links, with zero source paths inside the nested `graphify-godot/` folder. The root `.gitignore` rule `/graphify-godot/` is honored by Graphify and confirmed by `git check-ignore`.
 
 Ran `GRAPHIFY_OUT=<absolute map path> python -m graphify cluster-only .. --no-label` to generate cluster analysis and the HTML viewer without an LLM backend. The map directory contains `graph.html` (847,408 bytes), `GRAPH_REPORT.md`, and `.graphify_analysis.json`; the HTML aggregates the 17,165 source nodes into 761 named communities. `verification/graph.html` provides a focused 800-node view of the runner, test inventory, test scripts, and explicit code dependencies. All outputs remain local under ignored `.tools/`.
+
+## P4 progress — enemy lifecycle and element palette authority
+
+Updated: 2026-10-14
+
+Completed slice: Enemy variant creation, undo, and redo now transact the standalone .tres, mixed-family catalog, and generated manifests. The editor workbench is wired to one global EditorUndoRedoManager action and returns selection to the source variant on undo. A focused Godot 4.7.2 smoke passed file/path, cache, catalog reload, manifest freshness, undo-adapter, and redo checks. The test cleans its fixture and generated catalog state.
+
+Also advanced: ElementCatalog.element_for_palette() now derives element identity from ElementCatalogData.palette_keys; the existing aliases and Neutral fallback are preserved. Godot check-only and the existing source mapping agree with the authored table. Its focused runtime smoke was not rerun because the main editor remains active.
+
+Verification: Composition self-test and strict targets pass; test manifest validates at 160 rows / 158 runnable / 45 gate; UID validation passes for 469 script sidecars; git diff --check is clean. Graphify refreshed this review worktree to 21,235 nodes / 46,655 edges / 779 communities; graph.json, HTML, and report were rebuilt. Known certificate and MCP registry warnings came from the local Godot environment. No gameplay balance or schedule code changed.
+
+Open: Live editor undo-history behavior, rendered preview acceptance, exported-PCK lifecycle, item baselines/sets, element schema validation, and room authority remain open under P4/M1. Continue with an evidence-bounded item or element slice; do not update phase completion until its focused proof passes.

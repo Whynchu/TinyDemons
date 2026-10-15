@@ -137,21 +137,16 @@ static func is_valid_id(element_id: StringName) -> bool:
 
 
 static func element_for_palette(palette: String) -> int:
-	match palette.to_lower():
-		"red":
-			return Element.FIRE
-		"blue":
-			return Element.WATER
-		"yellow":
-			return Element.ELECTRIC
-		"green":
-			return Element.GRASS
-		"purple":
-			return Element.SHADOW
-		"orange":
-			return Element.GROUND
-		"aquamarine", "ice":
-			return Element.ICE
-		"grey", "gray":
-			return Element.NEUTRAL
+	var keys := palette_keys()
+	var normalized_palette := palette.to_lower()
+	if normalized_palette == "gray":
+		normalized_palette = str(keys.get(Element.NEUTRAL, "grey")).to_lower()
+	elif normalized_palette == "ice":
+		normalized_palette = str(keys.get(Element.ICE, "aquamarine")).to_lower()
+	for raw_element: Variant in keys:
+		if not raw_element is int:
+			continue
+		var element := int(raw_element)
+		if str(keys[raw_element]).to_lower() == normalized_palette:
+			return element
 	return Element.NEUTRAL

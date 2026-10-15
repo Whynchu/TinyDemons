@@ -1505,3 +1505,12 @@ Reconciled and verified the Tiny Demons map/query documentation. The Graphify fo
 
 ## 2026-10-14 - codex - done
 User accepted the shared EnemyBrain architecture and current Slime/Skeleton behavior. P3 focused smoke rows remain unverified and are non-blocking for this acceptance.
+2026-10-14 claim codex scripts/content/enemy_catalog.gd, scripts/editor/enemy_preview_workbench.gd, and focused catalog lifecycle smoke for reversible P4 definition creation.
+2026-10-14 blocker codex focused P4 smoke must wait for active main Godot editor to close; first isolated launch conflicted with the shared MCP registry/port and was stopped.
+2026-10-14 claim codex scripts/content/element_catalog.gd — derive palette-to-element identity from ElementCatalogData without changing mappings.
+2026-10-14 done codex P4 enemy lifecycle: focused create/undo/redo smoke passed; static composition, manifest, UID, and diff checks passed.
+2026-10-14 handoff codex P4: element palette lookup now reads ElementCatalogData; focused runtime smoke, schema validation, item authority, and room authority remain open.
+2026-10-14 done codex Graphify refresh: review worktree graph rebuilt at 21,546 nodes, 47,105 edges, 738 communities; HTML and report updated.
+2026-10-14 claim codex EnemyCatalog removal path validation and focused invalid-extension assertion.
+2026-10-14 done codex EnemyCatalog removal now rejects non-TRES paths; parser and static checks pass.
+2026-10-14 done codex Graphify final refresh: 21,235 nodes, 46,655 edges, 779 communities; focused queries find create_authored_definition and element_for_palette.
