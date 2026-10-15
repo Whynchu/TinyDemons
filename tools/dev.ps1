@@ -189,7 +189,6 @@ family = &"$Id"
 role = &"strength"
 role_tags = Array[String](["strength"])
 fusion_group = &"$Id"
-visual_id = &"$Id"
 "@
 	$utf8NoBom = New-Object -TypeName System.Text.UTF8Encoding -ArgumentList $false
 	[System.IO.File]::WriteAllText($definitionPath, $template, $utf8NoBom)

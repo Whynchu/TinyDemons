@@ -27,6 +27,5 @@ shield = {
 "guard_reduction": 1.0
 }
 fusion_group = &"rune"
-visual_id = &"rune"
 set_id = &"rune"
 set_name = "RUNE"

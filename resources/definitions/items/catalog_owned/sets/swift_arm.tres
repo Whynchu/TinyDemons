@@ -21,6 +21,5 @@ family = &"swift"
 role = &"swift"
 role_tags = Array[String](["swift", "agi"])
 fusion_group = &"swift"
-visual_id = &"swift"
 set_id = &"swift"
 set_name = "SWIFT"

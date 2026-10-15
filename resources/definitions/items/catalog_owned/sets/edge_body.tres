@@ -23,6 +23,5 @@ family = &"edge"
 role = &"edge"
 role_tags = Array[String](["edge", "agi"])
 fusion_group = &"edge"
-visual_id = &"edge"
 set_id = &"edge"
 set_name = "EDGE"

@@ -22,6 +22,5 @@ family = &"oath"
 role = &"oath"
 role_tags = Array[String](["oath", "defense"])
 fusion_group = &"oath"
-visual_id = &"oath"
 set_id = &"oath"
 set_name = "OATH"

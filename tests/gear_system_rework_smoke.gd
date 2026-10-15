@@ -21,10 +21,10 @@ func _initialize() -> void:
 		_expect(baseline_resource != null and baseline_resource.catalog_owned and baseline_resource.live, "%s resolves to a live catalog-owned ItemDefinition" % baseline_id, failures)
 	var basic_sword_record := catalog.definition_data(&"basic_sword")
 	_expect(basic_sword_record.get("description", "") == "A dependable blade with no trick." and basic_sword_record.get("family", "") == "blade" and basic_sword_record.get("fusion_group", "") == "blade", "Basic Sword preserves its effective description and family metadata", failures)
-	_expect(basic_sword_record.get("role_tags", []) == ["physical", "baseline"] and "starter" in basic_sword_record.get("source_tags", []) and basic_sword_record.get("visual_id", "") == "sword", "Basic Sword keeps its role, source, and visual metadata", failures)
+	_expect(basic_sword_record.get("role_tags", []) == ["physical", "baseline"] and "starter" in basic_sword_record.get("source_tags", []) and not basic_sword_record.has("visual_id"), "Basic Sword keeps its role and source metadata without a dead visual identifier", failures)
 	var plain_hood_record := catalog.definition_data(&"plain_hood")
 	_expect(plain_hood_record.get("description", "") == "Fills the Head slot without changing combat power." and plain_hood_record.get("rarity_ceiling", "") == "common", "Plain Hood preserves its effective metadata overlay and rarity ceiling", failures)
-	_expect(plain_hood_record.get("family", "") == "cloth" and plain_hood_record.get("role", "") == "starter" and plain_hood_record.get("fusion_group", "") == "starter" and plain_hood_record.get("visual_id", "") == "hood", "Plain Hood keeps its family, role, fusion, and visual IDs", failures)
+	_expect(plain_hood_record.get("family", "") == "cloth" and plain_hood_record.get("role", "") == "starter" and plain_hood_record.get("fusion_group", "") == "starter" and not plain_hood_record.has("visual_id"), "Plain Hood keeps its family, role, and fusion metadata without a dead visual identifier", failures)
 	_expect(catalog.definition_exists(&"cinder_blade") and &"cinder_blade" in live_ids, "standalone authored weapons join the live registry", failures)
 	_expect(&"demon_cloak" in catalog.playable_definition_ids(), "special-acquisition Demon Cloak remains playable", failures)
 	for retired_id: StringName in ItemCatalog.RETIRED_DEFINITION_IDS:

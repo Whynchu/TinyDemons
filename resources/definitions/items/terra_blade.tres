@@ -23,5 +23,4 @@ family = &"terra"
 role = &"elemental"
 role_tags = Array[String](["ground", "elemental"])
 fusion_group = &"terra"
-visual_id = &"terra_blade"
 weapon_element = 6

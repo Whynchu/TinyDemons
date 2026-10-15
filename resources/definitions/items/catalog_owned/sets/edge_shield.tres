@@ -25,6 +25,5 @@ shield = {
 "guard_reduction": 1.0
 }
 fusion_group = &"edge"
-visual_id = &"edge"
 set_id = &"edge"
 set_name = "EDGE"

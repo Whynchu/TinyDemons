@@ -26,6 +26,5 @@ shield = {
 "guard_reduction": 1.0
 }
 fusion_group = &"soul"
-visual_id = &"soul"
 set_id = &"soul"
 set_name = "SOUL"

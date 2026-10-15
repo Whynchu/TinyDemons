@@ -34,7 +34,6 @@ class_name ItemDefinition
 @export var effects: Dictionary = {}
 @export var shield: Dictionary = {}
 @export var fusion_group: StringName = &""
-@export var visual_id: StringName = &""
 ## Optional always-on weapon element. Neutral keeps the normal physical weapon contract.
 @export_enum("Neutral", "Fire", "Water", "Electric", "Grass", "Shadow", "Ground", "Ice") var weapon_element := 0
 @export var set_id: StringName = &""
@@ -115,7 +114,6 @@ func to_record() -> Dictionary:
 		"effects": effects.duplicate(true),
 		"shield": shield.duplicate(true),
 		"fusion_group": fusion_group if not fusion_group.is_empty() else family,
-		"visual_id": visual_id if not visual_id.is_empty() else id,
 		"weapon_element": weapon_element,
 		"set_id": set_id,
 		"set_name": set_name,

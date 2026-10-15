@@ -28,7 +28,6 @@ role_tags = Array[String](["starter", "zero_power"])
 effects = {}
 shield = {}
 fusion_group = &"starter"
-visual_id = &"wraps"
 weapon_element = 0
 set_id = &""
 set_name = ""

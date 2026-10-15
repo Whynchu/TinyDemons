@@ -23,5 +23,4 @@ family = &"volt"
 role = &"elemental"
 role_tags = Array[String](["electric", "elemental"])
 fusion_group = &"volt"
-visual_id = &"volt_blade"
 weapon_element = 3

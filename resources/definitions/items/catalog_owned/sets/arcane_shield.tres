@@ -26,6 +26,5 @@ shield = {
 "guard_reduction": 1.0
 }
 fusion_group = &"arcane"
-visual_id = &"arcane"
 set_id = &"arcane"
 set_name = "ARCANE"

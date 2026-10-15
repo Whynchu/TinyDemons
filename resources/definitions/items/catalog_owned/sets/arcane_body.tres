@@ -23,6 +23,5 @@ family = &"arcane"
 role = &"arcane"
 role_tags = Array[String](["arcane", "intelligence"])
 fusion_group = &"arcane"
-visual_id = &"arcane"
 set_id = &"arcane"
 set_name = "ARCANE"

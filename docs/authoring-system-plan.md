@@ -981,8 +981,9 @@ The 12 live Plain/Basic baselines and 54 set items now have catalog-owned
 `live_set_ids` preserve acquisition/generation order; `ItemCatalog` no longer
 synthesizes set records. Focused item, element, and palette smokes plus the
 110-resource definition validator pass. Element/flame tables remain in
-migration. Item artwork remains slot-level until `visual_id` becomes
-authoritative.
+migration. Item artwork remains slot-level. The unused `visual_id` placeholder
+was retired on 2026-10-15; per-item artwork awaits real visual resources/assets
+and a typed reference consumed by runtime and previews.
 
 Work items:
 
@@ -1039,9 +1040,13 @@ checks and definition-manifest validation passed on 2026-10-14.
   Card/Drop/Instance/Effects views backed by `ItemCatalog`; only current playable
   IDs appear, catalog-owned baselines/sets remain read-only, and item art remains
   slot-level.
-- [ ] Finish item-specific visual ownership and replacement through `visual_id`,
-  then add the element palette/effect preview and complete the item/element
-  preview acceptance checks.
+- [x] Retire the unconsumed `ItemDefinition.visual_id` placeholder from the
+  schema, authored resources, catalog projection, item workbench, and creation
+  template. Source inspection found no runtime reader or per-item art set;
+  slot-level runtime and preview art remain shared.
+- [ ] Add typed item-specific visual ownership and replacement when real visual
+  resources/assets exist, then add the element palette/effect preview and
+  complete the item/element preview acceptance checks.
 - [x] Include `element_catalog.tres` and `palette_library.tres` in the
   validator with real schema checks. Both resources now expose schema
   validators; the definition validator and focused malformed-data checks pass.

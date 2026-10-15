@@ -25,4 +25,3 @@ family = &"cloak"
 role = &"agility"
 role_tags = Array[String](["agility", "defense", "vitality", "mnd", "premium", "dual_slot"])
 fusion_group = &"cloak"
-visual_id = &"cloak_demon"

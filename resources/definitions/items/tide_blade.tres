@@ -23,5 +23,4 @@ family = &"tide"
 role = &"elemental"
 role_tags = Array[String](["water", "elemental"])
 fusion_group = &"tide"
-visual_id = &"tide_blade"
 weapon_element = 2

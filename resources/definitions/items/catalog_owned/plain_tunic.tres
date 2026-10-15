@@ -28,7 +28,6 @@ role_tags = Array[String]([])
 effects = {}
 shield = {}
 fusion_group = &"unknown"
-visual_id = &"plain_tunic"
 weapon_element = 0
 set_id = &""
 set_name = ""

@@ -23,5 +23,4 @@ family = &"shade"
 role = &"elemental"
 role_tags = Array[String](["shadow", "elemental"])
 fusion_group = &"shade"
-visual_id = &"shade_blade"
 weapon_element = 5

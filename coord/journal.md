@@ -1530,3 +1530,7 @@ User accepted the shared EnemyBrain architecture and current Slime/Skeleton beha
 2026-10-14 handoff codex elemental_binding_smoke passes behavior assertions but still logs ObjectDB/resource leaks after deferred quit; reverted ineffective teardown edit and left cleanup open.
 2026-10-14 claim codex generation policy ownership: remove ignored depth fields and derive generator primary flames from the authored starter roster.
 2026-10-14 done codex generation policy: removed ignored depth/starter fields, generated primary flames now consume the authored starter roster; policy/progression smokes and definition validation pass.
+## 2026-10-15T03:25Z - codex - claim
+P4 item visual metadata disposition. Inspecting and editing item schema/resources, preview, authoring docs, and gear smoke. Retire the unused visual_id surface; preserve slot-level art.
+
+2026-10-15 | codex | done | Recovered item visual metadata retirement: removed unused visual_id from schema, 74 item resources, catalog projection, preview and template. Gear, item definition and workbench focused smokes and 110/110 definition validation pass; composition, manifest, UID and diff checks pass. Preserved the pending Web renderer edit and the main worktree.

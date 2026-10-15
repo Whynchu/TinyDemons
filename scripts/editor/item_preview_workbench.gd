@@ -15,7 +15,7 @@ const EDITABLE_PROPERTIES: Array[StringName] = [
 	&"display_name", &"slot", &"gear_tier", &"tier_stat", &"tier_stats", &"description", &"price",
 	&"source_tags", &"minimum_run_rank", &"minimum_player_level", &"rarity_floor",
 	&"rarity_ceiling", &"shop_eligible", &"starter_only", &"live", &"family", &"role",
-	&"role_tags", &"effects", &"shield", &"fusion_group", &"visual_id", &"set_id",
+	&"role_tags", &"effects", &"shield", &"fusion_group", &"set_id",
 	&"set_name", &"passive_id", &"designer_notes", &"vitality_bonus", &"strength_bonus",
 	&"defense_bonus", &"agility_bonus", &"intelligence_bonus", &"mind_bonus",
 ]
@@ -237,12 +237,6 @@ var _preview_transmutation_id: StringName = &""
 	set(value):
 		_write_field(&"fusion_group", value)
 
-@export var visual_id: StringName:
-	get:
-		return StringName(str(_read_field(&"visual_id", _item_id)))
-	set(value):
-		_write_field(&"visual_id", value)
-
 @export var set_id: StringName:
 	get:
 		return StringName(str(_read_field(&"set_id", &"")))
@@ -319,7 +313,7 @@ var _preview_transmutation_id: StringName = &""
 
 @export var visual_status: String:
 	get:
-		return "Shared slot-level pickup art; visual_id is not yet resolved to per-item art."
+		return "Shared slot-level pickup art; item-specific visual resources are not authored yet."
 	set(_value):
 		pass
 

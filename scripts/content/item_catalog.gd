@@ -292,8 +292,6 @@ func definition_data(definition_id: StringName) -> Dictionary:
 		base["shop_eligible"] = false
 	if not base.has("fusion_group"):
 		base["fusion_group"] = str(base.get("family", "unknown"))
-	if not base.has("visual_id"):
-		base["visual_id"] = str(definition_id)
 	if not base.has("description"):
 		base["description"] = ""
 	base["id"] = String(definition_id)

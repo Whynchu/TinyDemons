@@ -22,6 +22,5 @@ family = &"guard"
 role = &"guard"
 role_tags = Array[String](["guard", "defense"])
 fusion_group = &"guard"
-visual_id = &"guard"
 set_id = &"guard"
 set_name = "GUARD"

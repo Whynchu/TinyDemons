@@ -27,6 +27,5 @@ shield = {
 "guard_reduction": 1.0
 }
 fusion_group = &"blood"
-visual_id = &"blood"
 set_id = &"blood"
 set_name = "BLOOD"

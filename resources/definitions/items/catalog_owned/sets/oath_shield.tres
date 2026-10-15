@@ -26,6 +26,5 @@ shield = {
 "guard_reduction": 2.0
 }
 fusion_group = &"oath"
-visual_id = &"oath"
 set_id = &"oath"
 set_name = "OATH"

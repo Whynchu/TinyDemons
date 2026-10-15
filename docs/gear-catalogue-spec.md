@@ -175,7 +175,6 @@ minimum_run_rank / minimum_player_level
 shop_eligible
 fusion_group
 price / salvage policy
-visual_id
 player_description
 designer_notes
 ```

@@ -23,5 +23,4 @@ family = &"frost"
 role = &"elemental"
 role_tags = Array[String](["ice", "elemental"])
 fusion_group = &"frost"
-visual_id = &"frost_blade"
 weapon_element = 7

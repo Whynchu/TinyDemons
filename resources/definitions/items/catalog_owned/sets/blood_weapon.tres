@@ -23,6 +23,5 @@ family = &"blood"
 role = &"blood"
 role_tags = Array[String](["blood", "vitality"])
 fusion_group = &"blood"
-visual_id = &"blood"
 set_id = &"blood"
 set_name = "BLOOD"

@@ -21,6 +21,5 @@ family = &"soldier"
 role = &"soldier"
 role_tags = Array[String](["soldier", "strength"])
 fusion_group = &"soldier"
-visual_id = &"soldier"
 set_id = &"soldier"
 set_name = "SOLDIER"

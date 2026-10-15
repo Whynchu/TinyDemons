@@ -23,5 +23,4 @@ family = &"grove"
 role = &"elemental"
 role_tags = Array[String](["grass", "elemental"])
 fusion_group = &"grove"
-visual_id = &"grove_blade"
 weapon_element = 4

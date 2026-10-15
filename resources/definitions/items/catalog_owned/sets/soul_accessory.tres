@@ -22,6 +22,5 @@ family = &"soul"
 role = &"soul"
 role_tags = Array[String](["soul", "mnd"])
 fusion_group = &"soul"
-visual_id = &"soul"
 set_id = &"soul"
 set_name = "SOUL"

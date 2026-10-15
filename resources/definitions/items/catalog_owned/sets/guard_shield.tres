@@ -26,6 +26,5 @@ shield = {
 "guard_reduction": 3.0
 }
 fusion_group = &"guard"
-visual_id = &"guard"
 set_id = &"guard"
 set_name = "GUARD"

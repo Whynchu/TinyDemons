@@ -2,8 +2,8 @@
 
 _Only codex writes this file._
 
-**Focus:** P0 inventory and review-branch update complete. No runtime edits/deletions. Existing main history and unrelated worktree edits remain separate.
-**Updated:** 2026-10-12
+**Focus:** Composition cleanup P4 catalog authority on `review/composition-cleanup-plan`.
+**Updated:** 2026-10-15
 
 ## Completed: Composition cleanup P0 dispositions
 
@@ -2181,3 +2181,20 @@ Removed the validated-but-unused `first_orb_depth` and `first_special_depth` fie
 `dungeon_generation_policy_smoke`, `generated_flame_progression_smoke`, and recursive definition validation pass (110/110). Composition self-test and strict targets, test-manifest (160 rows / 158 runnable / 45 gate), UID validation (469 sidecars), and `git diff --check` pass. `r6_plus_risk_reward_generation_smoke` remains open: the 2026-10-14 run fails elite-vault level assertions and emits boss-roster remap warnings. Manifest rows now record the observed open failures for that gate, Chroma defaults, the run-theme API call, and binding-smoke teardown. Gate selection still uses role, so all 45 gate paths remain selected.
 
 No gameplay balance, fixed route depth, or frame ordering changed. `project.godot` was restored byte-for-byte after focused standalone runs.
+
+## Completed: Item visual metadata disposition (2026-10-15)
+
+Current source shows `ItemDefinition.visual_id` is serialized and exposed by the
+workbench, but runtime item art resolves only by equipment slot. The archived
+5x5 sheets are 5x5-pixel placeholders and no per-item art set exists. Removed
+the unused field from authored definitions and the item contract while keeping
+the shared slot-level resolver intact. Keep per-item artwork as an explicit
+future authoring task requiring real visual resources and assets.
+
+Recovery verification: `gear_system_rework_smoke`, `item_definition_slice_smoke`,
+and `item_preview_workbench_smoke` pass with Godot 4.7.2; recursive definition
+validation passes at 110/110. Strict composition, manifest (160/158/45), UID
+(469 sidecars), and diff checks pass. Focused checks ran in the isolated review
+worktree with its MCP runtime autoload temporarily disabled and its project
+configuration restored byte-for-byte. The main-worktree editor was untouched.
+The existing pending Web renderer override change remains outside this batch.

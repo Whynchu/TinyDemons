@@ -18,7 +18,7 @@
 "elemental_damage_smoke","gate","unverified","chroma & elements","elemental damage via CombatCalculator","pure",""
 "enemy_room_engagement_smoke","gate","verified","slime enemies","enemy engagement and clear-gate contract","pure","2026-09-11 focused evidence"
 "equipment_menu_scene_smoke","gate","verified","gear & fusion","equipment cursor and selection presentation","main","deterministic starter fixture and save restoration; test timing + modern shop/equipment presenter expectations corrected 2026-09-13; passes"
-"gear_system_rework_smoke","gate","verified","gear & fusion","gear system rework contracts","pure","2026-10-14 typed baseline/set metadata and stable set-order assertions; focused standalone Godot pass"
+"gear_system_rework_smoke","gate","verified","gear & fusion","gear system rework contracts","pure","2026-10-15 Godot 4.7.2 pass; typed baseline/set metadata and stable order; unused visual_id projection retired"
 "generated_bound_reachability_smoke","gate","verified","generated layouts","generated room bound reachability","pure","focused run 2026-09-13; starter/bound reachability, late-run fixtures, recovery repair"
 "generated_layout_smoke","gate","verified","generated layouts","generated layout compiler and runtime contract","pure","focused run 2026-09-13; sampled topology, pacing, R6+ curriculum, and runtime graph construction"
 "generated_run_scene_smoke","gate","verified","generated layouts","generated run scene construction","main","2026-09-13 focused evidence"

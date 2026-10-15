@@ -37,7 +37,7 @@ traps:
 |---|---|---|
 | Former `resources/definitions/puzzle_map_r3.tres` path | Removed in Slice 0; the runtime and preview use `puzzle_map_r3_new.tres`. | resolved |
 | Retired `item_catalog.tres` expansion records | Removed in the schema-14 catalog cleanup; catalog-owned Plain/Basic baselines, typed set items, and standalone `ItemDefinition` resources remain. | resolved |
-| Item `visual_id` | Written but never read; item art is slot-level only. | 2 |
+| Item-specific artwork | Slot-level drop textures are authoritative; no per-item art reference exists in the current schema. | 2, deferred until assets exist |
 | Item `weapon_element` | Consumed by equipped weapon stats, composite damage, status application, and sword palette/highlight presentation. A non-neutral weapon element is always active; temporary IMBUE overrides damage and layers its own status onto the weapon status for authored reactions. | implemented for elemental blades |
 | `element_catalog.tres` and `palette_library.tres` | Both are included in recursive validation and read by their runtime catalogs. Element and player-flame string tables are consolidated; stable numeric enums remain save-facing, and a data-only new-flame proof is open. | partial |
 
@@ -529,7 +529,11 @@ Workflow (current, during Slice 2 migration):
    Catalog-owned baseline and set resources are preview-only; standalone items
    remain editable and saveable.
 
-Known traps: `visual_id` is never read (item art is slot-level). Demon Cloak is
+Item drop art resolves by canonical equipment slot through the same
+`ItemVisualResolver` used by runtime and previews. `ItemDefinition` intentionally
+has no per-item art field: the former `visual_id` placeholder had no runtime
+consumer, and no per-item art set exists. Add typed visual ownership with the
+assets and validator when item-specific artwork is authored. Demon Cloak is
 repeat-purchasable because duplicates are fusion materials. `PlayerProfile`
 owns its persistent escalating purchase counter and transaction; the typed
 definition owns its `cloaked_demon` source and `locked_slots` metadata, which
@@ -555,9 +559,10 @@ Item from Selected`, or saved with `Save Item Changes`.
 `Preview` selects Card, Drop, Instance, or Effects;
 rarity, enhancement, seed, and transmutation controls configure a temporary
 preview instance. The preview uses `ItemCatalog` calculations and does not change
-profile or gameplay state. Item drop art still resolves by slot; `visual_id` is
-shown for authoring but is not yet an item-specific art reference. The headless
-check is `pwsh -File tools/dev.ps1 preview item <id>`.
+profile or gameplay state. Item drop art resolves by canonical slot. The
+workbench uses the same resolver and reports that item-specific visual
+resources are not authored yet. The headless check is
+`pwsh -File tools/dev.ps1 preview item <id>`.
 
 Gear identity includes more than the display name. Enhancement, rarity,
 affixes, random stats, transmutation, and fusion investment determine the
