@@ -514,7 +514,9 @@ Workflow (current, during Slice 2 migration):
    the generated `resources/definitions/items/<id>.tres`, or select a typed seed
    in the workbench and use `Create Item from Selected`. Set the stable ID,
    display name, slot, tier/stat, bonuses, source tags, rarity gates, and any
-   effect status on that one typed resource.
+   effect status on that one typed resource. Use `locked_slots` when an item
+   occupies another equipment slot; runtime equip rules and previews read the
+   field from the definition.
 3. Do not edit `item_catalog.tres`, `live_base_ids`, `live_set_ids`,
    `definition_metadata`, or a count-pinned test for a standalone item. The registry
    discovers the resource, converts it through the compatibility boundary, and
@@ -528,11 +530,14 @@ Workflow (current, during Slice 2 migration):
    Catalog-owned baseline and set resources are preview-only; standalone items
    remain editable and saveable.
 
-Known traps: `visual_id` is never read (item art is slot-level), `demon_cloak`
-has a special acquisition/equip rule in `player_profile.gd`, `run_state.gd`,
-`equipment_component.gd`, and `hub_flow_controller.gd`. Baseline and set
-resources preserve their acquisition and generation behavior; ordered IDs live
-in `ItemCatalogData`, and set synthesis was removed from `item_catalog.gd`.
+Known traps: `visual_id` is never read (item art is slot-level). Demon Cloak is
+repeat-purchasable because duplicates are fusion materials. `PlayerProfile`
+owns its persistent escalating purchase counter and transaction; the typed
+definition owns its `cloaked_demon` source and `locked_slots` metadata, which
+the run shop, equip state, and previews consume. The hub transaction stays on
+the generic permanent-offer path. Baseline and set resources preserve their
+acquisition and generation behavior; ordered IDs live in `ItemCatalogData`, and
+set synthesis was removed from `item_catalog.gd`.
 The retired expansion definitions and their transmutation bindings are purged.
 Schema-14 profile loading removes saved instances of those retired IDs and
 restores starter equipment for slots they left empty. Standalone

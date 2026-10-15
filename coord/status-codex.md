@@ -2127,7 +2127,7 @@ Also advanced: ElementCatalog.element_for_palette() now derives element identity
 
 Verification: Composition self-test and strict targets pass; test manifest validates at 160 rows / 158 runnable / 45 gate; UID validation passes for 469 script sidecars; git diff --check is clean. Graphify's code-only refresh for this review worktree rebuilt graph.json, HTML, and report at 21,374 nodes / 48,225 edges / 735 communities. Documentation and media semantic extraction was not refreshed. Known certificate and MCP registry warnings came from the local Godot environment. No gameplay balance or schedule code changed.
 
-Open: Live editor undo-history behavior, rendered preview acceptance, exported-PCK lifecycle, Demon Cloak ownership, aspect tables, and room authority remain open under P4/M1. Element and palette schema validators are implemented with a narrow mixture-validation boundary that avoids the ElementCatalog resource cycle. Focused item, element, and palette smokes plus the recursive definition validator pass; do not update phase completion until the separate editor-history/export/room proofs pass.
+Open: Live editor undo-history behavior, rendered preview acceptance, exported-PCK lifecycle, aspect tables, and room authority remain open under P4/M1. Element and palette schema validators are implemented with a narrow mixture-validation boundary that avoids the ElementCatalog resource cycle. Focused item, element, palette, and Demon Cloak smokes plus the recursive definition validator pass; do not update phase completion until the separate editor-history/export/room proofs pass.
 
 ## Completed: Typed item baselines and set items (2026-10-14)
 
@@ -2142,3 +2142,22 @@ and palette smokes pass. The definition validator loads 110/110 resources and
 the generated manifests are fresh. Composition self-test and strict targets,
 test-manifest validation (160 rows / 158 runnable / 45 gate), UID validation
 (469 sidecars), script-index generation, and `git diff --check` pass.
+
+## Completed: Demon Cloak typed ownership (2026-10-14)
+
+The authored gear contract allows repeated Cloak purchases because duplicates
+are fusion materials; no unique flag was added. `demon_cloak.tres` declares its
+`cloaked_demon` seller source and Head-slot lock. `ItemCatalog` resolves those
+traits by source tag and definition metadata; RunState and equipment previews
+no longer branch on the item ID. `PlayerProfile` remains the owner of the
+persistent purchase counter, price, and purchase operation.
+
+Focused Godot 4.7.2 runs pass for `item_definition_slice_smoke` and the expanded
+`demon_cloak_smoke`, including repeated offers, fusion-ready repeat purchases,
+equip/load/preview slot locks, and save-slot portrait behavior. The cloak smoke
+now restores profile files and active-slot state byte-for-byte on normal or
+watchdog exit, and its final run has no Godot teardown leak warnings. Static
+composition self-test/strict targets, test-manifest, UID, script-index, and diff
+checks pass. The shared editor remains connected; focused smokes ran in the
+isolated review worktree with only its MCP runtime autoload temporarily disabled
+and restored.

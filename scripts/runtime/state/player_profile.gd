@@ -112,7 +112,7 @@ func ensure_starter_items(catalog: ItemCatalog = null) -> void:
 	var items := catalog if catalog != null else ItemCatalog.new()
 	for slot: StringName in ItemCatalog.SLOTS:
 		var starter := items.starter_item(slot)
-		var slot_locked := slot == &"head" and _head_locked_by_body(items)
+		var slot_locked := _slot_locked_by_body(slot, items)
 		# Existing four-slot files may already own `starter-armor`; retain that
 		# stable instance ID as Body instead of duplicating it as `starter-body`.
 		if slot == &"body" and find_item("starter-armor") != null and find_item(starter.instance_id) == null:
@@ -159,23 +159,26 @@ func equip_item(instance_id: String, catalog: ItemCatalog = null) -> bool:
 	var slot := items.definition_slot(item.definition_id)
 	if slot not in ItemCatalog.SLOTS:
 		return false
-	if slot == &"head" and _head_locked_by_body(items):
+	if _slot_locked_by_body(slot, items):
 		return false
 	equipped_instance_ids[String(slot)] = instance_id
-	if slot == &"body" and item.definition_id == &"demon_cloak":
-		# The Demon Cloak is a Body + Head gacha piece: wearing it occupies the
-		# Head slot and auto-unequips whatever headgear was there.
-		equipped_instance_ids["head"] = ""
+	if slot == &"body":
+		for locked_slot: StringName in items.definition_locked_slots(item.definition_id):
+			equipped_instance_ids[String(locked_slot)] = ""
 	_sync_body_alias()
 	return true
 
 
-func _head_locked_by_body(_catalog: ItemCatalog) -> bool:
+func _slot_locked_by_body(slot: StringName, catalog: ItemCatalog) -> bool:
 	var body_id := get_equipped_instance_id(&"body")
 	if body_id.is_empty():
 		return false
 	var body_item := find_item(body_id)
-	return body_item != null and body_item.definition_id == &"demon_cloak"
+	return body_item != null and catalog.definition_locks_slot(body_item.definition_id, slot)
+
+
+func _head_locked_by_body(catalog: ItemCatalog) -> bool:
+	return _slot_locked_by_body(&"head", catalog)
 
 
 func unequip_slot(slot: StringName, _catalog: ItemCatalog = null) -> bool:
@@ -849,8 +852,10 @@ func load_dictionary(data: Dictionary) -> void:
 		if not equipped_id.is_empty() and not valid_instance_ids.has(equipped_id):
 			equipped_instance_ids[String(slot)] = ""
 	_sync_body_alias()
-	if has_demon_cloak_equipped():
-		equipped_instance_ids["head"] = ""
+	var equipped_body := find_item(get_equipped_instance_id(&"body"))
+	if equipped_body != null:
+		for locked_slot: StringName in item_catalog.definition_locked_slots(equipped_body.definition_id):
+			equipped_instance_ids[String(locked_slot)] = ""
 	_sync_body_alias()
 	if retired_items_removed > 0 or retired_transmutations_removed > 0:
 		push_warning("PlayerProfile: removed %d retired item instance(s) and cleared %d retired transmutation(s) from the saved profile." % [retired_items_removed, retired_transmutations_removed])

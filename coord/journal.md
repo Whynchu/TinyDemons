@@ -1522,3 +1522,5 @@ User accepted the shared EnemyBrain architecture and current Slime/Skeleton beha
 2026-10-14 done codex item baselines and sets: 12 baselines and 54 set items now use catalog-owned ItemDefinitions; focused item, gear, workbench, and retired-item smokes pass.
 2026-10-14 done codex palette RGBA8 interpolation: nearest-byte quantization preserves the ability-icon highlight; palette smoke passes.
 2026-10-14 done codex Graphify refresh: review map rebuilt code-only at 21,374 nodes, 48,225 edges, 735 communities; HTML and report regenerated.
+2026-10-14 claim codex Demon Cloak typed ownership: definition-backed shop source and equipment slot lock; keep escalating repeat purchase/fusion state in PlayerProfile.
+2026-10-14 done codex Demon Cloak ownership: repeat purchases remain fusion materials; typed source/locked-slot metadata replaces RunState/equipment ID branches; focused item and cloak smokes pass with profile restoration and no teardown leaks.

@@ -427,26 +427,28 @@ func ensure_shop_stock(profile: PlayerProfile) -> void:
 		if not premium.definition_id.is_empty():
 			premium.instance_id = "shop-%s-premium" % run_id
 			shop_stock.append(_shop_entry(catalog, premium, premium_slot, roundi(catalog.price(premium) * 2.5)))
-	if profile != null:
-		var has_cloak := false
+	var cloaked_demon_items := catalog.definition_ids_for_source_tag(&"cloaked_demon")
+	var cloak_definition_id: StringName = cloaked_demon_items[0] if not cloaked_demon_items.is_empty() else &""
+	if profile != null and not cloak_definition_id.is_empty():
+		var has_special_offer := false
 		for entry: Dictionary in shop_stock:
 			var existing := ItemInstance.from_dictionary(entry.get("item", {}) as Dictionary)
-			if existing.definition_id == &"demon_cloak":
-				has_cloak = true
+			if existing.definition_id == cloak_definition_id:
+				has_special_offer = true
 				break
-		if not has_cloak:
-			var cloak := ItemInstance.new()
-			cloak.instance_id = "shop-%s-cloak" % run_id
-			cloak.definition_id = &"demon_cloak"
-			cloak.rarity = &"common"
-			cloak.quality = 1.0
-			var cloak_entry := _shop_entry(catalog, cloak, &"body", profile.demon_cloak_price())
-			cloak_entry["permanent"] = true
-			shop_stock.append(cloak_entry)
+		if not has_special_offer:
+			var special_item := ItemInstance.new()
+			special_item.instance_id = "shop-%s-cloak" % run_id
+			special_item.definition_id = cloak_definition_id
+			special_item.rarity = &"common"
+			special_item.quality = 1.0
+			var special_entry := _shop_entry(catalog, special_item, catalog.definition_slot(cloak_definition_id), profile.demon_cloak_price())
+			special_entry["permanent"] = true
+			shop_stock.append(special_entry)
 	if had_stock:
 		_normalize_shop_stock_ids(profile)
 	_ensure_elemental_shop_sword(catalog, not had_stock)
-	_move_elemental_shop_sword_before_cloak()
+	_move_elemental_shop_sword_before_definition(cloak_definition_id)
 
 
 func _ensure_elemental_shop_sword(catalog: ItemCatalog, may_create_offer: bool) -> void:
@@ -496,22 +498,24 @@ func _ensure_elemental_shop_sword(catalog: ItemCatalog, may_create_offer: bool) 
 	shop_stock.append(entry)
 
 
-func _move_elemental_shop_sword_before_cloak() -> void:
+func _move_elemental_shop_sword_before_definition(definition_id: StringName) -> void:
+	if definition_id.is_empty():
+		return
 	var sword_index := -1
-	var cloak_index := -1
+	var special_index := -1
 	for index in shop_stock.size():
 		var item := ItemInstance.from_dictionary(shop_stock[index].get("item", {}) as Dictionary)
 		if sword_index < 0 and bool(shop_stock[index].get("guaranteed_elemental_sword", false)) and not bool(shop_stock[index].get("sold", false)):
 			sword_index = index
-		if item.definition_id == &"demon_cloak":
-			cloak_index = index
-	if sword_index < 0 or cloak_index < 0 or sword_index == cloak_index:
+		if item.definition_id == definition_id:
+			special_index = index
+	if sword_index < 0 or special_index < 0 or sword_index == special_index:
 		return
 	var sword_entry: Dictionary = shop_stock[sword_index]
 	shop_stock.remove_at(sword_index)
-	if sword_index < cloak_index:
-		cloak_index -= 1
-	shop_stock.insert(cloak_index, sword_entry)
+	if sword_index < special_index:
+		special_index -= 1
+	shop_stock.insert(special_index, sword_entry)
 
 
 func _ensure_basic_shop_stock(catalog: ItemCatalog) -> void:

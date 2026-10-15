@@ -1,6 +1,9 @@
 extends SceneTree
 
 var _finished := false
+var _original_slot := 0
+var _profile_file_snapshots: Dictionary = {}
+var _profile_file_snapshot_active := false
 
 
 func _initialize() -> void:
@@ -23,6 +26,10 @@ func _initialize() -> void:
 		var run_state := gameplay.get("run_state") as RunState
 		if run_state == null:
 			run_state = RunState.new()
+		var catalog := ItemCatalog.new()
+		var seller_items := catalog.definition_ids_for_source_tag(&"cloaked_demon")
+		_expect(seller_items.size() == 1 and seller_items[0] == &"demon_cloak", "the typed Cloaked Demon source identifies its special offer", failures)
+		_expect(catalog.definition_locked_slots(&"demon_cloak") == [&"head"], "the typed Demon Cloak definition declares its secondary slot", failures)
 		# Ignore any persistent-save pollution from earlier runs: this test owns
 		# the cloak purchase state it asserts on.
 		profile.demon_cloak_purchases = 0
@@ -36,13 +43,16 @@ func _initialize() -> void:
 		_expect(not anim.cloaked, "player starts with the base sheet", failures)
 		_expect(profile.demon_cloak_price() == 500, "first cloak costs 500G", failures)
 		run_state.ensure_shop_stock(profile)
+		run_state.ensure_shop_stock(profile)
 		var cloak_entry: Dictionary = {}
+		var cloak_offer_count := 0
 		for entry: Dictionary in run_state.shop_stock:
 			var entry_item: Dictionary = entry.get("item", {}) as Dictionary
 			if str(entry_item.get("definition_id", "")) == "demon_cloak":
+				cloak_offer_count += 1
 				cloak_entry = entry
-				break
 		_expect(not cloak_entry.is_empty(), "shop always offers the Demon Cloak", failures)
+		_expect(cloak_offer_count == 1, "rebuilding stock keeps one source-tagged special offer", failures)
 		_expect(bool(cloak_entry.get("permanent", false)), "Demon Cloak is a permanent shop offer", failures)
 		profile.gold = 1000
 		var first_cloak := profile.purchase_demon_cloak()
@@ -54,7 +64,6 @@ func _initialize() -> void:
 		_expect(second_cloak != null and second_cloak.instance_id != first_cloak.instance_id, "repeated purchases never share an instance", failures)
 		_expect(profile.gold == 400 and profile.demon_cloak_price() == 700, "second purchase costs 600G and raises to 700G", failures)
 		_expect(profile.demon_cloak_price() == 700, "price escalates per purchase", failures)
-		var catalog := ItemCatalog.new()
 		var cloak_bonuses := catalog.bonuses(first_cloak)
 		_expect(float(cloak_bonuses.get("agi", 0.0)) >= 4.0 and float(cloak_bonuses.get("mnd", 0.0)) >= 2.0, "Demon Cloak carries the buffed Body + Head package", failures)
 		var mythic_cloak := ItemInstance.from_dictionary(first_cloak.to_dictionary())
@@ -69,6 +78,14 @@ func _initialize() -> void:
 		profile.grant_item(head_item)
 		_expect(profile.equip_item(head_item.instance_id), "a head item equips before the cloak", failures)
 		_expect(not profile.get_equipped_instance_id(&"head").is_empty(), "head slot holds the head item", failures)
+		var preview_profile := PlayerProfile.new()
+		preview_profile.grant_item(head_item)
+		preview_profile.equip_item(head_item.instance_id, catalog)
+		var cloak_preview := EquipmentComponent.new()
+		cloak_preview.configure_preview_from_profile(preview_profile, catalog, &"body", first_cloak)
+		var cloak_primary_points := catalog.combat_primary_points(first_cloak) if first_cloak != null else {}
+		_expect(is_equal_approx(cloak_preview.mnd_bonus, float(cloak_primary_points.get("mnd", 0.0))), "body preview omits head gear blocked by the candidate definition", failures)
+		cloak_preview.free()
 		if first_cloak != null:
 			_expect(profile.equip_item(first_cloak.instance_id), "Demon Cloak equips into the body slot", failures)
 		_expect(profile.get_equipped_instance_id(&"head").is_empty(), "equipping the cloak auto-unequips the head slot", failures)
@@ -82,13 +99,8 @@ func _initialize() -> void:
 		# Save-select portraits must resolve from each slot's profile, not the
 		# currently active runtime animation. Build two same-palette fixtures so a
 		# shared active cloak cannot hide behind a palette difference.
-		var original_slot := ProfileSaveService.current_slot()
-		var original_slot_data: Array[Dictionary] = []
-		var original_slot_present: Array[bool] = []
-		for slot in ProfileSaveService.SLOT_COUNT:
-			var saved_profile := ProfileSaveService.load_profile_for_slot(slot)
-			original_slot_present.append(saved_profile != null)
-			original_slot_data.append(saved_profile.to_dictionary() if saved_profile != null else {})
+		_original_slot = ProfileSaveService.current_slot()
+		_snapshot_profile_files()
 		var cloaked_slot_profile := PlayerProfile.new()
 		cloaked_slot_profile.has_started = true
 		cloaked_slot_profile.player_name = "CLOAKED"
@@ -108,30 +120,28 @@ func _initialize() -> void:
 		ProfileSaveService.select_slot(1)
 		ProfileSaveService.save_profile(plain_slot_profile)
 		ProfileSaveService.select_slot(0)
-		var save_portrait_overlay := screens.call("build_save_select", gameplay.get("ui") as Node, Callable(gameplay, "_pixel_text_texture"), Callable(gameplay, "_select_save_slot"), Callable(gameplay, "_confirm_overwrite"), Callable(gameplay, "_save_overwrite_no"), Callable(gameplay, "_save_portrait_texture"), Callable(gameplay, "_close_save_select")) as ColorRect
+		var assembly_controller: Variant = screens.get("assembly_controller")
+		var save_portrait_overlay: ColorRect = null
+		if assembly_controller != null:
+			save_portrait_overlay = assembly_controller.call("build_save_select", gameplay.get("ui") as Node, Callable(gameplay, "_pixel_text_texture"), Callable(gameplay, "_select_save_slot"), Callable(gameplay, "_confirm_overwrite"), Callable(gameplay, "_save_overwrite_no"), Callable(gameplay, "_save_portrait_texture"), Callable(gameplay, "_close_save_select")) as ColorRect
+		_expect(save_portrait_overlay != null, "current screen assembly builds the save-select preview", failures)
 		var cloaked_portrait: Sprite2D = null
 		var plain_portrait: Sprite2D = null
-		for child in save_portrait_overlay.get_children():
-			if not child is Button or not child.has_meta("save_slot"):
-				continue
-			var slot := int(child.get_meta("save_slot"))
-			var slot_portrait := child.get_node_or_null("Save%dPortrait" % slot) as Sprite2D
-			if slot == 0:
-				cloaked_portrait = slot_portrait
-			elif slot == 1:
-				plain_portrait = slot_portrait
-		_expect(cloaked_slot_profile.has_demon_cloak_equipped() and not plain_slot_profile.has_demon_cloak_equipped(), "save fixtures keep cloak state isolated per profile", failures)
+		if save_portrait_overlay != null:
+			for child in save_portrait_overlay.get_children():
+				if not child is Button or not child.has_meta("save_slot"):
+					continue
+				var slot := int(child.get_meta("save_slot"))
+				var slot_portrait := child.get_node_or_null("Save%dPortrait" % slot) as Sprite2D
+				if slot == 0:
+					cloaked_portrait = slot_portrait
+				elif slot == 1:
+					plain_portrait = slot_portrait
+			_expect(cloaked_slot_profile.has_demon_cloak_equipped() and not plain_slot_profile.has_demon_cloak_equipped(), "save fixtures keep cloak state isolated per profile", failures)
 		_expect(cloaked_portrait != null and plain_portrait != null and cloaked_portrait.texture != plain_portrait.texture, "save-slot portraits do not inherit the active profile's cloak", failures)
-		save_portrait_overlay.queue_free()
-		for slot in ProfileSaveService.SLOT_COUNT:
-			if original_slot_present[slot]:
-				var restore_profile := PlayerProfile.new()
-				restore_profile.load_dictionary(original_slot_data[slot])
-				ProfileSaveService.select_slot(slot)
-				ProfileSaveService.save_profile(restore_profile)
-			else:
-				ProfileSaveService.clear_slot(slot)
-		ProfileSaveService.select_slot(original_slot)
+		if save_portrait_overlay != null:
+			save_portrait_overlay.queue_free()
+		_restore_profile_files()
 
 		if profile != null:
 			_expect(profile.unequip_slot(&"body"), "Demon Cloak unequips", failures)
@@ -148,8 +158,44 @@ func _initialize() -> void:
 func _watchdog() -> void:
 	if _finished:
 		return
+	_restore_profile_files()
 	push_error("TEST_ABORTED: Demon Cloak smoke failed before completion")
 	quit(1)
+
+
+func _snapshot_profile_files() -> void:
+	_profile_file_snapshots.clear()
+	var paths: Array[String] = [ProfileSaveService.ACTIVE_SLOT_PATH]
+	for slot in ProfileSaveService.SLOT_COUNT:
+		paths.append(ProfileSaveService._save_path(slot))
+		paths.append(ProfileSaveService._backup_path(slot))
+		paths.append(ProfileSaveService._temp_path(slot))
+	for path: String in paths:
+		var exists := FileAccess.file_exists(path)
+		_profile_file_snapshots[path] = {
+			"exists": exists,
+			"bytes": FileAccess.get_file_as_bytes(path) if exists else PackedByteArray(),
+		}
+	_profile_file_snapshot_active = true
+
+
+func _restore_profile_files() -> void:
+	if not _profile_file_snapshot_active:
+		return
+	for raw_path: Variant in _profile_file_snapshots:
+		var path := str(raw_path)
+		var snapshot: Dictionary = _profile_file_snapshots[raw_path]
+		if bool(snapshot.get("exists", false)):
+			var file := FileAccess.open(path, FileAccess.WRITE)
+			if file == null:
+				push_error("Demon Cloak smoke could not restore profile file: %s" % path)
+				continue
+			file.store_buffer(snapshot.get("bytes", PackedByteArray()) as PackedByteArray)
+			file.close()
+		elif FileAccess.file_exists(path):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+	ProfileSaveService.active_slot = _original_slot
+	_profile_file_snapshot_active = false
 
 
 func _finish(failures: Array[String]) -> void:

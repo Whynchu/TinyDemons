@@ -9,6 +9,8 @@ class_name ItemDefinition
 @export var id: StringName = &""
 @export var display_name := ""
 @export var slot: StringName = &""
+## Additional equipment slots this definition occupies while worn.
+@export var locked_slots: Array[StringName] = []
 @export var gear_tier: StringName = &"basic"
 @export var tier_stat: StringName = &""
 @export var tier_stats: Array[String] = []
@@ -51,6 +53,15 @@ func validate() -> Array[String]:
 		problems.append("display_name must not be empty")
 	if slot not in [&"weapon", &"head", &"body", &"arm", &"shield", &"accessory"]:
 		problems.append("slot must be one of the six canonical equipment slots")
+	var seen_locked_slots: Dictionary = {}
+	for locked_slot: StringName in locked_slots:
+		if locked_slot not in [&"weapon", &"head", &"body", &"arm", &"shield", &"accessory"]:
+			problems.append("locked_slots must contain only canonical equipment slots")
+		elif locked_slot == slot:
+			problems.append("locked_slots must not repeat the primary slot")
+		if seen_locked_slots.has(locked_slot):
+			problems.append("locked_slots contains duplicate slot '%s'" % locked_slot)
+		seen_locked_slots[locked_slot] = true
 	if weapon_element < 0 or weapon_element > 7:
 		problems.append("weapon_element must be a registered ElementCatalog value")
 	if gear_tier not in [&"plain", &"basic", &"set", &"legacy", &"expansion"]:
@@ -85,6 +96,7 @@ func to_record() -> Dictionary:
 		"name": display_name,
 		"description": description,
 		"slot": slot,
+		"locked_slots": locked_slots.duplicate(),
 		"gear_tier": gear_tier,
 		"tier_stat": tier_stat,
 		"tier_stats": tier_stats.duplicate(),

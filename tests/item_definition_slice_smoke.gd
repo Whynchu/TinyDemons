@@ -19,6 +19,12 @@ func _initialize() -> void:
 		var missing_set_link := catalog_data.duplicate(true) as ItemCatalogData
 		missing_set_link.live_set_ids.erase(&"swift_weapon")
 		_expect(not missing_set_link.validate().is_empty(), "catalog-owned set resources must appear in live_set_ids", failures)
+	var invalid_slot_claim := _save_candidate(&"invalid_slot_claim", "slot_claim")
+	invalid_slot_claim.locked_slots = [&"head", &"head"]
+	_expect(not invalid_slot_claim.validate().is_empty(), "duplicate secondary equipment slots are rejected", failures)
+	var primary_slot_claim := _save_candidate(&"primary_slot_claim", "primary_claim")
+	primary_slot_claim.locked_slots = [&"weapon"]
+	_expect(not primary_slot_claim.validate().is_empty(), "a secondary slot cannot repeat the primary slot", failures)
 	var authored_count := 0
 	for resource: Resource in catalog.authored_definition_resources:
 		authored_count += 1

@@ -146,11 +146,8 @@ func live_definition_ids() -> Array[StringName]:
 ## Demon Cloak, but excludes legacy dictionary records with no live source.
 func playable_definition_ids() -> Array[StringName]:
 	var result := live_definition_ids()
-	for definition_id: StringName in all_definition_ids():
-		if definition_id in result:
-			continue
-		var sources: Variant = definition_data(definition_id).get("source_tags", [])
-		if sources is Array and "cloaked_demon" in sources:
+	for definition_id: StringName in definition_ids_for_source_tag(&"cloaked_demon"):
+		if definition_id not in result:
 			result.append(definition_id)
 	result.sort_custom(func(left: StringName, right: StringName) -> bool:
 		return String(left) < String(right)
@@ -184,6 +181,33 @@ func definition_resource(definition_id: StringName) -> ItemDefinition:
 	if _catalog_data == null:
 		return null
 	return _catalog_data.authored_definition_resource(definition_id)
+
+
+func definition_ids_for_source_tag(source_tag: StringName) -> Array[StringName]:
+	var result: Array[StringName] = []
+	if source_tag.is_empty():
+		return result
+	for definition_id: StringName in all_definition_ids():
+		var source_tags: Variant = definition_data(definition_id).get("source_tags", [])
+		if source_tags is Array and String(source_tag) in source_tags:
+			result.append(definition_id)
+	return result
+
+
+func definition_locked_slots(definition_id: StringName) -> Array[StringName]:
+	var result: Array[StringName] = []
+	var raw_locked_slots: Variant = definition_data(definition_id).get("locked_slots", [])
+	if not raw_locked_slots is Array:
+		return result
+	for raw_slot: Variant in raw_locked_slots:
+		var slot := canonical_slot(raw_slot)
+		if slot in SLOTS and slot not in result:
+			result.append(slot)
+	return result
+
+
+func definition_locks_slot(definition_id: StringName, slot: Variant) -> bool:
+	return canonical_slot(slot) in definition_locked_slots(definition_id)
 
 
 func definition_source_path(definition_id: StringName) -> String:

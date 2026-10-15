@@ -1016,10 +1016,12 @@ checks and definition-manifest validation passed on 2026-10-14.
   stable ID directly.
 - [x] Replace count-pinned legacy-catalogue expectations with live-registry
   invariants, retired-ID checks, and focused current-item fixtures.
-- [ ] Decide the `demon_cloak` model: either a `single_instance`/`unique` flag
-  in the definition or a documented special case with one owner, not four
-  (`player_profile.gd`, `run_state.gd`, `equipment_component.gd`,
-  `hub_flow_controller.gd`).
+- [x] Keep `demon_cloak` repeatable because duplicate purchases are intentional
+  fusion materials; a `single_instance`/`unique` flag would break that path.
+  `PlayerProfile` owns its persistent purchase counter, price, and purchase
+  operation. The typed definition declares its `cloaked_demon` seller source
+  and `locked_slots`; `RunState`, profile equip state, and equipment previews
+  consume those fields instead of branching on the item ID.
 - [ ] Collapse element identity to one source. `element_for_palette()` now
   reads authored keys, defaults are explicit in `element_catalog.tres`, and
   element lookup/matchup validation is implemented; the expanded focused smoke

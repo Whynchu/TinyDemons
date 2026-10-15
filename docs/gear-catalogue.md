@@ -2,7 +2,7 @@
 
 Status: historical design catalogue; its retired expansion item records are no longer in the runtime backend
 
-Updated: 2026-09-26
+Updated: 2026-10-14
 
 ## Status
 
@@ -100,11 +100,17 @@ Retired Body transmutation:
 ### Demon Cloak — special acquisition rule
 
 `demon_cloak` never enters any drop source (no `chest`/`clear_reward`/`boss`
-tag). The Cloaked Demon's shop always offers it, and it is always sold at
+tag). Its typed definition declares the `cloaked_demon` seller source and that
+it locks the Head slot while equipped. The Cloaked Demon's shop always offers
+it, and it is always sold at
 **Common**. Each purchase raises the next price by `100G` (500 → 600 → 700 …),
 tracked by a persistent `demon_cloak_purchases` profile counter. Fusing
 duplicates is the only way it leaves Common, so reaching Mythic +10 costs ~50
-escalating purchases plus Souls. While it is equipped the player renders from
+escalating purchases plus Souls; repeat purchases are part of the item contract
+and must not be marked unique. `PlayerProfile` owns the persistent counter,
+price, and purchase operation; `RunState` discovers the offer from the typed
+source tag, and equip/preview code reads the typed slot lock. While it is
+equipped the player renders from
 the baked `player_cloaked` animation set (`Artwork/TinyDemon_fullsheet_cloaked.png`
 plus the separate `TinyDemon-Defend-Cloaked.png` defend strip). It is a
 Body + Head **gacha piece**: equipping it auto-unequips the Head slot and greys
