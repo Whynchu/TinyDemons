@@ -48,7 +48,9 @@ func aggro_target(root: Object, slime: Sprite2D) -> Vector2:
 	var is_boss := _is_boss(slime)
 	# Only nearby slimes can crowd a target point; the broad-phase grid bounds
 	# this to the local crowd instead of scanning the whole room.
-	var nearby: Array[Sprite2D] = collision.slime_grid_candidates(slime_foot, collision.contact_distance) if collision != null else []
+	var nearby: Array[Sprite2D] = []
+	if collision != null:
+		nearby = collision.slime_grid_candidates(slime_foot, collision.contact_distance)
 	for buddy in nearby:
 		if buddy == slime or bool(root.call("_is_slime_dead", buddy)): continue
 		if is_boss and not _is_boss(buddy): continue

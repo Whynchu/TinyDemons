@@ -25,7 +25,10 @@ func collision_polygon(actor: Sprite2D, foot: Vector2) -> PackedVector2Array:
 
 
 func nearby_enemies(point: Vector2, radius: float) -> Array[Sprite2D]:
-	return collision_system.slime_grid_candidates(point, radius) if collision_system != null else []
+	if collision_system != null:
+		return collision_system.slime_grid_candidates(point, radius)
+	var empty: Array[Sprite2D] = []
+	return empty
 
 
 func is_defeated(actor: Sprite2D) -> bool:

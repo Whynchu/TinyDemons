@@ -150,50 +150,12 @@ function New-ItemDefinition {
 	if ([string]::IsNullOrWhiteSpace($Id) -or $Id -notmatch "^[a-z][a-z0-9_]*$") {
 		throw "Item id must match ^[a-z][a-z0-9_]*$"
 	}
-	$definitionsRoot = Join-Path $resolvedRoot "resources/definitions/items"
-	New-Item -ItemType Directory -Force -Path $definitionsRoot | Out-Null
-	$definitionPath = Join-Path $definitionsRoot ("{0}.tres" -f $Id)
-	if ((Test-Path -LiteralPath $definitionPath -PathType Leaf) -and -not $Force) {
-		throw "Definition already exists: $definitionPath. Use -Force only to replace it."
-	}
-	$allDefinitionsRoot = Join-Path $resolvedRoot "resources/definitions"
-	$pattern = '(^[\s]*id[\s]*=[\s]*&"' + [regex]::Escape($Id) + '"|&"' + [regex]::Escape($Id) + '"[\s]*:)'
-	$existingMatches = @(Get-ChildItem -LiteralPath $allDefinitionsRoot -Filter "*.tres" -File -Recurse | Select-String -Pattern $pattern -List)
-	if ($existingMatches.Count -gt 0 -and -not $Force) {
-		throw "An authored definition already uses id '$Id': $($existingMatches[0].Path)"
-	}
-	$displayName = (($Id -split "_") | Where-Object { $_ } | ForEach-Object { $_.Substring(0, 1).ToUpperInvariant() + $_.Substring(1) }) -join " "
-	$template = @"
-[gd_resource type="Resource" script_class="ItemDefinition" load_steps=2 format=3]
-
-[ext_resource type="Script" path="res://scripts/content/item_definition.gd" id="1_item"]
-
-[resource]
-script = ExtResource("1_item")
-id = &"$Id"
-display_name = "$($displayName.ToUpperInvariant())"
-slot = &"weapon"
-gear_tier = &"basic"
-tier_stat = &"strength"
-bonuses = {"strength": 1.0}
-description = "An authored equipment definition."
-price = 25
-source_tags = Array[String](["shop", "chest", "clear_reward"])
-minimum_run_rank = 1
-minimum_player_level = 1
-rarity_floor = &"common"
-rarity_ceiling = &"mythic"
-shop_eligible = true
-live = true
-family = &"$Id"
-role = &"strength"
-role_tags = Array[String](["strength"])
-fusion_group = &"$Id"
-"@
-	$utf8NoBom = New-Object -TypeName System.Text.UTF8Encoding -ArgumentList $false
-	[System.IO.File]::WriteAllText($definitionPath, $template, $utf8NoBom)
+	if ($Force) { throw "Item creation does not overwrite definitions. Edit an existing standalone item or choose a new ID." }
+	Assert-GodotAvailable
+	Invoke-HeadlessScript "res://tools/create_item_definition.gd" @(("--item-id={0}" -f $Id))
+	$definitionPath = Join-Path $resolvedRoot ("resources/definitions/items/{0}.tres" -f $Id)
 	Write-Host "NEW_ITEM_DEFINITION $definitionPath" -ForegroundColor Green
-	Write-Host "Next: edit the resource, run 'pwsh -File tools/dev.ps1 preview item $Id', then run the content tests and verification."
+	Write-Host "Definition and generated manifests are current. Next: edit the resource, preview item $Id, then run content tests and verification."
 }
 
 function Show-Help {

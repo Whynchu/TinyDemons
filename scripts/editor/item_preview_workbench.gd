@@ -589,10 +589,8 @@ func create_authored_item() -> void:
 		_set_workbench_error("An item definition already uses id '%s'" % candidate_id)
 		return
 	var source_name := _selected_definition.display_name
+	var previous_item_id := _item_id
 	var resource_path := "%s/%s.tres" % [ITEM_RESOURCE_ROOT, candidate_id]
-	if FileAccess.file_exists(resource_path):
-		_set_workbench_error("Definition already exists: %s" % resource_path)
-		return
 	var new_definition := _selected_definition.duplicate(true) as ItemDefinition
 	if new_definition == null:
 		_set_workbench_error("Could not copy the selected item definition.")
@@ -600,16 +598,59 @@ func create_authored_item() -> void:
 	new_definition.id = authored_id
 	new_definition.display_name = _new_item_display_name(candidate_id)
 	new_definition.resource_name = new_definition.display_name
-	var save_error := ResourceSaver.save(new_definition, resource_path)
+	var save_error := _catalog.create_authored_definition(new_definition, resource_path)
 	if save_error != OK:
 		_set_workbench_error("Could not create %s (error %d)" % [resource_path, save_error])
 		return
-	_catalog.invalidate_authored_definition_cache()
+
+	if Engine.is_editor_hint():
+		var undo_redo: EditorUndoRedoManager = EditorInterface.get_editor_undo_redo()
+		if undo_redo == null:
+			var rollback_error := _catalog.remove_authored_definition(new_definition, resource_path)
+			_set_workbench_error(
+				"Could not create an undoable editor action (error %d; rollback %d)"
+				% [ERR_UNAVAILABLE, rollback_error]
+			)
+			return
+		var catalog_action := ItemCatalog.new()
+		var workbench_ref: WeakRef = weakref(self)
+		undo_redo.create_action("Create Item Definition", 0, ItemCatalog.ITEM_CATALOG_DATA)
+		undo_redo.add_do_method(
+			catalog_action,
+			"redo_authored_definition_action",
+			new_definition,
+			resource_path,
+			authored_id,
+			source_name,
+			workbench_ref,
+		)
+		undo_redo.add_undo_method(
+			catalog_action,
+			"undo_authored_definition_action",
+			new_definition,
+			resource_path,
+			previous_item_id,
+			workbench_ref,
+		)
+		undo_redo.add_do_reference(new_definition)
+		undo_redo.add_undo_reference(new_definition)
+		undo_redo.add_do_reference(catalog_action)
+		undo_redo.add_undo_reference(catalog_action)
+		undo_redo.commit_action(false)
+
+	_select_item_after_catalog_change(
+		authored_id, "Created item %s from %s" % [candidate_id, source_name]
+	)
+	print("Item preview workbench created %s" % resource_path)
+
+
+func _select_item_after_catalog_change(item_id_value: StringName, notice: String) -> void:
+	if _catalog != null:
+		_catalog.invalidate_authored_definition_cache()
 	_catalog = ItemCatalog.new()
 	new_item_id = ""
-	_select_item(authored_id, true)
-	_workbench_notice = "Created item %s from %s" % [candidate_id, source_name]
-	print("Item preview workbench created %s" % resource_path)
+	_select_item(item_id_value, true)
+	_workbench_notice = notice
 	notify_property_list_changed()
 	queue_redraw()
 

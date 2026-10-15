@@ -520,6 +520,11 @@ Workflow (current, during Slice 2 migration):
    `definition_metadata`, or a count-pinned test for a standalone item. The registry
    discovers the resource, converts it through the compatibility boundary, and
    exposes it to live generation.
+   Both creation paths save the standalone resource and refresh the generated
+   manifests as one transaction. A fresh catalog and the workbench picker can
+   immediately find the new ID; a failed manifest refresh rolls creation back.
+   Creation rejects existing IDs, files, and UID sidecars. `new item -Force`
+   is unsupported: edit an existing standalone resource or choose a new ID.
 4. Run `pwsh -File tools/dev.ps1 test -Suite content` and
    `pwsh -File tools/dev.ps1 verify`. The validator checks every authored
    `ItemDefinition`, the report lists its ID, and the registry smoke covers
@@ -528,6 +533,15 @@ Workflow (current, during Slice 2 migration):
    rarity/enhancement path in the workbench without changing unrelated balance.
    Catalog-owned baseline and set resources are preview-only; standalone items
    remain editable and saveable.
+
+Workbench creation registers a global editor undo action. Undo removes the new
+resource and refreshes the manifests; redo recreates it. Confirm create, undo,
+redo, and editor reopen in the target checkout before accepting editor behavior.
+CLI creation writes persistent source content and has no editor undo history.
+For a disposable CLI experiment, use a unique ID, remove only that experiment's
+`.tres` and any matching `.tres.uid`, then run `tools/dev.ps1 manifest refresh`.
+Do not remove catalog-owned definitions. Manual file moves/deletions still need
+that refresh; the creation transaction handles its own refresh.
 
 Item drop art resolves by canonical equipment slot through the same
 `ItemVisualResolver` used by runtime and previews. `ItemDefinition` intentionally

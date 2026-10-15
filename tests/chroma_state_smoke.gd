@@ -10,6 +10,10 @@ func _initialize() -> void:
 	var failures: Array[String] = []
 	var chroma := Chroma.new()
 	root.add_child(chroma)
+	# Fixed scenario values exercise state transitions independently of live tuning.
+	chroma.max_chroma = 100
+	chroma.chroma_pickup_value = 20
+	chroma.elemental_ability_cost = 10
 
 	chroma.begin_new_run()
 	_expect(chroma.current_aspect == Chroma.Aspect.NONE, "new run starts Gray", failures)

@@ -29,6 +29,11 @@
 19. `docs/agent-workflow.md` — project-scoped Pip, Thorn, and Hexley advisory roles and usage.
 ## Coordination with other agents
 
+For explicitly delegated composition work, use
+`.agents/skills/tiny-demons-team/SKILL.md` and
+`docs/composition-team-execution-plan.md`. Pip, Thorn, and Hexley advise;
+bounded Luna workers implement; the parent owns integration and editor access.
+
 More than one AI agent may work this repo at the same time (opencode and codex
 share the one Godot editor through separate MCP bridges). The Godot toolkit's
 mutation lock and scene lease prevent write races but carry no identity or
@@ -109,7 +114,8 @@ process exits nonzero or a test reports failure.
 | Frame ordering | `gameplay_frame_controller.gd` |
 | Player input and movement | `player_controller.gd`, `actor_motor.gd` |
 | Actor geometry and combat bounds | `actor_geometry.gd`, then `actor_collision_system.gd` |
-| Slime behavior and attack timing | `slime_brain.gd`, `slime_combat_component.gd`, `slime_actor.gd` |
+| Enemy decision and family behavior | `slime_brain.gd` (`EnemyBrain`, historical resource path), `slime_brain_behavior_component.gd`, `skeleton_brain_behavior_component.gd`; `docs/composition-p3-family-brain-behavior.md` |
+| Slime attack timing and actor hooks | `slime_combat_component.gd`, `slime_actor.gd` |
 | Chroma and elemental casting | `player_chroma_component.gd`, then `player_aspect_ability_component.gd` and `magic_runtime_controller.gd` |
 | Projectile lifecycle | `magic_projectile_controller.gd`, driven by `magic_runtime_controller.gd` |
 | Room generation and milestones | `room_controller.gd`, `dungeon_graph.gd`, `dungeon_map_controller.gd`, `room_transition_result.gd` |
@@ -149,3 +155,22 @@ Start with the feature owner above. If behavior crosses three or more owners,
 define a typed command/result or signal at the boundary before adding coordinator
 logic. If no owner is obvious, update `docs/ARCHITECTURE.md` and `docs/AUDIT.md`
 before implementing the feature.
+
+## Graphify navigation
+
+When the local knowledge graph is available, query it before code ownership
+or relationship work, then verify relevant spans in the assigned worktree:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/graphify.ps1 query "<question>" --budget 1500
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/graphify.ps1 path "<A>" "<B>"
+```
+
+The wrapper uses this worktree as the source root and reuses an installed
+`graphify-godot` fork here or alongside Git's common directory. Maps stay under
+the ignored fork's `.tools/tiny-demons-map/`. If the fork, environment or map is
+missing, report that and use ownership docs/source; do not install unrelated
+upstream tools. Graph facts are navigation evidence, not unused-code proof.
+Check current source after every query. Refresh once after a completed verified
+code batch with `tools/graphify.ps1 update .`; ordinary questions and documentation
+edits do not require a rebuild. The parent owns refreshes when agents share a map.

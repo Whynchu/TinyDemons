@@ -26,6 +26,7 @@ assets/sounds/FFsounds/
 previous session.txt
 
 # Tool caches and generated analysis
+/graphify-godot/
 **/__pycache__/
 **/.venv*/
 node_modules/

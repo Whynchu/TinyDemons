@@ -59,9 +59,9 @@ bridge and `coord/status-codex.md`; preserve opencode's runner/Pages claim.
 | Package | Phase / dependency | Deliverable | Acceptance and status |
 | --- | --- | --- | --- |
 | E0 Recovery | P4; existing overnight diff | Retire unused item visual metadata; retain shared slot art | Published; three focused checks, 110 definitions and static guards pass |
-| E1 Team workflow | All phases | Small reusable skill and evidence-backed execution packets | LOW implementation present; independent skill/navigation exercise pending |
-| E2 Item lifecycle | P4 / X12 / X17 | Catalog-owned create/remove, generated manifest and cache parity, editor undo/redo | First establish regression; immediate discover/select/preview; undo removes; redo restores; duplicate/path rejection and failed-write rollback; no residual fixture |
-| E3 Entry points | E2 | CLI item scaffolding reaches the same fresh registry; guide describes actual editor/CLI paths | A new disposable item is immediately previewable and manifests are fresh; cleanup restores tracked resources |
+| E1 Team workflow | All phases | Small reusable skill and evidence-backed execution packets | Implemented; independent LOW navigation completed; official YAML validator unavailable without PyYAML |
+| E2 Item lifecycle | P4 / X12 / X17 | Catalog-owned create/remove, generated manifest and cache parity, editor undo/redo | Technical smoke passes on 4.7.1 including both replacement guards and post-save rollback; real editor history/reopen acceptance open |
+| E3 Entry points | E2 | CLI item scaffolding reaches the same fresh registry; guide describes actual editor/CLI paths | CLI creation, fresh-process preview and fixture-inclusive validation pass; original manifests and fixture absence restored |
 | E4 Source reconciliation | P4 / X14, X18 | Correct stale room-spec/policy/folder claims using field-to-consumer evidence | Typed RoomSpec/ConnectionSpec and policy consumption already exist; assign only remaining real parity/validation defects |
 | E5 Agent usability | E1-E4 | Independent LOW agent follows docs for supported enemy/item/room tasks | Record time, files/docs consulted, errors, interventions, central runtime edits, fixture cleanup and save/preview proof; repair and repeat failures |
 | E6 Migration evidence | P1/P2/P3 | Current-source family swap, file-backed restore, brain/steering and preview evidence | Focused checks pass; earlier P3 user acceptance remains valid; do not misreport previously unrun checks |
@@ -123,5 +123,49 @@ has stale dictionary-spec claims. Hexley endorsed item lifecycle consistency,
 with stable IDs, source tags, acquisition order and slot art preserved. Pip
 selected that lifecycle as the next bounded slice and retained all broader
 composition exit criteria. None claimed editor or runtime checks they did not
-perform. LOW implemented the reusable team skill; MAX will implement the item
-transaction after its regression is characterized.
+perform. LOW implemented the reusable team skill; MAX implemented the item
+transaction after its regression was characterized.
+
+Current evidence: the expanded item-workbench smoke fails on old source at
+immediate registry/picker discovery, stale manifests, selected ID/path, and
+missing transaction/undo APIs. Its fixture and project configuration were
+restored. The expanded smoke subsequently passed on the implementation, as did
+item-definition and gear smokes. Thorn requested an additional same-ID external
+replacement guard before final integration. The composition self-test passes.
+The team skill's official validator is environment-blocked by missing PyYAML;
+its scalar frontmatter and instruction paths were inspected. The review branch
+now has a worktree-aware Graphify wrapper:
+a query launched from the primary checkout resolved the shared ignored fork
+and existing map successfully without changing that checkout's source.
+
+Final E2 focused checks on Godot 4.7.1: expanded item-workbench smoke,
+item-definition slice, steering world, family brain behavior, and definition
+validator all exit 0 (110/110 definitions after cleanup). Godot 4.7.2 also passed
+gear rework, Chroma state, encounter family swaps and run-element themes. The
+last three repair earlier stale fixtures/current-source verification gaps.
+Steering verification exposed real typed-empty-array failures in the optional
+collision-service path of EnemySteeringWorld and EnemyBrain; narrow typed
+branches fix both. The steering fixture now explicitly uses non-centered actor
+geometry, also checks centered targets, and frees its unattached WalkableArea.
+No production tuning changed. The curated gate has not been run with the main
+editor active; R6+ elite generation and binding teardown remain open.
+
+Independent navigation exercise: Luna LOW started from the team skill, AGENTS
+and authoring guide on the working tree based on `ca18e279`. In approximately
+35 seconds it ran Graphify, verified source, and located item CLI/workbench,
+enemy family behavior owners, and the typed-runtime/dictionary-authored room
+boundary. It needed no runtime edits or engineering intervention. It did not
+create content, save/reopen, export, or visually inspect anything. Its cleanup
+ambiguity was repaired in CONTENT_AUTHORING: CLI creation has no editor undo;
+manual experiment deletion requires manifest refresh. E5's actual authoring
+exercise and the human Godot-only acceptance therefore remain open.
+
+The parent separately ran the real CLI create command successfully, then the
+creation driver and item preview in fresh processes; the temporary item was
+immediately found. Definitions passed at 111/111 with the fixture present.
+Cleanup restored the original manifests, fixture absence and project config.
+The first preview attempt used a nonexistent driver name; the corrected
+`res://tools/preview_item.gd -- --item-id=...` passed. Headless CLI import also
+enabled the editor MCP plugin briefly; subsequent isolated import probes must
+temporarily disable both editor plugins and the runtime autoload, restoring the
+exact original configuration. No GUI editor was opened.

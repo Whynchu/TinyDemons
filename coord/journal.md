@@ -1536,3 +1536,9 @@ P4 item visual metadata disposition. Inspecting and editing item schema/resource
 2026-10-15 | codex | done | Recovered item visual metadata retirement: removed unused visual_id from schema, 74 item resources, catalog projection, preview and template. Gear, item definition and workbench focused smokes and 110/110 definition validation pass; composition, manifest, UID and diff checks pass. Preserved the pending Web renderer edit and the main worktree.
 
 2026-10-15 | codex | claim | User-authorized composition completion team: serial Thorn/Hexley/Pip advisors, Luna LOW workflow and independent usability, Luna MAX item lifecycle implementation, parent integration and review-branch publication. Preserve separate main worktree and opencode runner/Pages claim.
+
+2026-10-15 | codex | done | Agent navigation now reuses the installed Graphify fork from linked worktrees; scoped query from a different working directory passes. AGENTS links the team workflow and current EnemyBrain owners. Item lifecycle characterization reproduces stale registry/preview behavior on old source; MAX implementation is in progress.
+
+2026-10-15 | codex | claim | Verification debt: make the Chroma state scenario use explicit fixture tuning and exercise current room encounter generation instead of the removed base-level bridge in run-theme coverage. Production tuning remains unchanged; focused reruns pending.
+2026-10-15 claim codex: enemy steering focused check exposed untyped empty-array return without collision service; parent owns narrow context fix and centered-geometry fixture correction.
+2026-10-15 done codex: Luna MAX item lifecycle and CLI integration pass focused Godot 4.7.1/4.7.2 checks; parent fixed typed empty collision queries; LOW navigation and Thorn review recorded. Editor/export and full-plan acceptance remain open.

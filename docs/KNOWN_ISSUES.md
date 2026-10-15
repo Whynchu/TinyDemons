@@ -2,12 +2,12 @@
 
 Status: live register for the `0.3.x` cycle
 
-Updated: 2026-10-11
+Updated: 2026-10-15
 
 Baseline: version `0.2.00`, commit `bfe55782f43ee40fe32b5bebd45de988e34579d8`
 
-Current release: version `0.3.92`. The current smoke inventory is 157 manifest
-rows / 155 runnable paths / 2 report rows / 45-path default gate; counts quoted
+Current release: version `0.3.92`. The current smoke inventory is 160 manifest
+rows / 158 runnable paths / 2 report rows / 45-path default gate; counts quoted
 in older sections below are historical snapshots. The authoring and verification
 sequence is in [`authoring-system-plan.md`](authoring-system-plan.md).
 

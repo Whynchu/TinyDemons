@@ -7,6 +7,26 @@ _Only codex writes this file._
 
 ## In flight: Delegated composition completion
 
+2026-10-15 integration checkpoint: E2/E3 item create/remove transaction and CLI
+entry point implemented. Final Godot 4.7.1 focused checks pass: item workbench
+(create/discover/select, undo/redo adapters, rollback, duplicate/path and both
+external replacement guards), item-definition, steering world, family brain
+behavior, and definitions 110/110. Godot 4.7.2 gear, Chroma, encounter family-swap
+and run-theme checks pass. CLI creation and fresh-process preview pass, with
+111/111 validation while the disposable item exists; original files/config
+restored afterward. Thorn reviewed deletion ownership; MAX added same-ID
+content protection. Parent repaired typed-empty optional collision queries and
+stale test fixtures without changing gameplay tuning.
+
+Independent LOW navigation took about 35 seconds and found all three requested
+owners. It did no content mutation or visual review; E5 actual authoring and
+human Godot-only acceptance remain open. Cleanup ambiguity was documented.
+Current technical gate evidence does not complete the full composition plan.
+Next: investigate existing R6+ elite-support level failure, then export and
+remaining authoring/runtime ownership acceptance in the execution queue.
+
+Historical progress notes below describe the sequence before this checkpoint.
+
 The user authorized Pip/Thorn/Hexley reviews, Luna LOW/MAX implementation,
 parent oversight, and publication to `review/composition-cleanup-plan`.
 The [execution plan](../docs/composition-team-execution-plan.md) maps the full
@@ -25,6 +45,21 @@ the journal blob; after checking the already-public baseline and exact generic
 task-only diff it accepted publication. The pending Web renderer change and
 separate dirty main worktree are preserved. Full composition acceptance and
 human editor/visual review remain open.
+
+The item lifecycle characterization now fails on unchanged source exactly at
+immediate discovery, playable selection, manifest freshness, selected ID/path,
+and missing transaction/undo APIs (Godot 4.7.2 exit 1). Fixture and configuration
+cleanup succeeded. MAX is implementing the transaction; the parent is routing
+CLI scaffolding through that same API. The strict validator self-test passes.
+
+Agent navigation fix: the review branch lacked `tools/graphify.ps1` even though
+the primary checkout had the local fork. A worktree-aware wrapper now finds
+that fork through Git's common directory, retains the assigned worktree as its
+source root, and preserves environment/current-directory state. Its query from
+the other worktree succeeded. AGENTS now links the team workflow and accurate
+EnemyBrain owners. The official skill validator cannot import optional PyYAML
+in the available Python environment; the simple two-field frontmatter and
+linked instruction paths were inspected, and independent usage is still pending.
 
 ## Completed: Composition cleanup P0 dispositions
 

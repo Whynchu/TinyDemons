@@ -109,12 +109,15 @@ static func canonical_slot(slot: Variant) -> StringName:
 
 
 static func definition_slot_for(definition_id: StringName) -> StringName:
-	var record: Dictionary = ITEM_CATALOG_DATA.authored_definition_data().get(definition_id, {})
+	var catalog_data := load(DATA_PATH) as ItemCatalogData
+	if catalog_data == null:
+		catalog_data = ITEM_CATALOG_DATA
+	var record: Dictionary = catalog_data.authored_definition_data().get(definition_id, {})
 	if record.is_empty():
-		record = ITEM_CATALOG_DATA.definitions.get(definition_id, {})
+		record = catalog_data.definitions.get(definition_id, {})
 	if not record.is_empty():
 		return canonical_slot(record.get("slot", &""))
-	for resource: Resource in ContentDefinitionManifestService.load_kind_entries(&"item", ITEM_DEFINITION_MANIFEST):
+	for resource: Resource in ContentDefinitionManifestService.load_kind_entries(&"item", catalog_data.item_manifest_resource()):
 		var definition := resource as ItemDefinition
 		if definition != null and definition.id == definition_id:
 			return canonical_slot(definition.slot)
@@ -221,6 +224,62 @@ func save_authored_definition(definition: ItemDefinition) -> int:
 	if _catalog_data == null:
 		return ERR_FILE_NOT_FOUND
 	return _catalog_data.save_authored_definition(definition)
+
+
+func create_authored_definition(definition: ItemDefinition, resource_path: String) -> Error:
+	if definition == null:
+		return ERR_INVALID_PARAMETER
+	if definition.id in RETIRED_DEFINITION_IDS:
+		return ERR_ALREADY_EXISTS
+	if _catalog_data == null:
+		return ERR_FILE_NOT_FOUND
+	return _catalog_data.create_authored_definition(definition, resource_path)
+
+
+func remove_authored_definition(definition: ItemDefinition, resource_path: String = "") -> Error:
+	if _catalog_data == null:
+		return ERR_FILE_NOT_FOUND
+	return _catalog_data.remove_authored_definition(definition, resource_path)
+
+
+func redo_authored_definition_action(
+	definition: ItemDefinition,
+	resource_path: String,
+	authored_id: StringName,
+	source_display_name: String,
+	workbench_ref: WeakRef,
+) -> void:
+	var create_error := create_authored_definition(definition, resource_path)
+	if create_error != OK:
+		push_error("ItemCatalog: redo create failed (%d) for %s" % [create_error, authored_id])
+		return
+	_select_workbench_item(
+		workbench_ref, authored_id, "Redid item creation from %s" % source_display_name
+	)
+
+
+func undo_authored_definition_action(
+	definition: ItemDefinition,
+	resource_path: String,
+	previous_item_id: StringName,
+	workbench_ref: WeakRef,
+) -> void:
+	var remove_error := remove_authored_definition(definition, resource_path)
+	if remove_error != OK:
+		push_error("ItemCatalog: undo create failed (%d) for %s" % [remove_error, definition.id])
+		return
+	_select_workbench_item(workbench_ref, previous_item_id, "Undid item creation")
+
+
+func _select_workbench_item(
+	workbench_ref: WeakRef,
+	item_id: StringName,
+	notice: String,
+) -> void:
+	var workbench := workbench_ref.get_ref() as Node
+	if workbench == null or not is_instance_valid(workbench):
+		return
+	workbench.call("_select_item_after_catalog_change", item_id, notice)
 
 
 func invalidate_authored_definition_cache() -> void:

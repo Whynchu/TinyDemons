@@ -80,7 +80,10 @@ func _initialize() -> void:
 			"pickups": [{"value": 1, "position": Vector2(12, 18)}],
 		}
 	}
-	var migration := EncounterDefinitionScript.migrate_cached_rosters(legacy_states, water_electric_theme, 3, 7789)
+	# Electric's yellow variant unlocks on run 5. Keep this fixture focused on
+	# the single off-theme Fire slot rather than also exercising locked IDs.
+	var migration_run_number := 5
+	var migration := EncounterDefinitionScript.migrate_cached_rosters(legacy_states, water_electric_theme, migration_run_number, 7789)
 	var migrated_states: Dictionary = migration.get("room_states", {})
 	var migrated_room: Dictionary = migrated_states.get(&"room_a", {})
 	_expect((migration.get("errors", []) as Array).is_empty(), "legacy room rosters migrate into the chosen theme", failures)
@@ -88,7 +91,7 @@ func _initialize() -> void:
 	_expect(migrated_room.get("enemy_levels", []) == legacy_states[&"room_a"].enemy_levels, "migration preserves enemy levels", failures)
 	_expect(migrated_room.get("enemy_runtime", {}) == legacy_states[&"room_a"].enemy_runtime, "migration preserves health and Chroma runtime state", failures)
 	_expect(migrated_room.get("pickups", []) == legacy_states[&"room_a"].pickups, "migration preserves saved pickup values and positions", failures)
-	_expect(EncounterDefinitionScript.validate_roster_theme(migrated_room.get("enemy_variants", []) as Array, water_electric_theme, 3).is_empty(), "migrated roster stays inside its theme", failures)
+	_expect(EncounterDefinitionScript.validate_roster_theme(migrated_room.get("enemy_variants", []) as Array, water_electric_theme, migration_run_number).is_empty(), "migrated roster stays inside its theme", failures)
 
 	var first_room_controller := RoomControllerScript.new() as Node
 	var second_room_controller := RoomControllerScript.new() as Node
@@ -98,7 +101,17 @@ func _initialize() -> void:
 	first_room_controller.set("progression_run_number", 5)
 	second_room_controller.set("progression_run_rank", 8)
 	second_room_controller.set("progression_run_number", 5)
-	_expect(int(first_room_controller.call("_generated_enemy_base_level", 0)) < int(second_room_controller.call("_generated_enemy_base_level", 0)), "enemy level still follows difficulty rank at a fixed campaign run", failures)
+	# Exercise the current room consumer with a fixed non-popcorn enemy. The old
+	# base-level bridge was removed when scaling gained its own typed owner.
+	first_room_controller.set("debug_enemy_variant", "grey")
+	second_room_controller.set("debug_enemy_variant", "grey")
+	var first_encounter: Dictionary = first_room_controller.call("_generate_enemy_encounter", 99123, 0, false, false)
+	var second_encounter: Dictionary = second_room_controller.call("_generate_enemy_encounter", 99123, 0, false, false)
+	var first_levels: Array = first_encounter.get("levels", [])
+	var second_levels: Array = second_encounter.get("levels", [])
+	_expect(not first_levels.is_empty() and not second_levels.is_empty(), "both difficulty ranks generate an enemy encounter", failures)
+	if not first_levels.is_empty() and not second_levels.is_empty():
+		_expect(int(first_levels.max()) < int(second_levels.min()), "enemy level still follows difficulty rank at a fixed campaign run", failures)
 	var first_definition := first_room_controller.call("_encounter_definition") as EncounterDefinition
 	var second_definition := second_room_controller.call("_encounter_definition") as EncounterDefinition
 	_expect(first_definition != second_definition and first_definition.matchup_policy != second_definition.matchup_policy, "room controllers own isolated matchup definitions", failures)

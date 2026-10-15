@@ -47,6 +47,11 @@ independent navigation; Luna MAX suits contract design, cross-file reasoning,
 and code integration. Honor explicit user model/effort choices. Keep each
 assignment narrow enough for its chosen effort and report assumptions early.
 
+With Codex's collaboration API, use `agent_type: worker`,
+`model: gpt-6-luna`, and `reasoning_effort: low` or `max`. Model overrides
+require `fork_turns: none`, so include the full packet rather than relying on
+inherited conversation. Advisor types are `pip`, `thorn`, and `hexley`.
+
 ## Preserve project contracts
 
 Follow `AGENTS.md` verification restrictions, including MCP-first editor safety
