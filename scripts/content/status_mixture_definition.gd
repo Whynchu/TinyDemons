@@ -9,11 +9,11 @@ class_name StatusMixtureDefinition
 @export var consumes_ingredients := true
 
 
-func validate(registered_status_ids: Array[StringName]) -> Array[String]:
+func validate(registered_status_ids: Array[StringName], registered_element_count: int) -> Array[String]:
 	var problems: Array[String] = []
-	if first_element <= ElementCatalog.Element.NEUTRAL or first_element >= ElementCatalog.element_count():
+	if first_element <= 0 or first_element >= registered_element_count:
 		problems.append("first_element must be a registered non-neutral element")
-	if second_element <= ElementCatalog.Element.NEUTRAL or second_element >= ElementCatalog.element_count():
+	if second_element <= 0 or second_element >= registered_element_count:
 		problems.append("second_element must be a registered non-neutral element")
 	if first_element == second_element:
 		problems.append("status mixture ingredients must be different elements")

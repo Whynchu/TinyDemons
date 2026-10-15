@@ -1007,10 +1007,11 @@ Work items:
   in the definition or a documented special case with one owner, not four
   (`player_profile.gd`, `run_state.gd`, `equipment_component.gd`,
   `hub_flow_controller.gd`).
-- [ ] Collapse element identity to one source. At minimum: derive
-  `element_for_palette()` (`element_catalog.gd:108-126`) from the data,
-  validate `element_count` and matchup-table dimensions, and remove the
-  duplicate default in `element_catalog_data.gd:14`.
+- [ ] Collapse element identity to one source. `element_for_palette()` now
+  reads authored keys, defaults are explicit in `element_catalog.tres`, and
+  element lookup/matchup validation is implemented; the expanded focused smoke
+  still needs a Godot run before this item closes. Remaining work includes the
+  aspect tables and their mirror below.
 - [ ] Move `AspectCatalog` flame/palette/recipe tables
   (`aspect_catalog.gd:4-32`) and the `PlayerChromaComponent` aspect mirror into
   typed definitions or generate them from the element registry.
@@ -1023,7 +1024,9 @@ Work items:
   then add the element palette/effect preview and complete the item/element
   preview acceptance checks.
 - [ ] Include `element_catalog.tres` and `palette_library.tres` in the
-  validator with real schema checks.
+  validator with real schema checks. Both resources now expose schema
+  validators, but the definition validator and focused malformed-data checks
+  still need a Godot run before this item closes.
 
 Acceptance bar: add one weapon and one flame with data only; save round-trip
 and `dev.ps1 verify` pass; no test edits.

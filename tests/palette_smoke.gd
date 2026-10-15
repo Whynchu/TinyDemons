@@ -1,6 +1,7 @@
 extends SceneTree
 
 const MATERIAL_SCRIPT = preload("res://scripts/actors/actor_palette_material.gd")
+const PALETTE_DATA := preload("res://resources/definitions/palette_library.tres")
 
 var _finished := false
 
@@ -9,7 +10,17 @@ func _initialize() -> void:
 	call_deferred("_watchdog")
 	var failures: Array[String] = []
 	var library := PaletteLibrary
-	_expect(library.PALETTE_NAMES.size() == 8, "palette library exposes all eight palettes", failures)
+	_expect(PALETTE_DATA.validate().is_empty(), "authored palette catalog passes schema validation", failures)
+	var missing_accent := PALETTE_DATA.duplicate(true) as PaletteLibraryData
+	missing_accent.accent.erase("blue")
+	_expect(not missing_accent.validate().is_empty(), "missing palette colors are rejected", failures)
+	var unknown_selectable := PALETTE_DATA.duplicate(true) as PaletteLibraryData
+	unknown_selectable.selectable_palettes.append("missing_palette")
+	_expect(not unknown_selectable.validate().is_empty(), "unknown selectable palettes are rejected", failures)
+	var non_selectable_rest_fire := PALETTE_DATA.duplicate(true) as PaletteLibraryData
+	non_selectable_rest_fire.rest_fire_palettes.append("grey")
+	_expect(not non_selectable_rest_fire.validate().is_empty(), "rest-fire palettes must be selectable", failures)
+	_expect(library.PALETTE_NAMES == PALETTE_DATA.palette_names, "palette service exposes authored names", failures)
 	_expect(library.NORMAL["blue"] == Color8(59, 93, 201), "blue normal is the canonical player blue", failures)
 	_expect(library.SHADOW["blue"] == Color8(41, 54, 111), "blue shadow is the canonical dark blue", failures)
 	_expect(library.ACCENT["blue"] == Color8(65, 166, 246), "blue accent is the canonical bright blue", failures)

@@ -13,7 +13,7 @@
 "dialogue_choice_smoke","gate","unverified","input & touch","dialogue touch buttons","pure",""
 "display_layout_smoke","gate","unverified","settings & display","DisplayLayout responsive math","pure",""
 "display_responsive_scene_smoke","gate","verified","settings & display","responsive scene layout across window sizes","main","focused pass 2026-09-15; Hub cursor anchor and orientation reflow assertions are deterministic; save cursor remains left of slot portrait"
-"element_catalog_smoke","gate","verified","chroma & elements","ElementCatalog element definitions","pure","core smoke checklist evidence"
+"element_catalog_smoke","gate","unverified","chroma & elements","ElementCatalog element definitions and authored schema","pure","schema assertions expanded 2026-10-14; focused Godot run pending while the shared editor is active"
 "elemental_binding_smoke","gate","verified","chroma & elements","elemental binding routes and starter gates","pure","2026-09-13 focused evidence"
 "elemental_damage_smoke","gate","unverified","chroma & elements","elemental damage via CombatCalculator","pure",""
 "enemy_room_engagement_smoke","gate","verified","slime enemies","enemy engagement and clear-gate contract","pure","2026-09-11 focused evidence"

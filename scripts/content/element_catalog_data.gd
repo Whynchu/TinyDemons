@@ -13,12 +13,62 @@ class_name ElementCatalogData
 @export var status_effects: Array[Resource] = []
 @export var status_mixtures: Array[Resource] = []
 @export var damage_number_color_boost := 1.10
-@export var default_element := 0
-@export var element_count := 8
+@export var default_element := -1
+@export var element_count := 0
 
 
 func validate() -> Array[String]:
 	var problems: Array[String] = []
+	if element_count <= 0:
+		problems.append("element_count must be positive")
+	if default_element < 0 or default_element >= element_count:
+		problems.append("default_element must reference a registered element")
+	_validate_indexed_mapping(ids, "ids", problems)
+	_validate_indexed_mapping(display_names, "display_names", problems)
+	_validate_indexed_mapping(palette_keys, "palette_keys", problems)
+	var seen_element_ids: Dictionary = {}
+	var seen_palette_keys: Dictionary = {}
+	for index in range(maxi(element_count, 0)):
+		if not ids.has(index) or not display_names.has(index) or not palette_keys.has(index):
+			continue
+		var raw_element_id: Variant = ids[index]
+		if not raw_element_id is StringName:
+			problems.append("element id %d must be a StringName" % index)
+		var element_id := str(raw_element_id).strip_edges()
+		if element_id.is_empty():
+			problems.append("element id %d must not be empty" % index)
+		elif seen_element_ids.has(element_id):
+			problems.append("duplicate element id '%s'" % element_id)
+		seen_element_ids[element_id] = true
+		var display_name: Variant = display_names[index]
+		if not display_name is String:
+			problems.append("element display name %d must be a String" % index)
+		if str(display_name).strip_edges().is_empty():
+			problems.append("element display name %d must not be empty" % index)
+		var raw_palette_key: Variant = palette_keys[index]
+		if not raw_palette_key is String:
+			problems.append("element palette key %d must be a String" % index)
+		var palette_key := str(raw_palette_key).strip_edges().to_lower()
+		if palette_key.is_empty():
+			problems.append("element palette key %d must not be empty" % index)
+		elif seen_palette_keys.has(palette_key):
+			problems.append("duplicate element palette key '%s'" % palette_key)
+		seen_palette_keys[palette_key] = true
+	if matchup_table.size() != element_count:
+		problems.append("matchup_table row count must equal element_count")
+	for attacker in mini(matchup_table.size(), maxi(element_count, 0)):
+		var row: Variant = matchup_table[attacker]
+		if not row is Array:
+			problems.append("matchup row %d must be an array" % attacker)
+			continue
+		if row.size() != element_count:
+			problems.append("matchup row %d column count must equal element_count" % attacker)
+		for defender in mini(row.size(), maxi(element_count, 0)):
+			var multiplier: Variant = row[defender]
+			if not multiplier is int and not multiplier is float:
+				problems.append("matchup %d -> %d must be numeric" % [attacker, defender])
+			elif not is_finite(float(multiplier)) or float(multiplier) < 0.0:
+				problems.append("matchup %d -> %d must be finite and non-negative" % [attacker, defender])
 	var seen_ids: Dictionary = {}
 	var seen_elements: Dictionary = {}
 	for index in status_effects.size():
@@ -47,7 +97,7 @@ func validate() -> Array[String]:
 		if mixture == null:
 			problems.append("status mixture %d is null or has an unsupported resource type" % index)
 			continue
-		for problem in mixture.validate(StatusEffectDefinition.AUXILIARY_STATUS_IDS + StatusEffectDefinition.STATUS_IDS):
+		for problem in mixture.validate(StatusEffectDefinition.AUXILIARY_STATUS_IDS + StatusEffectDefinition.STATUS_IDS, element_count):
 			problems.append("status mixture %d: %s" % [index, problem])
 		if not StatusEffectDefinition.AUXILIARY_STATUS_IDS.has(mixture.result_status_id):
 			problems.append("status mixture %d result must be an auxiliary status" % index)
@@ -67,3 +117,14 @@ func validate() -> Array[String]:
 			problems.append("duplicate status mixture pair '%s'" % pair_key)
 		seen_pairs[pair_key] = true
 	return problems
+
+
+func _validate_indexed_mapping(mapping: Dictionary, label: String, problems: Array[String]) -> void:
+	if mapping.size() != element_count:
+		problems.append("%s entry count must equal element_count" % label)
+	for index in range(maxi(element_count, 0)):
+		if not mapping.has(index):
+			problems.append("%s is missing element index %d" % [label, index])
+	for raw_index: Variant in mapping:
+		if not raw_index is int or int(raw_index) < 0 or int(raw_index) >= element_count:
+			problems.append("%s contains invalid element index '%s'" % [label, str(raw_index)])

@@ -9,6 +9,18 @@ func _initialize() -> void:
 	call_deferred("_watchdog")
 	var failures: Array[String] = []
 	var e := ElementCatalogScript.Element
+	_expect(ElementCatalogScript.DATA.validate().is_empty(), "authored element catalog passes schema validation", failures)
+	var invalid_dimensions := ElementCatalogScript.DATA.duplicate(true) as ElementCatalogData
+	invalid_dimensions.matchup_table[0].pop_back()
+	_expect(not invalid_dimensions.validate().is_empty(), "mismatched matchup dimensions are rejected", failures)
+	var missing_palette := ElementCatalogScript.DATA.duplicate(true) as ElementCatalogData
+	missing_palette.palette_keys.erase(e.ICE)
+	_expect(not missing_palette.validate().is_empty(), "missing palette indexes are rejected", failures)
+	var invalid_mixture := ElementCatalogScript.DATA.duplicate(true) as ElementCatalogData
+	var mixture := (ElementCatalogScript.DATA.status_mixtures[0] as StatusMixtureDefinition).duplicate() as StatusMixtureDefinition
+	invalid_mixture.status_mixtures = [mixture]
+	mixture.first_element = invalid_mixture.element_count
+	_expect(not invalid_mixture.validate().is_empty(), "mixture elements outside the authored element range are rejected", failures)
 	var expected := [
 		[1.0, 1.0, 1.0, 1.0, 1.0, 0.25, 1.0, 1.0],
 		[1.0, 0.8, 0.8, 1.0, 1.25, 1.0, 1.0, 1.25],
