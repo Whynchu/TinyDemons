@@ -1,0 +1,43 @@
+[gd_resource type="Resource" script_class="ItemDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/content/item_definition.gd" id="1_definition"]
+
+[resource]
+script = ExtResource("1_definition")
+id = &"basic_shield"
+display_name = "BASIC SHIELD"
+slot = &"shield"
+gear_tier = &"basic"
+tier_stat = &"defense"
+tier_stats = Array[String]([])
+bonuses = {
+"agi": -1.0,
+"defense": 2.0,
+"vitality": 1.0
+}
+description = "Teaches the core block contract with a readable guard package."
+price = 30
+source_tags = Array[String](["starter", "shop", "chest", "clear_reward"])
+minimum_run_rank = 1
+minimum_player_level = 1
+rarity_floor = &"common"
+rarity_ceiling = &"mythic"
+shop_eligible = true
+starter_only = false
+live = true
+catalog_owned = true
+family = &"shield"
+role = &"defense"
+role_tags = Array[String](["defense", "guard", "baseline"])
+effects = {}
+shield = {
+"guard_durability": 2.0,
+"guard_reduction": 1.0
+}
+fusion_group = &"shield"
+visual_id = &"shield"
+weapon_element = 0
+set_id = &""
+set_name = ""
+passive_id = &""
+designer_notes = ""

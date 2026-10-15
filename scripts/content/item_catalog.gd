@@ -43,7 +43,6 @@ const PLAIN_GEAR_DROP_WEIGHT := 5.0
 const BASIC_GEAR_DROP_WEIGHT := 4.5
 const SET_GEAR_DROP_WEIGHT := 0.6
 const RANDOM_STAT_KEYS: Array[String] = ["vitality", "strength", "defense", "agi", "intelligence", "mnd"]
-const SET_IDS: Array[StringName] = [&"swift", &"soldier", &"guard", &"blood", &"arcane", &"soul", &"edge", &"oath", &"rune"]
 ## Tombstones for definitions deliberately removed from the playable catalog.
 ## PlayerProfile and RunState use this list to purge those IDs from old saves;
 ## never reuse one of these IDs for a different item.
@@ -64,16 +63,15 @@ const RETIRED_TRANSMUTATION_IDS: Array[StringName] = [
 	&"bastion_core", &"blood_feed", &"bloodwoven_core", &"duelist_focus", &"gathering_edge",
 ]
 
-## Authoring data loads from resources/definitions/item_catalog.tres for live
-## baselines, sets, and their metadata. Standalone ItemDefinitions are discovered
-## alongside those records; instance fields keep compatibility call sites working.
+## Authoring data loads from resources/definitions/item_catalog.tres for ordered
+## live IDs and legacy metadata. Typed ItemDefinitions are discovered through
+## the generated manifest; instance fields keep compatibility call sites working.
 const DATA_PATH := "res://resources/definitions/item_catalog.tres"
 const ITEM_CATALOG_DATA: ItemCatalogData = preload("res://resources/definitions/item_catalog.tres")
 const ITEM_DEFINITION_MANIFEST: Resource = preload("res://resources/generated/item_definition_manifest.tres")
 
 var live_base_ids: Array[StringName] = []
-var live_base_definitions: Dictionary = {}
-var set_definitions: Dictionary = {}
+var live_set_ids: Array[StringName] = []
 var definitions: Dictionary = {}
 var definition_metadata: Dictionary = {}
 var transmutations: Dictionary = {}
@@ -88,8 +86,7 @@ func _init() -> void:
 		return
 	_catalog_data = data
 	live_base_ids = data.live_base_ids
-	live_base_definitions = data.live_base_definitions
-	set_definitions = data.set_definitions
+	live_set_ids = data.live_set_ids
 	# Keep each catalog instance's compatibility projection private. The
 	# authored ItemCatalogData resource is shared by ResourceLoader and must not
 	# accumulate per-instance synthesized definitions.
@@ -112,7 +109,7 @@ static func canonical_slot(slot: Variant) -> StringName:
 
 
 static func definition_slot_for(definition_id: StringName) -> StringName:
-	var record: Dictionary = ITEM_CATALOG_DATA.live_base_definitions.get(definition_id, {})
+	var record: Dictionary = ITEM_CATALOG_DATA.authored_definition_data().get(definition_id, {})
 	if record.is_empty():
 		record = ITEM_CATALOG_DATA.definitions.get(definition_id, {})
 	if not record.is_empty():
@@ -130,12 +127,17 @@ func slot_label(slot: Variant) -> String:
 
 func live_definition_ids() -> Array[StringName]:
 	var result: Array[StringName] = live_base_ids.duplicate()
+	var live_set_lookup: Dictionary = {}
+	for definition_id: StringName in live_set_ids:
+		live_set_lookup[definition_id] = true
 	for definition_id: StringName in authored_live_ids:
+		if live_set_lookup.has(definition_id):
+			continue
 		if definition_id not in result:
 			result.append(definition_id)
-	for set_id: StringName in SET_IDS:
-		for slot: StringName in SLOTS:
-			result.append(StringName("%s_%s" % [String(set_id), String(slot)]))
+	for definition_id: StringName in live_set_ids:
+		if definition_id not in result:
+			result.append(definition_id)
 	return result
 
 
@@ -160,8 +162,6 @@ func all_definition_ids() -> Array[StringName]:
 	var result: Array[StringName] = []
 	for definition_id: StringName in live_definition_ids():
 		_append_definition_id(result, definition_id)
-	for raw_id: Variant in live_base_definitions.keys():
-		_append_definition_id(result, raw_id)
 	for raw_id: Variant in definitions.keys():
 		_append_definition_id(result, raw_id)
 	for resource: Resource in authored_definition_resources:
@@ -209,49 +209,13 @@ func definition_exists(definition_id: StringName) -> bool:
 
 
 func _is_live_set_definition(definition_id: StringName) -> bool:
-	var value := String(definition_id)
-	for set_id: StringName in SET_IDS:
-		if value.begins_with("%s_" % String(set_id)):
-			var slot_text := value.substr(String(set_id).length() + 1)
-			return canonical_slot(slot_text) in SLOTS
-	return false
-
-
-func _live_set_definition(definition_id: StringName) -> Dictionary:
-	var value := String(definition_id)
-	for set_id: StringName in SET_IDS:
-		var prefix := "%s_" % String(set_id)
-		if not value.begins_with(prefix):
-			continue
-		var slot := canonical_slot(value.substr(prefix.length()))
-		var set_records: Dictionary = set_definitions.get(set_id, {})
-		var record: Dictionary = set_records.get(slot, {}).duplicate(true)
-		if record.is_empty():
-			return {}
-		record["slot"] = slot
-		record["gear_tier"] = "set"
-		record["set_id"] = String(set_id)
-		record["set_name"] = String(set_id).to_upper()
-		record["source_tags"] = ["shop", "chest", "clear_reward", "boss"]
-		record["minimum_run_rank"] = 1
-		record["minimum_player_level"] = 1
-		record["rarity_floor"] = "common"
-		record["rarity_ceiling"] = "mythic"
-		record["shop_eligible"] = true
-		record["family"] = String(set_id)
-		record["role_tags"] = [String(set_id), str(record.get("tier_stat", "stat"))]
-		record["primary_stat"] = str(record.get("tier_stat", ""))
-		record["effects"] = {}
-		record["fusion_group"] = String(set_id)
-		record["visual_id"] = String(set_id)
-		return record
-	return {}
+	return definition_id in live_set_ids
 
 
 func definition_data(definition_id: StringName) -> Dictionary:
-	var is_live := live_base_definitions.has(definition_id) or definition_id in authored_live_ids or _is_live_set_definition(definition_id)
-	var base: Dictionary = live_base_definitions.get(definition_id, {}).duplicate(true) if live_base_definitions.has(definition_id) else _live_set_definition(definition_id)
-	if base.is_empty() and definitions.has(definition_id):
+	var is_live := definition_id in live_base_ids or definition_id in authored_live_ids or _is_live_set_definition(definition_id)
+	var base: Dictionary = {}
+	if definitions.has(definition_id):
 		base = definitions.get(definition_id, {}).duplicate(true)
 	if base.is_empty():
 		return {}
@@ -378,7 +342,7 @@ func definition_effects(definition_id: StringName) -> Dictionary:
 
 
 func definition_is_runtime_ready(definition_id: StringName) -> bool:
-	if live_base_definitions.has(definition_id) or definition_id in authored_live_ids or _is_live_set_definition(definition_id):
+	if definition_id in live_base_ids or definition_id in authored_live_ids or _is_live_set_definition(definition_id):
 		return true
 	if not definitions.has(definition_id):
 		return false
@@ -610,7 +574,7 @@ func _is_basic_gear(definition_id: StringName) -> bool:
 
 
 func _is_live_definition(definition_id: StringName) -> bool:
-	return live_base_definitions.has(definition_id) or definition_id in authored_live_ids or _is_live_set_definition(definition_id)
+	return definition_id in live_base_ids or definition_id in authored_live_ids or _is_live_set_definition(definition_id)
 
 
 func _gear_drop_weight(definition_id: StringName) -> float:

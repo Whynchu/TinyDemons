@@ -1,0 +1,39 @@
+[gd_resource type="Resource" script_class="ItemDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/content/item_definition.gd" id="1_definition"]
+
+[resource]
+script = ExtResource("1_definition")
+id = &"plain_shield"
+display_name = "PLAIN SHIELD"
+slot = &"shield"
+gear_tier = &"plain"
+tier_stat = &""
+tier_stats = Array[String]([])
+bonuses = {}
+description = "A plain shield."
+price = 8
+source_tags = Array[String](["shop", "chest", "clear_reward", "boss"])
+minimum_run_rank = 1
+minimum_player_level = 1
+rarity_floor = &"common"
+rarity_ceiling = &"mythic"
+shop_eligible = false
+starter_only = false
+live = true
+catalog_owned = true
+family = &"unknown"
+role = &"stat"
+role_tags = Array[String]([])
+effects = {}
+shield = {
+"guard_durability": 1.0,
+"guard_reduction": 0.0
+}
+fusion_group = &"unknown"
+visual_id = &"plain_shield"
+weapon_element = 0
+set_id = &""
+set_name = ""
+passive_id = &""
+designer_notes = ""

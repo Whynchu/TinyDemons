@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/content/item_definition.gd" id="1_5law5"]
+
+[resource]
+script = ExtResource("1_5law5")
+id = &"edge_shield"
+display_name = "EDGE BUCKLER"
+slot = &"shield"
+gear_tier = &"set"
+tier_stat = &"agi"
+bonuses = {
+"agi": 1.0
+}
+description = "A shield that stays out of the way."
+price = 70
+source_tags = Array[String](["shop", "chest", "clear_reward", "boss"])
+shop_eligible = true
+catalog_owned = true
+family = &"edge"
+role = &"edge"
+role_tags = Array[String](["edge", "agi"])
+shield = {
+"guard_durability": 1.0,
+"guard_reduction": 1.0
+}
+fusion_group = &"edge"
+visual_id = &"edge"
+set_id = &"edge"
+set_name = "EDGE"

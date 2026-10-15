@@ -78,8 +78,9 @@ func _structural_checks(path: String, resource: Resource, kind: String) -> Array
 		"ItemCatalogData":
 			if (resource.get("definitions") as Dictionary).is_empty():
 				problems.append("%s: item definitions are empty" % path)
-			if (resource.get("live_base_definitions") as Dictionary).is_empty():
-				problems.append("%s: live base definitions are empty" % path)
+			var live_base_ids: Variant = resource.get("live_base_ids")
+			if not live_base_ids is Array or (live_base_ids as Array).is_empty():
+				problems.append("%s: live base IDs are empty" % path)
 		"SlimeVariantCatalogData":
 			if (resource.get("definitions") as Dictionary).is_empty():
 				problems.append("%s: slime variant definitions are empty" % path)

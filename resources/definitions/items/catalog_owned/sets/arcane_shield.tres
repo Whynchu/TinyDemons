@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/content/item_definition.gd" id="1_yawwf"]
+
+[resource]
+script = ExtResource("1_yawwf")
+id = &"arcane_shield"
+display_name = "ARCANE SHIELD"
+slot = &"shield"
+gear_tier = &"set"
+tier_stat = &"intelligence"
+bonuses = {
+"defense": 1.0,
+"intelligence": 2.0
+}
+description = "A shield for a caster."
+price = 80
+source_tags = Array[String](["shop", "chest", "clear_reward", "boss"])
+shop_eligible = true
+catalog_owned = true
+family = &"arcane"
+role = &"arcane"
+role_tags = Array[String](["arcane", "intelligence"])
+shield = {
+"guard_durability": 1.0,
+"guard_reduction": 1.0
+}
+fusion_group = &"arcane"
+visual_id = &"arcane"
+set_id = &"arcane"
+set_name = "ARCANE"

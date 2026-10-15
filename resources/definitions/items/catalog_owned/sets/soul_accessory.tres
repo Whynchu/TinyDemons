@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/content/item_definition.gd" id="1_h8js0"]
+
+[resource]
+script = ExtResource("1_h8js0")
+id = &"soul_accessory"
+display_name = "SOUL SEAL"
+slot = &"accessory"
+gear_tier = &"set"
+tier_stat = &"mnd"
+bonuses = {
+"intelligence": 1.0,
+"mnd": 2.0
+}
+description = "A seal for the inner fight."
+price = 75
+source_tags = Array[String](["shop", "chest", "clear_reward", "boss"])
+shop_eligible = true
+catalog_owned = true
+family = &"soul"
+role = &"soul"
+role_tags = Array[String](["soul", "mnd"])
+fusion_group = &"soul"
+visual_id = &"soul"
+set_id = &"soul"
+set_name = "SOUL"

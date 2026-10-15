@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/content/item_definition.gd" id="1_nu1i7"]
+
+[resource]
+script = ExtResource("1_nu1i7")
+id = &"edge_head"
+display_name = "EDGE CAP"
+slot = &"head"
+gear_tier = &"set"
+tier_stat = &"agi"
+bonuses = {
+"agi": 2.0
+}
+description = "Light and precise."
+price = 65
+source_tags = Array[String](["shop", "chest", "clear_reward", "boss"])
+shop_eligible = true
+catalog_owned = true
+family = &"edge"
+role = &"edge"
+role_tags = Array[String](["edge", "agi"])
+fusion_group = &"edge"
+visual_id = &"edge"
+set_id = &"edge"
+set_name = "EDGE"

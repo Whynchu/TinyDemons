@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/content/item_definition.gd" id="1_7v1b8"]
+
+[resource]
+script = ExtResource("1_7v1b8")
+id = &"guard_body"
+display_name = "GUARD PLATE"
+slot = &"body"
+gear_tier = &"set"
+tier_stat = &"defense"
+bonuses = {
+"agi": -1.0,
+"defense": 3.0,
+"vitality": 2.0
+}
+description = "Hold the line."
+price = 90
+source_tags = Array[String](["shop", "chest", "clear_reward", "boss"])
+shop_eligible = true
+catalog_owned = true
+family = &"guard"
+role = &"guard"
+role_tags = Array[String](["guard", "defense"])
+fusion_group = &"guard"
+visual_id = &"guard"
+set_id = &"guard"
+set_name = "GUARD"

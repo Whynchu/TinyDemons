@@ -45,10 +45,8 @@ func _report_items() -> void:
 		_failures.append("item_catalog.tres")
 		return
 	var definitions: Dictionary = catalog.definitions
-	var live: Dictionary = catalog.live_base_definitions
-	var sets: Dictionary = catalog.set_definitions
 	var transmutations: Dictionary = catalog.transmutations
-	print("item_catalog: %d definitions, %d live bases, %d standalone live, %d sets, %d transmutations" % [definitions.size(), live.size(), catalog.authored_live_ids.size(), sets.size(), transmutations.size()])
+	print("item_catalog: %d definitions, %d live bases, %d live set items, %d typed live, %d transmutations" % [definitions.size(), catalog.live_base_ids.size(), catalog.live_set_ids.size(), catalog.authored_live_ids.size(), transmutations.size()])
 	var ids: Array = definitions.keys()
 	ids.sort_custom(func(a, b): return String(a) < String(b))
 	print("  ids: %s" % ", ".join(ids.map(func(id): return String(id))))

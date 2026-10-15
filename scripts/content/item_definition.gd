@@ -2,9 +2,9 @@
 extends Resource
 class_name ItemDefinition
 
-## Typed, standalone equipment content contract. ItemCatalog converts this
-## record into its compatibility dictionary at load time so existing item
-## instances, saves, shops, and drop paths keep their current API.
+## Typed equipment content contract. ItemCatalog converts this record into its
+## compatibility dictionary at load time so existing item instances, saves,
+## shops, and drop paths keep their current API.
 
 @export var id: StringName = &""
 @export var display_name := ""
@@ -23,6 +23,9 @@ class_name ItemDefinition
 @export var shop_eligible := false
 @export var starter_only := false
 @export var live := true
+## Catalog-owned resources feed runtime generation but are preview-only in the
+## item workbench. Standalone authored items remain editable and saveable.
+@export var catalog_owned := false
 @export var family: StringName = &"authored"
 @export var role: StringName = &"stat"
 @export var role_tags: Array[String] = []
@@ -52,6 +55,13 @@ func validate() -> Array[String]:
 		problems.append("weapon_element must be a registered ElementCatalog value")
 	if gear_tier not in [&"plain", &"basic", &"set", &"legacy", &"expansion"]:
 		problems.append("unknown gear_tier '%s'" % gear_tier)
+	if gear_tier == &"set":
+		if set_id.is_empty() or set_name != String(set_id).to_upper():
+			problems.append("set-tier definitions require a matching set_id and set_name")
+		if id != StringName("%s_%s" % [String(set_id), String(slot)]):
+			problems.append("set-tier definition ID must match its set_id and slot")
+	elif not set_id.is_empty() or not set_name.is_empty():
+		problems.append("only set-tier definitions may declare set_id and set_name")
 	for stat: String in tier_stats:
 		if stat not in ["vitality", "strength", "defense", "agi", "intelligence", "mnd"]:
 			problems.append("unknown tier_stats entry '%s'" % stat)

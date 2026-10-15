@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/content/item_definition.gd" id="1_0uw7b"]
+
+[resource]
+script = ExtResource("1_0uw7b")
+id = &"soldier_arm"
+display_name = "SOLDIER GLOVES"
+slot = &"arm"
+gear_tier = &"set"
+tier_stat = &"strength"
+bonuses = {
+"strength": 2.0
+}
+description = "Built for committed blows."
+price = 70
+source_tags = Array[String](["shop", "chest", "clear_reward", "boss"])
+shop_eligible = true
+catalog_owned = true
+family = &"soldier"
+role = &"soldier"
+role_tags = Array[String](["soldier", "strength"])
+fusion_group = &"soldier"
+visual_id = &"soldier"
+set_id = &"soldier"
+set_name = "SOLDIER"

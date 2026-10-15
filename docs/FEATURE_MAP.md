@@ -2,7 +2,7 @@
 
 Status: current ownership map; strict composition scorecard passes, broader refactor and authoring targets remain open
 
-Updated: 2026-10-10
+Updated: 2026-10-14
 
 This is a human-maintained ownership map. It records the first place to look,
 not a claim that every feature is fully isolated. The strict composition
@@ -27,7 +27,7 @@ the active authoring workstream is [`authoring-system-plan.md`](authoring-system
 | Chroma and elements | `player_chroma_component.gd`, `element_catalog.gd` | chroma/profile state | pickups, spells, palette-driven fire effects (`gameplay.gd`, `effects_spawner.gd`) | chroma, binding, elemental, and fire-palette tests | Medium |
 | Projectiles and magic | `magic_projectile_controller.gd`, `magic_runtime_controller.gd` | combat/runtime state | projectile scenes and effects | imbue and projectile-related tests | High: documented coordinator seams |
 | Progression and settlement | `progression_controller.gd`, `run_settlement.gd` when extracted | `player_profile.gd` and run state | hub and reward UI | progression, grade, economy tests | High: state boundary needs tracing |
-| Gear and fusion | `item_catalog.gd`, `item_definition.gd`, `item_preview_workbench.gd`, `item_instance.gd`, `equipment_component.gd` | live baselines/sets, standalone definitions, and profile instance IDs | item preview workbench, equipment/fusion/bind menus, slot-level item visual resolver | item-definition, retired-item-purge, item-preview, gear, fusion, equipment tests | Medium: schema-14 retired-item/transmutation save cleanup landed; live baseline/set data remains dictionary-backed and item art is slot-level |
+| Gear and fusion | `item_catalog.gd`, `item_definition.gd`, `item_preview_workbench.gd`, `item_instance.gd`, `equipment_component.gd` | ordered catalog-owned Plain/Basic and set resources, standalone definitions, and profile instance IDs | item preview workbench, equipment/fusion/bind menus, slot-level item visual resolver | item-definition, retired-item-purge, item-preview, gear, fusion, equipment tests | Medium: item art remains slot-level |
 | Pause menu | `screen_route_controller.gd`, `pause_screen_presenter.gd`, `pause_menu_input_controller.gd` | `PauseMenuState`, typed player/profile context | `pause_menu.tscn`, `pause_items_presenter.gd`, `pause_items_model.gd`, `pause_menu_layout.gd`, `menu_command_list.gd` | pause and menu-command smoke tests | Medium: current inventory model supports gear only; runtime visual acceptance remains pending |
 | Hub and menus | `screen_state_controller.gd`, `hub_screen_setup_controller.gd`, `screen_route_controller.gd` | profile/menu state | menu scenes and page presenters | menu, hub, touch-menu tests | High: coordinator facade and route registry work remain |
 | HUD | `player_hud.gd`, `hud_controller.gd` | player/combat display data | `scenes/ui/hud/player_hud.tscn` | player HUD smoke test | Medium: focused scene contract passes; live layout evidence remains |

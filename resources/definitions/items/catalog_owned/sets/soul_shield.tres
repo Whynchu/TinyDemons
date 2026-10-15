@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/content/item_definition.gd" id="1_rwuhc"]
+
+[resource]
+script = ExtResource("1_rwuhc")
+id = &"soul_shield"
+display_name = "SOUL BUCKLER"
+slot = &"shield"
+gear_tier = &"set"
+tier_stat = &"mnd"
+bonuses = {
+"defense": 1.0,
+"mnd": 2.0
+}
+description = "A small ward of will."
+price = 80
+source_tags = Array[String](["shop", "chest", "clear_reward", "boss"])
+shop_eligible = true
+catalog_owned = true
+family = &"soul"
+role = &"soul"
+role_tags = Array[String](["soul", "mnd"])
+shield = {
+"guard_durability": 1.0,
+"guard_reduction": 1.0
+}
+fusion_group = &"soul"
+visual_id = &"soul"
+set_id = &"soul"
+set_name = "SOUL"

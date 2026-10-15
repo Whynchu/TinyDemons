@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/content/item_definition.gd" id="1_3gcs7"]
+
+[resource]
+script = ExtResource("1_3gcs7")
+id = &"arcane_weapon"
+display_name = "ARCANE SWORD"
+slot = &"weapon"
+gear_tier = &"set"
+tier_stat = &"intelligence"
+bonuses = {
+"intelligence": 3.0
+}
+description = "Spell power in a blade."
+price = 80
+source_tags = Array[String](["shop", "chest", "clear_reward", "boss"])
+shop_eligible = true
+catalog_owned = true
+family = &"arcane"
+role = &"arcane"
+role_tags = Array[String](["arcane", "intelligence"])
+fusion_group = &"arcane"
+visual_id = &"arcane"
+set_id = &"arcane"
+set_name = "ARCANE"

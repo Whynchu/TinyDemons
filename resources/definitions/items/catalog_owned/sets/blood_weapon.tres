@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/content/item_definition.gd" id="1_n83ay"]
+
+[resource]
+script = ExtResource("1_n83ay")
+id = &"blood_weapon"
+display_name = "BLOOD BLADE"
+slot = &"weapon"
+gear_tier = &"set"
+tier_stat = &"vitality"
+bonuses = {
+"agi": -1.0,
+"strength": 1.0,
+"vitality": 3.0
+}
+description = "Health first."
+price = 80
+source_tags = Array[String](["shop", "chest", "clear_reward", "boss"])
+shop_eligible = true
+catalog_owned = true
+family = &"blood"
+role = &"blood"
+role_tags = Array[String](["blood", "vitality"])
+fusion_group = &"blood"
+visual_id = &"blood"
+set_id = &"blood"
+set_name = "BLOOD"

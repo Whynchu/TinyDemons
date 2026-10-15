@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/content/item_definition.gd" id="1_uo851"]
+
+[resource]
+script = ExtResource("1_uo851")
+id = &"blood_shield"
+display_name = "BLOOD SHIELD"
+slot = &"shield"
+gear_tier = &"set"
+tier_stat = &"vitality"
+bonuses = {
+"agi": -1.0,
+"defense": 1.0,
+"vitality": 2.0
+}
+description = "Health with a speed cost."
+price = 80
+source_tags = Array[String](["shop", "chest", "clear_reward", "boss"])
+shop_eligible = true
+catalog_owned = true
+family = &"blood"
+role = &"blood"
+role_tags = Array[String](["blood", "vitality"])
+shield = {
+"guard_durability": 2.0,
+"guard_reduction": 1.0
+}
+fusion_group = &"blood"
+visual_id = &"blood"
+set_id = &"blood"
+set_name = "BLOOD"

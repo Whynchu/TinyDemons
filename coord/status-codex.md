@@ -2123,8 +2123,22 @@ Updated: 2026-10-14
 
 Completed slice: Enemy variant creation, undo, and redo now transact the standalone .tres, mixed-family catalog, and generated manifests. The editor workbench is wired to one global EditorUndoRedoManager action and returns selection to the source variant on undo. A focused Godot 4.7.2 smoke passed file/path, cache, catalog reload, manifest freshness, undo-adapter, and redo checks. The test cleans its fixture and generated catalog state.
 
-Also advanced: ElementCatalog.element_for_palette() now derives element identity from ElementCatalogData.palette_keys; the existing aliases and Neutral fallback are preserved. Godot check-only and the existing source mapping agree with the authored table. Its focused runtime smoke was not rerun because the main editor remains active.
+Also advanced: ElementCatalog.element_for_palette() now derives element identity from ElementCatalogData.palette_keys; the existing aliases and Neutral fallback are preserved. Its focused runtime smoke now passes. Palette ability-icon highlights round to the nearest RGBA8 color, preserving the intended accent.
 
-Verification: Composition self-test and strict targets pass; test manifest validates at 160 rows / 158 runnable / 45 gate; UID validation passes for 469 script sidecars; git diff --check is clean. Graphify refreshed this review worktree to 21,546 nodes / 47,109 edges / 741 communities; graph.json, HTML, and report were rebuilt. Known certificate and MCP registry warnings came from the local Godot environment. No gameplay balance or schedule code changed.
+Verification: Composition self-test and strict targets pass; test manifest validates at 160 rows / 158 runnable / 45 gate; UID validation passes for 469 script sidecars; git diff --check is clean. Graphify's code-only refresh for this review worktree rebuilt graph.json, HTML, and report at 21,374 nodes / 48,225 edges / 735 communities. Documentation and media semantic extraction was not refreshed. Known certificate and MCP registry warnings came from the local Godot environment. No gameplay balance or schedule code changed.
 
-Open: Live editor undo-history behavior, rendered preview acceptance, exported-PCK lifecycle, item baselines/sets, and room authority remain open under P4/M1. Element and palette schema validators are now implemented, with a narrow mixture-validation boundary that avoids the ElementCatalog resource cycle. Static composition, manifest, UID, and diff checks pass; focused element/palette Godot smokes and the definition validator remain pending while the shared editor is active. Do not update phase completion until those focused proofs pass.
+Open: Live editor undo-history behavior, rendered preview acceptance, exported-PCK lifecycle, Demon Cloak ownership, aspect tables, and room authority remain open under P4/M1. Element and palette schema validators are implemented with a narrow mixture-validation boundary that avoids the ElementCatalog resource cycle. Focused item, element, and palette smokes plus the recursive definition validator pass; do not update phase completion until the separate editor-history/export/room proofs pass.
+
+## Completed: Typed item baselines and set items (2026-10-14)
+
+Migrated the twelve Plain/Basic baselines and all 54 set pieces to catalog-owned
+`ItemDefinition` resources. `live_base_ids` and `live_set_ids` preserve runtime
+order; `ItemCatalog` still projects compatibility dictionaries and no longer
+synthesizes set entries. The workbench remains preview-only for catalog-owned
+resources, and save-collision checks cover baseline, set, typed, and legacy IDs.
+
+Focused item-definition, gear, set expansion, workbench, retired-item, element,
+and palette smokes pass. The definition validator loads 110/110 resources and
+the generated manifests are fresh. Composition self-test and strict targets,
+test-manifest validation (160 rows / 158 runnable / 45 gate), UID validation
+(469 sidecars), script-index generation, and `git diff --check` pass.

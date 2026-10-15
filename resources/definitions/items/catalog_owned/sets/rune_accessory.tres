@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/content/item_definition.gd" id="1_kyoj5"]
+
+[resource]
+script = ExtResource("1_kyoj5")
+id = &"rune_accessory"
+display_name = "RUNE CHARM"
+slot = &"accessory"
+gear_tier = &"set"
+tier_stat = &"strength"
+bonuses = {
+"intelligence": 1.0,
+"mnd": -1.0,
+"strength": 1.0
+}
+description = "More power, less restraint."
+price = 80
+source_tags = Array[String](["shop", "chest", "clear_reward", "boss"])
+shop_eligible = true
+catalog_owned = true
+family = &"rune"
+role = &"rune"
+role_tags = Array[String](["rune", "strength"])
+fusion_group = &"rune"
+visual_id = &"rune"
+set_id = &"rune"
+set_name = "RUNE"

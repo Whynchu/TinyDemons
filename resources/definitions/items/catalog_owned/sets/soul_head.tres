@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/content/item_definition.gd" id="1_bw5kg"]
+
+[resource]
+script = ExtResource("1_bw5kg")
+id = &"soul_head"
+display_name = "SOUL HOOD"
+slot = &"head"
+gear_tier = &"set"
+tier_stat = &"mnd"
+bonuses = {
+"mnd": 2.0
+}
+description = "A quiet mind."
+price = 70
+source_tags = Array[String](["shop", "chest", "clear_reward", "boss"])
+shop_eligible = true
+catalog_owned = true
+family = &"soul"
+role = &"soul"
+role_tags = Array[String](["soul", "mnd"])
+fusion_group = &"soul"
+visual_id = &"soul"
+set_id = &"soul"
+set_name = "SOUL"

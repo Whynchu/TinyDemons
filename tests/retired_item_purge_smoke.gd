@@ -19,7 +19,7 @@ func _initialize() -> void:
 		_expect(not catalog.definition_exists(definition_id), "%s no longer resolves from the runtime catalog" % definition_id, failures)
 	for raw_id: Variant in catalog.definitions.keys():
 		var definition_id := StringName(str(raw_id))
-		_expect(catalog.definition_resource(definition_id) != null, "%s is backed by a standalone ItemDefinition, not the retired dictionary catalog" % definition_id, failures)
+		_expect(catalog.definition_resource(definition_id) != null, "%s is backed by a typed ItemDefinition, not the retired dictionary catalog" % definition_id, failures)
 
 	var playable_ids := catalog.playable_definition_ids()
 	_expect(&"cinder_blade" in playable_ids, "the standalone weapon remains playable", failures)

@@ -338,11 +338,12 @@ func recolor_ability_icon(source: Texture2D, palette_name: String) -> Texture2D:
 	var shifted_base := _uses_shadow_base_palette(palette_name)
 	var base_color := PaletteLibrary.shadow(palette_name) if shifted_base else PaletteLibrary.normal(palette_name)
 	var highlight_color := PaletteLibrary.normal(palette_name) if shifted_base else PaletteLibrary.accent(palette_name)
+	var cyan_highlight := _to_rgba8_color(PaletteLibrary.accent(palette_name).lerp(PaletteLibrary.WHITE, 0.35))
 	var source_to_target := {
 		_rgb_int(PaletteLibrary.shadow("blue")): PaletteLibrary.shadow(palette_name),
 		_rgb_int(PaletteLibrary.normal("blue")): base_color,
 		_rgb_int(PaletteLibrary.accent("blue")): highlight_color,
-		_rgb_int(ABILITY_ICON_WATER_HIGHLIGHT): PaletteLibrary.accent(palette_name).lerp(PaletteLibrary.WHITE, 0.35),
+		_rgb_int(ABILITY_ICON_WATER_HIGHLIGHT): cyan_highlight,
 	}
 	var image := _cached_image(source).duplicate()
 	for y in image.get_height():
@@ -423,3 +424,12 @@ func _rgb_key(color: Color) -> String:
 
 func _rgb_int(color: Color) -> int:
 	return (int(round(color.r * 255.0)) << 16) | (int(round(color.g * 255.0)) << 8) | int(round(color.b * 255.0))
+
+
+func _to_rgba8_color(color: Color) -> Color:
+	return Color8(
+		int(round(color.r * 255.0)),
+		int(round(color.g * 255.0)),
+		int(round(color.b * 255.0)),
+		int(round(color.a * 255.0)),
+	)

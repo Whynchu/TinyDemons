@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/content/item_definition.gd" id="1_acyg3"]
+
+[resource]
+script = ExtResource("1_acyg3")
+id = &"oath_head"
+display_name = "OATH HELM"
+slot = &"head"
+gear_tier = &"set"
+tier_stat = &"defense"
+bonuses = {
+"defense": 2.0,
+"vitality": 1.0
+}
+description = "Stand firm."
+price = 70
+source_tags = Array[String](["shop", "chest", "clear_reward", "boss"])
+shop_eligible = true
+catalog_owned = true
+family = &"oath"
+role = &"oath"
+role_tags = Array[String](["oath", "defense"])
+fusion_group = &"oath"
+visual_id = &"oath"
+set_id = &"oath"
+set_name = "OATH"

@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/content/item_definition.gd" id="1_3io3s"]
+
+[resource]
+script = ExtResource("1_3io3s")
+id = &"oath_shield"
+display_name = "OATH SHIELD"
+slot = &"shield"
+gear_tier = &"set"
+tier_stat = &"defense"
+bonuses = {
+"defense": 2.0,
+"vitality": 1.0
+}
+description = "A dependable shield."
+price = 85
+source_tags = Array[String](["shop", "chest", "clear_reward", "boss"])
+shop_eligible = true
+catalog_owned = true
+family = &"oath"
+role = &"oath"
+role_tags = Array[String](["oath", "defense"])
+shield = {
+"guard_durability": 2.0,
+"guard_reduction": 2.0
+}
+fusion_group = &"oath"
+visual_id = &"oath"
+set_id = &"oath"
+set_name = "OATH"

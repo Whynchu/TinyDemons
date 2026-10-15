@@ -305,7 +305,9 @@ var _preview_transmutation_id: StringName = &""
 
 @export var selected_source: String:
 	get:
-		return "ItemDefinition" if _selected_definition != null else "ItemCatalogData (read-only)"
+		if _selected_definition == null:
+			return "ItemCatalogData (read-only)"
+		return "Catalog-owned ItemDefinition (read-only)" if _selected_definition.catalog_owned else "ItemDefinition"
 	set(_value):
 		pass
 
@@ -355,8 +357,12 @@ func _ensure_catalog() -> void:
 		_catalog = ItemCatalog.new()
 
 
+func _can_edit_selected_definition() -> bool:
+	return _selected_definition != null and not _selected_definition.catalog_owned
+
+
 func _process(_delta: float) -> void:
-	if not Engine.is_editor_hint() or _selected_definition == null:
+	if not Engine.is_editor_hint() or not _can_edit_selected_definition():
 		return
 	var current_record := _selected_definition.to_record()
 	if current_record == _observed_definition_record:
@@ -382,7 +388,7 @@ func _validate_property(property: Dictionary) -> void:
 	if property.name in [&"new_item_id", &"create_item_button", &"save_item_button", &"refresh_button"]:
 		return
 	if property.name in EDITABLE_PROPERTIES:
-		if _selected_definition == null:
+		if not _can_edit_selected_definition():
 			property.usage = PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_READ_ONLY
 		else:
 			# These are proxy controls for the selected Resource, not saved fields
@@ -452,7 +458,7 @@ func _select_item(requested_id: StringName, force := false) -> void:
 		_saved_definition_record.clear()
 		_observed_definition_record.clear()
 	_selected_record = _catalog.definition_data(requested_id)
-	_workbench_notice = "" if _selected_definition != null else "Catalog-owned live item is preview-only."
+	_workbench_notice = "" if _can_edit_selected_definition() else "Catalog-owned live item is preview-only."
 	_error_message = ""
 	notify_property_list_changed()
 	queue_redraw()
@@ -467,7 +473,7 @@ func _read_field(field: StringName, fallback: Variant) -> Variant:
 
 
 func _write_field(field: StringName, value: Variant) -> void:
-	if _selected_definition == null:
+	if not _can_edit_selected_definition():
 		return
 	var previous: Variant = _selected_definition.get(String(field))
 	if previous == value:
@@ -477,7 +483,7 @@ func _write_field(field: StringName, value: Variant) -> void:
 
 
 func _definition_changed() -> void:
-	if _selected_definition == null or _catalog == null:
+	if not _can_edit_selected_definition() or _catalog == null:
 		return
 	_observed_definition_record = _selected_definition.to_record().duplicate(true)
 	_catalog.definitions[_item_id] = _observed_definition_record.duplicate(true)
@@ -502,7 +508,7 @@ func _bonus_value(stat_key: String) -> float:
 
 
 func _set_bonus_value(stat_key: String, value: float) -> void:
-	if _selected_definition == null:
+	if not _can_edit_selected_definition():
 		return
 	var bonuses := _selected_definition.bonuses.duplicate(true)
 	var aliases: Array = STAT_ALIASES.get(stat_key, [stat_key])
@@ -545,13 +551,13 @@ func _preview_item() -> ItemInstance:
 
 
 func _definition_is_dirty() -> bool:
-	return _selected_definition != null \
+	return _can_edit_selected_definition() \
 		and not _saved_definition_record.is_empty() \
 		and _selected_definition.to_record() != _saved_definition_record
 
 
 func save_selected_definition() -> void:
-	if _selected_definition == null:
+	if not _can_edit_selected_definition():
 		_set_workbench_notice("Catalog-owned live items are preview-only; create a standalone ItemDefinition to edit one.")
 		return
 	var problems := _selected_definition.validate()
@@ -575,7 +581,7 @@ func create_authored_item() -> void:
 	if _definition_is_dirty():
 		_set_workbench_notice("Save item changes before creating another item.")
 		return
-	if _selected_definition == null:
+	if not _can_edit_selected_definition():
 		_set_workbench_notice("Select a standalone ItemDefinition to use as the starting point.")
 		return
 	var candidate_id := new_item_id.strip_edges()
@@ -656,7 +662,7 @@ func get_preview_summary() -> Dictionary:
 		"display_name": str(definition.get("display_name", definition.get("name", _item_id))),
 		"slot": String(ItemCatalog.canonical_slot(definition.get("slot", &""))),
 		"source_path": _catalog.definition_source_path(_item_id),
-		"editable": _selected_definition != null,
+		"editable": _can_edit_selected_definition(),
 		"dirty": _definition_is_dirty(),
 		"rarity": String(instance.rarity),
 		"enhancement_level": instance.enhancement_level,
@@ -693,7 +699,7 @@ func _status_text() -> String:
 		return _error_message
 	if not _workbench_notice.is_empty():
 		return _workbench_notice
-	if _selected_definition == null:
+	if not _can_edit_selected_definition():
 		return "READ ONLY - catalog-owned live item"
 	var problems := _selected_definition.validate()
 	if not problems.is_empty():

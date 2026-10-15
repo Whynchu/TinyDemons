@@ -37,7 +37,7 @@ traps:
 |---|---|---|
 | `dungeon_generation_policy.tres`: `first_orb_depth`, `first_special_depth`, `primary_flames` | Ignored. The generator uses `dungeon_layout_generator.gd:31-32,50`. | 3 |
 | Former `resources/definitions/puzzle_map_r3.tres` path | Removed in Slice 0; the runtime and preview use `puzzle_map_r3_new.tres`. | resolved |
-| Retired `item_catalog.tres` expansion records | Removed in the schema-14 catalog cleanup; current baseline/set data and standalone `ItemDefinition` resources remain. | resolved |
+| Retired `item_catalog.tres` expansion records | Removed in the schema-14 catalog cleanup; catalog-owned Plain/Basic baselines, typed set items, and standalone `ItemDefinition` resources remain. | resolved |
 | Item `visual_id` | Written but never read; item art is slot-level only. | 2 |
 | Item `weapon_element` | Consumed by equipped weapon stats, composite damage, status application, and sword palette/highlight presentation. A non-neutral weapon element is always active; temporary IMBUE overrides damage and layers its own status onto the weapon status for authored reactions. | implemented for elemental blades |
 | `element_catalog.tres` and `palette_library.tres` | Both are included in recursive validation and read by their runtime catalogs; element identity still spans parallel enums/adapters, and typed consolidation remains Slice 2 work. | 2 |
@@ -490,10 +490,12 @@ Do not alter global tuning to solve a room-specific placement problem.
 
 Current owners:
 
-- live baseline/set definitions and retained metadata:
+- baseline and set-item order:
   `resources/definitions/item_catalog.tres` (`ItemCatalogData`), loaded by
-  `scripts/content/item_catalog.gd` through
-  `scripts/content/item_catalog_data.gd`;
+  `scripts/content/item_catalog.gd` through `scripts/content/item_catalog_data.gd`;
+- catalog-owned Plain/Basic baseline and set-item resources:
+  `resources/definitions/items/catalog_owned/**/*.tres`; their order remains in
+  `ItemCatalogData.live_base_ids` and `live_set_ids`;
 - new standalone definitions: `resources/definitions/items/*.tres`
   (`ItemDefinition`), discovered by the same catalog registry;
 - serialized instance identity: `scripts/content/item_instance.gd`;
@@ -513,23 +515,25 @@ Workflow (current, during Slice 2 migration):
    in the workbench and use `Create Item from Selected`. Set the stable ID,
    display name, slot, tier/stat, bonuses, source tags, rarity gates, and any
    effect status on that one typed resource.
-3. Do not edit `item_catalog.tres`, `live_base_ids`, `definition_metadata`,
-   `SET_IDS`, or a count-pinned test for a standalone item. The registry
+3. Do not edit `item_catalog.tres`, `live_base_ids`, `live_set_ids`,
+   `definition_metadata`, or a count-pinned test for a standalone item. The registry
    discovers the resource, converts it through the compatibility boundary, and
    exposes it to live generation.
 4. Run `pwsh -File tools/dev.ps1 test -Suite content` and
-   `pwsh -File tools/dev.ps1 verify`. The validator checks every standalone
+   `pwsh -File tools/dev.ps1 verify`. The validator checks every authored
    `ItemDefinition`, the report lists its ID, and the registry smoke covers
    validation plus stable-ID save round-trip.
 5. Run `pwsh -File tools/dev.ps1 preview item <id>` and inspect each supported
    rarity/enhancement path in the workbench without changing unrelated balance.
-   Remaining live baseline/set data consolidation is still Slice 2 work.
+   Catalog-owned baseline and set resources are preview-only; standalone items
+   remain editable and saveable.
 
 Known traps: `visual_id` is never read (item art is slot-level), `demon_cloak`
 has a special acquisition/equip rule in `player_profile.gd`, `run_state.gd`,
-`equipment_component.gd`, and `hub_flow_controller.gd`. Live baseline/set data
-still uses dictionaries and set synthesis still lives in `item_catalog.gd`, but
-the retired expansion definitions and their transmutation bindings are purged.
+`equipment_component.gd`, and `hub_flow_controller.gd`. Baseline and set
+resources preserve their acquisition and generation behavior; ordered IDs live
+in `ItemCatalogData`, and set synthesis was removed from `item_catalog.gd`.
+The retired expansion definitions and their transmutation bindings are purged.
 Schema-14 profile loading removes saved instances of those retired IDs and
 restores starter equipment for slots they left empty. Standalone
 `ItemDefinition` resources use the same catalog path and validator. The design
@@ -541,7 +545,7 @@ run `pwsh -File tools/dev.ps1 preview item <id> -Editor` to open a selected item
 The `Item` picker uses `ItemCatalog.playable_definition_ids()`: current
 baseline/set items, standalone live `ItemDefinition` resources, and special-
 source items such as Demon Cloak. Retired expansion records are deleted and
-cannot be selected. Catalog-owned baseline/set entries are preview-only;
+cannot be selected. Catalog-owned baseline and set resources are preview-only;
 standalone `ItemDefinition` resources can be edited, duplicated with `Create
 Item from Selected`, or saved with `Save Item Changes`.
 `Preview` selects Card, Drop, Instance, or Effects;

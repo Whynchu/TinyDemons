@@ -1518,3 +1518,7 @@ User accepted the shared EnemyBrain architecture and current Slime/Skeleton beha
 2026-10-14 blocker codex focused element and palette Godot smokes await the active shared editor to close; static composition, manifest, UID, and diff checks pass.
 2026-10-14 done codex element and palette definition schema implementation; strict composition, manifest, UID, script-index, and diff checks pass.
 2026-10-14 handoff codex focused element/palette smokes and definition validation remain pending because the shared Godot peer is active; map refreshed at 21,546 nodes, 47,109 edges, 741 communities.
+2026-10-14 claim codex item baseline migration: typed catalog-owned ItemDefinitions, compatibility projection, explicit read-only workbench ownership, and preservation coverage.
+2026-10-14 done codex item baselines and sets: 12 baselines and 54 set items now use catalog-owned ItemDefinitions; focused item, gear, workbench, and retired-item smokes pass.
+2026-10-14 done codex palette RGBA8 interpolation: nearest-byte quantization preserves the ability-icon highlight; palette smoke passes.
+2026-10-14 done codex Graphify refresh: review map rebuilt code-only at 21,374 nodes, 48,225 edges, 735 communities; HTML and report regenerated.

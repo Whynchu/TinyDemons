@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/content/item_definition.gd" id="1_26p1g"]
+
+[resource]
+script = ExtResource("1_26p1g")
+id = &"arcane_body"
+display_name = "ARCANE ROBE"
+slot = &"body"
+gear_tier = &"set"
+tier_stat = &"intelligence"
+bonuses = {
+"defense": -1.0,
+"intelligence": 3.0,
+"mnd": 1.0
+}
+description = "Power over physical cover."
+price = 90
+source_tags = Array[String](["shop", "chest", "clear_reward", "boss"])
+shop_eligible = true
+catalog_owned = true
+family = &"arcane"
+role = &"arcane"
+role_tags = Array[String](["arcane", "intelligence"])
+fusion_group = &"arcane"
+visual_id = &"arcane"
+set_id = &"arcane"
+set_name = "ARCANE"

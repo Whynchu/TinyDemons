@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/content/item_definition.gd" id="1_drr4d"]
+
+[resource]
+script = ExtResource("1_drr4d")
+id = &"rune_weapon"
+display_name = "RUNE BLADE"
+slot = &"weapon"
+gear_tier = &"set"
+tier_stat = &"strength"
+bonuses = {
+"intelligence": 1.0,
+"strength": 3.0
+}
+description = "A brutal battle mage's blade."
+price = 90
+source_tags = Array[String](["shop", "chest", "clear_reward", "boss"])
+shop_eligible = true
+catalog_owned = true
+family = &"rune"
+role = &"rune"
+role_tags = Array[String](["rune", "strength"])
+fusion_group = &"rune"
+visual_id = &"rune"
+set_id = &"rune"
+set_name = "RUNE"

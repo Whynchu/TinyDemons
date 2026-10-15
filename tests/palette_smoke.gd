@@ -59,10 +59,11 @@ func _initialize() -> void:
 	var ability_source := ImageTexture.create_from_image(ability_art)
 	var green_ability := sprite_library.recolor_ability_icon(ability_source, "green")
 	var green_ability_image := green_ability.get_image() if green_ability != null else null
+	var green_cyan_highlight := _rgba8(library.accent("green").lerp(library.WHITE, 0.35))
 	_expect(green_ability_image != null and green_ability_image.get_pixel(0, 0).is_equal_approx(library.shadow("green")), "green ability outline uses the green shadow", failures)
 	_expect(green_ability_image != null and green_ability_image.get_pixel(1, 0).is_equal_approx(library.shadow("green")), "green ability base shifts down to the green shadow", failures)
 	_expect(green_ability_image != null and green_ability_image.get_pixel(2, 0).is_equal_approx(library.normal("green")), "green ability highlight shifts down to the green normal", failures)
-	_expect(green_ability_image != null and green_ability_image.get_pixel(3, 0).is_equal_approx(library.accent("green").lerp(library.WHITE, 0.35)), "green ability cyan highlight keeps the green accent headroom", failures)
+	_expect(green_ability_image != null and green_ability_image.get_pixel(3, 0).is_equal_approx(green_cyan_highlight), "green ability cyan highlight keeps the green accent headroom", failures)
 	var yellow_ability := sprite_library.recolor_ability_icon(ability_source, "yellow")
 	var yellow_ability_image := yellow_ability.get_image() if yellow_ability != null else null
 	_expect(yellow_ability_image != null and yellow_ability_image.get_pixel(1, 0).is_equal_approx(library.shadow("yellow")), "yellow ability base shifts down to the yellow shadow", failures)
@@ -156,6 +157,15 @@ func _expect(condition: bool, label: String, failures: Array[String]) -> void:
 
 func _luma(color: Color) -> float:
 	return color.r * 0.299 + color.g * 0.587 + color.b * 0.114
+
+
+func _rgba8(color: Color) -> Color:
+	return Color8(
+		roundi(color.r * 255.0),
+		roundi(color.g * 255.0),
+		roundi(color.b * 255.0),
+		roundi(color.a * 255.0),
+	)
 
 
 func _has_opaque_pixel(texture: Texture2D) -> bool:

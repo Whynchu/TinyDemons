@@ -34,9 +34,9 @@ func _initialize() -> void:
 		var source_ids := catalog.definitions_for_slot(slot, &"chest", 1, 1)
 		for baseline_id: StringName in baseline_ids_by_slot[slot]:
 			_expect(baseline_id in source_ids, "%s remains available to current chest sourcing" % baseline_id, failures)
-		for set_id: StringName in ItemCatalog.SET_IDS:
-			var set_item_id := StringName("%s_%s" % [String(set_id), String(slot)])
-			_expect(set_item_id in source_ids, "%s remains available to current chest sourcing" % set_item_id, failures)
+		for set_item_id: StringName in catalog.live_set_ids:
+			if catalog.definition_slot(set_item_id) == slot:
+				_expect(set_item_id in source_ids, "%s remains available to current chest sourcing" % set_item_id, failures)
 		for definition_id: StringName in source_ids:
 			_expect(catalog.definition_is_runtime_ready(definition_id), "%s is runtime-ready for its current source" % definition_id, failures)
 

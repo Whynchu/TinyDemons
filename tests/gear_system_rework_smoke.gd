@@ -11,8 +11,20 @@ func _initialize() -> void:
 	profile.ensure_starter_items(catalog)
 
 	var live_ids := catalog.live_definition_ids()
-	for baseline_id: StringName in [&"plain_blade", &"plain_hood", &"plain_tunic", &"plain_wraps", &"plain_shield", &"plain_ring", &"basic_sword", &"basic_hood", &"basic_tunic", &"basic_wraps", &"basic_shield", &"basic_charm"]:
+	var expected_baseline_order: Array[StringName] = [&"plain_blade", &"plain_hood", &"plain_tunic", &"plain_wraps", &"plain_shield", &"plain_ring", &"basic_sword", &"basic_hood", &"basic_tunic", &"basic_wraps", &"basic_shield", &"basic_charm"]
+	_expect(catalog.live_base_ids == expected_baseline_order, "live baseline IDs preserve their authored order", failures)
+	for baseline_index: int in expected_baseline_order.size():
+		_expect(baseline_index < live_ids.size() and live_ids[baseline_index] == expected_baseline_order[baseline_index], "live registry starts with baseline ID %s at its stable position" % expected_baseline_order[baseline_index], failures)
+	for baseline_id: StringName in expected_baseline_order:
 		_expect(baseline_id in live_ids, "%s remains a live baseline item" % baseline_id, failures)
+		var baseline_resource := catalog.definition_resource(baseline_id)
+		_expect(baseline_resource != null and baseline_resource.catalog_owned and baseline_resource.live, "%s resolves to a live catalog-owned ItemDefinition" % baseline_id, failures)
+	var basic_sword_record := catalog.definition_data(&"basic_sword")
+	_expect(basic_sword_record.get("description", "") == "A dependable blade with no trick." and basic_sword_record.get("family", "") == "blade" and basic_sword_record.get("fusion_group", "") == "blade", "Basic Sword preserves its effective description and family metadata", failures)
+	_expect(basic_sword_record.get("role_tags", []) == ["physical", "baseline"] and "starter" in basic_sword_record.get("source_tags", []) and basic_sword_record.get("visual_id", "") == "sword", "Basic Sword keeps its role, source, and visual metadata", failures)
+	var plain_hood_record := catalog.definition_data(&"plain_hood")
+	_expect(plain_hood_record.get("description", "") == "Fills the Head slot without changing combat power." and plain_hood_record.get("rarity_ceiling", "") == "common", "Plain Hood preserves its effective metadata overlay and rarity ceiling", failures)
+	_expect(plain_hood_record.get("family", "") == "cloth" and plain_hood_record.get("role", "") == "starter" and plain_hood_record.get("fusion_group", "") == "starter" and plain_hood_record.get("visual_id", "") == "hood", "Plain Hood keeps its family, role, fusion, and visual IDs", failures)
 	_expect(catalog.definition_exists(&"cinder_blade") and &"cinder_blade" in live_ids, "standalone authored weapons join the live registry", failures)
 	_expect(&"demon_cloak" in catalog.playable_definition_ids(), "special-acquisition Demon Cloak remains playable", failures)
 	for retired_id: StringName in ItemCatalog.RETIRED_DEFINITION_IDS:
@@ -28,12 +40,20 @@ func _initialize() -> void:
 		_expect(catalog.player_stat_rates(ItemInstance.from_dictionary({"definition_id": String(definition_id)})).is_empty(), "live gear has no player-stat percentage package: %s" % definition_id, failures)
 		if catalog.definition_slot(definition_id) == &"weapon":
 			_expect(lower_name.contains("sword") or lower_name.contains("blade"), "live weapon is a sword or blade: %s" % definition_id, failures)
-	for set_id: StringName in ItemCatalog.SET_IDS:
-		for slot: StringName in ItemCatalog.SLOTS:
-			var definition_id := StringName("%s_%s" % [String(set_id), String(slot)])
-			var definition := catalog.definition_data(definition_id)
-			_expect(not definition.is_empty() and str(definition.get("gear_tier", "")) == "set", "set has a live definition: %s" % definition_id, failures)
-			_expect(str(definition.get("set_id", "")) == String(set_id) and catalog.definition_slot(definition_id) == slot, "set keeps its slot identity: %s" % definition_id, failures)
+	for definition_id: StringName in catalog.live_set_ids:
+		var definition := catalog.definition_data(definition_id)
+		var set_id := str(definition.get("set_id", ""))
+		var slot := catalog.definition_slot(definition_id)
+		var typed_definition := catalog.definition_resource(definition_id)
+		_expect(not definition.is_empty() and str(definition.get("gear_tier", "")) == "set", "set has a live definition: %s" % definition_id, failures)
+		_expect(not set_id.is_empty() and definition_id == StringName("%s_%s" % [set_id, String(slot)]), "set keeps its stable set/slot identity: %s" % definition_id, failures)
+		_expect(typed_definition != null and typed_definition.catalog_owned and typed_definition.set_id == StringName(set_id), "set item is a catalog-owned typed definition: %s" % definition_id, failures)
+	var set_order_matches := live_ids.size() >= catalog.live_set_ids.size()
+	for set_index in catalog.live_set_ids.size():
+		var live_index := live_ids.size() - catalog.live_set_ids.size() + set_index
+		if live_index < 0 or live_ids[live_index] != catalog.live_set_ids[set_index]:
+			set_order_matches = false
+	_expect(set_order_matches, "set-item acquisition order remains the live registry suffix", failures)
 
 	var baseline_ids_by_slot: Dictionary = {
 		&"weapon": [&"plain_blade", &"basic_sword"],
@@ -47,9 +67,9 @@ func _initialize() -> void:
 		var source_definitions := catalog.definitions_for_slot(slot, &"chest", 1, 1)
 		for baseline_id: StringName in baseline_ids_by_slot[slot]:
 			_expect(baseline_id in source_definitions, "%s remains available to current chest sourcing" % baseline_id, failures)
-		for set_id: StringName in ItemCatalog.SET_IDS:
-			var set_item_id := StringName("%s_%s" % [String(set_id), String(slot)])
-			_expect(set_item_id in source_definitions, "%s remains available to current chest sourcing" % set_item_id, failures)
+		for set_item_id: StringName in catalog.live_set_ids:
+			if catalog.definition_slot(set_item_id) == slot:
+				_expect(set_item_id in source_definitions, "%s remains available to current chest sourcing" % set_item_id, failures)
 	var observed_tiers: Dictionary = {}
 	for seed in range(1, 512):
 		var generated := catalog.generate_item(&"weapon", seed, 12, &"common", false, &"chest", 12)

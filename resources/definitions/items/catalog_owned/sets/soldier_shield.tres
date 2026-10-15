@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/content/item_definition.gd" id="1_o8lt8"]
+
+[resource]
+script = ExtResource("1_o8lt8")
+id = &"soldier_shield"
+display_name = "SOLDIER SHIELD"
+slot = &"shield"
+gear_tier = &"set"
+tier_stat = &"strength"
+bonuses = {
+"agi": -2.0,
+"defense": 1.0,
+"strength": 2.0
+}
+description = "Power with a real speed loss."
+price = 80
+source_tags = Array[String](["shop", "chest", "clear_reward", "boss"])
+shop_eligible = true
+catalog_owned = true
+family = &"soldier"
+role = &"soldier"
+role_tags = Array[String](["soldier", "strength"])
+shield = {
+"guard_durability": 2.0,
+"guard_reduction": 1.0
+}
+fusion_group = &"soldier"
+visual_id = &"soldier"
+set_id = &"soldier"
+set_name = "SOLDIER"

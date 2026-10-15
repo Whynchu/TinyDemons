@@ -976,12 +976,26 @@ same catalog for typed-resource editing, live-item browsing, card/drop/instance/
 effect views, and the `preview item` command. Retired expansion item and
 transmutation records have been purged; saved profiles migrate by dropping those
 retired IDs while preserving Demon Cloak as a typed special-acquisition item.
-The live baseline/set dictionaries and element/flame tables remain in migration;
-item artwork remains slot-level until `visual_id` becomes authoritative.
+The 12 live Plain/Basic baselines and 54 set items now have catalog-owned
+`ItemDefinition` resources on the review branch. `live_base_ids` and
+`live_set_ids` preserve acquisition/generation order; `ItemCatalog` no longer
+synthesizes set records. Focused item, element, and palette smokes plus the
+110-resource definition validator pass. Element/flame tables remain in
+migration. Item artwork remains slot-level until `visual_id` becomes
+authoritative.
 
 Work items:
 
-- [ ] First migrate the 12 live Plain/Basic baseline definitions and their
+Implementation update (2026-10-14): the twelve baseline resources now preserve
+the merged catalog metadata and `live_base_ids` order. The catalog projects
+them through the generated manifest, and the workbench blocks edits and saves
+for catalog-owned resources. Save-collision checks cover baseline, typed, and
+legacy IDs. The 54 typed set items preserve the prior synthesized records and
+order through `live_set_ids`; duplicate IDs are validated and catalog-owned
+set items cannot be edited, saved, or shadowed by a new item. Focused Godot
+checks and definition-manifest validation passed on 2026-10-14.
+
+- [x] Migrate the 12 live Plain/Basic baseline definitions and their
   metadata from dictionaries to typed `ItemDefinition` resources. Capture the
   effective merged record, including metadata overlays and catalog defaults,
   rather than copying only the raw base dictionary. Keep the existing set
@@ -989,18 +1003,17 @@ Work items:
   read-only source boundary before placing them: the current
   `resources/definitions/items/` discovery root feeds the editable standalone
   workflow, and the workbench treats any resolved `ItemDefinition` as editable.
-- [ ] Preserve `ItemCatalog`'s dictionary projection and stable IDs while
+- [x] Preserve `ItemCatalog`'s dictionary projection and stable IDs while
   changing the baseline source. Include typed and legacy records in validation
   and save collision checks, and preserve the workbench's preview-only behavior
   for catalog-owned items after they become typed resources. The ownership rule
   must be explicit in data or discovery; path placement alone is insufficient
   because the generated item manifest can discover typed resources outside the
   standalone root too.
-- [ ] In a later atomic set slice, collapse the remaining registries and move
-  `SET_IDS` plus set synthesis rules out of `item_catalog.gd`. Current set IDs
-  are synthesized before dictionary fallback, while validation and save collision
-  checks omit synthesized IDs; a typed `swift_weapon` would otherwise be
-  shadowed without a duplicate-ID error.
+- [x] Move all set pieces into catalog-owned `ItemDefinition` resources and
+  preserve acquisition order in `live_set_ids`. `ItemCatalog` no longer
+  synthesizes set IDs, so item validation and save-collision checks see each
+  stable ID directly.
 - [x] Replace count-pinned legacy-catalogue expectations with live-registry
   invariants, retired-ID checks, and focused current-item fixtures.
 - [ ] Decide the `demon_cloak` model: either a `single_instance`/`unique` flag
@@ -1010,8 +1023,7 @@ Work items:
 - [ ] Collapse element identity to one source. `element_for_palette()` now
   reads authored keys, defaults are explicit in `element_catalog.tres`, and
   element lookup/matchup validation is implemented; the expanded focused smoke
-  still needs a Godot run before this item closes. Remaining work includes the
-  aspect tables and their mirror below.
+  passes. Remaining work includes the aspect tables and their mirror below.
 - [ ] Move `AspectCatalog` flame/palette/recipe tables
   (`aspect_catalog.gd:4-32`) and the `PlayerChromaComponent` aspect mirror into
   typed definitions or generate them from the element registry.
@@ -1023,10 +1035,9 @@ Work items:
 - [ ] Finish item-specific visual ownership and replacement through `visual_id`,
   then add the element palette/effect preview and complete the item/element
   preview acceptance checks.
-- [ ] Include `element_catalog.tres` and `palette_library.tres` in the
+- [x] Include `element_catalog.tres` and `palette_library.tres` in the
   validator with real schema checks. Both resources now expose schema
-  validators, but the definition validator and focused malformed-data checks
-  still need a Godot run before this item closes.
+  validators; the definition validator and focused malformed-data checks pass.
 
 Acceptance bar: add one weapon and one flame with data only; save round-trip
 and `dev.ps1 verify` pass; no test edits.

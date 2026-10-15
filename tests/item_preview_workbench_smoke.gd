@@ -33,7 +33,9 @@ func _run() -> void:
 		_expect(bool(summary.get("actions_ready", false)), "%s preview actions are bound" % definition_id, failures)
 		_expect(StringName(str(summary.get("id", ""))) == definition_id, "%s preview preserves its stable ID" % definition_id, failures)
 		_expect(not str(summary.get("slot", "")).is_empty(), "%s preview resolves a canonical slot" % definition_id, failures)
-		_expect(bool(summary.get("editable", false)) == (catalog.definition_resource(definition_id) != null), "%s editability matches its typed-resource source" % definition_id, failures)
+		var source_definition := catalog.definition_resource(definition_id)
+		var expected_editable := source_definition != null and not source_definition.catalog_owned
+		_expect(bool(summary.get("editable", false)) == expected_editable, "%s editability follows explicit catalog ownership" % definition_id, failures)
 
 		var expected_instance: ItemInstance = catalog.create_preview_instance(definition_id, 1, &"common", 0)
 		_expect(expected_instance != null, "%s creates a deterministic preview instance" % definition_id, failures)
@@ -41,6 +43,27 @@ func _run() -> void:
 			_expect(summary.get("bonuses", {}) == catalog.bonuses(expected_instance), "%s preview uses ItemCatalog's bonus calculation" % definition_id, failures)
 			_expect(summary.get("effect_lines", []) == catalog.effect_display_lines(expected_instance, true), "%s preview uses ItemCatalog's effect presentation" % definition_id, failures)
 		preview.queue_free()
+		await process_frame
+
+	var catalog_owned_definition := catalog.definition_resource(&"plain_hood")
+	_expect(catalog_owned_definition != null and catalog_owned_definition.catalog_owned, "Plain Hood is an explicitly catalog-owned typed resource", failures)
+	var catalog_owned_set := catalog.definition_resource(&"swift_weapon")
+	_expect(catalog_owned_set != null and catalog_owned_set.catalog_owned and catalog_owned_set.set_id == &"swift", "Swift Blade is an explicitly catalog-owned typed set resource", failures)
+	_expect(catalog.save_authored_definition(catalog_owned_set) == ERR_INVALID_PARAMETER, "catalog-owned set item cannot be saved through the catalog API", failures)
+	if catalog_owned_definition != null:
+		var read_only_preview := PREVIEW_SCENE.instantiate() as Node2D
+		read_only_preview.set("item_id", &"plain_hood")
+		root.add_child(read_only_preview)
+		await process_frame
+		var original_name := str(read_only_preview.get("display_name"))
+		read_only_preview.set("display_name", "Edited Baseline")
+		var read_only_summary := read_only_preview.call("get_preview_summary") as Dictionary
+		_expect(str(read_only_preview.get("display_name")) == original_name, "catalog-owned item fields ignore workbench edits", failures)
+		_expect(not bool(read_only_summary.get("editable", true)) and not bool(read_only_summary.get("dirty", true)), "catalog-owned item remains preview-only and clean", failures)
+		_expect(str(read_only_preview.get("selected_source")).contains("read-only"), "catalog-owned source is labeled read-only", failures)
+		_expect(catalog.save_authored_definition(catalog_owned_definition) == ERR_INVALID_PARAMETER, "catalog-owned item cannot be saved through the catalog API", failures)
+		read_only_preview.call("save_selected_definition")
+		read_only_preview.queue_free()
 		await process_frame
 
 	var first_instance: ItemInstance = catalog.create_preview_instance(&"cinder_blade", 4917, &"rare", 3)
