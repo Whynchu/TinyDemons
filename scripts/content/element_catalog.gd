@@ -141,12 +141,16 @@ static func element_for_palette(palette: String) -> int:
 	var normalized_palette := palette.to_lower()
 	if normalized_palette == "gray":
 		normalized_palette = str(keys.get(Element.NEUTRAL, "grey")).to_lower()
-	elif normalized_palette == "ice":
-		normalized_palette = str(keys.get(Element.ICE, "aquamarine")).to_lower()
 	for raw_element: Variant in keys:
 		if not raw_element is int:
 			continue
 		var element := int(raw_element)
 		if str(keys[raw_element]).to_lower() == normalized_palette:
+			return element
+	for raw_element: Variant in DATA.aspect_palette_keys:
+		if not raw_element is int:
+			continue
+		var element := int(raw_element)
+		if str(DATA.aspect_palette_keys[raw_element]).to_lower() == normalized_palette:
 			return element
 	return Element.NEUTRAL

@@ -159,7 +159,7 @@ func start_selected_archetype(root: GameplayState) -> void:
 		profile.base_agi = 2
 		profile.base_int = 2
 		profile.base_mnd = 2
-		var starter_flame: StringName = screen.ASPECT_CATALOG_SCRIPT.STARTER_FLAMES[screen.archetype_presenter.starter_flame_index]
+		var starter_flame: StringName = screen.ASPECT_CATALOG_SCRIPT.starter_flames()[screen.archetype_presenter.starter_flame_index]
 		profile.starter_flame = starter_flame
 		profile.allocation_profile = int(StatsComponent.AllocationProfile.BALANCED)
 		profile.palette_name = screen.ASPECT_CATALOG_SCRIPT.palette_for_flame(starter_flame)
@@ -174,7 +174,7 @@ func start_selected_archetype(root: GameplayState) -> void:
 
 
 func shift_archetype(root: GameplayState, direction: int) -> void:
-	screen.archetype_presenter.starter_flame_index = posmod(screen.archetype_presenter.starter_flame_index + direction, screen.ASPECT_CATALOG_SCRIPT.STARTER_FLAMES.size())
+	screen.archetype_presenter.starter_flame_index = posmod(screen.archetype_presenter.starter_flame_index + direction, screen.ASPECT_CATALOG_SCRIPT.starter_flames().size())
 	screen.archetype_presenter.index = screen.archetype_presenter.starter_flame_index
 	archetype_arrow_pulse(root, direction)
 	update_archetype_screen(root)
@@ -208,7 +208,7 @@ func select_archetype_menu_row(root: GameplayState, row: int) -> void:
 func update_archetype_screen(root: GameplayState) -> void:
 	var _display := root.get("display_controller") as DisplayController
 	var view_width: float = screen.layout_controller.layout_view_size().x
-	var flame: StringName = screen.ASPECT_CATALOG_SCRIPT.STARTER_FLAMES[screen.archetype_presenter.starter_flame_index]
+	var flame: StringName = screen.ASPECT_CATALOG_SCRIPT.starter_flames()[screen.archetype_presenter.starter_flame_index]
 	var flame_name: String = screen.ASPECT_CATALOG_SCRIPT.display_name(flame)
 	var flame_palette: String = screen.ASPECT_CATALOG_SCRIPT.palette_for_flame(flame)
 	screen.archetype_presenter.name_text.texture = root.call("_pixel_text_texture", flame_name, PaletteLibrary.normal(flame_palette) if screen.archetype_presenter.menu_row == 0 else Color.WHITE) as Texture2D
@@ -345,7 +345,7 @@ func update_game_over_input(root: GameplayState) -> void:
 
 
 func update_archetype_button_styles(_root: Object) -> void:
-	var flame: StringName = screen.ASPECT_CATALOG_SCRIPT.STARTER_FLAMES[screen.archetype_presenter.starter_flame_index]
+	var flame: StringName = screen.ASPECT_CATALOG_SCRIPT.starter_flames()[screen.archetype_presenter.starter_flame_index]
 	var color := PaletteLibrary.normal(screen.ASPECT_CATALOG_SCRIPT.palette_for_flame(flame)); var row: Variant = screen.archetype_presenter.menu_row
 	var type_active: bool = row == 0; var sprite_active: bool = false; var start_active: bool = row == 1
 	var type_left: Variant = screen.archetype_presenter.type_left_button; var type_right: Variant = screen.archetype_presenter.type_right_button; var start: Variant = screen.archetype_presenter.start_button

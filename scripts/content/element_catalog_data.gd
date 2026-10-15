@@ -2,13 +2,18 @@
 extends Resource
 class_name ElementCatalogData
 
-## Editor-inspectable element lookup tables. The stable Element enum and
-## matchup policy stay in element_catalog.gd; the id/name/palette lookups are
-## authored here so the editor can inspect and tune presentation keys.
+## Editor-inspectable element and player-aspect lookup tables. Stable combat
+## and save-facing enum ordinals stay in code; their IDs, names, palette keys,
+## starter order, and fusion recipes are authored here.
 
 @export var ids: Dictionary = {}
 @export var display_names: Dictionary = {}
 @export var palette_keys: Dictionary = {}
+## Player aspect ramps are a separate visual domain from combat palette keys.
+## Ice intentionally uses `ice` here and `aquamarine` in palette_keys.
+@export var aspect_palette_keys: Dictionary = {}
+@export var starter_flames: Array[StringName] = []
+@export var fusion_recipes: Dictionary = {}
 @export var matchup_table: Array = []
 @export var status_effects: Array[Resource] = []
 @export var status_mixtures: Array[Resource] = []
@@ -26,6 +31,7 @@ func validate() -> Array[String]:
 	_validate_indexed_mapping(ids, "ids", problems)
 	_validate_indexed_mapping(display_names, "display_names", problems)
 	_validate_indexed_mapping(palette_keys, "palette_keys", problems)
+	_validate_aspect_palette_keys(problems)
 	var seen_element_ids: Dictionary = {}
 	var seen_palette_keys: Dictionary = {}
 	for index in range(maxi(element_count, 0)):
@@ -54,6 +60,8 @@ func validate() -> Array[String]:
 		elif seen_palette_keys.has(palette_key):
 			problems.append("duplicate element palette key '%s'" % palette_key)
 		seen_palette_keys[palette_key] = true
+	_validate_starter_flames(problems)
+	_validate_fusion_recipes(problems)
 	if matchup_table.size() != element_count:
 		problems.append("matchup_table row count must equal element_count")
 	for attacker in mini(matchup_table.size(), maxi(element_count, 0)):
@@ -117,6 +125,83 @@ func validate() -> Array[String]:
 			problems.append("duplicate status mixture pair '%s'" % pair_key)
 		seen_pairs[pair_key] = true
 	return problems
+
+
+func _validate_aspect_palette_keys(problems: Array[String]) -> void:
+	if aspect_palette_keys.size() != maxi(element_count - 1, 0):
+		problems.append("aspect_palette_keys entry count must equal the elemental count")
+	var seen: Dictionary = {}
+	for index in range(1, maxi(element_count, 1)):
+		if not aspect_palette_keys.has(index):
+			problems.append("aspect_palette_keys is missing element index %d" % index)
+	for raw_index: Variant in aspect_palette_keys:
+		if not raw_index is int or int(raw_index) <= 0 or int(raw_index) >= element_count:
+			problems.append("aspect_palette_keys contains invalid element index '%s'" % str(raw_index))
+			continue
+		var value: Variant = aspect_palette_keys[raw_index]
+		if not value is String:
+			problems.append("aspect palette key %d must be a String" % int(raw_index))
+		var palette_key := str(value).strip_edges().to_lower()
+		if palette_key.is_empty():
+			problems.append("aspect palette key %d must not be empty" % int(raw_index))
+		elif seen.has(palette_key):
+			problems.append("duplicate aspect palette key '%s'" % palette_key)
+		seen[palette_key] = true
+		for raw_combat_index: Variant in palette_keys:
+			if not raw_combat_index is int:
+				continue
+			var combat_palette_key := str(palette_keys[raw_combat_index]).strip_edges().to_lower()
+			if combat_palette_key == palette_key and int(raw_combat_index) != int(raw_index):
+				problems.append("aspect palette key '%s' conflicts with combat element %d" % [palette_key, int(raw_combat_index)])
+
+
+func _validate_starter_flames(problems: Array[String]) -> void:
+	if starter_flames.is_empty():
+		problems.append("starter_flames must not be empty")
+	var seen: Dictionary = {}
+	for flame in starter_flames:
+		var element_index := _element_index_for_id(flame)
+		if element_index <= 0:
+			problems.append("starter flame '%s' must reference an elemental id" % String(flame))
+		if seen.has(flame):
+			problems.append("duplicate starter flame '%s'" % String(flame))
+		seen[flame] = true
+
+
+func _validate_fusion_recipes(problems: Array[String]) -> void:
+	var seen_pairs: Dictionary = {}
+	for raw_pair: Variant in fusion_recipes:
+		if not raw_pair is String:
+			problems.append("fusion recipe key must be a String")
+			continue
+		var ingredients := String(raw_pair).split("|", false)
+		if ingredients.size() != 2:
+			problems.append("fusion recipe '%s' must contain exactly two flame ids" % String(raw_pair))
+			continue
+		var first := StringName(ingredients[0])
+		var second := StringName(ingredients[1])
+		if first == second:
+			problems.append("fusion recipe '%s' must use two different flames" % String(raw_pair))
+		if String(first) >= String(second):
+			problems.append("fusion recipe '%s' must use canonical sorted flame ids" % String(raw_pair))
+		if _element_index_for_id(first) <= 0 or _element_index_for_id(second) <= 0:
+			problems.append("fusion recipe '%s' must reference elemental ids" % String(raw_pair))
+		var pair_key := "%s|%s" % [String(first), String(second)] if String(first) < String(second) else "%s|%s" % [String(second), String(first)]
+		if seen_pairs.has(pair_key):
+			problems.append("duplicate fusion recipe pair '%s'" % pair_key)
+		seen_pairs[pair_key] = true
+		var result: Variant = fusion_recipes[raw_pair]
+		if not result is StringName:
+			problems.append("fusion recipe '%s' result must be a StringName" % String(raw_pair))
+		if _element_index_for_id(result as StringName if result is StringName else &"") <= 0:
+			problems.append("fusion recipe '%s' result must reference an elemental id" % String(raw_pair))
+
+
+func _element_index_for_id(element_id: StringName) -> int:
+	for raw_index: Variant in ids:
+		if raw_index is int and int(raw_index) > 0 and ids[raw_index] == element_id:
+			return int(raw_index)
+	return -1
 
 
 func _validate_indexed_mapping(mapping: Dictionary, label: String, problems: Array[String]) -> void:

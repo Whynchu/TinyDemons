@@ -16,6 +16,15 @@ func _initialize() -> void:
 	var missing_palette := ElementCatalogScript.DATA.duplicate(true) as ElementCatalogData
 	missing_palette.palette_keys.erase(e.ICE)
 	_expect(not missing_palette.validate().is_empty(), "missing palette indexes are rejected", failures)
+	var duplicate_aspect_palette := ElementCatalogScript.DATA.duplicate(true) as ElementCatalogData
+	duplicate_aspect_palette.aspect_palette_keys[e.ICE] = "purple"
+	_expect(not duplicate_aspect_palette.validate().is_empty(), "duplicate player aspect palettes are rejected", failures)
+	var duplicate_starter := ElementCatalogScript.DATA.duplicate(true) as ElementCatalogData
+	duplicate_starter.starter_flames.append(&"fire")
+	_expect(not duplicate_starter.validate().is_empty(), "duplicate starter flames are rejected", failures)
+	var reversed_recipe := ElementCatalogScript.DATA.duplicate(true) as ElementCatalogData
+	reversed_recipe.fusion_recipes["water|fire"] = &"shadow"
+	_expect(not reversed_recipe.validate().is_empty(), "noncanonical and duplicate fusion pairs are rejected", failures)
 	var invalid_mixture := ElementCatalogScript.DATA.duplicate(true) as ElementCatalogData
 	var mixture := (ElementCatalogScript.DATA.status_mixtures[0] as StatusMixtureDefinition).duplicate() as StatusMixtureDefinition
 	invalid_mixture.status_mixtures = [mixture]
@@ -55,6 +64,7 @@ func _initialize() -> void:
 	_expect(ElementCatalogScript.palette_key(e.SHADOW) == "purple", "Shadow uses purple palette", failures)
 	_expect(ElementCatalogScript.palette_key(e.GROUND) == "orange", "Ground uses orange palette", failures)
 	_expect(ElementCatalogScript.palette_key(e.ICE) == "aquamarine", "Ice uses aquamarine palette", failures)
+	_expect(ElementCatalogScript.element_for_palette("ice") == e.ICE, "player Ice palette alias resolves to Ice", failures)
 	_expect(is_equal_approx(ElementCatalogScript.effectiveness(e.ELECTRIC, e.GROUND), 0.25), "Electric is strongly resisted by Ground", failures)
 	_expect(is_equal_approx(ElementCatalogScript.effectiveness(e.ICE, e.GROUND), 1.25), "Ice is strong into Ground", failures)
 	var fire_damage_color := ElementCatalogScript.damage_number_color(e.FIRE)

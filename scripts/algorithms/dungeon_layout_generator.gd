@@ -750,7 +750,7 @@ static func _available_vault_elements() -> Array[StringName]:
 				available_flames.append(result_flame)
 				expanded = true
 	var available_elements: Array[StringName] = []
-	for flame in ASPECT_CATALOG_SCRIPT.ELEMENTAL_FLAMES:
+	for flame in ASPECT_CATALOG_SCRIPT.elemental_flames():
 		if not available_flames.has(flame):
 			continue
 		var element_id := ELEMENT_CATALOG_SCRIPT.id(ELEMENT_CATALOG_SCRIPT.element_for_palette(ASPECT_CATALOG_SCRIPT.palette_for_flame(flame)))

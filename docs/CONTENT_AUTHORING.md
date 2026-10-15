@@ -585,22 +585,19 @@ boundary. A new elemental rule must specify current element, bound element,
 Chroma amount, pickup behavior, zero-resource behavior, combat element, gate
 requirements, visual palette, and save compatibility.
 
-Player flame palettes are mapped in `aspect_catalog.gd` and their color ramps
-are authored in `resources/definitions/palette_library.tres`. Player Ice uses
-the bright `ice` ramp; Ice enemy variants keep the `aquamarine` combat palette
-from `element_catalog.tres`.
+`resources/definitions/element_catalog.tres` owns element IDs, display names,
+combat palette keys, player aspect palette keys, starter-flame order, and
+fusion recipes. `ElementCatalog` and `AspectCatalog` project those tables;
+`PlayerChromaComponent` derives flame names and player pickup colors from the
+same data. The combat and player palette namespaces stay separate: Player Ice
+uses the bright `ice` ramp, Ice enemy variants use `aquamarine`, and both map
+to the stable Ice identity. `gray`/`grey` and the older aquamarine flame alias
+remain supported.
 
-Known traps: element identity currently lives in four parallel tables — the
-`ElementCatalog.Element` enum (`element_catalog.gd:11-20`), the numeric keys and
-`element_count` in `element_catalog.tres`, the `PlayerChromaComponent.Aspect`
-enum (`player_chroma_component.gd:14-23`), and the flame/palette/recipe strings
-in `aspect_catalog.gd:4-32`. `element_for_palette()` is a hand-written switch
-that can drift from the resource, `element_count` has two defaults, and
-`element_catalog.tres` is now loaded by the recursive definition validator. Adding
-a ninth element also breaks the hardcoded 8×8 table in
-`tests/element_catalog_smoke.gd:12-21`, the `<= Aspect.ICE` validity bound, and
-the `element_for_aspect` numeric adapter at the same time. Slice 2 collapses
-this to one source with schema validation.
+`ElementCatalog.Element` and `PlayerChromaComponent.Aspect` keep their current
+numeric ordinals for combat callers and saved run state. The current player
+flame roster stops at Ice; adding an element or player aspect still needs an
+explicit save/runtime/effect/gate decision and is not yet a data-only workflow.
 
 Verify Gray/Normal collection, bound depletion, temporary fusion depletion,
 pickup coloring, save/load at zero, and any relevant gate route. Do not fold a

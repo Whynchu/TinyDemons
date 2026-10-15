@@ -82,7 +82,7 @@ func _check_progression(starter_flame: StringName, completed_runs: int, failures
 	if completed_runs == 1:
 		_expect(not map.available_puzzle_colors().has(&"puzzle_d"), "%s Run 2 withholds the future third puzzle color" % starter_flame, failures)
 		var unearned_flame: StringName = &""
-		for candidate in ASPECT_CATALOG_SCRIPT.STARTER_FLAMES:
+		for candidate in ASPECT_CATALOG_SCRIPT.starter_flames():
 			if candidate not in available:
 				unearned_flame = candidate
 				break

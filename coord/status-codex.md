@@ -2127,7 +2127,7 @@ Also advanced: ElementCatalog.element_for_palette() now derives element identity
 
 Verification: Composition self-test and strict targets pass; test manifest validates at 160 rows / 158 runnable / 45 gate; UID validation passes for 469 script sidecars; git diff --check is clean. Graphify's code-only refresh for this review worktree rebuilt graph.json, HTML, and report at 21,374 nodes / 48,225 edges / 735 communities. Documentation and media semantic extraction was not refreshed. Known certificate and MCP registry warnings came from the local Godot environment. No gameplay balance or schedule code changed.
 
-Open: Live editor undo-history behavior, rendered preview acceptance, exported-PCK lifecycle, aspect tables, and room authority remain open under P4/M1. Element and palette schema validators are implemented with a narrow mixture-validation boundary that avoids the ElementCatalog resource cycle. Focused item, element, palette, and Demon Cloak smokes plus the recursive definition validator pass; do not update phase completion until the separate editor-history/export/room proofs pass.
+Open: Live editor undo-history behavior, rendered preview acceptance, exported-PCK lifecycle, data-only new-flame acceptance, and room authority remain open under P4/M1. Element and palette schema validators are implemented with a narrow mixture-validation boundary that avoids the ElementCatalog resource cycle. Focused item, element, palette, aspect/binding/progression, and Demon Cloak smokes plus the recursive definition validator pass; do not update phase completion until the separate editor-history/export/room proofs pass.
 
 ## Completed: Typed item baselines and set items (2026-10-14)
 
@@ -2161,3 +2161,15 @@ composition self-test/strict targets, test-manifest, UID, script-index, and diff
 checks pass. The shared editor remains connected; focused smokes ran in the
 isolated review worktree with only its MCP runtime autoload temporarily disabled
 and restored.
+
+## Completed: Aspect/flame catalog ownership (2026-10-14)
+
+`element_catalog.tres` now owns flame identity/display lookup, player palette keys, starter order, and fusion recipes. `AspectCatalog` delegates to those tables; `PlayerChromaComponent` derives names and pickup palettes from the catalog while keeping the numeric aspect enum stable for saved run state. Ice keeps its `ice` player ramp and `aquamarine` combat palette; gray aliases and run unlock order are unchanged.
+
+Focused `element_catalog_smoke`, `starter_flame_smoke`, `elemental_binding_smoke`, `generated_flame_progression_smoke`, and the recursive definition validator pass (110/110 resources). Composition self-test/strict targets, test-manifest, UID validation (469 sidecars), script-index generation, and `git diff --check` pass. The separate `chroma_state_smoke` still has pre-existing 1/20 versus 20/10 tuning expectation failures; `run_element_theme_smoke` calls the missing `RoomController._generated_enemy_base_level`. These two tests were not changed in this catalog slice.
+
+Remaining P4 acceptance: data-only addition of a new player flame, live editor history, rendered preview, exported-PCK lifecycle, and room authority. No gameplay balance or frame ordering changed.
+
+## Open: Elemental binding smoke teardown (2026-10-14)
+
+The standalone `elemental_binding_smoke` behavior passes but exits with 158 ObjectDB instances and four resources still in use. Deferring its final quit did not change the warning. Keep this test cleanup separate from the aspect catalog change until the retained generated-route owners are identified.

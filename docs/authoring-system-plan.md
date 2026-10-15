@@ -1022,13 +1022,18 @@ checks and definition-manifest validation passed on 2026-10-14.
   operation. The typed definition declares its `cloaked_demon` seller source
   and `locked_slots`; `RunState`, profile equip state, and equipment previews
   consume those fields instead of branching on the item ID.
-- [ ] Collapse element identity to one source. `element_for_palette()` now
-  reads authored keys, defaults are explicit in `element_catalog.tres`, and
-  element lookup/matchup validation is implemented; the expanded focused smoke
-  passes. Remaining work includes the aspect tables and their mirror below.
-- [ ] Move `AspectCatalog` flame/palette/recipe tables
-  (`aspect_catalog.gd:4-32`) and the `PlayerChromaComponent` aspect mirror into
-  typed definitions or generate them from the element registry.
+- [x] Consolidate element and player-flame string data in the validated
+  `element_catalog.tres`: element IDs and display names feed both catalogs;
+  combat `palette_keys` stay distinct from player `aspect_palette_keys`; starter
+  order and fusion recipes are authored there. Gray/grey and the legacy
+  aquamarine-to-Ice alias remain compatible.
+- [x] Make `AspectCatalog` and `PlayerChromaComponent` resolve flame names and
+  player palettes through the element data. Their numeric enums remain stable
+  save-facing ordinals; the player flame roster does not expose elements beyond
+  the current enum range.
+- [ ] Prove a data-only new-flame addition through save/load, combat, gates, and
+  previews without changing tests. This remains an acceptance gate: extending
+  the save-facing aspect range still needs an explicit migration decision.
 - [x] Add the first ItemDefinition design-preview workbench. It provides
   `preview item <id>`, typed-resource editing and save/create actions, plus
   Card/Drop/Instance/Effects views backed by `ItemCatalog`; only current playable
@@ -1222,7 +1227,6 @@ and file name, and every count in the docs matches the tooling output.
 |---|---|---|
 | Policy fields validated but never read | `dungeon_generation_policy.gd:21-25` vs `dungeon_layout_generator.gd:31-32,50` | 3 |
 | Item base needs three `.tres` registries plus code lists | `item_catalog_data.gd:8-13`, `item_catalog.gd:45` | 2 |
-| Element identity is four parallel tables | `element_catalog.gd`, `element_catalog_data.gd`, `aspect_catalog.gd:4-32`, `player_chroma_component.gd:14-23` | 2 |
 | Count-pinned tests block content additions | `gear_system_rework_smoke.gd:13`, `gear_catalogue_expansion_smoke.gd:22`, `element_catalog_smoke.gd:12-21` | 2/5 |
 
 Slices 0 and 1 resolved the class-cache, validator coverage, catalog exit-code,

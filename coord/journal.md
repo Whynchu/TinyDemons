@@ -1524,3 +1524,7 @@ User accepted the shared EnemyBrain architecture and current Slime/Skeleton beha
 2026-10-14 done codex Graphify refresh: review map rebuilt code-only at 21,374 nodes, 48,225 edges, 735 communities; HTML and report regenerated.
 2026-10-14 claim codex Demon Cloak typed ownership: definition-backed shop source and equipment slot lock; keep escalating repeat purchase/fusion state in PlayerProfile.
 2026-10-14 done codex Demon Cloak ownership: repeat purchases remain fusion materials; typed source/locked-slot metadata replaces RunState/equipment ID branches; focused item and cloak smokes pass with profile restoration and no teardown leaks.
+2026-10-14 claim codex aspect/flame catalog ownership: preserve save ordinals, Ice palette domains, gray aliases, and run unlock order.
+2026-10-14 done codex aspect/flame tables now use validated ElementCatalogData; player string adapters use stable save ordinals; focused catalog, starter, binding, progression, and definition checks pass.
+2026-10-14 claim codex elemental binding smoke teardown: defer test completion so generated graph/layout locals are released before exit.
+2026-10-14 handoff codex elemental_binding_smoke passes behavior assertions but still logs ObjectDB/resource leaks after deferred quit; reverted ineffective teardown edit and left cleanup open.

@@ -2,6 +2,7 @@ extends Node
 class_name PlayerChromaComponent
 
 const AspectCatalogScript = preload("res://scripts/content/aspect_catalog.gd")
+const ElementCatalogScript = preload("res://scripts/content/element_catalog.gd")
 
 ## Runtime owner for the player's aspect identity and Chroma state.
 ## Triangle execution, HUD presentation, and visual desaturation are separate.
@@ -184,15 +185,8 @@ func current_is_bound() -> bool:
 
 
 func aspect_for_flame(flame: StringName) -> Aspect:
-	match flame:
-		&"fire": return Aspect.FIRE
-		&"water": return Aspect.WATER
-		&"electric": return Aspect.ELECTRIC
-		&"grass": return Aspect.GRASS
-		&"shadow": return Aspect.SHADOW
-		&"ground": return Aspect.GROUND
-		&"ice": return Aspect.ICE
-	return Aspect.NONE
+	var element := ElementCatalogScript.element_for_id(flame)
+	return element as Aspect if ElementCatalogScript.is_valid_id(flame) and element <= Aspect.ICE else Aspect.NONE
 
 
 func ability_mode() -> AbilityMode:
@@ -206,60 +200,22 @@ func ability_mode() -> AbilityMode:
 
 
 func aspect_name() -> StringName:
-	match current_aspect:
-		Aspect.FIRE:
-			return &"fire"
-		Aspect.WATER:
-			return &"water"
-		Aspect.ELECTRIC:
-			return &"electric"
-		Aspect.GRASS:
-			return &"grass"
-		Aspect.SHADOW:
-			return &"shadow"
-		Aspect.GROUND:
-			return &"ground"
-		Aspect.ICE:
-			return &"ice"
-	return &"gray"
+	return ElementCatalogScript.id(current_aspect) if current_aspect != Aspect.NONE else &"gray"
 
 
 func chroma_palette_name() -> String:
 	## Pickups follow the aspect that is currently meaningful to the player.
 	## Gray is the neutral pickup color, including a normal player with a full
 	## neutral bar.
-	match current_aspect:
-		Aspect.FIRE:
-			return "red"
-		Aspect.WATER:
-			return "blue"
-		Aspect.ELECTRIC:
-			return "yellow"
-		Aspect.GRASS:
-			return "green"
-		Aspect.SHADOW:
-			return "purple"
-		Aspect.GROUND:
-			return "orange"
-		Aspect.ICE:
-			return "aquamarine"
-	return "grey"
+	return AspectCatalogScript.palette_for_flame(aspect_name()) if current_aspect != Aspect.NONE else "grey"
 
 
 func bound_aspect_name() -> StringName:
-	match bound_aspect:
-		Aspect.FIRE: return &"fire"
-		Aspect.WATER: return &"water"
-		Aspect.ELECTRIC: return &"electric"
-		Aspect.GRASS: return &"grass"
-		Aspect.SHADOW: return &"shadow"
-		Aspect.GROUND: return &"ground"
-		Aspect.ICE: return &"ice"
-	return &"gray"
+	return ElementCatalogScript.id(bound_aspect) if bound_aspect != Aspect.NONE else &"gray"
 
 
 func _is_valid_elemental_aspect(aspect: Aspect) -> bool:
-	return aspect > Aspect.NONE and aspect <= Aspect.ICE
+	return aspect > Aspect.NONE and aspect <= Aspect.ICE and ElementCatalogScript.is_valid_id(ElementCatalogScript.id(aspect))
 
 
 func _sync_binding_state() -> void:

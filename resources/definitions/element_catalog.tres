@@ -46,6 +46,22 @@ palette_keys = {
 6: "orange",
 7: "aquamarine"
 }
+aspect_palette_keys = {
+1: "red",
+2: "blue",
+3: "yellow",
+4: "green",
+5: "purple",
+6: "orange",
+7: "ice"
+}
+starter_flames = Array[StringName]([&"fire", &"water", &"electric"])
+fusion_recipes = {
+"fire|water": &"shadow",
+"electric|fire": &"ground",
+"electric|water": &"grass",
+"grass|water": &"ice"
+}
 matchup_table = [[1.0, 1.0, 1.0, 1.0, 1.0, 0.25, 1.0, 1.0], [1.0, 0.8, 0.8, 1.0, 1.25, 1.0, 1.0, 1.25], [1.0, 1.25, 0.8, 1.0, 0.8, 1.0, 1.25, 1.0], [1.0, 1.0, 1.25, 0.8, 0.8, 1.0, 0.25, 1.0], [1.0, 0.8, 1.25, 1.0, 0.8, 1.0, 1.25, 1.0], [1.0, 1.0, 1.0, 1.0, 1.0, 1.25, 1.0, 1.0], [1.0, 1.25, 1.0, 1.25, 0.8, 1.0, 0.8, 1.0], [1.0, 0.8, 0.8, 1.0, 1.25, 1.0, 1.25, 0.8]]
 status_effects = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7")])
 status_mixtures = Array[Resource]([SubResource("StatusMixtureDefinition_water_ice")])
