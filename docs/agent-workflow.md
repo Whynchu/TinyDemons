@@ -1,11 +1,11 @@
 # Tiny Demons Agent Workflow
 
-Status: current project-scoped Codex and opencode advisor setup
+Status: current project-scoped Codex/opencode advisors and bounded team workflow
 
-Updated: 2026-09-27
+Updated: 2026-10-15
 
-Scope: use Pip, Thorn, and Hexley for focused advice on project priorities and
-feature decisions
+Scope: use Pip, Thorn, and Hexley for focused advice; use the team skill for
+explicitly delegated composition and authoring implementation
 
 Owner: repository contributors
 
@@ -33,6 +33,31 @@ All three are advisors. Their definitions prohibit file edits and further
 delegation. They inherit the parent session's model and permissions. Use them
 when a decision benefits from a specialist perspective; routine implementation
 does not need all three.
+
+## Bounded implementation delegation
+
+The repo-scoped [team skill](../.agents/skills/tiny-demons-team/SKILL.md) covers explicit
+multi-agent composition and authoring tasks. It is separate from the three
+read-only advisor roles: implementation workers may edit only their assigned
+paths, while the parent remains responsible for coordination, integration,
+and acceptance. Do not treat a worker as an advisor or ask an advisor to
+implement.
+
+The configured subagent cap is one child in addition to the parent (two live
+agents total). Serialize child assignments and adapt to actual session capacity.
+Do not change project or global
+settings to increase capacity. For bounded mechanical edits or independent
+navigation, Luna LOW is appropriate; use Luna MAX for contract design and
+cross-file implementation/integration. Explicit user model or effort choices
+take precedence. The team skill requires a task packet with branch and absolute
+worktree, owned paths, authority/trap pointers, preservation constraints,
+verification, and acceptance/stop condition. Workers do not use the Godot
+editor bridge, publish externally, or spawn further agents; parent ownership
+and `AGENTS.md` verification rules continue to apply.
+
+Keep the worker's usability report (time, docs needed, errors/ambiguities, and
+runtime edits) distinct from human visual acceptance. It can reveal friction in
+the authoring workflow, but does not substitute for rendered/editor review.
 
 ## Ask about the next repo priority
 

@@ -5,6 +5,27 @@ _Only codex writes this file._
 **Focus:** Composition cleanup P4 catalog authority on `review/composition-cleanup-plan`.
 **Updated:** 2026-10-15
 
+## In flight: Delegated composition completion
+
+The user authorized Pip/Thorn/Hexley reviews, Luna LOW/MAX implementation,
+parent oversight, and publication to `review/composition-cleanup-plan`.
+The [execution plan](../docs/composition-team-execution-plan.md) maps the full
+remaining acceptance queue. Thorn found item creation does not refresh the
+generated manifest; Hexley and Pip selected its create/discover/undo/redo
+transaction as the next slice. A MAX worker is characterizing that regression
+before implementation. LOW wrote the repository team skill and workflow docs.
+The two-live-agent cap permits one child at a time; editor and integration
+remain parent-owned. Room ledger X14 was reconciled against typed runtime specs
+and the still-dictionary authored adapters, avoiding a duplicate migration.
+
+Recovery is published as `8e4358a` via the GitHub connector, with a tree matching
+local `4801d0c` exactly. The local review branch is aligned to the published Git
+object. Direct Git HTTPS could not connect. Automatic review initially rejected
+the journal blob; after checking the already-public baseline and exact generic
+task-only diff it accepted publication. The pending Web renderer change and
+separate dirty main worktree are preserved. Full composition acceptance and
+human editor/visual review remain open.
+
 ## Completed: Composition cleanup P0 dispositions
 
 Published a human-readable P0 review, a complete per-community/per-file JSON

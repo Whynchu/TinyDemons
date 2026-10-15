@@ -7,6 +7,11 @@ complete; see the [human-readable P0 review](composition-p0-review.md) and
 
 Status: current navigation guide for the `0.3.x` cycle
 
+Team execution: [composition team plan](composition-team-execution-plan.md)
+sequences the existing composition/authoring authorities into bounded advisor
+and Luna worker tasks. The [team skill](../.agents/skills/tiny-demons-team/SKILL.md)
+defines delegation packets and evidence; it does not replace those authorities.
+
 Updated: 2026-10-14
 
 The repository contains design history, implementation handoffs, audits, and

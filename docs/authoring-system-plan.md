@@ -1064,6 +1064,14 @@ preview-only in the workbench.
 
 Goal: level and route content stops requiring controller knowledge.
 
+Current boundary (source review 2026-10-15): runtime `RoomSpec` and
+`ConnectionSpec` are typed `RefCounted` classes, and layout validation returns
+structured errors. The authoring adapters still export dictionary arrays in
+`DungeonRunDefinition` and `PuzzlePlanData`; the editor-resource task below
+targets those inputs. `DungeonMapController` currently logs layout errors and
+continues graph initialization, so the fail-fast preflight remains open. The
+generation-policy fields retained after the 2026-10-14 cleanup are consumed.
+
 Work items:
 
 - [ ] Promote `RoomSpec` / `ConnectionSpec` (`dungeon_layout_definition.gd`)

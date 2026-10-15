@@ -1534,3 +1534,5 @@ User accepted the shared EnemyBrain architecture and current Slime/Skeleton beha
 P4 item visual metadata disposition. Inspecting and editing item schema/resources, preview, authoring docs, and gear smoke. Retire the unused visual_id surface; preserve slot-level art.
 
 2026-10-15 | codex | done | Recovered item visual metadata retirement: removed unused visual_id from schema, 74 item resources, catalog projection, preview and template. Gear, item definition and workbench focused smokes and 110/110 definition validation pass; composition, manifest, UID and diff checks pass. Preserved the pending Web renderer edit and the main worktree.
+
+2026-10-15 | codex | claim | User-authorized composition completion team: serial Thorn/Hexley/Pip advisors, Luna LOW workflow and independent usability, Luna MAX item lifecycle implementation, parent integration and review-branch publication. Preserve separate main worktree and opencode runner/Pages claim.
