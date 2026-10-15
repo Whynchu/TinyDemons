@@ -1068,10 +1068,10 @@ Work items:
 - [ ] Replace `push_error`-only layout validation
   (`dungeon_map_controller.gd:65-101`) with fail-fast validation that the
   validator and CI can run without booting the game.
-- [ ] Delete or make authoritative the policy fields that are validated but
-  ignored: `first_orb_depth`, `first_special_depth`, `primary_flames`
-  (`dungeon_generation_policy.gd:21-25` vs
-  `dungeon_layout_generator.gd:31-32,50`).
+- [x] Remove the unused `first_orb_depth` and `first_special_depth` exports;
+  these are fixed route-grammar anchors in `DungeonLayoutGenerator`, not
+  tuning fields. Remove duplicate `primary_flames`; generated routes now read
+  the starter roster from `ElementCatalogData` through `AspectCatalog`.
 - [ ] Consolidate room-type aliases and gate-color whitelists into one
   registry (`dungeon_graph.gd`, `dungeon_map_state.gd:11-16`,
   `dungeon_map_controller.gd:19-22`, `puzzle_map_layout_compiler.gd:218-228`).
@@ -1225,7 +1225,6 @@ and file name, and every count in the docs matches the tooling output.
 
 | Trap | Evidence | Owner slice |
 |---|---|---|
-| Policy fields validated but never read | `dungeon_generation_policy.gd:21-25` vs `dungeon_layout_generator.gd:31-32,50` | 3 |
 | Item base needs three `.tres` registries plus code lists | `item_catalog_data.gd:8-13`, `item_catalog.gd:45` | 2 |
 | Count-pinned tests block content additions | `gear_system_rework_smoke.gd:13`, `gear_catalogue_expansion_smoke.gd:22`, `element_catalog_smoke.gd:12-21` | 2/5 |
 

@@ -35,12 +35,11 @@ traps:
 
 | Authored data | Current runtime behavior | Owner slice |
 |---|---|---|
-| `dungeon_generation_policy.tres`: `first_orb_depth`, `first_special_depth`, `primary_flames` | Ignored. The generator uses `dungeon_layout_generator.gd:31-32,50`. | 3 |
 | Former `resources/definitions/puzzle_map_r3.tres` path | Removed in Slice 0; the runtime and preview use `puzzle_map_r3_new.tres`. | resolved |
 | Retired `item_catalog.tres` expansion records | Removed in the schema-14 catalog cleanup; catalog-owned Plain/Basic baselines, typed set items, and standalone `ItemDefinition` resources remain. | resolved |
 | Item `visual_id` | Written but never read; item art is slot-level only. | 2 |
 | Item `weapon_element` | Consumed by equipped weapon stats, composite damage, status application, and sword palette/highlight presentation. A non-neutral weapon element is always active; temporary IMBUE overrides damage and layers its own status onto the weapon status for authored reactions. | implemented for elemental blades |
-| `element_catalog.tres` and `palette_library.tres` | Both are included in recursive validation and read by their runtime catalogs; element identity still spans parallel enums/adapters, and typed consolidation remains Slice 2 work. | 2 |
+| `element_catalog.tres` and `palette_library.tres` | Both are included in recursive validation and read by their runtime catalogs. Element and player-flame string tables are consolidated; stable numeric enums remain save-facing, and a data-only new-flame proof is open. | partial |
 
 The definition validator is part of the release gate and web CI. The catalog
 report exits nonzero when a required surface cannot load.
@@ -758,14 +757,15 @@ typed catalog entry; do not add a rank gate or weight to `RoomController`.
 
 ### Example: add a generated-map policy
 
-Current caveat: `first_orb_depth`, `first_special_depth`, and `primary_flames`
-in `dungeon_generation_policy.tres` are validated but ignored; the generator
-uses `dungeon_layout_generator.gd:31-32,50`. The candidate counts, risk-choice
-band, vault cap, and route-advantage fields are read.
+`DungeonGenerationPolicy` owns the candidate counts, risk-choice band, vault
+cap, and route advantage consumed by the generator. First Orb depth 3 and first
+Special depth 4 are fixed route-grammar anchors in `DungeonLayoutGenerator`;
+the primary flame roster comes from `ElementCatalogData.starter_flames` through
+`AspectCatalog`. Do not add duplicate resource fields for those values.
 
 1. Edit `resources/definitions/dungeon_generation_policy.tres` for the fields
-   the generator actually reads (see caveat).
-2. `DungeonLayoutGenerator.policy()` reads it — no code change.
+   owned by the policy resource.
+2. `DungeonLayoutGenerator.policy()` reads those tuning values.
 3. Add an assertion to `tests/dungeon_generation_policy_smoke.gd`.
 4. Run `tools/validate_definitions.ps1` and the generated-run smoke.
 

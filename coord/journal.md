@@ -1528,3 +1528,5 @@ User accepted the shared EnemyBrain architecture and current Slime/Skeleton beha
 2026-10-14 done codex aspect/flame tables now use validated ElementCatalogData; player string adapters use stable save ordinals; focused catalog, starter, binding, progression, and definition checks pass.
 2026-10-14 claim codex elemental binding smoke teardown: defer test completion so generated graph/layout locals are released before exit.
 2026-10-14 handoff codex elemental_binding_smoke passes behavior assertions but still logs ObjectDB/resource leaks after deferred quit; reverted ineffective teardown edit and left cleanup open.
+2026-10-14 claim codex generation policy ownership: remove ignored depth fields and derive generator primary flames from the authored starter roster.
+2026-10-14 done codex generation policy: removed ignored depth/starter fields, generated primary flames now consume the authored starter roster; policy/progression smokes and definition validation pass.

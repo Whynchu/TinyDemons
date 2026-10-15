@@ -2173,3 +2173,11 @@ Remaining P4 acceptance: data-only addition of a new player flame, live editor h
 ## Open: Elemental binding smoke teardown (2026-10-14)
 
 The standalone `elemental_binding_smoke` behavior passes but exits with 158 ObjectDB instances and four resources still in use. Deferring its final quit did not change the warning. Keep this test cleanup separate from the aspect catalog change until the retained generated-route owners are identified.
+
+## Completed: Generation policy ownership (2026-10-14)
+
+Removed the validated-but-unused `first_orb_depth` and `first_special_depth` fields from the policy schema/resource; the fixed route-grammar constants remain in `DungeonLayoutGenerator`. Removed the duplicate policy/generator `primary_flames` arrays; generated routes now read `ElementCatalogData.starter_flames` through `AspectCatalog`, preserving the current Fire/Water/Electric order.
+
+`dungeon_generation_policy_smoke`, `generated_flame_progression_smoke`, and recursive definition validation pass (110/110). Composition self-test and strict targets, test-manifest (160 rows / 158 runnable / 45 gate), UID validation (469 sidecars), and `git diff --check` pass. `r6_plus_risk_reward_generation_smoke` remains open: the 2026-10-14 run fails elite-vault level assertions and emits boss-roster remap warnings. Manifest rows now record the observed open failures for that gate, Chroma defaults, the run-theme API call, and binding-smoke teardown. Gate selection still uses role, so all 45 gate paths remain selected.
+
+No gameplay balance, fixed route depth, or frame ordering changed. `project.godot` was restored byte-for-byte after focused standalone runs.

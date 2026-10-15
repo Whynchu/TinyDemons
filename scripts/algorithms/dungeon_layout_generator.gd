@@ -28,6 +28,7 @@ const GENERATED_LAYOUT_ID: StringName = &"RUN_GENERATED"
 const COMPACT_MAP_SIZE := Vector2i(35, 35)
 const COMPACT_MAP_ORIGIN := Vector2i(17, 32)
 static var last_progression_repairs: Array[String] = []
+# Fixed anchors in the established tutorial route grammar, not editor tuning.
 const FIRST_ORB_DEPTH := 3
 const FIRST_SPECIAL_DEPTH := 4
 
@@ -47,7 +48,6 @@ const ROUTE_PRIMARY_FLAME: StringName = DungeonGraph.ROUTE_PRIMARY_FLAME
 const ROUTE_ORB_UTILITY: StringName = DungeonGraph.ROUTE_ORB_UTILITY
 const ROUTE_ELEMENTAL_VAULT: StringName = DungeonGraph.ROUTE_ELEMENTAL_VAULT
 const RISK_REWARD_GENERATION_MODE: StringName = &"risk_reward_r6_plus"
-const PRIMARY_FLAMES: Array[StringName] = [&"fire", &"water", &"electric"]
 
 
 class LayoutBuilder extends RefCounted:
@@ -280,8 +280,9 @@ static func _assign_primary_flame_rooms(builder: LayoutBuilder) -> void:
 			candidates.append(room)
 	_sort_room_specs_by_depth(candidates)
 	var used_ids: Dictionary = {}
-	for flame_index in PRIMARY_FLAMES.size():
-		var flame: StringName = PRIMARY_FLAMES[flame_index]
+	var primary_flames := ASPECT_CATALOG_SCRIPT.starter_flames()
+	for flame_index in primary_flames.size():
+		var flame: StringName = primary_flames[flame_index]
 		var chosen = null
 		if not candidates.is_empty():
 			var candidate_index := 0
@@ -738,7 +739,7 @@ static func _available_vault_elements() -> Array[StringName]:
 	# The R6+ contract guarantees all three primary flames on the ungated
 	# network. Derive the optional Orb pool from the live recipe/catalog tables so
 	# a future recipe or element cannot silently diverge from generation policy.
-	var available_flames: Array[StringName] = PRIMARY_FLAMES.duplicate()
+	var available_flames := ASPECT_CATALOG_SCRIPT.starter_flames()
 	var expanded := true
 	while expanded:
 		expanded = false
@@ -805,8 +806,9 @@ static func _treasure_has_single_incoming(layout, destination_id: StringName, se
 
 static func _primary_flame_room_count(layout) -> int:
 	var count := 0
+	var primary_flames := ASPECT_CATALOG_SCRIPT.starter_flames()
 	for room in layout.rooms:
-		if room.route_role == ROUTE_PRIMARY_FLAME and room.fire_flame in PRIMARY_FLAMES:
+		if room.route_role == ROUTE_PRIMARY_FLAME and room.fire_flame in primary_flames:
 			count += 1
 	return count
 
@@ -821,6 +823,7 @@ static func _elemental_vault_count(layout) -> int:
 
 static func validate_risk_reward(layout, _completed_runs: int = 5, _selected_starter_flame: StringName = &"fire", _selected_bound_flame: StringName = &"") -> Array[String]:
 	var errors: Array[String] = []
+	var primary_flames := ASPECT_CATALOG_SCRIPT.starter_flames()
 	if layout == null:
 		errors.append("R6+ risk/reward layout is missing")
 		return errors
@@ -837,7 +840,7 @@ static func validate_risk_reward(layout, _completed_runs: int = 5, _selected_sta
 		room_ids[room.id] = true
 		if room.room_type == DungeonGraph.ROOM_BOSS:
 			boss_id = room.id
-		if room.route_role == ROUTE_PRIMARY_FLAME and room.fire_flame in PRIMARY_FLAMES:
+		if room.route_role == ROUTE_PRIMARY_FLAME and room.fire_flame in primary_flames:
 			primary_by_flame[room.fire_flame] = room.id
 		if room.route_role == ROUTE_ELITE_REWARD:
 			vault_room_ids[room.id] = true
@@ -851,7 +854,7 @@ static func validate_risk_reward(layout, _completed_runs: int = 5, _selected_sta
 			errors.append("risk shortcut room has a non-dangerous encounter tier: %s" % room.id)
 		if room.route_role == ROUTE_SAFE and room.encounter_tier == DungeonGraph.ENCOUNTER_ELITE:
 			errors.append("safe route room cannot use the elite encounter tier: %s" % room.id)
-	for flame in PRIMARY_FLAMES:
+	for flame in primary_flames:
 		if not primary_by_flame.has(flame):
 			errors.append("generated R6+ layout is missing its %s primary flame" % flame)
 	for connection in layout.connections:
@@ -891,7 +894,7 @@ static func validate_risk_reward(layout, _completed_runs: int = 5, _selected_sta
 	if not boss_id.is_empty() and not ungated_reachable.has(boss_id):
 		errors.append("generated R6+ Boss is not reachable without an optional Orb door")
 	var undirected_reachable := _undirected_reachable_rooms(layout, start_id) if not start_id.is_empty() else {}
-	for flame in PRIMARY_FLAMES:
+	for flame in primary_flames:
 		var flame_id: StringName = primary_by_flame.get(flame, &"") as StringName
 		if not flame_id.is_empty() and not ungated_reachable.has(flame_id):
 			errors.append("generated %s flame is not ungated-reachable" % flame)
