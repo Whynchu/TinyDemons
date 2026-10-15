@@ -1,6 +1,25 @@
 extends RefCounted
 class_name EnemyEncounterScaling
 
+const ELITE_LEVEL_BONUS := 2
+
+
+static func roll_non_popcorn_level(
+	rng: RandomNumberGenerator,
+	base: int,
+	spread: int,
+	encounter_tier: StringName,
+	normal_cap: int,
+) -> int:
+	var floor_level := base - spread
+	var cap := normal_cap
+	if encounter_tier == DungeonGraph.ENCOUNTER_ELITE:
+		# The caller already includes the tier's base offset. Every elite-marked
+		# enemy, including appended supports, uses the lead enemy's raised band.
+		floor_level = base + 1
+		cap += ELITE_LEVEL_BONUS
+	return clampi(rng.randi_range(floor_level, base + spread), 1, cap)
+
 
 static func level_cap(run_rank: int) -> int:
 	return run_rank + 2 if run_rank <= 3 else run_rank + 4

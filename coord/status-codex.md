@@ -7,6 +7,27 @@ _Only codex writes this file._
 
 ## In flight: Delegated composition completion
 
+Elite support scaling is verified for publication as its own bug-fix package:
+R6+ and support-component smokes pass4.7.1 after old-source failures (101 route
+assertions plus generated/restored support failures across five ranks).
+Thorn found no RNG/order/restore defect. Shared scaling owns the unchanged lead
+band; only formerly underleveled elite supports change. Other local work below
+(enemy CLI, dirty-undo hardening, stronger P1 recovery/evidence) is not yet
+published. The first real CLI creation passed, but its new-variant preview
+stalled; parent stopped only the verified headless worker and restored all
+temporary files/config. An explorer is tracing that before another run.
+
+Published verified E2/E3 batch as `094cdef5` (local branch aligned to the exact
+GitHub tree). Graphify refreshed to 21,825 nodes / 49,123 edges / 737
+communities. Independent LOW actual item authoring then passed in about nine
+minutes with zero production edits; parent verified all three manifest bytes
+and restored config. Current next MAX slice: variant CLI leaves manifests stale
+and enemy preview falsely accepts a fallback ID. Parent reproduced it, and MAX
+is writing test characterization before changes. R6+ baseline check is in flight.
+P1 report was missing from this branch; a new branch-specific report records
+current checks and identifies the still-missing file-backed/live recovery proof.
+Do not reuse stronger primary-worktree evidence as a review-branch pass.
+
 2026-10-15 integration checkpoint: E2/E3 item create/remove transaction and CLI
 entry point implemented. Final Godot 4.7.1 focused checks pass: item workbench
 (create/discover/select, undo/redo adapters, rollback, duplicate/path and both

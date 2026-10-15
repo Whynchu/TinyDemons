@@ -7,10 +7,12 @@ const ROOM_CONTROLLER = preload("res://scripts/runtime/controllers/room_controll
 const GRID = preload("res://scripts/algorithms/puzzle_map_grid.gd")
 const ELEMENTS = preload("res://scripts/content/element_catalog.gd")
 const ENCOUNTERS = preload("res://scripts/content/encounter_definition.gd")
+const SCALING = preload("res://scripts/content/enemy_encounter_scaling.gd")
 
 
 func _initialize() -> void:
 	var failures: Array[String] = []
+	_assert_support_level_contract(failures)
 	var sampled_runs: Array[int] = [5, 6, 9, 12]
 	var sampled_starters: Array[StringName] = [&"fire", &"water", &"electric"]
 	var sampled_seeds: Array[int] = [12001, 78123, 440917, 991337]
@@ -111,6 +113,71 @@ func _assert_risk_reward_layout(dungeon_seed: int, completed_runs: int, starter:
 
 	var repeat = ROUTE_GENERATOR.build(dungeon_seed, completed_runs, starter)
 	_assert(_layout_signature(layout) == _layout_signature(repeat), "R%d generation remains deterministic" % (completed_runs + 1), failures)
+
+
+func _assert_support_level_contract(failures: Array[String]) -> void:
+	var policy := RoomDefinition.new()
+	policy.support_companion_enemies_per_group = 3
+	policy.support_companion_chance_per_group = 1.0
+	var theme: Array[int] = [ELEMENTS.Element.FIRE]
+	var pool := ENCOUNTERS.filter_weighted_pool_for_theme(
+		EnemyFactory.weighted_variants_for_role(&"slime", &"support", 99), theme, 99)
+	_assert(not pool.is_empty(), "support level fixture has an eligible authored healer", failures)
+	for rank in [1, 3, 4, 6, 12]:
+		var normal_cap: int = SCALING.level_cap(rank)
+		var spread := 1 if rank <= 3 else 2
+		for tier in [GRAPH.ENCOUNTER_NORMAL, GRAPH.ENCOUNTER_DANGEROUS, GRAPH.ENCOUNTER_ELITE]:
+			var variants: Array[String] = ["grey", "grey", "grey"]
+			var levels: Array[int] = [2, 3, 4]
+			var popcorn: Array[bool] = [false, false, false]
+			var popcorn_types: Array[String] = ["", "", ""]
+			var ambush: Array[bool] = [false, false, false]
+			var elite: Array[bool] = [false, false, false]
+			var tier_bonus := 2 if tier == GRAPH.ENCOUNTER_ELITE else (1 if tier == GRAPH.ENCOUNTER_DANGEROUS else 0)
+			var base: int = SCALING.base_level(rank) + 1 + tier_bonus
+			var rng := RandomNumberGenerator.new()
+			rng.seed = 99331 + rank
+			var expected_rng := RandomNumberGenerator.new()
+			expected_rng.seed = rng.seed
+			expected_rng.randf()
+			if not pool.is_empty():
+				ENCOUNTERS.select_weighted_variant(pool, expected_rng)
+			var expected_ordinary_level := clampi(expected_rng.randi_range(base - spread, base + spread), 1, normal_cap)
+			var added := ENCOUNTERS.append_support_companions(
+				false, variants, levels, popcorn, popcorn_types, ambush, elite,
+				rng, policy, rank, 99, base, spread, tier, normal_cap, theme)
+			_assert(added == 1 and levels.size() == 4, "support level fixture appends one companion", failures)
+			if added != 1 or levels.size() != 4:
+				continue
+			_assert(levels.slice(0, 3) == [2, 3, 4], "support addition preserves existing enemy levels", failures)
+			_assert(not popcorn[3] and not ambush[3], "support addition retains non-popcorn non-ambush identity", failures)
+			if tier == GRAPH.ENCOUNTER_ELITE:
+				_assert(elite[3] and levels[3] > normal_cap and levels[3] <= normal_cap + 2,
+					"elite support uses the same elevated bounded level band as lead enemies", failures)
+			else:
+				_assert(not elite[3] and levels[3] == expected_ordinary_level and rng.state == expected_rng.state,
+					"normal and dangerous support retain exact seeded levels and RNG consumption", failures)
+
+		var room := GRAPH.RoomRecord.new(&"support_fixture", Vector2i.ZERO, 442211, GRAPH.ROOM_TREASURE)
+		room.encounter_tier = GRAPH.ENCOUNTER_ELITE
+		var state := {
+			"enemy_variants": ["grey", "grey", "grey"], "enemy_levels": [2, 3, 4],
+			"enemy_runtime": {"0": {"health": 1.5, "alive": true}},
+		}
+		ENCOUNTERS.migrate_saved_room_support_companions(state, room, GRAPH.ROOM_TREASURE,
+			SCALING.base_level(rank), rank, 99, normal_cap, policy, true, theme)
+		var migrated_levels: Array = state.get("enemy_levels", [])
+		_assert(migrated_levels.size() == 4 and migrated_levels.slice(0, 3) == [2, 3, 4],
+			"saved-room migration preserves existing levels and appends one support", failures)
+		if migrated_levels.size() == 4:
+			_assert(int(migrated_levels[3]) > normal_cap and int(migrated_levels[3]) <= normal_cap + 2,
+				"saved-room elite support uses the elevated bounded level band", failures)
+		_assert(state.enemy_runtime == {"0": {"health": 1.5, "alive": true}},
+			"support migration preserves saved health and alive state", failures)
+		ENCOUNTERS.migrate_saved_room_support_companions(state, room, GRAPH.ROOM_TREASURE,
+			SCALING.base_level(rank), rank, 99, normal_cap, policy, true, theme)
+		_assert(state.enemy_levels == migrated_levels and state.enemy_variants.size() == 4,
+			"processed support migration is idempotent", failures)
 
 
 func _layout_signature(layout) -> String:

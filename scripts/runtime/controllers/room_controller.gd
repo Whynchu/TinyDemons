@@ -64,7 +64,8 @@ const POPCORN_RESPAWN_RETRY_DELAY := 0.25
 const SHADOW_BOSS_CHANCE: float = 0.04
 const ROOM_POPCORN := "ROOM_POPCORN"
 const ELITE_POPCORN := "ELITE_POPCORN"
-const ELITE_ENCOUNTER_LEVEL_BONUS := 2
+# CombatRuntimeController also consumes this public cap adjustment.
+const ELITE_ENCOUNTER_LEVEL_BONUS := ENCOUNTER_SCALING.ELITE_LEVEL_BONUS
 const SLIME_BOSS_JUMP_PHASE_POPCORN := "SlimeBossJumpPhasePopcorn"
 const PLAYER_DOOR_REPOSITION_RADII := [0.0, 2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 16.0, 20.0, 24.0, 32.0, 40.0, 48.0]
 const PLAYER_DOOR_REPOSITION_DIRECTIONS := 16
@@ -284,14 +285,9 @@ func _generate_enemy_encounter(generation_seed: int, room_depth: int, special_ro
 		popcorn_flags.append(is_popcorn)
 		popcorn_types.append(ROOM_POPCORN if is_popcorn else "")
 		elite_flags.append(encounter_tier == DungeonGraph.ENCOUNTER_ELITE and not is_popcorn)
-		var level_floor := base_level - level_spread
-		if encounter_tier == DungeonGraph.ENCOUNTER_ELITE:
-			# Elite levels stay above the full normal encounter band, so the
-			# overhead marker communicates a real stat-pool increase.
-			level_floor = base_level + 1
-		var enemy_level := ENCOUNTER_SCALING.popcorn_level(player_level) if is_popcorn else encounter_rng.randi_range(level_floor, base_level + level_spread)
-		var level_cap := ENCOUNTER_SCALING.level_cap(progression_run_rank) + ELITE_ENCOUNTER_LEVEL_BONUS if encounter_tier == DungeonGraph.ENCOUNTER_ELITE and not is_popcorn else ENCOUNTER_SCALING.level_cap(progression_run_rank)
-		levels.append(enemy_level if is_popcorn else clampi(enemy_level, 1, level_cap))
+		var enemy_level := ENCOUNTER_SCALING.popcorn_level(player_level) if is_popcorn else ENCOUNTER_SCALING.roll_non_popcorn_level(
+			encounter_rng, base_level, level_spread, encounter_tier, ENCOUNTER_SCALING.level_cap(progression_run_rank))
+		levels.append(enemy_level)
 	definition.finalize_room_encounter(
 		force_debug_enemy, variants, levels, popcorn_flags, popcorn_types,
 		ambush_flags, elite_flags, ENCOUNTER_SCALING.popcorn_level(player_level), ROOM_POPCORN,

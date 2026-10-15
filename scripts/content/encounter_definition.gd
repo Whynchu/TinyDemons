@@ -9,6 +9,7 @@ class_name EncounterDefinition
 
 const DEFAULT_DATA_PATH := "res://resources/definitions/encounter_definition.tres"
 const ENEMY_CATALOG_SCRIPT = preload("res://scripts/content/enemy_catalog.gd")
+const ENCOUNTER_SCALING = preload("res://scripts/content/enemy_encounter_scaling.gd")
 const SAVED_ROOM_SUPPORT_ROLL_SALT := 0x48534C4D
 
 
@@ -609,8 +610,8 @@ static func append_support_companions(
 		if support_definition == null or support_definition.encounter_role != &"support":
 			continue
 		variants.append(support_variant)
-		var support_level := encounter_rng.randi_range(base_level - level_spread, base_level + level_spread)
-		levels.append(clampi(support_level, 1, enemy_level_cap))
+		levels.append(ENCOUNTER_SCALING.roll_non_popcorn_level(
+			encounter_rng, base_level, level_spread, encounter_tier, enemy_level_cap))
 		popcorn_flags.append(false)
 		popcorn_types.append("")
 		ambush_flags.append(false)

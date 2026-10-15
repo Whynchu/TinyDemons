@@ -27,6 +27,26 @@ reports, reproduction notes, and acceptance criteria remain in
 does not mean that cold-start timing, every display orientation, physical
 touch input, browser behavior, or a complete player journey has been verified.
 
+## 2026-10-15 composition review — elite support scaling
+
+Fixed on the composition review branch; no release or phase acceptance is
+implied. Elite-marked support companions used the ordinary level cap and could
+fall below the elite lead enemy's existing level band. Both generated rooms
+and saved-room support migration now use `EnemyEncounterScaling`'s shared
+non-popcorn roll. The existing elite floor and +2 cap are preserved; normal and
+dangerous rolls retain exact seeded levels and RNG consumption. Existing saved
+slot levels, health and alive state are unchanged.
+
+The original R6+ gate failed 101 elite-band assertions. Added support checks
+also failed across five ranks in generated and restored paths. After the fix,
+R6+ and support-component smokes pass on Godot 4.7.1; migration is idempotent.
+Thorn's source review found no scheduling, RNG-order or restore regression.
+Existing boss-roster remap warnings remain a separate finding. The curated
+gate remains unrun while the main MCP editor is active.
+
+Owner sizes: scaling 22 → 41 lines, encounter definition 689 → 690, room
+controller 2,176 → 2,172. Root dispatch/reach-through counts are unchanged.
+
 ## 2026-10-11 combat fixes — 0.3.89
 
 Wet takes precedence over Burn: applying Wet removes up to three applied Burn
