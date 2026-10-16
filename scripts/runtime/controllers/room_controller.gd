@@ -480,20 +480,20 @@ func configure_enemy_spawn_services(services: RoomEnemySpawnServices) -> void:
 
 
 func enemy_spawn_context() -> RoomSpawnContext:
-	if enemy_spawn_services == null or enemy_spawn_services.enemy_roster == null:
+	if enemy_spawn_services == null or enemy_spawn_services.actor_runtime == null or enemy_spawn_services.actor_runtime.enemy_roster == null:
 		return null
 	var player_foot := enemy_spawn_services.actor_foot(enemy_spawn_services.player) if enemy_spawn_services.player != null else Vector2.ZERO
 	var chest_rect := enemy_spawn_services.current_chest_rect()
 	var state := room_states.get(current_room_id, {}) as Dictionary
-	return RoomSpawnContext.new(current_room_id, current_room_type, enemy_spawn_services.enemy_roster.members, enemy_spawn_services.player, enemy_spawn_services.chest, player_foot, chest_rect, enemy_spawn_services, state)
+	return RoomSpawnContext.new(current_room_id, current_room_type, enemy_spawn_services.actor_runtime.enemy_roster.members, enemy_spawn_services.player, enemy_spawn_services.chest, player_foot, chest_rect, enemy_spawn_services, state)
 
 
 func enemy_respawn_context() -> RoomRespawnContext:
-	if enemy_spawn_services == null or enemy_spawn_services.enemy_roster == null:
+	if enemy_spawn_services == null or enemy_spawn_services.actor_runtime == null or enemy_spawn_services.actor_runtime.enemy_roster == null:
 		return null
 	var player_foot := enemy_spawn_services.actor_foot(enemy_spawn_services.player) if enemy_spawn_services.player != null else Vector2.ZERO
 	var chest_rect := enemy_spawn_services.current_chest_rect()
-	return RoomRespawnContext.new(current_room_id, current_room_type, enemy_spawn_services.enemy_roster.members, enemy_spawn_services.player, enemy_spawn_services.chest, player_foot, chest_rect, enemy_spawn_services)
+	return RoomRespawnContext.new(current_room_id, current_room_type, enemy_spawn_services.actor_runtime.enemy_roster.members, enemy_spawn_services.player, enemy_spawn_services.chest, player_foot, chest_rect, enemy_spawn_services)
 
 
 func enter_room(room_id: StringName, room_type: StringName, arrival_socket: StringName = &"") -> void:
@@ -1309,7 +1309,7 @@ func kill_slime_without_effects(root: Object, slime: Sprite2D) -> void:
 	if root is GameplayState:
 		var context := enemy_respawn_context()
 		if context != null:
-			context.services.clear_slime_without_effects(slime)
+			context.services.actor_runtime.clear_enemy_without_effects(slime)
 
 
 func record_enemy_death_context(context: RoomRespawnContext, slime: Sprite2D) -> void:
@@ -1319,7 +1319,7 @@ func record_enemy_death_context(context: RoomRespawnContext, slime: Sprite2D) ->
 	if context == null or not context.is_valid():
 		return
 	record_special_enemy_death(context, slime)
-	context.services.clear_slime_without_effects(slime)
+	context.services.actor_runtime.clear_enemy_without_effects(slime)
 	record_popcorn_enemy_death(context, slime)
 
 
@@ -1422,7 +1422,7 @@ func record_popcorn_enemy_death(context: RoomRespawnContext, slime: Sprite2D) ->
 
 
 func begin_boss_jump_phase_popcorn(root: Object, boss: Sprite2D, anchor: Vector2) -> int:
-	var enemy_roster := enemy_spawn_services.enemy_roster if enemy_spawn_services != null else null
+	var enemy_roster := enemy_spawn_services.actor_runtime.enemy_roster if enemy_spawn_services != null and enemy_spawn_services.actor_runtime != null else null
 	if enemy_roster == null:
 		push_error("Boss jump-phase popcorn requires the room EnemyRoster.")
 		return 0
@@ -1454,10 +1454,10 @@ func begin_boss_jump_phase_popcorn(root: Object, boss: Sprite2D, anchor: Vector2
 		root.call("_prepare_slime_idle_visual", popcorn)
 		popcorn.visible = true
 		enemy_roster.append(popcorn)
-		(root.get("actor_sprites") as Array[Sprite2D]).append(popcorn)
-		(root.get("collision_sprites") as Array[Sprite2D]).append(popcorn)
-		(root.get("depth_sprites") as Array[Sprite2D]).append(popcorn)
-		(root.get("occluder_sprites") as Array[Sprite2D]).append(popcorn)
+		enemy_spawn_services.actor_runtime.actor_sprites.append(popcorn)
+		enemy_spawn_services.actor_runtime.collision_sprites.append(popcorn)
+		enemy_spawn_services.actor_runtime.depth_sprites.append(popcorn)
+		enemy_spawn_services.actor_runtime.occluder_sprites.append(popcorn)
 		wave.append(popcorn)
 	boss_jump_phase_waves[boss.get_instance_id()] = wave
 	return wave.size()
@@ -1481,7 +1481,7 @@ func clear_boss_jump_phase_popcorn(boss: Sprite2D) -> void:
 
 
 func initialize_boss_jump_phase_pool(root: Object) -> void:
-	var enemy_roster := enemy_spawn_services.enemy_roster if enemy_spawn_services != null else null
+	var enemy_roster := enemy_spawn_services.actor_runtime.enemy_roster if enemy_spawn_services != null and enemy_spawn_services.actor_runtime != null else null
 	if enemy_roster == null:
 		push_error("Boss jump-phase pool requires the room EnemyRoster.")
 		return
@@ -1518,17 +1518,17 @@ func initialize_boss_jump_phase_pool(root: Object) -> void:
 func prepare_boss_jump_phase_pool(services: RoomEnemySpawnServices, variant: String) -> void:
 	if services == null or boss_jump_phase_pool.is_empty():
 		return
-	if services.enemy_roster == null:
+	if services.actor_runtime == null or services.actor_runtime.enemy_roster == null:
 		push_error("Boss jump-phase preparation requires the room EnemyRoster.")
 		return
 	for popcorn in boss_jump_phase_pool:
 		services.configure_slime_variant(popcorn, variant)
 		popcorn.set_meta("encounter_scale", 1.0)
 		popcorn.set_meta("prepared_boss_variant", variant)
-		services.enemy_roster.append(popcorn)
+		services.actor_runtime.enemy_roster.append(popcorn)
 	services.prepare_enemy_visuals_direct()
 	for popcorn in boss_jump_phase_pool:
-		services.enemy_roster.remove(popcorn)
+		services.actor_runtime.enemy_roster.remove(popcorn)
 
 
 func _acquire_boss_jump_phase_slot(root: Object) -> Sprite2D:
@@ -1557,10 +1557,8 @@ func _deactivate_boss_jump_phase_slot(popcorn: Sprite2D) -> void:
 	popcorn.set_meta("boss_jump_phase_popcorn", false)
 	popcorn.set_meta("is_elite", false)
 	popcorn.set_meta("boss_airborne", false)
-	for collection_name in ["actor_sprites", "collision_sprites", "depth_sprites", "occluder_sprites"]:
-		var collection: Variant = get_parent().get(collection_name) if get_parent() != null else null
-		if collection is Array:
-			(collection as Array).erase(popcorn)
+	if enemy_spawn_services != null and enemy_spawn_services.actor_runtime != null:
+		enemy_spawn_services.actor_runtime.remove_actor_from_runtime_lists(popcorn)
 	if not boss_jump_phase_pool.has(popcorn):
 		boss_jump_phase_pool.append(popcorn)
 
@@ -1644,7 +1642,7 @@ func update_special_enemy_respawns(context: RoomRespawnContext, delta: float) ->
 	var chest_rect: Rect2 = context.chest_rect
 	var occupied: Array[Vector2] = []
 	for slime in context.slimes:
-		if slime.visible and not services.is_slime_dead(slime):
+		if slime.visible and not services.actor_runtime.is_slime_dead(slime):
 			occupied.append(services.actor_foot(slime))
 	var layout_rng := RandomNumberGenerator.new()
 	layout_rng.seed = int(current_room_state.get("enemy_spawn_seed", String(context.room_id).hash() + 303)) + 1771
@@ -1724,7 +1722,7 @@ func update_popcorn_respawns(context: RoomRespawnContext, delta: float) -> void:
 	var chest_rect: Rect2 = context.chest_rect
 	var occupied: Array[Vector2] = []
 	for slime in context.slimes:
-		if slime.visible and not services.is_slime_dead(slime):
+		if slime.visible and not services.actor_runtime.is_slime_dead(slime):
 			occupied.append(services.actor_foot(slime))
 	var respawn_serial := int(state.get("popcorn_respawn_serial", 0)) + 1
 	state["popcorn_respawn_serial"] = respawn_serial
@@ -1738,7 +1736,7 @@ func update_popcorn_respawns(context: RoomRespawnContext, delta: float) -> void:
 			pending.erase(timer_key)
 			continue
 		var slime := context.slimes[slot]
-		if slime.visible and not services.is_slime_dead(slime):
+		if slime.visible and not services.actor_runtime.is_slime_dead(slime):
 			pending.erase(timer_key)
 			continue
 		# A defeated support slot gets a fresh position when it returns. The
@@ -1889,10 +1887,10 @@ func _spawn_enemy_slot(context: RoomEnemyContext, state: Dictionary, slime_index
 	slime.set_meta("popcorn_type", popcorn_type)
 	var tuning: SlimeTuning = services.slime_tuning
 	var rng: RandomNumberGenerator = services.rng
-	var actor_sprites: Array[Sprite2D] = services.actor_sprites
-	var collision: Array[Sprite2D] = services.collision_sprites
-	var depth_sprites: Array[Sprite2D] = services.depth_sprites
-	var occluder_sprites: Array[Sprite2D] = services.occluder_sprites
+	var actor_sprites: Array[Sprite2D] = services.actor_runtime.actor_sprites
+	var collision: Array[Sprite2D] = services.actor_runtime.collision_sprites
+	var depth_sprites: Array[Sprite2D] = services.actor_runtime.depth_sprites
+	var occluder_sprites: Array[Sprite2D] = services.actor_runtime.occluder_sprites
 	var encounter_scale := float(active_scales[slime_index]) if slime_index < active_scales.size() else 1.0
 	if encounter_scale > 1.0:
 		_apply_authored_boss_geometry(slime)
@@ -1919,7 +1917,7 @@ func _spawn_enemy_slot(context: RoomEnemyContext, state: Dictionary, slime_index
 		return false
 	occupied.append(spawn_foot)
 	var actor := slime as EnemyActor
-	var brain: EnemyBrain = services.enemy_brain(slime)
+	var brain: EnemyBrain = services.actor_runtime.enemy_brain(slime)
 	# The spawn solver returns a world-space position because it validates against
 	# the world-space floor outline. Actors are children of the offset Actors
 	# node, so assign through global_position instead of treating that point as a
@@ -1938,7 +1936,7 @@ func _spawn_enemy_slot(context: RoomEnemyContext, state: Dictionary, slime_index
 	if actor != null:
 		actor.configure_health(max_health, tuning.regen_delay, tuning.regen_interval, tuning.regen_amount)
 		actor.reset_runtime_state(slime.position, slime.position, rng.randf_range(tuning.repath_min, tuning.repath_max), rng.randf_range(tuning.hold_min, tuning.hold_max), 0.0, rng.randf_range(0.2, 0.6))
-	var presenter: SlimeHealthPresenter = services.slime_health_presenter(slime)
+	var presenter: SlimeHealthPresenter = services.actor_runtime.slime_health_presenter(slime)
 	if presenter == null:
 		return false
 	presenter.display_health = max_health
@@ -1981,7 +1979,7 @@ func reset_slimes_for_room(context: RoomSpawnContext) -> RoomSpawnResult:
 	result.room_type = context.room_type
 	services.effects_spawner.clear_slime_notices()
 	for slime in context.slimes:
-		services.clear_slime_without_effects(slime)
+		services.actor_runtime.clear_enemy_without_effects(slime)
 	# Hub, rest, NPC, puzzle, and orb rooms are intentionally enemy-free. Keep
 	# the cleanup above, but do not interpret stale room-state data as an enemy
 	# encounter when one of those rooms is entered.
@@ -2032,12 +2030,12 @@ func reset_slimes_for_room(context: RoomSpawnContext) -> RoomSpawnResult:
 			spawn_positions[slime_index] = runtime_entry["position"]
 		var animate_spawn := (first_entry and not has_runtime_entry) or (backtrack_popcorn_pending and not has_runtime_entry and slime_index == active_variants.size() - 1)
 		if _spawn_enemy_slot(context, state, slime_index, occupied, layout_rng, player_foot, chest_rect, animate_spawn):
-			var spawn_started: bool = animate_spawn and services.is_slime_spawn_locked(context.slimes[slime_index])
+			var spawn_started: bool = animate_spawn and services.actor_runtime.is_slime_spawn_locked(context.slimes[slime_index])
 			result.record_spawn(slime_index, spawn_started)
 			spawned_slots += 1
 			if has_runtime_entry:
-				services.restore_enemy_health(context.slimes[slime_index], runtime_entry)
-			if animate_spawn and services.is_slime_spawn_locked(context.slimes[slime_index]):
+				services.actor_runtime.restore_enemy_health(context.slimes[slime_index], runtime_entry)
+			if animate_spawn and services.actor_runtime.is_slime_spawn_locked(context.slimes[slime_index]):
 				backtrack_spawn_started = backtrack_popcorn_pending
 				animated_spawn_started = true
 				if not spawn_audio_played:

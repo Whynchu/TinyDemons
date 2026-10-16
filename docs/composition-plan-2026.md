@@ -1356,7 +1356,14 @@ title and gameplay build sequences now use `BuildStep`, and only the concrete
 Gameplay save hook remains a `root.call(...)` in `GameplayBootstrap`.
 
 Then collapse `RoomEnemySpawnServices` — a 45-member field bag — into typed
-context objects of the `MagicRuntimeContext` shape. The 2026-10-16 X05 slice removed its duplicate mutable `slimes` list: room contexts, family replacement, and boss-phase pool membership now use `EnemyRoster` as the canonical slot owner. The remaining service still has 40 stored fields, so broader typed-context extraction remains open. Boot phase purposes now use
+context objects of the `MagicRuntimeContext` shape. The 2026-10-16 X05 slices
+removed its duplicate mutable `slimes` list and moved EnemyRoster ownership,
+actor query lists, family replacement, reset/restoration, and related
+HUD/occlusion/position rebinding into `EnemyActorRuntimeServices`.
+`RoomEnemySpawnServices` is now 30 stored fields, down from 40; the focused
+family-swap, room-entry, respawn, and strict composition checks pass. Broader
+typed-context extraction remains open.
+Boot phase purposes now use
 the typed `BuildStep.Phase` enum while retaining their diagnostic keys; move
 remaining inline setup phases into action steps only where the frame and
 dependency boundaries stay explicit.

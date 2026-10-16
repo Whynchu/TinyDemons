@@ -2,7 +2,7 @@
 
 _Only codex writes this file._
 
-**Focus:** X04 acceptance fixture is implemented and verified on review/composition-cleanup-plan: the title boot smoke appends one dependency-bound probe row to the live Gameplay cohort, rejects a missing prerequisite, and validates the live node. The broader no-existing-script-edit production acceptance remains open. X05 roster canonicalization is pushed as `30454b1`; keep PerformanceCaptureService outside the current work.
+**Focus:** X05 actor lifecycle slice is implemented and verified on review/composition-cleanup-plan. EnemyActorRuntimeServices now owns roster-backed actor lists, component access, family swaps, reset/restore, and HUD/occlusion/position rebinding; RoomEnemySpawnServices is down from 40 to 30 stored fields. Focused smokes and strict composition checks pass; known boss/popcorn fixture failures reproduce on baseline. Graphify is current at 21,764 nodes / 49,179 edges / 774 communities. The slice is ready to commit/push. X04 acceptance fixture is `634337d`.
 **Updated:** 2026-10-16
 
 ## 2026-10-16 handoff

@@ -1620,3 +1620,15 @@ X04 registration acceptance. Extending the title boot smoke from a generic no-se
 
 ## 2026-10-16T16:49Z - codex - done
 X04 test slice: the title boot smoke now validates a one-row extension against the live Gameplay cohort, including a real prerequisite and missing-prerequisite rejection. Godot 4.7.2 title boot smoke passes. The broader no-existing-script-edit production acceptance remains open.
+
+## 2026-10-16T17:05Z - codex - claim
+X05 actor lifecycle ownership. Extract canonical roster, actor query lists, and family replacement into a focused typed service while preserving verified slime/skeleton slot behavior.
+
+## 2026-10-16T17:16Z - codex - done
+X05 actor lifecycle slice: EnemyActorRuntimeServices now owns the roster reference, actor/query lists, family replacement, HUD/occlusion/position rebinding, and health callback hookup; RoomEnemySpawnServices fell from 40 to 30 fields. Godot 4.7.2 encounter family-swap, enemy-room entrance, and special-respawn smokes pass. Boss-jump's four assertions reproduce exactly on untouched commit 634337d; popcorn support-slot assertion remains the recorded baseline. Composition self-test/strict targets, UID validation, script index, and diff check pass. Graph refresh/publication pending.
+
+## 2026-10-16T17:20Z - codex - claim
+X05 actor reset ownership. Move reset/restore and component access helpers into EnemyActorRuntimeServices so RoomEnemySpawnServices retains room spawn configuration and dependencies.
+
+## 2026-10-16T17:32Z - codex - done
+X05 actor lifecycle transfer: EnemyActorRuntimeServices owns roster-backed actor lists, enemy component access, family swaps, no-effects reset, health/chroma restore, and HUD/occlusion/position rebinding. RoomEnemySpawnServices is down from 40 to 30 stored fields. Godot 4.7.2 family-swap, enemy-room entrance, and special-respawn smokes pass; popcorn support-slot assertion and four boss-jump assertions reproduce on the untouched 634337d baseline. Composition self-test, strict targets, UID validation, and script index pass. Graphify refreshed: 21,764 nodes / 49,179 edges / 774 communities; focused path confirms RoomEnemySpawnServices references EnemyActorRuntimeServices.
