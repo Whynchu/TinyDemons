@@ -1650,3 +1650,9 @@ X05 remove the RoomController-to-itself boss-pool callback from RoomEnemySpawnSe
 
 2026-10-16T18:27Z - codex - done
 X05 direct boss-pool call: removed the RoomEnemySpawnServices callback that pointed back to RoomController; the controller now calls its own typed method directly. RoomEnemySpawnServices dropped from 29 to 28 fields. Godot 4.7.2 boss_variant_selection_smoke, composition self-test, strict targets, UID validation, script index, and diff checks pass. Graphify refreshed: 21,767 nodes / 49,184 edges / 776 communities; graph confirms the call from _prepare_enemy_slot_visuals to prepare_boss_jump_phase_pool.
+
+2026-10-16T18:28Z - codex - claim
+X05 room enemy audio dependency. Replace play_sound Callable(root, _play_sound) with a typed SoundManager reference and direct null-safe method; preserve both spawn cue call sites.
+
+2026-10-16T18:43Z - codex - done
+X05 typed sound dependency: RoomEnemySpawnServices now holds SoundManager and exposes a null-safe play_sound method; GameplayBootstrap wires the manager directly and RoomController uses direct method calls. Room-entry and respawn Godot 4.7.2 smokes, composition self-test, strict targets, UID validation, script index, and diff checks pass. Service stored-field count remains 28 because a callback was replaced by one typed reference. Graphify refreshed: 21,768 nodes / 49,189 edges / 767 communities; play_sound reads sound_manager.

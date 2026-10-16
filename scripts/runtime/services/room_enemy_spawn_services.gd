@@ -16,6 +16,7 @@ var walkable_area: WalkableArea = null
 var dungeon_graph: DungeonGraph = null
 var dungeon_map_controller: DungeonMapController = null
 var effects_spawner: EffectsSpawner = null
+var sound_manager: SoundManager = null
 var player: Sprite2D = null
 var chest: Sprite2D = null
 var actor_runtime: EnemyActorRuntimeServices = EnemyActorRuntimeServices.new()
@@ -33,7 +34,6 @@ var assign_slime_attack_frames: Callable = Callable()
 var assign_slime_shocked_frames: Callable = Callable()
 var assign_slime_spawn_frames: Callable = Callable()
 var trigger_slime_notice: Callable = Callable()
-var play_sound: Callable = Callable()
 var set_door_active: Callable = Callable()
 var set_entrance_open: Callable = Callable()
 var build_depth_lists: Callable = Callable()
@@ -57,3 +57,9 @@ func current_chest_rect() -> Rect2:
 	if chest == null or not collision_rect.is_valid():
 		return Rect2()
 	return collision_rect.call(chest) as Rect2
+
+
+func play_sound(sound_name: String, volume_db: float = 0.0, pitch_scale: float = 1.0) -> void:
+	if sound_manager == null:
+		return
+	sound_manager.play(sound_name, volume_db, pitch_scale)

@@ -1764,7 +1764,7 @@ func _play_popcorn_spawn_sound_context(context: RoomRespawnContext) -> void:
 	var pitch := 0.98
 	if context.services.rng != null:
 		pitch += context.services.rng.randf_range(-0.03, 0.03)
-	context.services.play_sound.call("slime_spawn", -6.0, pitch)
+	context.services.play_sound("slime_spawn", -6.0, pitch)
 
 
 func reset_chest_for_room(root: Object, show_chest: bool = true) -> void:
@@ -2023,7 +2023,7 @@ func reset_slimes_for_room(context: RoomSpawnContext) -> RoomSpawnResult:
 				animated_spawn_started = true
 				if not spawn_audio_played:
 					var spawn_rng := services.rng
-					services.play_sound.call("slime_spawn", -6.0, 0.98 + spawn_rng.randf_range(-0.03, 0.03))
+					services.play_sound("slime_spawn", -6.0, 0.98 + spawn_rng.randf_range(-0.03, 0.03))
 					spawn_audio_played = true
 		else:
 			result.record_failure(slime_index)

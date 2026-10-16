@@ -2,7 +2,7 @@
 
 _Only codex writes this file._
 
-**Focus:** X05 actor lifecycle/setup ownership is verified; `RoomEnemySpawnServices` is down to 28 stored fields, including removal of its callback back into `RoomController`. Boss variant smoke, strict composition targets, self-test, and UID validation pass. Graphify is current at 21,767 nodes / 49,184 edges / 776 communities. Next, map the remaining service values to their consumers before extracting further.
+**Focus:** X05 now uses a direct typed `SoundManager` for room enemy spawn cues; `RoomEnemySpawnServices` remains at 28 stored fields. Room-entry and respawn smokes, strict composition targets, self-test, UID validation, and script index pass. Graphify is current at 21,768 nodes / 49,189 edges / 767 communities, and the graph shows `RoomEnemySpawnServices.play_sound()` reading `sound_manager`. Map remaining service values before extracting further.
 **Updated:** 2026-10-16
 
 ## 2026-10-16 handoff
