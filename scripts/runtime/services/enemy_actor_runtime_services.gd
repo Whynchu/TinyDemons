@@ -115,6 +115,23 @@ func remove_actor_from_runtime_lists(actor: Sprite2D) -> void:
 	occluder_sprites.erase(actor)
 
 
+func add_actor_to_runtime_lists(actor: Sprite2D) -> void:
+	if actor == null:
+		return
+	if not actor_sprites.has(actor):
+		actor_sprites.append(actor)
+	if not collision_sprites.has(actor):
+		collision_sprites.append(actor)
+	if not depth_sprites.has(actor):
+		depth_sprites.append(actor)
+	if not occluder_sprites.has(actor):
+		occluder_sprites.append(actor)
+
+
+func remove_actor_from_collision_list(actor: Sprite2D) -> void:
+	collision_sprites.erase(actor)
+
+
 func clear_enemy_without_effects(actor: Sprite2D) -> void:
 	if actor == null:
 		return

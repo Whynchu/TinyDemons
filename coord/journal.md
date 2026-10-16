@@ -1632,3 +1632,9 @@ X05 actor reset ownership. Move reset/restore and component access helpers into 
 
 ## 2026-10-16T17:32Z - codex - done
 X05 actor lifecycle transfer: EnemyActorRuntimeServices owns roster-backed actor lists, enemy component access, family swaps, no-effects reset, health/chroma restore, and HUD/occlusion/position rebinding. RoomEnemySpawnServices is down from 40 to 30 stored fields. Godot 4.7.2 family-swap, enemy-room entrance, and special-respawn smokes pass; popcorn support-slot assertion and four boss-jump assertions reproduce on the untouched 634337d baseline. Composition self-test, strict targets, UID validation, and script index pass. Graphify refreshed: 21,764 nodes / 49,179 edges / 774 communities; focused path confirms RoomEnemySpawnServices references EnemyActorRuntimeServices.
+
+## 2026-10-16T17:34Z - codex - claim
+X05 actor collection API. Move RoomController's actor-list add/remove/collision exclusion into EnemyActorRuntimeServices while preserving room spawn and boss support membership.
+
+2026-10-16T17:42Z - codex - done
+X05 actor-list mutation API: RoomController now delegates actor list addition, removal, and spawn collision exclusion to EnemyActorRuntimeServices. Focused room-entry, encounter-definition, and special-respawn smokes pass; composition self-test, strict target audit, UID validation, script index refresh, and diff checks pass. Graphify refreshed: 21,768 nodes / 49,183 edges / 767 communities; path confirms RoomController -> RoomEnemySpawnServices -> EnemyActorRuntimeServices.

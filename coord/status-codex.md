@@ -2,7 +2,7 @@
 
 _Only codex writes this file._
 
-**Focus:** X05 actor lifecycle slice is implemented and verified on review/composition-cleanup-plan. EnemyActorRuntimeServices now owns roster-backed actor lists, component access, family swaps, reset/restore, and HUD/occlusion/position rebinding; RoomEnemySpawnServices is down from 40 to 30 stored fields. Focused smokes and strict composition checks pass; known boss/popcorn fixture failures reproduce on baseline. Graphify is current at 21,764 nodes / 49,179 edges / 774 communities. The slice is ready to commit/push. X04 acceptance fixture is `634337d`.
+**Focus:** X05 actor-list mutation API is verified; `RoomController` now delegates actor registration, collision exclusion, and removal to `EnemyActorRuntimeServices`. `RoomEnemySpawnServices` remains at 30 fields (down from 40). Graph path is current; preparing commit and push. Preserve slime/skeleton behavior and leave `PerformanceCaptureService` outside this work.
 **Updated:** 2026-10-16
 
 ## 2026-10-16 handoff

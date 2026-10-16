@@ -1454,10 +1454,7 @@ func begin_boss_jump_phase_popcorn(root: Object, boss: Sprite2D, anchor: Vector2
 		root.call("_prepare_slime_idle_visual", popcorn)
 		popcorn.visible = true
 		enemy_roster.append(popcorn)
-		enemy_spawn_services.actor_runtime.actor_sprites.append(popcorn)
-		enemy_spawn_services.actor_runtime.collision_sprites.append(popcorn)
-		enemy_spawn_services.actor_runtime.depth_sprites.append(popcorn)
-		enemy_spawn_services.actor_runtime.occluder_sprites.append(popcorn)
+		enemy_spawn_services.actor_runtime.add_actor_to_runtime_lists(popcorn)
 		wave.append(popcorn)
 	boss_jump_phase_waves[boss.get_instance_id()] = wave
 	return wave.size()
@@ -1887,10 +1884,6 @@ func _spawn_enemy_slot(context: RoomEnemyContext, state: Dictionary, slime_index
 	slime.set_meta("popcorn_type", popcorn_type)
 	var tuning: SlimeTuning = services.slime_tuning
 	var rng: RandomNumberGenerator = services.rng
-	var actor_sprites: Array[Sprite2D] = services.actor_runtime.actor_sprites
-	var collision: Array[Sprite2D] = services.actor_runtime.collision_sprites
-	var depth_sprites: Array[Sprite2D] = services.actor_runtime.depth_sprites
-	var occluder_sprites: Array[Sprite2D] = services.actor_runtime.occluder_sprites
 	var encounter_scale := float(active_scales[slime_index]) if slime_index < active_scales.size() else 1.0
 	if encounter_scale > 1.0:
 		_apply_authored_boss_geometry(slime)
@@ -1910,10 +1903,7 @@ func _spawn_enemy_slot(context: RoomEnemyContext, state: Dictionary, slime_index
 		var failed_runtime := state.get("enemy_runtime", {}) as Dictionary
 		failed_runtime[str(slime_index)] = {"alive": false, "position": slime.global_position, "health": 0.0}
 		state["enemy_runtime"] = failed_runtime
-		actor_sprites.erase(slime)
-		collision.erase(slime)
-		depth_sprites.erase(slime)
-		occluder_sprites.erase(slime)
+		services.actor_runtime.remove_actor_from_runtime_lists(slime)
 		return false
 	occupied.append(spawn_foot)
 	var actor := slime as EnemyActor
@@ -1950,18 +1940,11 @@ func _spawn_enemy_slot(context: RoomEnemyContext, state: Dictionary, slime_index
 	slime.set_meta("attack_speed_multiplier", rng.randf_range(0.85, 1.20))
 	services.set_actor_visual_scale.call(slime, Vector2.ONE)
 	services.apply_actor_scale.call(slime, false)
-	if not actor_sprites.has(slime):
-		actor_sprites.append(slime)
-	if not collision.has(slime):
-		collision.append(slime)
-	if not depth_sprites.has(slime):
-		depth_sprites.append(slime)
-	if not occluder_sprites.has(slime):
-		occluder_sprites.append(slime)
+	services.actor_runtime.add_actor_to_runtime_lists(slime)
 	if animate_spawn and services.begin_slime_spawn.call(slime):
 		# The actor remains rendered and depth-sorted during the intro, but it is
 		# excluded from collisions and all combat queries until the final frame.
-		collision.erase(slime)
+		services.actor_runtime.remove_actor_from_collision_list(slime)
 	return true
 
 
