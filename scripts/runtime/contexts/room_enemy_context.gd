@@ -8,7 +8,7 @@ class_name RoomEnemyContext
 
 var room_id: StringName = &""
 var room_type: StringName = &""
-var slimes: Array[Sprite2D] = []
+var enemy_actors: Array[Sprite2D] = []
 var player: Sprite2D = null
 var chest: Sprite2D = null
 var player_foot := Vector2.ZERO
@@ -19,7 +19,7 @@ var services: RoomEnemySpawnServices = null
 func _init(
 	new_room_id: StringName,
 	new_room_type: StringName,
-	new_slimes: Array[Sprite2D],
+	new_enemy_actors: Array[Sprite2D],
 	new_player: Sprite2D,
 	new_chest: Sprite2D,
 	new_player_foot: Vector2,
@@ -28,7 +28,7 @@ func _init(
 ) -> void:
 	room_id = new_room_id
 	room_type = new_room_type
-	slimes = new_slimes
+	enemy_actors = new_enemy_actors
 	player = new_player
 	chest = new_chest
 	player_foot = new_player_foot

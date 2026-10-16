@@ -2,7 +2,7 @@
 
 _Only codex writes this file._
 
-**Focus:** X04 registration acceptance is now demonstrated with a new test-only service script and one appended row; the title boot smoke proves script identity, dependency order, and live-parent validation without production source edits. X04 remains open for typed `RoomEnemySpawnServices` contexts and the non-build step-queue decision. X05 actor ownership remains pushed through `8c6772a` with 28 spawn-service fields. Graphify is current at 21,771 nodes / 49,192 edges / 728 communities.
+**Focus:** X05 room roster naming is complete: `RoomEnemyContext` and `RoomEnemyRuntimeContext` expose `enemy_actors`; focused room/enemy smokes, strict composition, UID validation, and Graphify pass. Next: select a narrow typed-context extraction from `RoomEnemySpawnServices` after field ownership review.
 **Updated:** 2026-10-16
 
 ## 2026-10-16 handoff

@@ -6,7 +6,7 @@ const GRAPH_SCRIPT = preload("res://scripts/algorithms/dungeon_graph.gd")
 class FakeRoot extends Node:
 	var current_room_type: StringName = &""
 	var current_room_id: StringName = &""
-	var slimes: Array[Sprite2D] = []
+	var enemy_actors: Array[Sprite2D] = []
 
 
 func _initialize() -> void:
@@ -19,11 +19,11 @@ func _initialize() -> void:
 			_expect(String(variant) != "purple", "special-room policy does not force Shadow Slimes", failures)
 	var fake := FakeRoot.new()
 	var room_id: StringName = &"special_test"
-	fake.slimes = [Sprite2D.new(), Sprite2D.new(), Sprite2D.new()]
+	fake.enemy_actors = [Sprite2D.new(), Sprite2D.new(), Sprite2D.new()]
 	var services := RoomEnemySpawnServices.new()
 	services.slime_tuning = SlimeTuning.new()
 	services.rng = RandomNumberGenerator.new()
-	var special_context := RoomRespawnContext.new(room_id, GRAPH_SCRIPT.ROOM_SPECIAL_ENEMY, fake.slimes, null, null, Vector2.ZERO, Rect2(), services)
+	var special_context := RoomRespawnContext.new(room_id, GRAPH_SCRIPT.ROOM_SPECIAL_ENEMY, fake.enemy_actors, null, null, Vector2.ZERO, Rect2(), services)
 	controller.room_states[room_id] = {"enemy_variants": ["blue", "red", "green"]}
 	controller.schedule_special_enemy_respawns(special_context)
 	var state: Dictionary = controller.room_states[room_id]
@@ -47,7 +47,7 @@ func _initialize() -> void:
 	var persistent_timers: Dictionary = persistent_state.get("special_respawn_timers", {}) as Dictionary
 	_expect(not persistent_timers.has("0"), "living special-room enemies do not receive a reset timer on re-entry", failures)
 	_expect(is_equal_approx(float(persistent_timers.get("1", -1.0)), 45.0), "defeated special-room enemies still receive their respawn timer", failures)
-	var away_context := RoomRespawnContext.new(room_id, GRAPH_SCRIPT.ROOM_COMBAT, fake.slimes, null, null, Vector2.ZERO, Rect2(), services)
+	var away_context := RoomRespawnContext.new(room_id, GRAPH_SCRIPT.ROOM_COMBAT, fake.enemy_actors, null, null, Vector2.ZERO, Rect2(), services)
 	controller.room_states[room_id] = {
 		"room_type": GRAPH_SCRIPT.ROOM_SPECIAL_ENEMY,
 		"special_clear_earned": true,
@@ -59,8 +59,8 @@ func _initialize() -> void:
 	_expect(is_equal_approx(float((controller.room_states[room_id] as Dictionary)["special_respawn_timers"]["0"]), 13.0), "special-room timers continue while the room is away from the player", failures)
 	controller.update_special_enemy_respawns(away_context, 20.0)
 	_expect(is_zero_approx(float((controller.room_states[room_id] as Dictionary)["special_respawn_timers"]["0"])), "away-room respawn timers become ready after 45 seconds", failures)
-	for slime in fake.slimes:
-		slime.free()
+	for enemy_actor in fake.enemy_actors:
+		enemy_actor.free()
 	fake.free()
 	controller.free()
 	_finish(failures)

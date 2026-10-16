@@ -1337,9 +1337,9 @@ func save_enemy_runtime_state_context(context: RoomEnemyRuntimeContext) -> RoomE
 		return result
 	var runtime: Dictionary = {}
 	for slot in context.active_variants.size():
-		if slot >= context.slimes.size():
+		if slot >= context.enemy_actors.size():
 			continue
-		var slime := context.slimes[slot]
+		var slime := context.enemy_actors[slot]
 		if slime == null or not is_instance_valid(slime):
 			continue
 		var combat := context.combat_components[slot] if slot < context.combat_components.size() else null
@@ -1363,7 +1363,7 @@ func save_enemy_runtime_state_context(context: RoomEnemyRuntimeContext) -> RoomE
 func record_special_enemy_death(context: RoomRespawnContext, slime: Sprite2D) -> void:
 	if context == null or not context.is_valid() or context.room_type != DungeonGraph.ROOM_SPECIAL_ENEMY:
 		return
-	var slot := context.slimes.find(slime)
+	var slot := context.enemy_actors.find(slime)
 	if slot < 0:
 		return
 	var state: Dictionary = room_states.get(context.room_id, {}) as Dictionary
@@ -1407,7 +1407,7 @@ func record_popcorn_enemy_death(context: RoomRespawnContext, slime: Sprite2D) ->
 	if context == null or not context.is_valid() or not _is_popcorn_respawn_room_context(context):
 		return
 	var state: Dictionary = room_states.get(context.room_id, {}) as Dictionary
-	var slot := context.slimes.find(slime)
+	var slot := context.enemy_actors.find(slime)
 	if slot < 0 or slot >= (state.get("enemy_variants", []) as Array).size():
 		return
 	# Ordinary encounters respawn from their complete initial roster. Boss and
@@ -1638,7 +1638,7 @@ func update_special_enemy_respawns(context: RoomRespawnContext, delta: float) ->
 	var player_foot: Vector2 = context.player_foot
 	var chest_rect: Rect2 = context.chest_rect
 	var occupied: Array[Vector2] = []
-	for slime in context.slimes:
+	for slime in context.enemy_actors:
 		if slime.visible and not services.actor_runtime.is_slime_dead(slime):
 			occupied.append(services.actor_foot(slime))
 	var layout_rng := RandomNumberGenerator.new()
@@ -1718,7 +1718,7 @@ func update_popcorn_respawns(context: RoomRespawnContext, delta: float) -> void:
 	var player_foot: Vector2 = context.player_foot
 	var chest_rect: Rect2 = context.chest_rect
 	var occupied: Array[Vector2] = []
-	for slime in context.slimes:
+	for slime in context.enemy_actors:
 		if slime.visible and not services.actor_runtime.is_slime_dead(slime):
 			occupied.append(services.actor_foot(slime))
 	var respawn_serial := int(state.get("popcorn_respawn_serial", 0)) + 1
@@ -1729,10 +1729,10 @@ func update_popcorn_respawns(context: RoomRespawnContext, delta: float) -> void:
 	var did_respawn := false
 	for slot in ready_slots:
 		var timer_key := str(slot)
-		if slot < 0 or slot >= context.slimes.size():
+		if slot < 0 or slot >= context.enemy_actors.size():
 			pending.erase(timer_key)
 			continue
-		var slime := context.slimes[slot]
+		var slime := context.enemy_actors[slot]
 		if slime.visible and not services.actor_runtime.is_slime_dead(slime):
 			pending.erase(timer_key)
 			continue
@@ -1818,7 +1818,7 @@ func _prepare_enemy_slot_visuals(context: RoomEnemyContext, state: Dictionary) -
 	if context == null or not context.is_valid():
 		return
 	var services := context.services
-	var slimes := context.slimes
+	var slimes := context.enemy_actors
 	var active_variants := state.get("enemy_variants", []) as Array
 	var active_ambush := state.get("enemy_ambush", []) as Array
 	var active_scales := state.get("enemy_scales", []) as Array
@@ -1855,7 +1855,7 @@ func _spawn_enemy_slot(context: RoomEnemyContext, state: Dictionary, slime_index
 	if context == null or not context.is_valid():
 		return false
 	var services := context.services
-	var slimes := context.slimes
+	var slimes := context.enemy_actors
 	if slime_index < 0 or slime_index >= slimes.size():
 		return false
 	var active_variants := state.get("enemy_variants", []) as Array
@@ -1961,7 +1961,7 @@ func reset_slimes_for_room(context: RoomSpawnContext) -> RoomSpawnResult:
 	result.room_id = context.room_id
 	result.room_type = context.room_type
 	services.effects_spawner.clear_slime_notices()
-	for slime in context.slimes:
+	for slime in context.enemy_actors:
 		services.actor_runtime.clear_enemy_without_effects(slime)
 	# Hub, rest, NPC, puzzle, and orb rooms are intentionally enemy-free. Keep
 	# the cleanup above, but do not interpret stale room-state data as an enemy
@@ -1999,7 +1999,7 @@ func reset_slimes_for_room(context: RoomSpawnContext) -> RoomSpawnResult:
 	var backtrack_popcorn_pending := false
 	var backtrack_spawn_started := false
 	for slime_index in active_variants.size():
-		if slime_index >= context.slimes.size():
+		if slime_index >= context.enemy_actors.size():
 			result.record_failure(slime_index)
 			continue
 		var timer_key := str(slime_index)
@@ -2013,12 +2013,12 @@ func reset_slimes_for_room(context: RoomSpawnContext) -> RoomSpawnResult:
 			spawn_positions[slime_index] = runtime_entry["position"]
 		var animate_spawn := (first_entry and not has_runtime_entry) or (backtrack_popcorn_pending and not has_runtime_entry and slime_index == active_variants.size() - 1)
 		if _spawn_enemy_slot(context, state, slime_index, occupied, layout_rng, player_foot, chest_rect, animate_spawn):
-			var spawn_started: bool = animate_spawn and services.actor_runtime.is_slime_spawn_locked(context.slimes[slime_index])
+			var spawn_started: bool = animate_spawn and services.actor_runtime.is_slime_spawn_locked(context.enemy_actors[slime_index])
 			result.record_spawn(slime_index, spawn_started)
 			spawned_slots += 1
 			if has_runtime_entry:
-				services.actor_runtime.restore_enemy_health(context.slimes[slime_index], runtime_entry)
-			if animate_spawn and services.actor_runtime.is_slime_spawn_locked(context.slimes[slime_index]):
+				services.actor_runtime.restore_enemy_health(context.enemy_actors[slime_index], runtime_entry)
+			if animate_spawn and services.actor_runtime.is_slime_spawn_locked(context.enemy_actors[slime_index]):
 				backtrack_spawn_started = backtrack_popcorn_pending
 				animated_spawn_started = true
 				if not spawn_audio_played:
@@ -2037,7 +2037,7 @@ func reset_slimes_for_room(context: RoomSpawnContext) -> RoomSpawnResult:
 	if services.run_state != null and services.run_state.active:
 		services.run_state.register_room_enemies(context.room_id, spawned_slots)
 	if context.room_type == DungeonGraph.ROOM_DOWNSTAIRS and not animated_spawn_started:
-		for slime in context.slimes:
+		for slime in context.enemy_actors:
 			if slime.visible:
 				services.trigger_slime_notice.call(slime)
 	last_spawn_result = result

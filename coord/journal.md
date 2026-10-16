@@ -1662,3 +1662,12 @@ X04 production registration acceptance. Replace the existing-script probe with a
 
 2026-10-16T19:01Z - codex - done
 X04 new-service acceptance proof: added a test-only Node service script and used it for generic and live-cohort appended registration rows. title_boot_scene_smoke passes; it validates the new script identity, parent/dependency order, missing-prerequisite rejection, and live cohort without production source edits. Composition self-test, strict targets, UID validation (473 sidecars), script index, and diff check pass. Graphify refreshed: 21,771 nodes / 49,192 edges / 728 communities; new test fixture is indexed in the current map.
+
+2026-10-16T19:02Z - codex - claim
+X05 context actor naming. Rename RoomEnemyContext.slimes and the typed spawn/respawn constructor parameters to enemy_actors; update only consumers of this room context, preserving gameplay.slimes and distinct support/magic contexts.
+
+2026-10-16T19:06Z - codex - claim-update
+X05 context actor naming expanded to RoomEnemyRuntimeContext after focused Godot parse diagnostics showed its typed snapshot array is another roster-backed context consumer.
+
+2026-10-16T19:25Z - codex - done
+X05 room roster naming: both typed room actor contexts use enemy_actors; special respawn, enemy room entrance, and encounter definition smokes pass. Composition self-test and strict targets pass; script index has 312 entries, UID validation has 473 sidecars, and Graphify refreshed to 21,771 nodes / 49,192 edges / 789 communities.
