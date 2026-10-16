@@ -20,7 +20,6 @@ var sound_manager: SoundManager = null
 
 var actor_runtime: EnemyActorRuntimeServices = EnemyActorRuntimeServices.new()
 var collision_rect: Callable = Callable()
-var actor_foot_offset := Vector2.ZERO
 
 var set_actor_visual_scale: Callable = Callable()
 var apply_actor_scale: Callable = Callable()
@@ -49,7 +48,7 @@ func prepare_enemy_visuals_direct() -> void:
 
 
 func actor_foot(actor: Sprite2D) -> Vector2:
-	return ActorGeometry.foot(actor, actor_foot_offset)
+	return ActorGeometry.foot(actor, GameplayState.ACTOR_FOOT_OFFSET)
 
 
 func current_chest_rect(chest_actor: Sprite2D) -> Rect2:

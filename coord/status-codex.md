@@ -2,7 +2,7 @@
 
 _Only codex writes this file._
 
-**Focus:** X05 context identity proof complete: enemy-room smoke verifies spawn and respawn snapshots preserve player/chest references, canonical roster order, and derived foot/chest geometry. Godot 4.7.2 smoke, strict composition, UID 473, and Graphify 21,771 / 49,191 / 742 pass. Next: consolidate duplicate actor-foot offset definitions under the shared GameplayState constant.
+**Focus:** Published-ready canonical `GameplayState.ACTOR_FOOT_OFFSET` use across enemy spawning and room camera geometry; four focused Godot smokes, strict composition audit, script index, UID checks, and Graphify refresh pass.
 **Updated:** 2026-10-16
 
 ## 2026-10-16 handoff

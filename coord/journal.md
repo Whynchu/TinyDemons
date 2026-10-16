@@ -1689,3 +1689,9 @@ X05 room context identity proof. Assert the live spawn and respawn snapshots pre
 
 2026-10-16T20:01Z - codex - done
 X05 room context identity proof: enemy-room smoke asserts spawn and respawn snapshots retain the configured player/chest references, canonical EnemyRoster slots, and computed geometry. Godot 4.7.2 test, strict composition, UID 473, and Graphify 21,771 / 49,191 / 742 pass.
+
+2026-10-16T20:02Z - codex - claim
+X05 shared geometry source. Remove the duplicate actor-foot offset constant and spawn-service offset field; use GameplayState.ACTOR_FOOT_OFFSET for room spawn placement and camera geometry.
+
+2026-10-16T20:21Z - codex - done
+Canonical actor-foot geometry consolidation: removed the spawn-service offset field and duplicate RoomController/RoomGeometryController constants; room spawning and camera geometry reference GameplayState.ACTOR_FOOT_OFFSET. Four focused Godot 4.7.2 smokes, strict composition self-test/audit, 312-script index, 473 UID validation, and Graphify 21,768 / 49,188 / 782 pass.

@@ -54,7 +54,6 @@ var current_room_type: StringName = &""
 
 func set_run_element_theme(theme: Array[int]) -> void: run_element_theme = EncounterDefinition.normalize_run_element_theme(theme)
 
-const ACTOR_FOOT_OFFSET := Vector2(8, 15)
 const BOSS_SLIME_AUTHORING_SCENE := "res://scenes/authoring/previews/boss_slime_authoring.tscn"
 const ENEMY_MIN_PLAYER_DISTANCE := 20.0
 const ENEMY_MIN_SPAWN_DISTANCE := 18.0
@@ -1445,7 +1444,7 @@ func begin_boss_jump_phase_popcorn(root: Object, boss: Sprite2D, anchor: Vector2
 			root.call("_configure_slime_variant", popcorn, String(boss.get("variant")))
 		var offset := Vector2(-12.0 + float(index) * 12.0, 8.0 if index % 2 == 0 else -8.0)
 		var spawn_foot: Vector2 = root.call("_nearest_slime_walkable_point", anchor + offset)
-		popcorn.global_position = spawn_foot - ACTOR_FOOT_OFFSET
+		popcorn.global_position = spawn_foot - GameplayState.ACTOR_FOOT_OFFSET
 		root.call("_apply_enemy_room_level", popcorn, maxi(1, _popcorn_enemy_level_for_root(root)))
 		var tuning := root.get("slime_tuning") as SlimeTuning
 		var maximum := float(root.call("_enemy_max_health", popcorn))
@@ -1896,10 +1895,10 @@ func _spawn_enemy_slot(context: RoomEnemyContext, state: Dictionary, slime_index
 	services.apply_actor_scale.call(slime, false)
 	var has_saved_position := spawn_positions.has(slime_index) or spawn_positions.has(str(slime_index))
 	var spawn_position: Vector2 = spawn_positions.get(slime_index, spawn_positions.get(str(slime_index), Vector2.ZERO))
-	if not has_saved_position or not _valid_enemy_spawn_foot_context(context, slime, spawn_position + ACTOR_FOOT_OFFSET, player_foot, chest_rect, occupied):
+	if not has_saved_position or not _valid_enemy_spawn_foot_context(context, slime, spawn_position + GameplayState.ACTOR_FOOT_OFFSET, player_foot, chest_rect, occupied):
 		spawn_position = _choose_enemy_spawn_position_context(context, slime, layout_rng, occupied)
 		spawn_positions[slime_index] = spawn_position
-	var spawn_foot := spawn_position + ACTOR_FOOT_OFFSET
+	var spawn_foot := spawn_position + GameplayState.ACTOR_FOOT_OFFSET
 	if not _valid_enemy_spawn_foot_context(context, slime, spawn_foot, player_foot, chest_rect, occupied):
 		spawn_positions.erase(slime_index)
 		spawn_positions.erase(str(slime_index))
@@ -2109,13 +2108,13 @@ func _apply_authored_boss_geometry(slime: Sprite2D) -> void:
 func _choose_enemy_spawn_position_context(context: RoomEnemyContext, slime: Sprite2D, layout_rng: RandomNumberGenerator, occupied: Array[Vector2]) -> Vector2:
 	if context == null:
 		return Vector2(INF, INF)
-	return ROOM_ENEMY_PLACEMENT_SCRIPT.choose_spawn_position(context.services.walkable_area, slime, layout_rng, occupied, context.player_foot, context.chest_rect, context.services.actor_foot_offset, active_door_sockets, active_entrance_sockets, ENEMY_MIN_PLAYER_DISTANCE, ENEMY_MIN_SPAWN_DISTANCE, ENEMY_MIN_SOCKET_DISTANCE)
+	return ROOM_ENEMY_PLACEMENT_SCRIPT.choose_spawn_position(context.services.walkable_area, slime, layout_rng, occupied, context.player_foot, context.chest_rect, GameplayState.ACTOR_FOOT_OFFSET, active_door_sockets, active_entrance_sockets, ENEMY_MIN_PLAYER_DISTANCE, ENEMY_MIN_SPAWN_DISTANCE, ENEMY_MIN_SOCKET_DISTANCE)
 
 
 func _valid_enemy_spawn_foot_context(context: RoomEnemyContext, slime: Sprite2D, candidate_foot: Vector2, player_foot: Vector2, chest_rect: Rect2, occupied: Array[Vector2]) -> bool:
 	if context == null:
 		return false
-	return ROOM_ENEMY_PLACEMENT_SCRIPT.valid_spawn_foot(slime, candidate_foot, player_foot, chest_rect, occupied, context.services.walkable_area, context.services.actor_foot_offset, active_door_sockets, active_entrance_sockets, ENEMY_MIN_PLAYER_DISTANCE, ENEMY_MIN_SPAWN_DISTANCE, ENEMY_MIN_SOCKET_DISTANCE)
+	return ROOM_ENEMY_PLACEMENT_SCRIPT.valid_spawn_foot(slime, candidate_foot, player_foot, chest_rect, occupied, context.services.walkable_area, GameplayState.ACTOR_FOOT_OFFSET, active_door_sockets, active_entrance_sockets, ENEMY_MIN_PLAYER_DISTANCE, ENEMY_MIN_SPAWN_DISTANCE, ENEMY_MIN_SOCKET_DISTANCE)
 
 
 func apply_room_geometry(_root: Object = null) -> void:

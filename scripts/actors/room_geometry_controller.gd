@@ -9,7 +9,6 @@ class_name RoomGeometryController
 ## the coordinator.
 
 const BOSS_ROOM_AUTHORING_SCENE := "res://scenes/debug/boss_room_debug.tscn"
-const ACTOR_FOOT_OFFSET := Vector2(8, 15)
 
 var map_root: Node2D = null
 var floor_tiles: Node2D = null
@@ -308,4 +307,4 @@ func update_large_room_camera() -> void:
 	var camera := player.get_node_or_null("LargeRoomCamera") as Camera2D
 	if camera == null or not camera.enabled:
 		return
-	camera.global_position = ActorGeometry.foot(player, ACTOR_FOOT_OFFSET) + Vector2(0.0, -7.0)
+	camera.global_position = ActorGeometry.foot(player, GameplayState.ACTOR_FOOT_OFFSET) + Vector2(0.0, -7.0)
