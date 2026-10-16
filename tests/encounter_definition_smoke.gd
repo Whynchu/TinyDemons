@@ -148,15 +148,21 @@ func _initialize() -> void:
 	actor_runtime.enemy_health_damaged_callback = Callable(self, "_on_test_enemy_damaged")
 	actor_runtime.enemy_health_healed_callback = Callable(self, "_on_test_enemy_healed")
 	actor_runtime.enemy_health_changed_callback = Callable(self, "_on_test_enemy_health_changed")
-	spawn_services.clear_enemy_max_health_cache = Callable(self, "_on_enemy_max_health_cache_cleared")
+	actor_runtime.clear_enemy_max_health_cache_callback = Callable(self, "_on_enemy_max_health_cache_cleared")
 	var target_fixture := TargetFixture.new()
 	target_fixture.current_target = actor_slot
-	spawn_services.configure_slime_variant(actor_slot, "skeleton")
+	actor_runtime.configure_enemy_variant(actor_slot, "skeleton", spawn_services.slime_tuning)
 	_expect(actor_pool[0] is SkeletonActor, "selected skeleton definition replaces the pooled slime actor family", failures)
 	var skeleton_slot := actor_pool[0]
 	_expect(skeleton_slot is EnemyActor and not skeleton_slot is SlimeActor, "skeleton actor uses the EnemyActor sibling contract", failures)
 	var skeleton_brain := skeleton_slot.get_node_or_null("Brain") as EnemyBrain
 	_expect(skeleton_brain != null and skeleton_brain.behavior_component is SkeletonBrainBehaviorComponent, "Slime-to-Skeleton replacement installs and binds Skeleton brain behavior", failures)
+	var ambush_tuning := SlimeTuning.new()
+	actor_runtime.configure_enemy_ambush(skeleton_slot, true, ambush_tuning)
+	var skeleton_ambush := skeleton_slot.get_node_or_null("Ambush") as SlimeAmbushComponent
+	_expect(skeleton_ambush != null and skeleton_ambush.is_hidden() and skeleton_slot.self_modulate == skeleton_ambush.hidden_modulate, "actor runtime applies configured ambush concealment", failures)
+	actor_runtime.configure_enemy_ambush(skeleton_slot, false, ambush_tuning)
+	_expect(skeleton_ambush != null and not skeleton_ambush.active and skeleton_slot.self_modulate == Color.WHITE and skeleton_slot.modulate == Color.WHITE, "actor runtime clears ambush state and transient tint", failures)
 	_expect((skeleton_slot as EnemyActor).roster_slot_id == original_slot_id and skeleton_slot.is_in_group("enemies") and not actor_slot.is_in_group("enemies"), "family replacement preserves slot identity and transfers enemies-group membership", failures)
 	var combat_runtime := CombatRuntimeControllerScript.new() as CombatRuntimeController
 	var skeleton_combat := skeleton_slot.get_node("Combat") as SlimeCombatComponent
@@ -188,7 +194,7 @@ func _initialize() -> void:
 	_expect(actor_parent.get_child(1) == skeleton_slot and actor_parent.get_child(2) == after_slot, "deferred deletion leaves the replacement in its original sibling order", failures)
 	var targeting := TargetingRuntimeControllerScript.new() as TargetingRuntimeController
 	_expect(targeting.valid_current_target(target_fixture) == null and target_fixture.current_target == null, "targeting clears a stale target after the replaced actor is freed", failures)
-	spawn_services.configure_slime_variant(skeleton_slot, "grey")
+	actor_runtime.configure_enemy_variant(skeleton_slot, "grey", spawn_services.slime_tuning)
 	var returned_slime_slot := actor_pool[0]
 	_expect(returned_slime_slot is SlimeActor and not returned_slime_slot is SkeletonActor, "skeleton-to-slime configuration restores the slime actor family", failures)
 	var returned_slime_brain := returned_slime_slot.get_node_or_null("Brain") as EnemyBrain

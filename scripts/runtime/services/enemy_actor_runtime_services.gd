@@ -15,6 +15,7 @@ var occlusion_renderer: OcclusionRenderer = null
 var enemy_health_damaged_callback: Callable = Callable()
 var enemy_health_healed_callback: Callable = Callable()
 var enemy_health_changed_callback: Callable = Callable()
+var clear_enemy_max_health_cache_callback: Callable = Callable()
 
 
 func enemy_brain(actor: Sprite2D) -> EnemyBrain:
@@ -130,6 +131,50 @@ func add_actor_to_runtime_lists(actor: Sprite2D) -> void:
 
 func remove_actor_from_collision_list(actor: Sprite2D) -> void:
 	collision_sprites.erase(actor)
+
+
+func configure_enemy_variant(actor: Sprite2D, variant: String, tuning: SlimeTuning) -> Sprite2D:
+	var definition := EnemyFactory.definition(StringName(variant))
+	if definition == null:
+		return actor
+	actor = replace_actor_family(actor, definition)
+	if actor == null:
+		return null
+	actor.set("variant", String(definition.variant_id))
+	actor.set_meta("element", definition.element)
+	actor.set_meta("damage_contract", String(definition.damage_contract))
+	actor.set_meta("visual_source", definition.visual_source)
+	var enemy := actor as EnemyActor
+	if enemy != null:
+		EnemyFactory.configure_actor(enemy, definition)
+	var stats := actor.get_node_or_null("Stats") as StatsComponent
+	if stats != null and enemy == null:
+		stats.apply_enemy_variant_profile(definition.base_stats, definition.growth_weights, definition.variant_id)
+	configure_enemy_ambush(actor, false, tuning)
+	if clear_enemy_max_health_cache_callback.is_valid():
+		clear_enemy_max_health_cache_callback.call()
+	return actor
+
+
+func configure_enemy_ambush(actor: Sprite2D, enabled: bool, tuning: SlimeTuning) -> void:
+	if actor == null:
+		return
+	var ambush := actor.get_node_or_null("Ambush") as SlimeAmbushComponent
+	if enabled:
+		if tuning == null:
+			push_error("Enemy ambush configuration requires SlimeTuning.")
+			return
+		if ambush == null:
+			ambush = SlimeAmbushComponent.new()
+			ambush.name = "Ambush"
+			actor.add_child(ambush)
+		ambush.configure(true, tuning.ambush_reveal_window, tuning.ambush_block_stun, tuning.ambush_hit_extension)
+		ambush.apply_hidden(actor)
+		return
+	if ambush != null:
+		ambush.configure(false, 0.0, 0.0, 0.0)
+	actor.self_modulate = Color.WHITE
+	actor.modulate = Color.WHITE
 
 
 func clear_enemy_without_effects(actor: Sprite2D) -> void:

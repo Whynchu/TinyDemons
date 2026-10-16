@@ -1519,7 +1519,7 @@ func prepare_boss_jump_phase_pool(services: RoomEnemySpawnServices, variant: Str
 		push_error("Boss jump-phase preparation requires the room EnemyRoster.")
 		return
 	for popcorn in boss_jump_phase_pool:
-		services.configure_slime_variant(popcorn, variant)
+		services.actor_runtime.configure_enemy_variant(popcorn, variant, services.slime_tuning)
 		popcorn.set_meta("encounter_scale", 1.0)
 		popcorn.set_meta("prepared_boss_variant", variant)
 		services.actor_runtime.enemy_roster.append(popcorn)
@@ -1829,10 +1829,10 @@ func _prepare_enemy_slot_visuals(context: RoomEnemyContext, state: Dictionary) -
 			break
 		var ambush_enabled := slot < active_ambush.size() and bool(active_ambush[slot])
 		var requested_variant := String(active_variants[slot])
-		if String(slimes[slot].get_meta("enemy_variant_id", "")) != requested_variant: services.configure_slime_variant(slimes[slot], requested_variant)
+		if String(slimes[slot].get_meta("enemy_variant_id", "")) != requested_variant: services.actor_runtime.configure_enemy_variant(slimes[slot], requested_variant, services.slime_tuning)
 		slimes[slot].set_meta("encounter_scale", float(active_scales[slot]) if slot < active_scales.size() else 1.0)
 		slimes[slot].set_meta("is_elite", _is_elite_enemy_slot(state, slot))
-		services.configure_slime_ambush(slimes[slot], String(active_variants[slot]) == "purple" and ambush_enabled)
+		services.actor_runtime.configure_enemy_ambush(slimes[slot], String(active_variants[slot]) == "purple" and ambush_enabled, services.slime_tuning)
 	if signature == _enemy_visual_preparation_signature:
 		return
 	_enemy_visual_preparation_signature = signature

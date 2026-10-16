@@ -2,7 +2,7 @@
 
 _Only codex writes this file._
 
-**Focus:** X05 actor-list mutation API is verified; `RoomController` now delegates actor registration, collision exclusion, and removal to `EnemyActorRuntimeServices`. `RoomEnemySpawnServices` remains at 30 fields (down from 40). Graph path is current; preparing commit and push. Preserve slime/skeleton behavior and leave `PerformanceCaptureService` outside this work.
+**Focus:** X05 actor variant/ambush setup and max-health cache invalidation now belong to `EnemyActorRuntimeServices`; `RoomEnemySpawnServices` is down from 30 to 29 stored fields. Focused enemy/room smokes, strict composition targets, self-test, UID validation, and Graphify all pass. Graphify is current at 21,768 nodes / 49,186 edges / 773 communities. Next, map the remaining spawn-service values to their consumers before extracting further.
 **Updated:** 2026-10-16
 
 ## 2026-10-16 handoff

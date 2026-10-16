@@ -1638,3 +1638,9 @@ X05 actor collection API. Move RoomController's actor-list add/remove/collision 
 
 2026-10-16T17:42Z - codex - done
 X05 actor-list mutation API: RoomController now delegates actor list addition, removal, and spawn collision exclusion to EnemyActorRuntimeServices. Focused room-entry, encounter-definition, and special-respawn smokes pass; composition self-test, strict target audit, UID validation, script index refresh, and diff checks pass. Graphify refreshed: 21,768 nodes / 49,183 edges / 767 communities; path confirms RoomController -> RoomEnemySpawnServices -> EnemyActorRuntimeServices.
+
+2026-10-16T17:48Z - codex - claim
+X05 actor setup ownership. Move family variant/ambush configuration and max-health cache invalidation out of RoomEnemySpawnServices into EnemyActorRuntimeServices; preserve family swaps, tint reset, and cache behavior.
+
+2026-10-16T18:12Z - codex - done
+X05 actor setup ownership: EnemyActorRuntimeServices now configures enemy variants and ambush state, and owns max-health cache invalidation. RoomEnemySpawnServices dropped these duplicate methods and its cache callback, falling from 30 to 29 stored fields. Encounter-definition, room-entry, respawn, slime-variant, and boss-variant smokes pass; ambush conceal/reveal and cache invalidation are asserted. Composition self-test, strict targets, UID validation, and script index pass. Graphify refreshed: 21,768 nodes / 49,186 edges / 773 communities; RoomController -> RoomEnemySpawnServices -> EnemyActorRuntimeServices path confirmed.

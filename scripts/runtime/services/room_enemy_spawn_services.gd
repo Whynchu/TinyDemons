@@ -38,7 +38,6 @@ var play_sound: Callable = Callable()
 var set_door_active: Callable = Callable()
 var set_entrance_open: Callable = Callable()
 var build_depth_lists: Callable = Callable()
-var clear_enemy_max_health_cache: Callable = Callable()
 
 
 func is_valid() -> bool:
@@ -59,41 +58,3 @@ func current_chest_rect() -> Rect2:
 	if chest == null or not collision_rect.is_valid():
 		return Rect2()
 	return collision_rect.call(chest) as Rect2
-
-
-func configure_slime_variant(slime: Sprite2D, variant: String) -> void:
-	var definition := EnemyFactory.definition(StringName(variant))
-	if definition == null:
-		return
-	slime = actor_runtime.replace_actor_family(slime, definition)
-	if slime == null:
-		return
-	var palette := String(definition.variant_id)
-	slime.set("variant", palette)
-	slime.set_meta("element", definition.element)
-	slime.set_meta("damage_contract", String(definition.damage_contract))
-	slime.set_meta("visual_source", definition.visual_source)
-	var actor := slime as EnemyActor
-	if actor != null:
-		EnemyFactory.configure_actor(actor, definition)
-	var stats := slime.get_node_or_null("Stats") as StatsComponent
-	if stats != null and actor == null:
-		stats.apply_enemy_variant_profile(definition.base_stats, definition.growth_weights, definition.variant_id)
-	configure_slime_ambush(slime, false)
-	if clear_enemy_max_health_cache.is_valid():
-		clear_enemy_max_health_cache.call()
-
-func configure_slime_ambush(slime: Sprite2D, enabled: bool) -> void:
-	var ambush := slime.get_node_or_null("Ambush") as SlimeAmbushComponent
-	if enabled:
-		if ambush == null:
-			ambush = SlimeAmbushComponent.new()
-			ambush.name = "Ambush"
-			slime.add_child(ambush)
-		ambush.configure(true, slime_tuning.ambush_reveal_window, slime_tuning.ambush_block_stun, slime_tuning.ambush_hit_extension)
-		ambush.apply_hidden(slime)
-	else:
-		if ambush != null:
-			ambush.configure(false, 0.0, 0.0, 0.0)
-		slime.self_modulate = Color.WHITE
-		slime.modulate = Color.WHITE
