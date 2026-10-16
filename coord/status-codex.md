@@ -2,7 +2,7 @@
 
 _Only codex writes this file._
 
-**Focus:** `composition-plan-2026.md`, the X04 ledger, and execution checkpoint now match source: zero `GameplayBootstrap.root.call` references, direct `ProfileSaveService`, 25 spawn-service fields; real production-row and typed room-context acceptance remain open.
+**Focus:** X06 is implemented and verified. Continue composition cleanup from source-backed plan opportunities; X04 production-row proof and X05 typed room-context extraction remain open acceptance items.
 **Updated:** 2026-10-16
 
 ## 2026-10-16 handoff

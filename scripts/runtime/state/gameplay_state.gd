@@ -483,7 +483,7 @@ func _bind_current_element() -> bool:
 		dungeon_map_controller.call("set_bound_flame", current)
 	var palette := AspectCatalogScript.palette_for_flame(current)
 	player_profile.palette_name = palette
-	call("_save_player_profile")
+	ProfileSaveService.save_profile(player_profile)
 	_update_soul_indicator()
 	_sync_current_element_state()
 	if current_room_type == DungeonGraph.ROOM_START:
@@ -1161,7 +1161,7 @@ func _complete_flame_service(flame: StringName, is_fusion: bool) -> bool:
 		applied = bool(player_chroma_component.call("attune_flame", flame))
 	if not applied:
 		player_profile.add_souls(cost)
-		call("_save_player_profile")
+		ProfileSaveService.save_profile(player_profile)
 		_update_soul_indicator()
 		_play_sound("ui_no_input", 0.0, 1.0)
 		return false
@@ -1185,7 +1185,7 @@ func _complete_flame_service(flame: StringName, is_fusion: bool) -> bool:
 			dungeon_map_controller.call("set_starter_flame_attuned", true)
 		_set_door_active(true)
 		_set_entrance_open(true)
-	call("_save_player_profile")
+	ProfileSaveService.save_profile(player_profile)
 	_checkpoint_safe_run_state()
 	_update_soul_indicator()
 	var action_name := "FUSED %s" % String(result_flame).to_upper() if is_fusion else "%s USED" % String(flame).to_upper()

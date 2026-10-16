@@ -1707,3 +1707,9 @@ Reconcile stale current-source statements in composition-plan-2026.md after the 
 
 2026-10-16T20:41Z - codex - done
 Reconciled the current X04/X05 summary and implementation record in composition-plan-2026.md: GameplayBootstrap has zero root.call references, RoomEnemySpawnServices is down to 25 fields, and the test-only/live-cohort row proof is accurately bounded while real production-row and typed-context acceptance remain open. No source code changed in this documentation reconciliation.
+
+2026-10-16T20:42Z - codex - claim
+X06 narrow save dispatch. Replace the three GameplayState self-call string dispatches with the same direct ProfileSaveService operation used by Gameplay._save_player_profile; retain existing save timing and null behavior.
+
+2026-10-16T20:45Z - codex - done
+Completed X06: all three GameplayState profile-save self-reflections now call ProfileSaveService directly. The title boot smoke, composition self-test and strict audit, script index generation, UID validation, diff check, and Graphify refresh passed. The profile-writing fire-exchange smoke was not run because it can modify the user's profile data.
