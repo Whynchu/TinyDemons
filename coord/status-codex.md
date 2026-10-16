@@ -2382,3 +2382,30 @@ Final integration checks: the regenerated script index contains 311 entries;
 all 311 scripts have UID sidecars; the UID validator found 471 sidecars with
 no duplicate or mismatched scene IDs. The composition audit and self-test
 passed, as did `git diff --check`. Slime, boss-selection, and enemy-room content smokes were corrected to match typed themes, the unified catalog, and the shared EnemyActor contract; focused reruns pass. The single-command 10-path content rerun was not started after its safety preflight observed a Godot GUI process. The full curated gate was not rerun after the row-only extension, and prior red results remain unclassified. Graphify's structural refresh completed at 21,638 nodes, 49,054 edges, and 768 communities; 742 saved community labels remain and no LLM relabel pass was run. The existing coordination journal was read as CP1252 and left unchanged in encoding.
+
+## Completed: X04 service registration cohorts (2026-10-16)
+
+Three ordered cohorts now register 27 production services: six early services,
+14 gameplay services, and seven world-support/room services. Setup callbacks
+preserve the old attach-time order, including CloudSavePanel configuration,
+debug geometry, occlusion scale, RoomPrefabHost placement, and RoomController
+geometry/signal wiring. `GameplayBootstrap` now has 16 `_add_runtime_node`
+invocations left; the audit reports 17 pattern matches including the helper
+declaration, against a 44-match regression ceiling. This does not complete
+Stage 3.2: 16 calls, 31 named build steps, typed RoomEnemySpawnServices
+contexts, phase interfaces, and production append-one-row acceptance remain.
+
+Current Godot 4.7.2 focused title-boot and enemy-room entrance smokes pass. The
+composition self-test and strict audit pass; definition validation loaded
+110/110, the manifest reports 160 rows / 158 runnable / 45 gate, the UID check
+found 471 script sidecars, and the generated index contains 311 scripts. The
+45-path curated gate ran after the gameplay cohort but before the seven
+world-support/room rows: 29 passed, 12 failed, and 4 timed out. Those outcomes
+match the earlier red list and remain unclassified; the full list is recorded
+above. Web export was blocked by missing Godot 4.7.2 Web templates. Headless
+imports emitted the known MCP Toolkit shutdown leak warnings (180 ObjectDB
+instances / 155 resources); focused smoke runs exited 0.
+
+The shared Graphify map predates this final code batch and still needs one
+refresh before handoff. Other board claims remain owned by codex export proof
+and opencode.

@@ -1592,3 +1592,10 @@ The menu visibility extraction passed the composition regression audit after its
 2026-10-16 | codex | claim | Align tests/enemy_room_entrance_scene_smoke.gd with Run 3 guard eligibility and the EnemyActor factory materialization contract.
 
 2026-10-16 | codex | done | Verified X04 registration and menu-world visibility, corrected stale Slime/boss/enemy-room smoke fixtures, passed isolated E5 variant create/preview and 111/111 definition plus manifest checks, and refreshed Graphify at 21638 nodes / 49054 edges / 768 communities.
+
+
+## 2026-10-16T14:09Z - codex - claim
+Gameplay-service registration slice: typed ordered rows for the adjacent service block, with focused live boot coverage. Other claims stay untouched.
+
+## 2026-10-16T14:43Z - codex - done
+Closed the X04 registration batch: three ordered cohorts cover 27 production services, the strict composition audit passes at 17 bootstrap-registration matches, and current title-boot/enemy-room smokes pass. The full curated gate remains 29 pass / 12 fail / 4 timeout; see coord/status-codex.md.

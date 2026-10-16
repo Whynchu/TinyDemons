@@ -59,6 +59,16 @@ func _initialize() -> void:
 		await process_frame
 	var live_service_rows := RuntimeServiceRegistrationPlan.early_service_registrations(gameplay)
 	_expect(RuntimeServiceRegistrationPlan.live_registration_errors(live_service_rows).is_empty(), "live early service nodes match their registration rows", failures)
+	var live_gameplay_service_rows := RuntimeServiceRegistrationPlan.gameplay_service_registrations(gameplay as GameplayState)
+	_expect(RuntimeServiceRegistrationPlan.live_registration_errors(live_gameplay_service_rows).is_empty(), "live gameplay service nodes match their registration rows", failures)
+	var live_world_service_rows := RuntimeServiceRegistrationPlan.world_service_registrations(gameplay as GameplayState)
+	_expect(RuntimeServiceRegistrationPlan.live_registration_errors(live_world_service_rows).is_empty(), "live world support nodes match their registration rows", failures)
+	var live_gameplay_state := gameplay as GameplayState
+	var room_prefab_host := live_gameplay_state.map_root.get_node_or_null("RoomPrefabHost") as RoomPrefabHost if live_gameplay_state != null else null
+	_expect(room_prefab_host != null, "room prefab host registers under the map root", failures)
+	if live_gameplay_state != null and room_prefab_host != null and live_gameplay_state.hub_stone_accent_layer != null:
+		_expect(room_prefab_host.get_index() < live_gameplay_state.hub_stone_accent_layer.get_index(), "room prefab host retains its position ahead of the stone accent layer", failures)
+	_expect(live_gameplay_state != null and live_gameplay_state.room_controller != null, "room controller is configured through the world service cohort", failures)
 	var screens := gameplay.get("screen_state_controller") as ScreenStateController
 	var settings := gameplay.get("settings_service") as SettingsService
 	var display := gameplay.get("display_controller") as DisplayController
@@ -105,6 +115,7 @@ func _initialize() -> void:
 			screens.title_presenter.cloud_button.pressed.emit()
 			var cloud_panel := gameplay.get("cloud_save_panel") as CloudSavePanel
 			_expect(cloud_panel != null and cloud_panel.overlay != null and cloud_panel.overlay.visible, "Cloud Save button opens the management window", failures)
+			_expect(cloud_panel != null and cloud_panel.service == gameplay.get("cloud_save_service"), "Cloud Save panel is configured by its registered prerequisite", failures)
 			if cloud_panel != null: cloud_panel.close()
 		var version := screens.title_presenter.overlay.get_node_or_null("TitleVersion") as Sprite2D
 		_expect(version != null and version.texture != null and version.position.is_equal_approx(Vector2(4, screens.display_view_size.y - 8.0)), "title screen shows the game version in the bottom-left", failures)

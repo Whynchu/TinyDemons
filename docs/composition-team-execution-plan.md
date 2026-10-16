@@ -77,22 +77,18 @@ The broad plan is not complete merely because E0-E3 land.
 
 ### E9 checkpoint (2026-10-16)
 
-The X04 pilot now executes six production services through typed registration
-rows and one shared registrar. After the row-only extension fix, the focused
-current-tree Godot 4.7.2 title boot smoke and composition/manifest/definition/
-UID preflights pass. The composition audit reports 38 `_add_runtime_node(` regex matches against
-a 44-match regression ceiling: 37 invocation expressions plus the helper
-declaration. This is a guard, not the Stage 3.2 completion criterion. The last
-supervised 45-path curated gate ran immediately before the sixth no-setup row
-was added and was red at 29 pass / 12 fail / 4 timeout. The full gate was not
-rerun after that row; aggregate counts and named outcomes are recorded in `coord/status-codex.md`.
-The referenced per-test CSV is absent from both available worktrees, so logs
-are unavailable and individual failures and timeouts remain unclassified
-pending a base comparison. The generic registrar now
-accepts and creates an appended no-setup row; its declared rows are the source
-of truth, with no duplicate required-name list. End-to-end production
-append-one-row acceptance, remaining registrations, named build steps, typed
-spawn-service contexts, and phase interfaces remain open.
+The X04 registrar now covers 27 production services in three ordered cohorts.
+The focused current-tree Godot 4.7.2 title boot and enemy-room smokes pass; the
+composition audit reports 17 `_add_runtime_node(` matches against a 44-match
+regression ceiling (16 invocations plus the helper declaration). This is a
+guard, not the Stage 3.2 completion criterion. The supervised 45-path gate ran
+after the 14-service gameplay cohort and before the seven world-support/room rows; it
+remained 29 pass / 12 fail / 4 timeout. Those failures match the earlier list
+and remain unclassified. Web export could not run because the local Godot 4.7.2
+Web templates are missing. The generic registrar still accepts an appended
+no-setup row, but production append-one-row acceptance, 16 remaining
+registrations, 31 named build steps, typed spawn-service contexts, and phase
+interfaces remain open.
 
 ### E5 checkpoint (2026-10-16)
 

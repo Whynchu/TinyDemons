@@ -1347,7 +1347,7 @@ is 876 lines; the 800-line Stage 3.1 target remains open.
 
 ### 3.2 `gameplay_bootstrap.gd` — declarative assembly
 
-Convert the remaining 37 `_add_runtime_node` invocation expressions into rows
+Convert the remaining 16 `_add_runtime_node` invocation expressions into rows
 consumed by the shared registrar, and replace the 31 `root.call(...)` build
 dispatches with named build steps in an ordered list.
 
@@ -1361,20 +1361,22 @@ runtime system is added by appending **one table row and zero edits to any
 existing script**, and a validator asserts every registered system's
 dependencies resolve.
 
-**Implementation record (2026-10-16):** A bounded X04 pilot now declares six
-early services as typed rows and executes them through a shared registrar with
-optional immediate setup callbacks. The cohort covers settings, display,
-input routing, device tracking, touch controls, and DebugSessionController.
-Static and live checks reject missing/duplicate/forward dependencies and wrong
-live scripts, parents, or prerequisite order. The current tree's focused title
-boot smoke and runner preflights pass on Godot 4.7.2. This is partial Stage 3.2
-progress: 37 `_add_runtime_node` invocations, the 31 named build steps, typed
-RoomEnemySpawnServices contexts,
-phase interfaces, and end-to-end production append-one-row/no-existing-script-
-edit acceptance remain open. Registration rows are the source of truth, and a
-synthetic appended no-setup row proves the shared registrar accepts and creates
-an extension row without a second required-name registry. See
-`coord/status-codex.md` for the current curated-gate results.
+**Implementation record (2026-10-16):** Three typed registration cohorts now
+cover 27 production services: six early services, 14 gameplay services, and
+seven world-support services. The registrar preserves sibling order and runs
+each setup callback immediately after attachment; this includes CloudSavePanel
+configuration, geometry-debug setup, and the platform-specific occlusion scale.
+Static and live checks cover declared dependencies, scripts, parents, and
+prerequisite order. The focused title-boot and enemy-room smokes pass on Godot
+4.7.2. The audit now reports 17 `_add_runtime_node(` matches against the 44
+regression ceiling (16 invocations plus the helper declaration). This remains
+partial Stage 3.2: 16 invocations, 31 named build steps, typed
+RoomEnemySpawnServices contexts, phase interfaces, and end-to-end production
+append-one-row/no-existing-script-edit acceptance remain open. The synthetic
+row-extension fixture still proves generic row creation. The curated 45-path
+gate ran after the gameplay cohort and before the world-support cohort: 29
+passed, 12 failed, and 4 timed out; see `coord/status-codex.md` for the paths
+and current export limitation.
 
 ---
 

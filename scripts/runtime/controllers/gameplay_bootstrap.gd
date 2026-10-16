@@ -7,26 +7,11 @@ const GOLD_PICKUP_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers
 const FEEDBACK_ANIMATION_REGISTRY_SCRIPT = preload("res://scripts/services/feedback_animation_registry.gd")
 const PLAYER_ASPECT_ABILITY_COMPONENT_SCRIPT = preload("res://scripts/components/player_aspect_ability_component.gd")
 const ENEMY_CATALOG_SCRIPT = preload("res://scripts/content/enemy_catalog.gd")
-const PROFILE_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/profile_runtime_controller.gd")
-const PICKUP_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/pickup_runtime_controller.gd")
-const RUN_FLOW_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/run_flow_controller.gd")
-const HUB_FLOW_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/hub_flow_controller.gd")
-const SAVE_FLOW_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/save_flow_controller.gd")
 const ACTIVE_RUN_SAVE_SERVICE_SCRIPT = preload("res://scripts/runtime/services/active_run_save_service.gd")
-const ROOM_PUZZLE_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/room_puzzle_controller.gd")
-const MAGIC_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/magic_runtime_controller.gd")
-const TARGETING_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/targeting_runtime_controller.gd")
-const COMBAT_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/combat_runtime_controller.gd")
-const SLIME_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/slime_runtime_controller.gd")
-const ACTOR_PRESENTATION_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/actor_presentation_runtime_controller.gd")
-const DUNGEON_MAP_CONTROLLER_SCRIPT = preload("res://scripts/ui/dungeon_map_controller.gd")
 const DUNGEON_MINIMAP_CONTROLLER_SCRIPT = preload("res://scripts/ui/dungeon_minimap_controller.gd")
 const INPUT_DEVICE_TRACKER_SCRIPT = preload("res://scripts/services/input_device_tracker.gd")
 const TOUCH_CONTROLS_LAYER_SCRIPT = preload("res://scripts/ui/touch_controls_layer.gd")
 const PERFORMANCE_CAPTURE_SERVICE_SCRIPT = preload("res://scripts/services/performance_capture_service.gd")
-const CLOUD_SAVE_SERVICE_SCRIPT = preload("res://scripts/services/cloud_save_service.gd")
-const CLOUD_SAVE_PANEL_SCRIPT = preload("res://scripts/ui/cloud_save_panel.gd")
-const ROOM_PREFAB_HOST_SCRIPT = preload("res://scripts/runtime/controllers/room_prefab_host.gd")
 const DEBUG_RUN_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/debug_run_runtime_controller.gd")
 ## Runtime enemy capacity is a pool size, not an authored content roster. Every
 ## slot is materialized by EnemyFactory so a new definition never needs a scene
@@ -121,21 +106,11 @@ func initialize(root: GameplayState, preview_session: RefCounted = null) -> void
 	touch_controls_layer.set_last_input_device(input_device_tracker.current_device)
 	touch_controls_layer.set_input_context(InputRouter.Context.MENU)
 	root.input_router.set_touch_provider(touch_controls_layer)
-	root.profile_runtime_controller = _add_runtime_node(root, PROFILE_RUNTIME_CONTROLLER_SCRIPT, "ProfileRuntimeController")
-	root.pickup_runtime_controller = _add_runtime_node(root, PICKUP_RUNTIME_CONTROLLER_SCRIPT, "PickupRuntimeController") as PickupRuntimeController
-	root.run_flow_controller = _add_runtime_node(root, RUN_FLOW_CONTROLLER_SCRIPT, "RunFlowController") as RunFlowController
-	root.dungeon_map_controller = _add_runtime_node(root, DUNGEON_MAP_CONTROLLER_SCRIPT, "DungeonMapController") as DungeonMapController
-	root.hub_flow_controller = _add_runtime_node(root, HUB_FLOW_CONTROLLER_SCRIPT, "HubFlowController")
-	root.save_flow_controller = _add_runtime_node(root, SAVE_FLOW_CONTROLLER_SCRIPT, "SaveFlowController")
-	root.cloud_save_service = _add_runtime_node(root, CLOUD_SAVE_SERVICE_SCRIPT, "CloudSaveService") as CloudSaveService
-	root.cloud_save_panel = _add_runtime_node(root, CLOUD_SAVE_PANEL_SCRIPT, "CloudSavePanel") as CloudSavePanel
-	root.cloud_save_panel.configure(root, root.cloud_save_service)
-	root.room_puzzle_controller = _add_runtime_node(root, ROOM_PUZZLE_CONTROLLER_SCRIPT, "RoomPuzzleController")
-	root.magic_runtime_controller = _add_runtime_node(root, MAGIC_RUNTIME_CONTROLLER_SCRIPT, "MagicRuntimeController")
-	root.targeting_runtime_controller = _add_runtime_node(root, TARGETING_RUNTIME_CONTROLLER_SCRIPT, "TargetingRuntimeController")
-	root.combat_runtime_controller = _add_runtime_node(root, COMBAT_RUNTIME_CONTROLLER_SCRIPT, "CombatRuntimeController")
-	root.slime_runtime_controller = _add_runtime_node(root, SLIME_RUNTIME_CONTROLLER_SCRIPT, "SlimeRuntimeController")
-	root.actor_presentation_runtime_controller = _add_runtime_node(root, ACTOR_PRESENTATION_RUNTIME_CONTROLLER_SCRIPT, "ActorPresentationRuntimeController")
+	var gameplay_service_rows := RuntimeServiceRegistrationPlan.gameplay_service_registrations(root)
+	var gameplay_service_errors := RuntimeServiceRegistrationPlan.register_all(gameplay_service_rows)
+	assert(gameplay_service_errors.is_empty(), "Invalid gameplay service registration: %s" % "; ".join(gameplay_service_errors))
+	if not gameplay_service_errors.is_empty():
+		return
 	root.player_profile = profile
 	root.has_persistent_profile = has_profile
 	root.screen_state_controller = _add_runtime_node(root, ScreenStateController, "ScreenStateController") as ScreenStateController
@@ -143,34 +118,13 @@ func initialize(root: GameplayState, preview_session: RefCounted = null) -> void
 	root.gameplay_frame_controller = _add_runtime_node(root, GameplayFrameController, "GameplayFrameController") as GameplayFrameController
 	root.feedback_animation_registry = FEEDBACK_ANIMATION_REGISTRY_SCRIPT.new() as FeedbackAnimationRegistry
 	root.performance_capture_service = _add_runtime_node(root, PERFORMANCE_CAPTURE_SERVICE_SCRIPT, "PerformanceCaptureService")
-	var effects_tuning := root.effects_tuning
-	root.walkable_area = _add_runtime_node(root, WalkableArea, "WalkableArea") as WalkableArea
-	root.actor_collision_system = _add_runtime_node(root, ActorCollisionSystem, "ActorCollisionSystem") as ActorCollisionSystem
-	var geometry_debug := _add_runtime_node(root, ActorGeometryDebugDrawer, "ActorGeometryDebugDrawer") as ActorGeometryDebugDrawer
-	geometry_debug.enabled = root.debug_actor_geometry; geometry_debug.z_as_relative = false; geometry_debug.z_index = 4096; root.actor_geometry_debug_drawer = geometry_debug
-	root.depth_sorter = _add_runtime_node(root, DepthSorter, "DepthSorter") as DepthSorter
-	var occlusion := _add_runtime_node(root, OcclusionRenderer, "OcclusionRenderer") as OcclusionRenderer
-	# Web keeps the same visuals but uses the lowest exact-pixel occlusion pass
-	# to avoid multiplying every actor pixel on weaker mobile CPUs. Desktop keeps
-	# the inspector-selected scale unchanged.
-	occlusion.resolution_scale = 1 if OS.has_feature("web") else effects_tuning.resolution_scale; root.occlusion_renderer = occlusion
-	var room_prefab_host := _add_runtime_node(root, ROOM_PREFAB_HOST_SCRIPT, "RoomPrefabHost", root.map_root) as RoomPrefabHost
-	if root.hub_stone_accent_layer != null:
-		var accent_index := root.map_root.get_children().find(root.hub_stone_accent_layer)
-		if accent_index >= 0 and room_prefab_host != null:
-			root.map_root.move_child(room_prefab_host, accent_index)
-	root.room_controller = _add_runtime_node(root, RoomController, "RoomController") as RoomController
-	root.room_controller.configure_geometry(
-		root.floor_tiles.get_parent() as Node2D,
-		root.floor_tiles,
-		root.player,
-		root.display_controller,
-		root.scene_file_path)
-	if root.hub_stone_accent_layer != null:
-		root.room_controller.room_entered.connect(
-			Callable(root.hub_stone_accent_layer, "on_room_entered"))
-	root.room_controller.room_cleared.connect(Callable(root.dungeon_map_controller, "on_room_completed_result"))
-	root.room_controller.room_cleared.connect(Callable(root, "_on_room_cleared_for_checkpoint"))
+	var world_service_rows := RuntimeServiceRegistrationPlan.world_service_registrations(root)
+	var world_service_errors := RuntimeServiceRegistrationPlan.register_all(world_service_rows)
+	assert(world_service_errors.is_empty(), "Invalid world service registration: %s" % "; ".join(world_service_errors))
+	if not world_service_errors.is_empty():
+		return
+	var geometry_debug := root.actor_geometry_debug_drawer
+	var occlusion := root.occlusion_renderer
 	root.dungeon_map_controller.connect(&"map_state_changed", Callable(root, "_on_dungeon_map_state_changed"))
 	root.shadow_controller = _add_runtime_node(root, ShadowController, "ShadowController") as ShadowController
 	root.interaction_component = _add_runtime_node(root, InteractionComponent, "InteractionComponent") as InteractionComponent

@@ -1,6 +1,22 @@
 extends RefCounted
 class_name RuntimeServiceRegistrationPlan
 
+const PROFILE_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/profile_runtime_controller.gd")
+const PICKUP_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/pickup_runtime_controller.gd")
+const RUN_FLOW_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/run_flow_controller.gd")
+const DUNGEON_MAP_CONTROLLER_SCRIPT = preload("res://scripts/ui/dungeon_map_controller.gd")
+const HUB_FLOW_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/hub_flow_controller.gd")
+const SAVE_FLOW_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/save_flow_controller.gd")
+const CLOUD_SAVE_SERVICE_SCRIPT = preload("res://scripts/services/cloud_save_service.gd")
+const CLOUD_SAVE_PANEL_SCRIPT = preload("res://scripts/ui/cloud_save_panel.gd")
+const ROOM_PUZZLE_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/room_puzzle_controller.gd")
+const MAGIC_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/magic_runtime_controller.gd")
+const TARGETING_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/targeting_runtime_controller.gd")
+const COMBAT_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/combat_runtime_controller.gd")
+const SLIME_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/slime_runtime_controller.gd")
+const ACTOR_PRESENTATION_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/actor_presentation_runtime_controller.gd")
+const ROOM_PREFAB_HOST_SCRIPT = preload("res://scripts/runtime/controllers/room_prefab_host.gd")
+
 ## GameplayBootstrap-owned declarations and validation for ordered runtime services.
 class Row:
 	extends RefCounted
@@ -36,6 +52,216 @@ static func early_service_registrations(root: Node) -> Array[Row]:
 	registrations.append(Row.new(&"InputDeviceTracker", preload("res://scripts/services/input_device_tracker.gd"), root))
 	registrations.append(Row.new(&"TouchControlsLayer", preload("res://scripts/ui/touch_controls_layer.gd"), root, [&"InputRouter", &"InputDeviceTracker"]))
 	registrations.append(Row.new(&"DebugSessionController", DebugSessionController, root))
+	return registrations
+
+
+## Keeps the next contiguous GameplayBootstrap creation block in its original
+## sibling order while making each service's parent, script, prerequisite, and
+## root binding part of the registration declaration.
+static func gameplay_service_registrations(root: GameplayState) -> Array[Row]:
+	var registrations: Array[Row] = []
+	registrations.append(Row.new(
+		&"ProfileRuntimeController",
+		PROFILE_RUNTIME_CONTROLLER_SCRIPT,
+		root,
+		[],
+		func(service: Node) -> void:
+			root.profile_runtime_controller = service
+	))
+	registrations.append(Row.new(
+		&"PickupRuntimeController",
+		PICKUP_RUNTIME_CONTROLLER_SCRIPT,
+		root,
+		[],
+		func(service: Node) -> void:
+			root.pickup_runtime_controller = service as PickupRuntimeController
+	))
+	registrations.append(Row.new(
+		&"RunFlowController",
+		RUN_FLOW_CONTROLLER_SCRIPT,
+		root,
+		[],
+		func(service: Node) -> void:
+			root.run_flow_controller = service as RunFlowController
+	))
+	registrations.append(Row.new(
+		&"DungeonMapController",
+		DUNGEON_MAP_CONTROLLER_SCRIPT,
+		root,
+		[],
+		func(service: Node) -> void:
+			root.dungeon_map_controller = service as DungeonMapController
+	))
+	registrations.append(Row.new(
+		&"HubFlowController",
+		HUB_FLOW_CONTROLLER_SCRIPT,
+		root,
+		[],
+		func(service: Node) -> void:
+			root.hub_flow_controller = service
+	))
+	registrations.append(Row.new(
+		&"SaveFlowController",
+		SAVE_FLOW_CONTROLLER_SCRIPT,
+		root,
+		[],
+		func(service: Node) -> void:
+			root.save_flow_controller = service
+	))
+	registrations.append(Row.new(
+		&"CloudSaveService",
+		CLOUD_SAVE_SERVICE_SCRIPT,
+		root,
+		[],
+		func(service: Node) -> void:
+			root.cloud_save_service = service as CloudSaveService
+	))
+	registrations.append(Row.new(
+		&"CloudSavePanel",
+		CLOUD_SAVE_PANEL_SCRIPT,
+		root,
+		[&"CloudSaveService"],
+		func(service: Node) -> void:
+			root.cloud_save_panel = service as CloudSavePanel
+			root.cloud_save_panel.configure(root, root.cloud_save_service)
+	))
+	registrations.append(Row.new(
+		&"RoomPuzzleController",
+		ROOM_PUZZLE_CONTROLLER_SCRIPT,
+		root,
+		[],
+		func(service: Node) -> void:
+			root.room_puzzle_controller = service
+	))
+	registrations.append(Row.new(
+		&"MagicRuntimeController",
+		MAGIC_RUNTIME_CONTROLLER_SCRIPT,
+		root,
+		[],
+		func(service: Node) -> void:
+			root.magic_runtime_controller = service as MagicRuntimeController
+	))
+	registrations.append(Row.new(
+		&"TargetingRuntimeController",
+		TARGETING_RUNTIME_CONTROLLER_SCRIPT,
+		root,
+		[],
+		func(service: Node) -> void:
+			root.targeting_runtime_controller = service
+	))
+	registrations.append(Row.new(
+		&"CombatRuntimeController",
+		COMBAT_RUNTIME_CONTROLLER_SCRIPT,
+		root,
+		[],
+		func(service: Node) -> void:
+			root.combat_runtime_controller = service
+	))
+	registrations.append(Row.new(
+		&"SlimeRuntimeController",
+		SLIME_RUNTIME_CONTROLLER_SCRIPT,
+		root,
+		[],
+		func(service: Node) -> void:
+			root.slime_runtime_controller = service
+	))
+	registrations.append(Row.new(
+		&"ActorPresentationRuntimeController",
+		ACTOR_PRESENTATION_RUNTIME_CONTROLLER_SCRIPT,
+		root,
+		[],
+		func(service: Node) -> void:
+			root.actor_presentation_runtime_controller = service
+	))
+	return registrations
+
+
+## Declares the adjacent world-support cohort at the point where it is built.
+## Setup callbacks preserve the debug-drawer and occlusion configuration that
+## previously ran immediately after each add_child call.
+static func world_service_registrations(root: GameplayState) -> Array[Row]:
+	var registrations: Array[Row] = []
+	registrations.append(Row.new(
+		&"WalkableArea",
+		WalkableArea,
+		root,
+		[],
+		func(service: Node) -> void:
+			root.walkable_area = service as WalkableArea
+	))
+	registrations.append(Row.new(
+		&"ActorCollisionSystem",
+		ActorCollisionSystem,
+		root,
+		[],
+		func(service: Node) -> void:
+			root.actor_collision_system = service as ActorCollisionSystem
+	))
+	registrations.append(Row.new(
+		&"ActorGeometryDebugDrawer",
+		ActorGeometryDebugDrawer,
+		root,
+		[],
+		func(service: Node) -> void:
+			var geometry_debug := service as ActorGeometryDebugDrawer
+			geometry_debug.enabled = root.debug_actor_geometry
+			geometry_debug.z_as_relative = false
+			geometry_debug.z_index = 4096
+			root.actor_geometry_debug_drawer = geometry_debug
+	))
+	registrations.append(Row.new(
+		&"DepthSorter",
+		DepthSorter,
+		root,
+		[],
+		func(service: Node) -> void:
+			root.depth_sorter = service as DepthSorter
+	))
+	registrations.append(Row.new(
+		&"OcclusionRenderer",
+		OcclusionRenderer,
+		root,
+		[],
+		func(service: Node) -> void:
+			var occlusion := service as OcclusionRenderer
+			# Web keeps the same visuals but uses the lowest exact-pixel occlusion
+			# pass; desktop keeps the inspector-selected scale unchanged.
+			occlusion.resolution_scale = 1 if OS.has_feature("web") else root.effects_tuning.resolution_scale
+			root.occlusion_renderer = occlusion
+	))
+	registrations.append(Row.new(
+		&"RoomPrefabHost",
+		ROOM_PREFAB_HOST_SCRIPT,
+		root.map_root,
+		[],
+		func(service: Node) -> void:
+			if root.hub_stone_accent_layer == null:
+				return
+			var accent_index := root.map_root.get_children().find(root.hub_stone_accent_layer)
+			if accent_index >= 0:
+				root.map_root.move_child(service, accent_index)
+	))
+	registrations.append(Row.new(
+		&"RoomController",
+		RoomController,
+		root,
+		[],
+		func(service: Node) -> void:
+			root.room_controller = service as RoomController
+			root.room_controller.configure_geometry(
+				root.floor_tiles.get_parent() as Node2D,
+				root.floor_tiles,
+				root.player,
+				root.display_controller,
+				root.scene_file_path)
+			if root.hub_stone_accent_layer != null:
+				root.room_controller.room_entered.connect(
+					Callable(root.hub_stone_accent_layer, "on_room_entered"))
+			root.room_controller.room_cleared.connect(
+				Callable(root.dungeon_map_controller, "on_room_completed_result"))
+			root.room_controller.room_cleared.connect(
+				Callable(root, "_on_room_cleared_for_checkpoint"))
+	))
 	return registrations
 
 
