@@ -1677,3 +1677,9 @@ X05 service context ownership. Move player/chest references out of RoomEnemySpaw
 
 2026-10-16T19:43Z - codex - done
 X05 service context ownership: RoomController now receives player/chest when configured and builds the same typed room snapshots; RoomEnemySpawnServices is down to 26 stored fields from 40. Godot 4.7.2 enemy-room entrance, special-respawn, and encounter-definition smokes pass. Strict composition, UID 473, and refreshed Graphify 21,771 / 49,191 / 742 pass.
+
+2026-10-16T19:44Z - codex - claim
+X04 BuildStep boundary decision. Record conditional saved-route/checkpoint selection and awaited room handoff as runtime workflow outside the service-assembly step queues.
+
+2026-10-16T19:44Z - codex - done
+X04 BuildStep boundary: keep saved-route and checkpoint selection plus awaited room handoff outside assembly queues; those branches and awaits preserve runtime workflow order. Decision recorded in the existing extraction ledger; typed-service context extraction and production append-one-row acceptance remain open.

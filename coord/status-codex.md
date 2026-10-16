@@ -2,7 +2,7 @@
 
 _Only codex writes this file._
 
-**Focus:** X05 moved `player`/`chest` ownership out of `RoomEnemySpawnServices` into typed `RoomController` context construction. The service is down to 26 stored fields; room entry, respawn, and encounter-definition smokes, strict composition, UID validation, and refreshed Graphify pass. Next: resolve the X04 decision about conditional and async route setup outside `BuildStep` queues. and into `RoomController`'s typed room-context setup; preserve the contexts' existing snapshots and spawn behavior.
+**Focus:** X04 queue boundary resolved: saved-profile route selection, checkpoint selection, and awaited room handoff stay outside `BuildStep` queues; the reason is recorded in the X04 ledger. X04 remains open for production append-one-row acceptance and typed RoomEnemySpawnServices context extraction.
 **Updated:** 2026-10-16
 
 ## 2026-10-16 handoff
