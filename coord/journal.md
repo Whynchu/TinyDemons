@@ -1683,3 +1683,9 @@ X04 BuildStep boundary decision. Record conditional saved-route/checkpoint selec
 
 2026-10-16T19:44Z - codex - done
 X04 BuildStep boundary: keep saved-route and checkpoint selection plus awaited room handoff outside assembly queues; those branches and awaits preserve runtime workflow order. Decision recorded in the existing extraction ledger; typed-service context extraction and production append-one-row acceptance remain open.
+
+2026-10-16T19:46Z - codex - claim
+X05 room context identity proof. Assert the live spawn and respawn snapshots preserve player/chest references, canonical roster order, and derived room geometry.
+
+2026-10-16T20:01Z - codex - done
+X05 room context identity proof: enemy-room smoke asserts spawn and respawn snapshots retain the configured player/chest references, canonical EnemyRoster slots, and computed geometry. Godot 4.7.2 test, strict composition, UID 473, and Graphify 21,771 / 49,191 / 742 pass.
