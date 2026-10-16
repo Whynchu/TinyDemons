@@ -1407,7 +1407,7 @@ Begin Phase 0/1 in graphify-godot: select the pinned GDScript grammar and implem
 ## 2026-10-11 - codex - done
 Added the pinned optional GDScript extra and initial .gd discovery/extraction in the local godot-support branch. Five focused tests pass; 605 Tiny Demons scripts have zero extractor exceptions and seven grammar-recovery files. Refreshed the fork code graph. Next: .tres/.tscn parsing and resource resolution.
 
-## 2026-10-11T19:30Z — codex — claim
+## 2026-10-11T19:30Z ï¿½ codex ï¿½ claim
 Implementing the shared Godot text-resource parser and resource-link resolution in the local Graphify fork. Files: graphify-godot/graphify and graphify-godot/tests.
 
 ## 2026-10-11T20:17Z - codex - done
@@ -1437,13 +1437,13 @@ Adding explicit test-to-source and test-runner relationships to Graphify Godot s
 ## 2026-10-11 - codex - done
 Connected all 157 manifest entries to GDScript tests, linked all 157 tests to explicit gameplay references (615 edges), and connected run_all_smoke.ps1 to manifest.csv. Refreshed ignored aggregate and focused HTML; focused Graphify tests passed 395/19.
 
-## 2026-10-11 — codex — claim
+## 2026-10-11 ï¿½ codex ï¿½ claim
 Plan GDScript completion and source-group filters; documentation and coordination only.
 
-## 2026-10-11 — codex — done
+## 2026-10-11 ï¿½ codex ï¿½ done
 Added GDScript completion and viewer filter plan with staged acceptance gates. Next implementation: V1 source-group filters in the Graphify fork.
 
-## 2026-10-11 — codex — claim
+## 2026-10-11 ï¿½ codex ï¿½ claim
 Implement Graphify source-group viewer filters and continue GDScript support in the nested fork. Existing outer project file changes remain untouched.
 
 ## 2026-10-11T23:20Z - codex - done
@@ -1507,7 +1507,7 @@ Reconciled and verified the Tiny Demons map/query documentation. The Graphify fo
 User accepted the shared EnemyBrain architecture and current Slime/Skeleton behavior. P3 focused smoke rows remain unverified and are non-blocking for this acceptance.
 2026-10-14 claim codex scripts/content/enemy_catalog.gd, scripts/editor/enemy_preview_workbench.gd, and focused catalog lifecycle smoke for reversible P4 definition creation.
 2026-10-14 blocker codex focused P4 smoke must wait for active main Godot editor to close; first isolated launch conflicted with the shared MCP registry/port and was stopped.
-2026-10-14 claim codex scripts/content/element_catalog.gd — derive palette-to-element identity from ElementCatalogData without changing mappings.
+2026-10-14 claim codex scripts/content/element_catalog.gd ï¿½ derive palette-to-element identity from ElementCatalogData without changing mappings.
 2026-10-14 done codex P4 enemy lifecycle: focused create/undo/redo smoke passed; static composition, manifest, UID, and diff checks passed.
 2026-10-14 handoff codex P4: element palette lookup now reads ElementCatalogData; focused runtime smoke, schema validation, item authority, and room authority remain open.
 2026-10-14 done codex Graphify refresh: review worktree graph rebuilt at 21,546 nodes, 47,105 edges, 738 communities; HTML and report updated.
@@ -1701,3 +1701,9 @@ X04 final reflective save seam. The root parameter is typed GameplayState; route
 
 2026-10-16T20:39Z - codex - done
 X04 final Bootstrap reflection seam: replaced root.call to the Gameplay-only save hook with the equivalent direct ProfileSaveService.save_profile(profile) call; profile identity and active-profile condition are preserved. title_boot_scene_smoke passes Godot 4.7.2; composition self-test/strict audit, index 312, UID 473, diff check, and Graphify 21,768 / 49,189 / 777 pass. Bootstrap root.call count is zero.
+
+2026-10-16T20:40Z - codex - claim
+Reconcile stale current-source statements in composition-plan-2026.md after the published Bootstrap root.call removal; preserve the remaining X04 acceptance items as open.
+
+2026-10-16T20:41Z - codex - done
+Reconciled the current X04/X05 summary and implementation record in composition-plan-2026.md: GameplayBootstrap has zero root.call references, RoomEnemySpawnServices is down to 25 fields, and the test-only/live-cohort row proof is accurately bounded while real production-row and typed-context acceptance remain open. No source code changed in this documentation reconciliation.

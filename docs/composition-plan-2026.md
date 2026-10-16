@@ -1352,17 +1352,20 @@ build operations as named `BuildStep` entries in ordered lists. The source
 reconciliation on 2026-10-16 found seven cohorts covering 42 production
 services, with one direct attachment left for `PerformanceCaptureService`.
 The historical 31 `root.call(...)` build-dispatch count is no longer current:
-title and gameplay build sequences now use `BuildStep`, and only the concrete
-Gameplay save hook remains a `root.call(...)` in `GameplayBootstrap`.
+title and gameplay build sequences use `BuildStep`, and `GameplayBootstrap`
+now has no `root.call` references. Active-profile persistence calls
+`ProfileSaveService` directly.
 
-Then collapse `RoomEnemySpawnServices` — a 45-member field bag — into typed
-context objects of the `MagicRuntimeContext` shape. The 2026-10-16 X05 slices
-removed its duplicate mutable `slimes` list and moved EnemyRoster ownership,
-actor query lists, family replacement, reset/restoration, and related
-HUD/occlusion/position rebinding into `EnemyActorRuntimeServices`.
-`RoomEnemySpawnServices` is now 30 stored fields, down from 40; the focused
-family-swap, room-entry, respawn, and strict composition checks pass. Broader
-typed-context extraction remains open.
+Continue narrowing `RoomEnemySpawnServices` along typed responsibilities.
+The 2026-10-16 X05 work removed the duplicate mutable `slimes` list and
+actor-foot-offset field; canonical `EnemyRoster` and
+`GameplayState.ACTOR_FOOT_OFFSET` now supply those shared values.
+`EnemyActorRuntimeServices` owns roster-backed query lists, family replacement,
+reset/restoration, and related HUD/occlusion/position rebinding. The ledger
+currently measures 25 `RoomEnemySpawnServices` fields, down from the historical
+40. Keep typed context extraction focused on real room inputs and enemy
+lifecycle responsibilities; the broader slice remains open.
+
 Boot phase purposes now use
 the typed `BuildStep.Phase` enum while retaining their diagnostic keys; move
 remaining inline setup phases into action steps only where the frame and
@@ -1394,16 +1397,21 @@ screen, title-only assembly, and full gameplay animation, visual, and UI build
 sequence. The phase enum maps every existing diagnostic key without changing
 the emitted names; the gameplay sequence retains its ten frame yields. The
 title smoke checks the step order, diagnostic mapping, and yield declarations;
-it also appends one dependency-bound row to the live Gameplay cohort and validates the prerequisite and live node metadata. The Godot 4.7.2 enemy-room entrance smoke exercises the full path. Bootstrap
-`root.call` invocations fell from 37 to one; the remaining call is the save hook
-implemented on the concrete `Gameplay` scene script. The script index is
+it also appends one dependency-bound row to the live Gameplay cohort and
+validates prerequisite and live node metadata. The Godot 4.7.2 enemy-room
+entrance smoke exercises the full path.
+Bootstrap `root.call` invocations fell from 37 to zero; active-profile
+persistence now calls `ProfileSaveService` directly. The script index is
 regenerated.
 
 Stage 3.2 remains partial: `PerformanceCaptureService` is the one direct
 service attachment; `RoomEnemySpawnServices` still needs typed context
 extraction; and the production append-one-row/no-existing-script-edit
-acceptance remains open. The synthetic row-extension fixture proves generic
-row creation only. The current supervised 45-path gate reports 30 pass, 12
+acceptance remains open. The title smoke validates a test-only appended row
+through generic registration and checks a dependency-bound extension against
+live production-cohort metadata; a real production feature added with one row
+and zero existing-script edits remains unproven. The current supervised 45-path
+gate reports 30 pass, 12
 fail, and 3 timeouts; the 12 failures match the recorded red list, and
 `generated_bound_reachability_smoke` passed this run. The timeouts were
 generated layout, generated run scene, and touch controls. Main-scene headless
