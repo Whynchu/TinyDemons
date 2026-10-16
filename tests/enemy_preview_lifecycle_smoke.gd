@@ -6,15 +6,23 @@ extends SceneTree
 const PREVIEW_SCENE := preload("res://scenes/authoring/previews/enemy_preview_workbench.tscn")
 
 var _finished := false
+var _roundtrip_path := ""
+var _roundtrip_owned := false
+var _preview: Node
 
 
 func _initialize() -> void:
+	create_timer(90.0).timeout.connect(_watchdog)
 	call_deferred("_run")
 
 
 func _run() -> void:
 	var failures: Array[String] = []
 	var preview := PREVIEW_SCENE.instantiate()
+	_preview = preview
+	# The editor scene opens in Boss mode; this fixture starts with the regular
+	# family geometry before explicitly switching to its boss counterpart.
+	preview.set("preview_actor_size", 0)
 	preview.set("enemy_id", &"guard_slime")
 	root.add_child(preview)
 	await process_frame
@@ -23,6 +31,21 @@ func _run() -> void:
 	_expect(bool(summary.get("ready", false)), "selected enemy preview resolves", failures)
 	_expect(String(summary.get("id", "")) == "guard_slime", "preview reports the selected stable ID", failures)
 	_expect((preview.get("preview_actor") as Node).process_mode == Node.PROCESS_MODE_DISABLED, "preview actor simulation is disabled", failures)
+	var supports_label_fitting := preview.has_method("_fit_pixel_label_texture")
+	_expect(supports_label_fitting, "pixel labels expose their bounded fitting contract", failures)
+	if supports_label_fitting:
+		var long_name := "A VERY LONG AUTHORED ENEMY NAME WITH A UNIQUE NUMERIC SUFFIX 20261015"
+		var fitted: Texture2D = preview.call("_fit_pixel_label_texture", long_name, Color.WHITE, 136.0)
+		_expect(fitted != null and fitted.get_width() <= 136, "long authored labels fit the preview panel", failures)
+		_expect(preview.call("_fit_pixel_label_texture", long_name, Color.WHITE, 2.0) == null, "labels narrower than the ellipsis safely omit drawing", failures)
+		_expect(preview.call("_fit_pixel_label_texture", long_name, Color.WHITE, 0.0) == null, "zero-width labels safely omit drawing", failures)
+		var selected_definition := preview.get("definition") as EnemyDefinition
+		var original_name := selected_definition.display_name
+		selected_definition.display_name = long_name
+		preview.queue_redraw()
+		await process_frame
+		_expect(bool((preview.call("get_preview_summary") as Dictionary).get("ready", false)), "drawing a long authored name returns to the next frame", failures)
+		selected_definition.display_name = original_name
 
 	preview.call("preview_death_effect")
 	var first_particle_count := (preview.get("_death_effect_particles") as Array).size()
@@ -58,16 +81,20 @@ func _run() -> void:
 	preview.call("redo_geometry_edit")
 	_expect(preview.call("_capture_geometry") == edited, "boss redo restores edited geometry", failures)
 	var packed: PackedScene = preview.call("_pack_boss_geometry")
-	var roundtrip_path := "user://enemy_preview_boss_roundtrip.tscn"
-	var save_result := ResourceSaver.save(packed, roundtrip_path)
-	_expect(save_result == OK, "boss geometry scene saves", failures)
-	if save_result == OK:
-		var saved_scene := ResourceLoader.load(roundtrip_path, "PackedScene", ResourceLoader.CACHE_MODE_IGNORE) as PackedScene
-		var saved_actor := saved_scene.instantiate()
-		_expect(saved_actor.get_node("BodyHitbox").polygon == points, "boss saved scene retains edited body", failures)
-		_expect(saved_actor.get_node("Combat") != null and saved_actor.get_node("Visual") != null, "boss save preserves runtime components", failures)
-		saved_actor.free()
-		DirAccess.remove_absolute(roundtrip_path)
+	_roundtrip_path = "res://.godot/enemy_preview_boss_roundtrip_%d_%d.tscn" % [OS.get_process_id(), Time.get_ticks_usec()]
+	_roundtrip_owned = not FileAccess.file_exists(_roundtrip_path) and not DirAccess.dir_exists_absolute(ProjectSettings.globalize_path(_roundtrip_path)) and not FileAccess.file_exists(_roundtrip_path + ".uid")
+	_expect(_roundtrip_owned, "preview roundtrip reserves a unique ignored path", failures)
+	if _roundtrip_owned:
+		var save_result := ResourceSaver.save(packed, _roundtrip_path)
+		_expect(save_result == OK, "boss geometry scene saves", failures)
+		if save_result == OK:
+			var saved_scene := ResourceLoader.load(_roundtrip_path, "PackedScene", ResourceLoader.CACHE_MODE_IGNORE) as PackedScene
+			_expect(saved_scene != null, "saved boss geometry scene reloads", failures)
+			if saved_scene != null:
+				var saved_actor := saved_scene.instantiate()
+				_expect(saved_actor.get_node("BodyHitbox").polygon == points, "boss saved scene retains edited body", failures)
+				_expect(saved_actor.get_node("Combat") != null and saved_actor.get_node("Visual") != null, "boss save preserves runtime components", failures)
+				saved_actor.free()
 	preview.call("undo_geometry_edit")
 	preview.set("preview_actor_size", 0)
 	await process_frame
@@ -82,6 +109,13 @@ func _run() -> void:
 
 
 func _finish(failures: Array[String]) -> void:
+	_finished = true
+	if is_instance_valid(_preview):
+		_preview.free()
+	if _roundtrip_owned:
+		for path in [_roundtrip_path, _roundtrip_path + ".uid"]:
+			if FileAccess.file_exists(path):
+				_expect(DirAccess.remove_absolute(ProjectSettings.globalize_path(path)) == OK, "preview removes only its reserved roundtrip artifact", failures)
 	if failures.is_empty():
 		print("ENEMY_PREVIEW_LIFECYCLE_SMOKE_OK")
 		quit(0)
@@ -89,6 +123,11 @@ func _finish(failures: Array[String]) -> void:
 	for failure: String in failures:
 		push_error("FAILED: %s" % failure)
 	quit(1)
+
+
+func _watchdog() -> void:
+	if not _finished:
+		_finish(["enemy preview lifecycle smoke timed out"])
 
 
 func _expect(condition: bool, label: String, failures: Array[String]) -> void:

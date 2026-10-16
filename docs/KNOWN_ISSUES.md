@@ -27,6 +27,16 @@ reports, reproduction notes, and acceptance criteria remain in
 does not mean that cold-start timing, every display orientation, physical
 touch input, browser behavior, or a complete player journey has been verified.
 
+## 2026-10-15 composition review — cloud-save presentation check
+
+`cloud_save_contract_smoke` exits 1 on Godot 4.7.1 at two assertions: save
+selection touch-back visibility and title-transition fizzle card coverage.
+Both fail identically with this batch's desktop `_web_has_profile` guard
+temporarily removed, with original source/configuration restored afterward.
+No menu production code changed in the batch. The cloud persistence assertions
+did not report failure. Triage the current presentation contract before the
+standalone gate; the historical manifest pass is not a current-source pass.
+
 ## 2026-10-15 composition review — elite support scaling
 
 Fixed on the composition review branch; no release or phase acceptance is

@@ -14,19 +14,36 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var enemy_id := _enemy_id_from_args()
-	var preview := PREVIEW_SCENE.instantiate()
+	var preview := PREVIEW_SCENE.instantiate() as Node2D
+	if preview == null:
+		push_error("ENEMY_PREVIEW_FAILED id=%s error=scene could not be instantiated" % enemy_id)
+		quit(1)
+		return
 	preview.set("enemy_id", StringName(enemy_id))
 	root.add_child(preview)
 	await process_frame
 
 	var summary := preview.call("get_preview_summary") as Dictionary
-	if not bool(summary.get("ready", false)):
-		push_error("ENEMY_PREVIEW_FAILED id=%s error=%s" % [enemy_id, str(summary.get("error", "unknown error"))])
+	if typeof(summary) != TYPE_DICTIONARY:
+		push_error("ENEMY_PREVIEW_FAILED id=%s error=preview returned no summary" % enemy_id)
 		preview.queue_free()
+		await process_frame
+		quit(1)
+		return
+	var resolved_id := StringName(str(summary.get("id", "")))
+	if not bool(summary.get("ready", false)) or resolved_id != StringName(enemy_id):
+		var failure := str(summary.get("error", ""))
+		if resolved_id != StringName(enemy_id):
+			failure = "requested ID resolved to '%s'" % resolved_id
+		if failure.is_empty():
+			failure = "preview is not ready"
+		push_error("ENEMY_PREVIEW_FAILED id=%s error=%s" % [enemy_id, failure])
+		preview.queue_free()
+		await process_frame
 		quit(1)
 		return
 
-	print("ENEMY_PREVIEW_OK id=%s display=%s element=%s geometry=%s" % [summary.get("id", enemy_id), summary.get("display_name", ""), summary.get("element", ""), summary.get("geometry_valid", false)])
+	print("ENEMY_PREVIEW_OK id=%s display=%s element=%s geometry=%s" % [resolved_id, summary.get("display_name", ""), summary.get("element", ""), summary.get("geometry_valid", false)])
 	preview.queue_free()
 	await process_frame
 	quit(0)

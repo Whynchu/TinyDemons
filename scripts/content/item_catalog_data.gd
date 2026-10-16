@@ -33,6 +33,7 @@ var _authored_definition_data_cache: Dictionary = {}
 var _authored_definition_data_loaded := false
 var _authored_live_ids_cache: Array[StringName] = []
 var _authored_live_ids_loaded := false
+static var _persisted_authored_definition_signatures: Dictionary = {}
 
 
 func authored_definition_resources() -> Array[Resource]:
@@ -113,6 +114,8 @@ func save_authored_definition(definition: ItemDefinition) -> int:
 			return ERR_ALREADY_EXISTS
 	var save_error := ResourceSaver.save(definition, source_path)
 	if save_error == OK:
+		if _normalized_authored_item_path(source_path, definition.id) == source_path:
+			_remember_authored_definition(definition, source_path)
 		invalidate_authored_definition_cache()
 	return save_error
 
@@ -161,6 +164,7 @@ func create_authored_definition(definition: ItemDefinition, resource_path: Strin
 		return manifest_error
 
 	definition.emit_changed()
+	_remember_authored_definition(definition, normalized_path)
 	_invalidate_all_authored_definition_caches()
 	return OK
 
@@ -172,12 +176,20 @@ func remove_authored_definition(definition: ItemDefinition, resource_path: Strin
 	var normalized_path := _normalized_authored_item_path(requested_path, definition.id)
 	if normalized_path.is_empty() or definition.resource_path != normalized_path:
 		return ERR_INVALID_PARAMETER
+	if DirAccess.dir_exists_absolute(ProjectSettings.globalize_path(normalized_path + ".uid")):
+		return ERR_INVALID_DATA
 	if not FileAccess.file_exists(normalized_path):
 		return ERR_DOES_NOT_EXIST
 	var on_disk := ResourceLoader.load(
 		normalized_path, "", ResourceLoader.CACHE_MODE_IGNORE
 	) as ItemDefinition
-	if on_disk == null or not _stored_authored_definition_matches(on_disk, definition):
+	var expected_signature: Dictionary = _persisted_authored_definition_signatures.get(
+		normalized_path, _authored_definition_signature(definition)
+	)
+	if (
+		on_disk == null
+		or not _stored_authored_definition_matches_signature(on_disk, expected_signature)
+	):
 		return ERR_INVALID_DATA
 
 	var original_resource_bytes := FileAccess.get_file_as_bytes(normalized_path)
@@ -214,21 +226,30 @@ func remove_authored_definition(definition: ItemDefinition, resource_path: Strin
 
 	definition.take_over_path("")
 	definition.emit_changed()
+	_persisted_authored_definition_signatures.erase(normalized_path)
 	_invalidate_all_authored_definition_caches()
 	return OK
 
 
-func _stored_authored_definition_matches(
+func _stored_authored_definition_matches_signature(
 	on_disk: ItemDefinition,
-	expected: ItemDefinition,
+	expected_signature: Dictionary,
 ) -> bool:
-	return (
-		on_disk.id == expected.id
-		and on_disk.live == expected.live
-		and on_disk.catalog_owned == expected.catalog_owned
-		and on_disk.resource_name == expected.resource_name
-		and on_disk.to_record() == expected.to_record()
-	)
+	return _authored_definition_signature(on_disk) == expected_signature
+
+
+func _authored_definition_signature(definition: ItemDefinition) -> Dictionary:
+	return {
+		"id": definition.id,
+		"live": definition.live,
+		"catalog_owned": definition.catalog_owned,
+		"resource_name": definition.resource_name,
+		"record": definition.to_record().duplicate(true),
+	}
+
+
+func _remember_authored_definition(definition: ItemDefinition, resource_path: String) -> void:
+	_persisted_authored_definition_signatures[resource_path] = _authored_definition_signature(definition)
 
 
 func _is_valid_authored_item_id(item_id: StringName) -> bool:
@@ -254,6 +275,7 @@ func _authored_item_path_is_occupied(resource_path: String) -> bool:
 		FileAccess.file_exists(resource_path)
 		or FileAccess.file_exists(resource_path + ".uid")
 		or DirAccess.dir_exists_absolute(ProjectSettings.globalize_path(resource_path))
+		or DirAccess.dir_exists_absolute(ProjectSettings.globalize_path(resource_path + ".uid"))
 	)
 
 
@@ -308,13 +330,28 @@ func _restore_item_manifest_dependency(original_dependency: Resource) -> Error:
 
 
 func _replace_item_manifest_dependency() -> Error:
+	var fresh_manifest := ResourceLoader.load(
+		ITEM_MANIFEST_PATH, "", ResourceLoader.CACHE_MODE_IGNORE
+	) as ContentDefinitionManifestData
+	if fresh_manifest == null or not _item_manifest_entries_match_file(fresh_manifest):
+		return ERR_FILE_CANT_OPEN
 	var refreshed_manifest := ResourceLoader.load(
 		ITEM_MANIFEST_PATH, "", ResourceLoader.CACHE_MODE_REPLACE
-	) as Resource
-	if refreshed_manifest == null:
+	) as ContentDefinitionManifestData
+	if refreshed_manifest == null or not _item_manifest_entries_match_file(refreshed_manifest):
 		return ERR_FILE_CANT_OPEN
 	_item_manifest_dependency = refreshed_manifest
 	return OK
+
+
+func _item_manifest_entries_match_file(manifest: ContentDefinitionManifestData) -> bool:
+	if not CONTENT_MANIFEST_SERVICE_SCRIPT.loaded_manifest_matches_file(manifest, ITEM_MANIFEST_PATH):
+		return false
+	for raw_entry: Variant in manifest.entries:
+		var item_definition := raw_entry as ItemDefinition
+		if item_definition == null:
+			return false
+	return true
 
 
 func _snapshot_generated_manifests() -> Dictionary:

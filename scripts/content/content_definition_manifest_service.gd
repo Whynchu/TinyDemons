@@ -88,6 +88,41 @@ static func load_kind_entries(kind: StringName, export_dependency: Resource) -> 
 	return _entries_from_manifest(manifest)
 
 
+## Match this writer's ordered references before adopting an authoring cache.
+## Godot can return an older cached manifest after a dependency fails to load.
+static func loaded_manifest_matches_file(
+	manifest: ContentDefinitionManifestData,
+	manifest_path: String,
+) -> bool:
+	var manifest_file := FileAccess.open(manifest_path, FileAccess.READ)
+	if manifest_file == null:
+		return false
+	var manifest_text := manifest_file.get_as_text()
+	manifest_file.close()
+	var expected_paths: Array[String] = []
+	for line: String in manifest_text.split("\n"):
+		if not line.begins_with('[ext_resource type="Resource" path='):
+			continue
+		var path_marker_start := line.find("path=")
+		if path_marker_start < 0:
+			return false
+		var path_start := path_marker_start + "path=".length()
+		var path_end := line.find(' id="', path_start)
+		if path_end < path_start:
+			return false
+		var raw_path: Variant = JSON.parse_string(line.substr(path_start, path_end - path_start))
+		if typeof(raw_path) != TYPE_STRING:
+			return false
+		expected_paths.append(str(raw_path))
+	if manifest.entries.size() != expected_paths.size():
+		return false
+	for index in expected_paths.size():
+		var entry: Resource = manifest.entries[index]
+		if entry == null or entry.resource_path != expected_paths[index]:
+			return false
+	return true
+
+
 static func _entries_from_manifest(manifest: Resource) -> Array[Resource]:
 	var result: Array[Resource] = []
 	if manifest == null:

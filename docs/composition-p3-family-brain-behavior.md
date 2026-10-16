@@ -1,6 +1,6 @@
 # P3 follow-on — family brain behavior
 
-Status: implemented. Current P3 acceptance is recorded in the [composition plan](composition-cleanup-review-plan.md); focused smokes remain unverified.
+Status: implemented and accepted in the [composition plan](composition-cleanup-review-plan.md). Focused family brain and replacement checks pass on current source, 2026-10-15; broader P1/P2 gates remain separate.
 
 Scope: Keep decision state and candidate steering in one shared `EnemyBrain`, while moving the first family-specific preferred-distance rules into typed behavior components.
 
@@ -42,9 +42,9 @@ separately.
 - Fresh Godot filesystem scan followed by a `BossRoomDebug` restart: a serialized boss Slime and factory-created Skeleton both had a `FamilyBehavior` child and a non-null typed strategy reference.
 - The focused scene run started without editor-console warnings/errors or game-log errors. This is a startup and composition probe, not a mixed-room behavior or release-gate pass.
 - MCP script diagnostics passed for the shared brain, behavior base and family scripts, actor hooks, factory, and new smoke.
-- `tests/enemy_brain_behavior_smoke.gd` loads the actual boss Slime authoring scene, checks direct Skeleton setup and factory assembly, preserves the family ranges, and verifies the Skeleton range through the target used by its walk path. It has not run.
-- The existing `encounter_definition_smoke.gd` family replacement path asserts that Slime-to-Skeleton-to-Slime swaps bind the matching behavior components. Its added assertion remains unverified.
-- Focused smoke rows remain unverified and must not be represented as passes. They are not blockers under the acceptance recorded in the parent plan.
+- `tests/enemy_brain_behavior_smoke.gd` passes on Godot 4.7.1 and 4.7.2, 2026-10-15. It loads the actual boss Slime authoring scene, checks direct Skeleton setup and factory assembly, preserves family ranges, and verifies the Skeleton target used by its walk path.
+- `encounter_definition_smoke.gd` passes on Godot 4.7.2, including Slime-to-Skeleton-to-Slime replacement and matching family components.
+- These focused results do not advance P1/P2 release acceptance. See [current characterization](composition-p1-characterization.md) for file-backed recovery, export and curated-gate gaps.
 
 ## Future boundary
 

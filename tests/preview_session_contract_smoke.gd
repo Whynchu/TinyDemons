@@ -25,7 +25,11 @@ func _run() -> void:
 		_expect(round_trip.get("requested_mode") == session.get("requested_mode"), "preview route is preserved", failures)
 		_expect(round_trip.get("seed") == session.get("seed"), "round-trip seed is preserved", failures)
 		_expect(round_trip.get("loadout") == session.get("loadout"), "loadout is preserved", failures)
-	var payload_path := "user://preview_session_contract_smoke.json"
+	var payload_path := "res://.godot/preview_session_contract_%d_%d.json" % [OS.get_process_id(), Time.get_ticks_usec()]
+	if FileAccess.file_exists(payload_path) or DirAccess.dir_exists_absolute(ProjectSettings.globalize_path(payload_path)):
+		failures.append("temporary payload path is already occupied; test refuses to overwrite it")
+		_finish(failures)
+		return
 	var payload_file := FileAccess.open(payload_path, FileAccess.WRITE)
 	_expect(payload_file != null, "temporary payload fixture opens", failures)
 	if payload_file != null:
@@ -38,7 +42,7 @@ func _run() -> void:
 		var parsed_session := parsed_args.get("session") as RefCounted
 		_expect(bool(parsed_args.get("present", false)), "session argument is detected", failures)
 		_expect(parsed_session != null and parsed_args.get("payload_path") == ProjectSettings.globalize_path(payload_path), "argument payload loads from disk", failures)
-		DirAccess.remove_absolute(ProjectSettings.globalize_path(payload_path))
+		_expect(DirAccess.remove_absolute(ProjectSettings.globalize_path(payload_path)) == OK, "test removes only its own payload fixture", failures)
 
 	var session_record: Dictionary = session.call("to_record") as Dictionary
 	var bad_schema := session_record.duplicate(true)

@@ -3,7 +3,7 @@
 Review proposal: [Composition and repository cleanup](composition-cleanup-review-plan.md)
 and its [whole-map census](composition-map-census.json). P0 dispositions are
 complete; see the [human-readable P0 review](composition-p0-review.md) and
-[full disposition inventory](composition-p0-disposition.json). The [extraction ledger](composition-extraction-ledger.md) records remaining source work. The [P3 steering injection](composition-p3-steering-injection.md) and [P3 family brain behavior](composition-p3-family-brain-behavior.md) describe the shared EnemyBrain implementation. Acceptance lives in the composition plan; focused smoke rows remain unverified. Existing approved composition and authoring plans remain authoritative.
+[full disposition inventory](composition-p0-disposition.json). The [extraction ledger](composition-extraction-ledger.md) records remaining source work. [P1/P2 characterization](composition-p1-characterization.md) records current review-branch evidence and gaps. The [P3 steering injection](composition-p3-steering-injection.md) and [P3 family brain behavior](composition-p3-family-brain-behavior.md) describe the shared EnemyBrain implementation; their focused checks now pass. Acceptance lives in the composition plan. Existing approved composition and authoring plans remain authoritative.
 
 Status: current navigation guide for the `0.3.x` cycle
 
@@ -12,7 +12,7 @@ sequences the existing composition/authoring authorities into bounded advisor
 and Luna worker tasks. The [team skill](../.agents/skills/tiny-demons-team/SKILL.md)
 defines delegation packets and evidence; it does not replace those authorities.
 
-Updated: 2026-10-14
+Updated: 2026-10-15
 
 The repository contains design history, implementation handoffs, audits, and
 active plans. Use this page to choose the right authority before changing code.

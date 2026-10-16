@@ -26,6 +26,7 @@ var _outside_catalog_path_reserved := false
 var _blocked_path := ""
 var _blocked_path_reserved := false
 var _blocked_directory_created := false
+var _uid_directory_probe_paths: Array[String] = []
 var _workbench: Node2D
 var _preview: Node2D
 var _replacement_probe_active := false
@@ -39,6 +40,10 @@ var _manifest_failure_backup_reserved := false
 var _manifest_failure_directory_created := false
 var _manifest_failure_fixture_active := false
 var _manifest_failure_original_manifests: Dictionary = {}
+var _remove_failure_fixture_active := false
+var _remove_failure_path := ""
+var _remove_failure_path_reserved := false
+var _remove_failure_state: Dictionary = {}
 
 
 func _initialize() -> void:
@@ -133,7 +138,7 @@ func _run_authored_lifecycle(catalog: ItemCatalog, failures: Array[String]) -> v
 		if FileAccess.file_exists(candidate_path) or DirAccess.dir_exists_absolute(ProjectSettings.globalize_path(candidate_path)):
 			continue
 		var candidate_uid_path := candidate_path + ".uid"
-		if FileAccess.file_exists(candidate_uid_path):
+		if FileAccess.file_exists(candidate_uid_path) or DirAccess.dir_exists_absolute(ProjectSettings.globalize_path(candidate_uid_path)):
 			continue
 		_fixture_id = candidate_id
 		_fixture_path = candidate_path
@@ -280,6 +285,7 @@ func _exercise_transaction_boundaries(
 		_blocked_directory_created = false
 
 	_exercise_manifest_failure_rollback(catalog, source_definition, failures)
+	_exercise_uid_directory_create_blocker(catalog, source_definition, failures)
 
 
 func _exercise_undo_redo(
@@ -290,8 +296,43 @@ func _exercise_undo_redo(
 ) -> void:
 	var source_id := source_definition.id
 	var workbench_ref: WeakRef = weakref(_workbench)
+	var saved_baseline_name := "Saved Item Lifecycle Baseline"
+	definition.display_name = saved_baseline_name
+	definition.resource_name = saved_baseline_name
+	var save_error := int(catalog.call("save_authored_definition", definition))
+	_expect(save_error == OK, "lifecycle saves an edited baseline through the catalog API", failures)
+	var persisted_record: Dictionary = definition.to_record().duplicate(true)
+	var saved_baseline_disk := ResourceLoader.load(
+		_fixture_path, "", ResourceLoader.CACHE_MODE_IGNORE
+	) as ItemDefinition
+	_expect(
+		saved_baseline_disk != null
+			and saved_baseline_disk.to_record() == persisted_record
+			and saved_baseline_disk.resource_name == saved_baseline_name,
+		"successful item save updates the persisted semantic baseline",
+		failures
+	)
+	var unsaved_draft_name := "Unsaved Lifecycle Draft After Save"
+	definition.display_name = unsaved_draft_name
+	definition.resource_name = unsaved_draft_name
+	_expect(definition.to_record() != persisted_record, "undo fixture holds an unsaved in-memory item draft", failures)
+	var pre_undo_disk := ResourceLoader.load(
+		_fixture_path, "", ResourceLoader.CACHE_MODE_IGNORE
+	) as ItemDefinition
+	_expect(
+		pre_undo_disk != null
+			and pre_undo_disk.to_record() == persisted_record
+			and pre_undo_disk.resource_name == saved_baseline_name,
+		"unsaved item draft leaves the newly saved baseline unchanged before undo",
+		failures
+	)
 	catalog.call("undo_authored_definition_action", definition, _fixture_path, source_id, workbench_ref)
 	_expect(not FileAccess.file_exists(_fixture_path), "undo removes the standalone definition file", failures)
+	_expect(
+		definition.display_name == unsaved_draft_name and definition.resource_name == unsaved_draft_name,
+		"undo retains the unsaved item draft in memory",
+		failures
+	)
 	_fixture_file_created = FileAccess.file_exists(_fixture_path)
 	var after_undo_catalog := ITEM_CATALOG_SCRIPT.new() as ItemCatalog
 	_expect(not after_undo_catalog.definition_exists(_fixture_id), "undo removes the item from catalog discovery", failures)
@@ -311,25 +352,221 @@ func _exercise_undo_redo(
 		)
 		_fixture_file_created = FileAccess.file_exists(_fixture_path)
 		_expect(_fixture_file_created, "redo recreates the standalone definition file", failures)
+		var redone_definition := ResourceLoader.load(
+			_fixture_path, "", ResourceLoader.CACHE_MODE_IGNORE
+		) as ItemDefinition
+		_expect(
+			redone_definition != null
+				and redone_definition.display_name == unsaved_draft_name
+				and redone_definition.resource_name == unsaved_draft_name,
+			"redo persists the unsaved item draft after the explicit save",
+			failures
+		)
 		var after_redo_catalog := ITEM_CATALOG_SCRIPT.new() as ItemCatalog
 		_expect(after_redo_catalog.definition_exists(_fixture_id), "redo restores item catalog discovery", failures)
 		_expect(StringName(str(_workbench.get("item_id"))) == _fixture_id, "redo selects the restored item", failures)
 		_expect(CONTENT_MANIFEST_SERVICE_SCRIPT.check_freshness().is_empty(), "redo refreshes all generated manifests", failures)
-		_exercise_replaced_file_rejection(catalog, definition, source_definition, failures)
+		_exercise_remove_manifest_refresh_failure(catalog, definition, failures)
+		_exercise_replaced_file_rejection(catalog, source_definition, failures)
+	_exercise_uid_directory_remove_blocker(catalog, failures)
+
+
+func _exercise_remove_manifest_refresh_failure(
+	catalog: ItemCatalog,
+	definition: ItemDefinition,
+	failures: Array[String],
+) -> void:
+	var fault_stem := "codex_item_remove_manifest_fault_%d" % Time.get_ticks_usec()
+	_remove_failure_path = ITEM_RESOURCE_ROOT.path_join("%s.tres" % fault_stem)
+	var missing_script_path := "res://scripts/content/%s_missing.gd" % fault_stem
+	_remove_failure_path_reserved = (
+		not FileAccess.file_exists(_remove_failure_path)
+		and not FileAccess.file_exists(_remove_failure_path + ".uid")
+		and not DirAccess.dir_exists_absolute(ProjectSettings.globalize_path(_remove_failure_path))
+		and not DirAccess.dir_exists_absolute(ProjectSettings.globalize_path(_remove_failure_path + ".uid"))
+	)
+	_expect(_remove_failure_path_reserved, "post-delete failure resource path is unused", failures)
+	var missing_script_reserved := (
+		not FileAccess.file_exists(missing_script_path)
+		and not DirAccess.dir_exists_absolute(ProjectSettings.globalize_path(missing_script_path))
+	)
+	_expect(missing_script_reserved, "post-delete failure dependency path is unused", failures)
+	if not _remove_failure_path_reserved or not missing_script_reserved or not FileAccess.file_exists(_fixture_path):
+		return
+
+	_remove_failure_state = {
+		"fixture": _snapshot_test_file(_fixture_path),
+		"fixture_uid": _snapshot_test_file(_fixture_uid_path),
+		"catalog": _snapshot_test_file(ITEM_CATALOG_DATA_SCRIPT.DEFAULT_DATA_PATH),
+		"catalog_uid": _snapshot_test_file(ITEM_CATALOG_DATA_SCRIPT.DEFAULT_DATA_PATH + ".uid"),
+		"manifests": _snapshot_generated_manifest_state(),
+	}
+	var original_display_name := definition.display_name
+	var original_resource_name := definition.resource_name
+	var unsaved_failure_draft := "Unsaved Draft Across Manifest Rollback"
+	definition.display_name = unsaved_failure_draft
+	definition.resource_name = unsaved_failure_draft
+	var persisted_before_failure := ResourceLoader.load(
+		_fixture_path, "", ResourceLoader.CACHE_MODE_IGNORE
+	) as ItemDefinition
+	_expect(
+		persisted_before_failure != null
+			and persisted_before_failure.display_name != unsaved_failure_draft
+			and persisted_before_failure.to_record() != definition.to_record(),
+		"post-delete rollback probe has a persisted snapshot distinct from its dirty draft",
+		failures
+	)
+	_remove_failure_fixture_active = true
+	var invalid_resource_text := (
+		'[gd_resource type="Resource" script_class="ItemDefinition" load_steps=2 format=3]\n'
+		+ '[ext_resource type="Script" path="%s" id="1"]\n' % missing_script_path
+		+ '[resource]\nscript = ExtResource("1")\n'
+	)
+	var fault_write_error := _write_test_bytes(
+		_remove_failure_path, invalid_resource_text.to_utf8_buffer()
+	)
+	_expect(fault_write_error == OK, "test writes its reserved malformed item manifest dependency", failures)
+	var remove_error := ERR_FILE_CANT_OPEN
+	if fault_write_error == OK:
+		remove_error = int(catalog.call("remove_authored_definition", definition, _fixture_path))
+		_expect(
+			remove_error == ERR_FILE_CANT_OPEN,
+			"remove reaches manifest cache failure after deleting the fixture",
+			failures
+		)
+		_expect(
+			FileAccess.get_file_as_bytes(_fixture_path) == _remove_failure_state["fixture"].get("bytes", PackedByteArray()),
+			"failed item remove restores exact definition bytes",
+			failures
+		)
+		_expect(
+			_snapshot_test_file(_fixture_uid_path) == _remove_failure_state["fixture_uid"],
+			"failed item remove restores exact UID-sidecar state",
+			failures
+		)
+		_expect(
+			_snapshot_test_file(ITEM_CATALOG_DATA_SCRIPT.DEFAULT_DATA_PATH) == _remove_failure_state["catalog"],
+			"failed item remove preserves exact catalog bytes",
+			failures
+		)
+		_expect(
+			_snapshot_test_file(ITEM_CATALOG_DATA_SCRIPT.DEFAULT_DATA_PATH + ".uid") == _remove_failure_state["catalog_uid"],
+			"failed item remove preserves exact catalog UID-sidecar state",
+			failures
+		)
+		_expect(
+			_generated_manifest_state_matches(_remove_failure_state["manifests"]),
+			"failed item remove restores every generated manifest byte",
+			failures
+		)
+		var restored_catalog := ITEM_CATALOG_SCRIPT.new() as ItemCatalog
+		_expect(restored_catalog.definition_exists(_fixture_id), "failed item remove restores catalog discovery", failures)
+
+	_restore_remove_manifest_failure_fixture(failures)
+	_fixture_file_created = FileAccess.file_exists(_fixture_path)
+	definition.take_over_path(_fixture_path)
+	if fault_write_error != OK or remove_error == OK:
+		definition.display_name = original_display_name
+		definition.resource_name = original_resource_name
+		return
+	if not _fixture_file_created and not FileAccess.file_exists(_fixture_path):
+		definition.display_name = original_display_name
+		definition.resource_name = original_resource_name
+		var recovery_error := int(catalog.call("create_authored_definition", definition, _fixture_path))
+		_expect(recovery_error == OK, "test recovers the authored fixture after a failed probe", failures)
+		_fixture_file_created = FileAccess.file_exists(_fixture_path)
+	if FileAccess.file_exists(_fixture_path):
+		var retained_snapshot_remove_error := int(
+			catalog.call("remove_authored_definition", definition, _fixture_path)
+		)
+		_expect(
+			retained_snapshot_remove_error == OK,
+			"later dirty item removal succeeds with the persisted snapshot retained",
+			failures
+		)
+		_expect(not FileAccess.file_exists(_fixture_path), "successful retry removes the item fixture", failures)
+		_expect(
+			definition.display_name == unsaved_failure_draft
+				and definition.resource_name == unsaved_failure_draft,
+			"successful retry preserves the unsaved draft in memory",
+			failures
+		)
+		_fixture_file_created = FileAccess.file_exists(_fixture_path)
+		var recreate_error := int(catalog.call("create_authored_definition", definition, _fixture_path))
+		_expect(recreate_error == OK, "test recreates the fixture for the remaining ownership probes", failures)
+	_fixture_file_created = FileAccess.file_exists(_fixture_path)
+	_expect(_fixture_file_created, "post-delete failure probe leaves the main fixture available", failures)
+
+
+func _restore_remove_manifest_failure_fixture(failures: Array[String]) -> void:
+	if not _remove_failure_fixture_active:
+		return
+	var restore_succeeded := true
+	if _remove_failure_path_reserved:
+		for path: String in [_remove_failure_path, _remove_failure_path + ".uid"]:
+			if FileAccess.file_exists(path):
+				var remove_error := _remove_file(path)
+				if remove_error != OK:
+					failures.append("remove failure fixture cleanup failed for %s (%d)" % [path, remove_error])
+					restore_succeeded = false
+		for pair: Array in [
+			[_fixture_path, _remove_failure_state.get("fixture", {})],
+			[_fixture_uid_path, _remove_failure_state.get("fixture_uid", {})],
+			[ITEM_CATALOG_DATA_SCRIPT.DEFAULT_DATA_PATH, _remove_failure_state.get("catalog", {})],
+			[ITEM_CATALOG_DATA_SCRIPT.DEFAULT_DATA_PATH + ".uid", _remove_failure_state.get("catalog_uid", {})],
+		]:
+			var state: Dictionary = pair[1]
+			if not _restore_test_file_snapshot(pair[0], state):
+				failures.append("remove failure fixture could not restore %s" % pair[0])
+				restore_succeeded = false
+	var manifest_state: Dictionary = _remove_failure_state.get("manifests", {})
+	_restore_generated_manifest_state(manifest_state, failures)
+	if not _generated_manifest_state_matches(manifest_state):
+		restore_succeeded = false
+	if not CONTENT_MANIFEST_SERVICE_SCRIPT.check_freshness().is_empty():
+		failures.append("remove failure fixture did not restore generated manifest freshness")
+		restore_succeeded = false
+	if restore_succeeded:
+		_remove_failure_fixture_active = false
+		_fixture_file_created = FileAccess.file_exists(_fixture_path)
+
+
+func _snapshot_test_file(resource_path: String) -> Dictionary:
+	var exists := FileAccess.file_exists(resource_path)
+	return {
+		"exists": exists,
+		"bytes": FileAccess.get_file_as_bytes(resource_path) if exists else PackedByteArray(),
+	}
+
+
+func _restore_test_file_snapshot(resource_path: String, state: Dictionary) -> bool:
+	if bool(state.get("exists", false)):
+		var bytes: PackedByteArray = state.get("bytes", PackedByteArray())
+		if _write_test_bytes(resource_path, bytes) != OK:
+			return false
+		return FileAccess.get_file_as_bytes(resource_path) == bytes
+	if FileAccess.file_exists(resource_path):
+		return _remove_file(resource_path) == OK
+	return true
 
 
 func _exercise_replaced_file_rejection(
 	catalog: ItemCatalog,
-	definition: ItemDefinition,
 	source_definition: ItemDefinition,
 	failures: Array[String],
 ) -> void:
 	if not FileAccess.file_exists(_fixture_path):
 		_expect(false, "replacement rejection starts with the recreated fixture", failures)
 		return
+	var persisted_definition := ResourceLoader.load(
+		_fixture_path, "", ResourceLoader.CACHE_MODE_IGNORE
+	) as ItemDefinition
+	_expect(persisted_definition != null, "replacement probes freshly load the persisted item", failures)
+	if persisted_definition == null:
+		return
 	var original_bytes := FileAccess.get_file_as_bytes(_fixture_path)
 	var original_text := FileAccess.get_file_as_string(_fixture_path)
-	var original_display_field := 'display_name = "%s"' % definition.display_name
+	var original_display_field := 'display_name = "%s"' % persisted_definition.display_name
 	var changed_display_text := original_text.replace(
 		original_display_field, 'display_name = "EXTERNAL EDIT"'
 	)
@@ -337,7 +574,7 @@ func _exercise_replaced_file_rejection(
 	if changed_display_text != original_text:
 		_exercise_replacement_attempt(
 			catalog,
-			definition,
+			persisted_definition,
 			original_bytes,
 			changed_display_text,
 			"remove rejects same-ID external content changes",
@@ -353,7 +590,7 @@ func _exercise_replaced_file_rejection(
 	if replacement_id_text != original_text:
 		_exercise_replacement_attempt(
 			catalog,
-			definition,
+			persisted_definition,
 			original_bytes,
 			replacement_id_text,
 			"remove rejects an on-disk definition with a replaced ID",
@@ -479,6 +716,168 @@ func _exercise_existing_path_collision(
 	var manifest_error := int(CONTENT_MANIFEST_SERVICE_SCRIPT.refresh_manifest())
 	_expect(manifest_error == OK, "path collision cleanup restores generated manifests", failures)
 	ITEM_CATALOG_DATA_SCRIPT.invalidate_default_cache()
+
+
+func _exercise_uid_directory_create_blocker(
+	catalog: ItemCatalog,
+	source_definition: ItemDefinition,
+	failures: Array[String],
+) -> void:
+	var probe_id := StringName("codex_item_uid_directory_create_%d" % Time.get_ticks_usec())
+	var probe_path := ITEM_RESOURCE_ROOT.path_join("%s.tres" % String(probe_id))
+	var uid_path := probe_path + ".uid"
+	var path_reserved := (
+		not catalog.definition_exists(probe_id)
+		and not FileAccess.file_exists(probe_path)
+		and not FileAccess.file_exists(uid_path)
+		and not DirAccess.dir_exists_absolute(ProjectSettings.globalize_path(probe_path))
+		and not DirAccess.dir_exists_absolute(ProjectSettings.globalize_path(uid_path))
+	)
+	_expect(path_reserved, "UID directory create probe reserves a unique item resource and sidecar", failures)
+	if not path_reserved:
+		return
+
+	var manifest_snapshot := _snapshot_generated_manifest_state()
+	var before_catalog := ITEM_CATALOG_SCRIPT.new() as ItemCatalog
+	var before_ids: Array[StringName] = before_catalog.all_definition_ids()
+	var directory_error := DirAccess.make_dir_absolute(ProjectSettings.globalize_path(uid_path))
+	_expect(directory_error == OK, "UID directory create probe reserves an empty sidecar directory", failures)
+	if directory_error != OK:
+		return
+	_uid_directory_probe_paths.append(uid_path)
+	var candidate := source_definition.duplicate(true) as ItemDefinition
+	candidate.id = probe_id
+	var create_error := int(catalog.call("create_authored_definition", candidate, probe_path))
+	_expect(create_error == ERR_ALREADY_EXISTS, "item create rejects an occupied UID sidecar directory", failures)
+	_expect(not FileAccess.file_exists(probe_path), "rejected UID directory create writes no item resource", failures)
+	_expect(DirAccess.dir_exists_absolute(ProjectSettings.globalize_path(uid_path)), "rejected UID directory create preserves the sidecar directory", failures)
+	if FileAccess.file_exists(probe_path):
+		_expect(_remove_file(probe_path) == OK, "test removes only its newly created UID-probe resource", failures)
+	if FileAccess.file_exists(uid_path):
+		_expect(_remove_file(uid_path) == OK, "test removes only its newly created UID-probe sidecar", failures)
+	var remove_directory_error := DirAccess.remove_absolute(ProjectSettings.globalize_path(uid_path))
+	_expect(remove_directory_error == OK, "test removes only its empty UID create-probe directory", failures)
+	_restore_generated_manifest_state(manifest_snapshot, failures)
+	var after_catalog := ITEM_CATALOG_SCRIPT.new() as ItemCatalog
+	_expect(not after_catalog.definition_exists(probe_id), "rejected UID directory create does not register the item ID", failures)
+	_expect(after_catalog.all_definition_ids() == before_ids, "rejected UID directory create preserves item discovery", failures)
+	_expect(_generated_manifest_state_matches(manifest_snapshot), "UID directory create probe restores exact manifest bytes", failures)
+
+
+func _exercise_uid_directory_remove_blocker(
+	catalog: ItemCatalog,
+	failures: Array[String],
+) -> void:
+	if not FileAccess.file_exists(_fixture_path):
+		_expect(false, "UID directory remove probe starts with its standalone fixture", failures)
+		return
+	var definition := ResourceLoader.load(
+		_fixture_path, "", ResourceLoader.CACHE_MODE_IGNORE
+	) as ItemDefinition
+	_expect(definition != null, "UID directory remove probe freshly loads the fixture", failures)
+	if definition == null:
+		return
+	var resource_bytes := FileAccess.get_file_as_bytes(_fixture_path)
+	var uid_exists := FileAccess.file_exists(_fixture_uid_path)
+	var uid_bytes := FileAccess.get_file_as_bytes(_fixture_uid_path) if uid_exists else PackedByteArray()
+	var manifest_snapshot := _snapshot_generated_manifest_state()
+	var before_catalog := ITEM_CATALOG_SCRIPT.new() as ItemCatalog
+	var before_ids: Array[StringName] = before_catalog.all_definition_ids()
+	var uid_absolute_path := ProjectSettings.globalize_path(_fixture_uid_path)
+	if DirAccess.dir_exists_absolute(uid_absolute_path):
+		_expect(false, "fixture UID path has no pre-existing directory", failures)
+		return
+	if uid_exists:
+		var remove_uid_error := DirAccess.remove_absolute(uid_absolute_path)
+		_expect(remove_uid_error == OK, "test frees only its own fixture UID sidecar for a blocker", failures)
+		if remove_uid_error != OK:
+			return
+	var directory_error := DirAccess.make_dir_absolute(uid_absolute_path)
+	_expect(directory_error == OK, "UID directory remove probe reserves an empty fixture sidecar path", failures)
+	if directory_error != OK:
+		if uid_exists:
+			_expect(_write_test_bytes(_fixture_uid_path, uid_bytes) == OK, "failed UID blocker setup restores sidecar bytes", failures)
+		return
+	_uid_directory_probe_paths.append(_fixture_uid_path)
+
+	var remove_error := int(catalog.call("remove_authored_definition", definition, _fixture_path))
+	_expect(remove_error != OK, "item remove rejects a directory occupying the UID sidecar path", failures)
+	_expect(FileAccess.get_file_as_bytes(_fixture_path) == resource_bytes, "rejected UID directory removal preserves item bytes", failures)
+	_expect(DirAccess.dir_exists_absolute(uid_absolute_path), "rejected UID directory removal preserves the sidecar directory", failures)
+	var after_catalog := ITEM_CATALOG_SCRIPT.new() as ItemCatalog
+	_expect(after_catalog.definition_exists(_fixture_id), "rejected UID directory removal preserves item discovery", failures)
+	_expect(after_catalog.all_definition_ids() == before_ids, "rejected UID directory removal leaves item IDs unchanged", failures)
+	_expect(_generated_manifest_state_matches(manifest_snapshot), "rejected UID directory removal preserves exact manifest bytes", failures)
+
+	var remove_directory_error := DirAccess.remove_absolute(uid_absolute_path)
+	_expect(remove_directory_error == OK, "test removes only its empty fixture UID directory", failures)
+	if not FileAccess.file_exists(_fixture_path) or FileAccess.get_file_as_bytes(_fixture_path) != resource_bytes:
+		_expect(_write_test_bytes(_fixture_path, resource_bytes) == OK, "UID blocker restores exact fixture resource bytes", failures)
+	if uid_exists:
+		if not FileAccess.file_exists(_fixture_uid_path) or FileAccess.get_file_as_bytes(_fixture_uid_path) != uid_bytes:
+			_expect(_write_test_bytes(_fixture_uid_path, uid_bytes) == OK, "UID blocker restores exact fixture sidecar bytes", failures)
+	elif FileAccess.file_exists(_fixture_uid_path):
+		_expect(_remove_file(_fixture_uid_path) == OK, "UID blocker removes only its newly generated sidecar", failures)
+	_restore_generated_manifest_state(manifest_snapshot, failures)
+	definition.take_over_path(_fixture_path)
+	_fixture_file_created = FileAccess.file_exists(_fixture_path)
+	_expect(not DirAccess.dir_exists_absolute(uid_absolute_path), "UID directory remove probe leaves no sidecar directory", failures)
+	_expect(_generated_manifest_state_matches(manifest_snapshot), "UID directory remove probe restores exact manifest bytes", failures)
+
+
+func _snapshot_generated_manifest_state() -> Dictionary:
+	var snapshot: Dictionary = {}
+	for manifest_path: String in GENERATED_MANIFEST_PATHS:
+		var exists := FileAccess.file_exists(manifest_path)
+		snapshot[manifest_path] = {
+			"exists": exists,
+			"bytes": FileAccess.get_file_as_bytes(manifest_path) if exists else PackedByteArray(),
+		}
+	return snapshot
+
+
+func _restore_generated_manifest_state(snapshot: Dictionary, failures: Array[String]) -> void:
+	for manifest_path: String in GENERATED_MANIFEST_PATHS:
+		var state: Dictionary = snapshot.get(manifest_path, {})
+		if bool(state.get("exists", false)):
+			var expected_bytes: PackedByteArray = state.get("bytes", PackedByteArray())
+			_expect(_write_test_bytes(manifest_path, expected_bytes) == OK, "test restores manifest %s" % manifest_path, failures)
+		elif FileAccess.file_exists(manifest_path):
+			_expect(_remove_file(manifest_path) == OK, "test removes only generated manifest %s" % manifest_path, failures)
+
+	var restored_item_manifest := ResourceLoader.load(
+		ITEM_MANIFEST_PATH, "", ResourceLoader.CACHE_MODE_REPLACE
+	) as Resource
+	var default_data := load(ITEM_CATALOG_DATA_SCRIPT.DEFAULT_DATA_PATH) as ItemCatalogData
+	if restored_item_manifest == null or default_data == null:
+		_expect(false, "test reloads the restored item manifest dependency", failures)
+	else:
+		default_data._item_manifest_dependency = restored_item_manifest
+		default_data.invalidate_authored_definition_cache()
+	ITEM_CATALOG_DATA_SCRIPT.invalidate_default_cache()
+	_expect(_generated_manifest_state_matches(snapshot), "test verifies exact generated manifest restoration", failures)
+
+
+func _generated_manifest_state_matches(snapshot: Dictionary) -> bool:
+	for manifest_path: String in GENERATED_MANIFEST_PATHS:
+		var state: Dictionary = snapshot.get(manifest_path, {})
+		var existed := bool(state.get("exists", false))
+		if FileAccess.file_exists(manifest_path) != existed:
+			return false
+		if existed and FileAccess.get_file_as_bytes(manifest_path) != state.get("bytes", PackedByteArray()):
+			return false
+	return true
+
+
+func _write_test_bytes(resource_path: String, bytes: PackedByteArray) -> Error:
+	var file := FileAccess.open(resource_path, FileAccess.WRITE)
+	if file == null:
+		return FileAccess.get_open_error()
+	file.store_buffer(bytes)
+	file.flush()
+	var write_error := file.get_error()
+	file.close()
+	return write_error
 
 
 func _exercise_manifest_failure_rollback(
@@ -667,6 +1066,7 @@ func _watchdog() -> void:
 
 
 func _cleanup_test_resources(failures: Array[String], verify_cleanup: bool) -> void:
+	_restore_remove_manifest_failure_fixture(failures)
 	_restore_replaced_fixture_resource(failures)
 	_restore_manifest_failure_fixture(failures)
 	if _replacement_backup_reserved and not _replacement_probe_active and FileAccess.file_exists(_replacement_backup_path):
@@ -705,6 +1105,11 @@ func _cleanup_test_resources(failures: Array[String], verify_cleanup: bool) -> v
 		if directory_remove_error != OK:
 			failures.append("rollback directory cleanup failed (%d)" % directory_remove_error)
 		_blocked_directory_created = false
+	for uid_directory_path: String in _uid_directory_probe_paths:
+		if DirAccess.dir_exists_absolute(ProjectSettings.globalize_path(uid_directory_path)):
+			var uid_directory_remove_error := DirAccess.remove_absolute(ProjectSettings.globalize_path(uid_directory_path))
+			if uid_directory_remove_error != OK:
+				failures.append("UID directory probe cleanup failed for %s (%d)" % [uid_directory_path, uid_directory_remove_error])
 
 	if _fixture_path_reserved and _replacement_probe_active and verify_cleanup:
 		failures.append("replacement fixture could not be restored; preserving the file and byte backup")

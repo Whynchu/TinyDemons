@@ -7,15 +7,32 @@ _Only codex writes this file._
 
 ## In flight: Delegated composition completion
 
-Elite support scaling is verified for publication as its own bug-fix package:
+Elite support scaling is published as `221d387` on the composition branch:
 R6+ and support-component smokes pass4.7.1 after old-source failures (101 route
 assertions plus generated/restored support failures across five ranks).
 Thorn found no RNG/order/restore defect. Shared scaling owns the unchanged lead
 band; only formerly underleveled elite supports change. Other local work below
 (enemy CLI, dirty-undo hardening, stronger P1 recovery/evidence) is not yet
-published. The first real CLI creation passed, but its new-variant preview
-stalled; parent stopped only the verified headless worker and restored all
-temporary files/config. An explorer is tracing that before another run.
+published. Parent fixed the preview ellipsis loop that grew its string forever.
+The actual enemy CLI create and same-ID preview now exit 0, missing-ID preview
+and Force return 1, and fixture-inclusive definitions pass111/111. API cleanup
+restores all3manifest bytes; Godot reserializes catalog formatting, so the harness
+restores original catalog bytes and config. Preview lifecycle including the
+long-name first draw passes4.7.1. Guarded file-backed/profile plus live recovery
+passes4.7.1 in a unique namespace; no real profile is used. MAX implemented
+persisted semantic undo snapshots after parent reproduced dirty-draft and
+UID-directory failures. Expanded smokes pass standard4.7.1, including explicit
+save updating the baseline and post-delete rollback followed by dirty retry.
+Fresh manifest loading/path matching rejects stale cached data after a parse
+failure. Thorn found no source defect and approved putting the duplicate path
+comparison in the existing manifest service; LOW completed that move and both
+expanded smokes pass again. Strict composition, manifest160/158/45 and UID469
+pass. This verified package is ready for publication; unrelated project.godot
+renderer deletion remains excluded. Web packaging and native PCK resource-load
+checks pass, but browser/export-plugin/MCP-runtime guard checks remain open.
+No browser provider is available. Main MCP editor stays attached to the separate
+primary worktree, so no standalone curated/full runner was launched. Cloud-save
+presentation has two current failing assertions, recorded in KNOWN_ISSUES.
 
 Published verified E2/E3 batch as `094cdef5` (local branch aligned to the exact
 GitHub tree). Graphify refreshed to 21,825 nodes / 49,123 edges / 737

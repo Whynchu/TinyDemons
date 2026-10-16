@@ -109,40 +109,12 @@ function New-EnemyVariantDefinition {
 	if ([string]::IsNullOrWhiteSpace($Id) -or $Id -notmatch "^[a-z][a-z0-9_]*$") {
 		throw "Variant id must match ^[a-z][a-z0-9_]*$"
 	}
-	$definitionsRoot = Join-Path $resolvedRoot "resources/definitions"
-	$definitionPath = Join-Path $definitionsRoot ("{0}.tres" -f $Id)
-	if ((Test-Path -LiteralPath $definitionPath -PathType Leaf) -and -not $Force) {
-		throw "Definition already exists: $definitionPath. Use -Force only to replace it."
-	}
-	$pattern = '^[\s]*id[\s]*=[\s]*&"' + [regex]::Escape($Id) + '"'
-	$existingMatches = @(Get-ChildItem -LiteralPath $definitionsRoot -Filter "*.tres" -File | Select-String -Pattern $pattern -List)
-	if ($existingMatches.Count -gt 0 -and -not $Force) {
-		throw "An authored definition already uses id '$Id': $($existingMatches[0].Path)"
-	}
-	$displayName = (($Id -split "_") | Where-Object { $_ } | ForEach-Object { $_.Substring(0, 1).ToUpperInvariant() + $_.Substring(1) }) -join " "
-	$template = @"
-[gd_resource type="Resource" script_class="EnemyDefinition" load_steps=2 format=3]
-
-[ext_resource type="Script" path="res://scripts/content/enemy_definition.gd" id="1_enemy"]
-
-[resource]
-script = ExtResource("1_enemy")
-id = &"$Id"
-display_name = "$displayName"
-type_id = &"slime"
-element = 0
-damage_contract = &"physical"
-base_stats = {"AGI": 2, "DEF": 2, "INT": 0, "MND": 1, "STR": 2, "VIT": 2}
-growth_weights = {"AGI": 0.2, "DEF": 0.24, "INT": 0.0, "MND": 0.08, "STR": 0.24, "VIT": 0.24}
-visual_source = "green"
-encounter_role = &"late"
-encounter_weight = 0.5
-encounter_min_rank = 3
-"@
-	$utf8NoBom = New-Object -TypeName System.Text.UTF8Encoding -ArgumentList $false
-	[System.IO.File]::WriteAllText($definitionPath, $template, $utf8NoBom)
+	if ($Force) { throw "Enemy variant creation does not overwrite definitions. Choose a new ID." }
+	Assert-GodotAvailable
+	Invoke-HeadlessScript "res://tools/create_enemy_definition.gd" @(("--enemy-id={0}" -f $Id))
+	$definitionPath = Join-Path $resolvedRoot ("resources/definitions/{0}.tres" -f $Id)
 	Write-Host "NEW_ENEMY_VARIANT_DEFINITION $definitionPath" -ForegroundColor Green
-	Write-Host "Next: edit the resource, then run 'pwsh -File tools/dev.ps1 preview enemy $Id' and 'pwsh -File tools/dev.ps1 verify'."
+	Write-Host "Definition and generated manifests are current. Next: edit the resource, preview enemy $Id, then run verification."
 }
 
 function New-ItemDefinition {
@@ -171,7 +143,7 @@ Tiny Demons authoring commands
   preview enemy <id> -Editor     Open the preview workbench in the Godot editor.
   preview item <id>              Validate and report an item preview without booting a run.
   preview item <id> -Editor      Open the item preview workbench in the Godot editor.
-  new variant <id>               Create one standalone Slime variant definition.
+  new variant <id>               Create one standalone Slime variant and refresh its manifests; existing IDs are never overwritten.
   new enemy <id>                  Create a new enemy family (requires a family definition and actor route; not available yet).
   new item <id>                  Create one standalone ItemDefinition resource.
   report                         Print the authored catalog report.

@@ -12,7 +12,7 @@ replace the cached kind manifest after refresh. The all-resource manifest feeds
 preflight and freshness checks. The enemy workbench create action now couples its standalone resource, catalog entry, and generated manifests; a focused headless smoke passes create/undo/redo through the catalog action adapter. Live EditorUndoRedoManager, move, and exported-PCK acceptance remain open M1 evidence. Read the trap table below before
 editing any `.tres`.
 
-Updated: 2026-10-14
+Updated: 2026-10-15
 
 Owner: the feature owner listed in [`FEATURE_MAP.md`](FEATURE_MAP.md). The
 content guide describes current boundaries; it does not authorize a new data
@@ -26,6 +26,19 @@ stable ID and owning catalog or layout definition first, then add focused
 verification before changing runtime orchestration. **Verify that the runtime
 consumer reads the field you are editing**; several resources are only
 partially wired.
+
+### Running the commands on Windows
+
+Examples use `pwsh`. If PowerShell 7 is unavailable or its Windows app alias
+does not start, use `powershell.exe -NoProfile -ExecutionPolicy Bypass -File`
+with the same script arguments. Set `GODOT_BIN` once to the installed console
+executable, or pass `-GodotBin`; Mono and non-Mono distributions have different
+executable names. `tools/dev.ps1 doctor` checks the configured path.
+
+The headless wrappers import before running their focused script. Import output
+can say `loading_editor_layout` even with `--headless`; wait for completion and
+check the final exit/result marker. It does not establish visual acceptance.
+Follow AGENTS' shared-editor restrictions before any gate or full suite.
 
 ## Data paths that currently do nothing
 
@@ -283,7 +296,10 @@ Workflow (current, typed enemy-definition path):
    does not create a new enemy.
 2. Create one standalone variant definition with
    `pwsh -File tools/dev.ps1 new variant <id>`; this writes
-   `resources/definitions/<id>.tres`. Existing embedded catalog entries in
+   `resources/definitions/<id>.tres` through the catalog transaction and refreshes
+   generated manifests. A fresh preview process immediately discovers it.
+   Existing IDs, resource/UID files and resource/UID directories are rejected;
+   `-Force` does not overwrite variants. Existing embedded catalog entries in
    `slime_variant_catalog.tres` remain valid, but new content should use the
    one-file path. Set `id` to the stable variant ID and `type_id` to the owning
    family (`slime` for Slime variants; `skeleton` for Skeleton entries),

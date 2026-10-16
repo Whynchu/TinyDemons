@@ -1,6 +1,6 @@
 # P3 first slice — explicit steering world
 
-Status: implemented. Current P3 acceptance is recorded in the [composition plan](composition-cleanup-review-plan.md); the focused smoke remains unverified.
+Status: implemented and accepted in the [composition plan](composition-cleanup-review-plan.md). The focused smoke passes on Godot 4.7.1 and 4.7.2, 2026-10-15.
 
 Scope: Remove `EnemyBrain`'s ancestor search for the world services used by its aggro steering decision.
 
@@ -52,7 +52,9 @@ steering and existing callers share the same collision and walkability logic.
 - `tests/enemy_steering_world_smoke.gd` characterizes the shared actor foot,
   collision walkability, bounds rejection, and steering toward an injected
   player when the actor has no `GameplayState` ancestor. It is registered as
-  unverified. Keep that result truthful; the user accepted the slice based on
-  the shared `EnemyBrain` architecture and observed Slime/Skeleton behavior.
+  verified after a typed-empty-array fix in the optional collision-service
+  query and an explicit non-centered actor fixture. Centered geometry is also
+  checked. The user previously accepted the slice based on the shared
+  `EnemyBrain` architecture and observed Slime/Skeleton behavior.
   The smoke and P1/P2 performance or release gates are separate from this P3
   acceptance.

@@ -1932,16 +1932,24 @@ func _draw_preview_chrome() -> void:
 	draw_rect(Rect2(159, 28, 70, 1), PREVIEW_BORDER_DARK_COLOR, true)
 
 
-func _draw_pixel_label(target: CanvasItem, position: Vector2, text: String, color: Color, max_width: float, alignment: int = HORIZONTAL_ALIGNMENT_LEFT) -> void:
-	if _pixel_text_renderer == null or not is_instance_valid(_pixel_text_renderer):
-		return
-	var fitted_text := text
-	var texture := _pixel_text_renderer.number_texture(fitted_text, color)
-	while texture != null and texture.get_width() > max_width and not fitted_text.is_empty():
-		var shortened := fitted_text.substr(0, fitted_text.length() - 1).strip_edges()
-		fitted_text = "%s..." % shortened if not shortened.is_empty() else "..."
-		texture = _pixel_text_renderer.number_texture(fitted_text, color)
+func _fit_pixel_label_texture(text: String, color: Color, max_width: float) -> Texture2D:
+	if _pixel_text_renderer == null or not is_instance_valid(_pixel_text_renderer) or max_width <= 0.0:
+		return null
+	var remaining_text := text
+	var texture := _pixel_text_renderer.number_texture(remaining_text, color)
+	while texture != null and texture.get_width() > max_width and not remaining_text.is_empty():
+		# Shrink the source prefix. Trimming the previous ellipsis and appending
+		# it again grows the string and never terminates for an over-width label.
+		remaining_text = remaining_text.substr(0, remaining_text.length() - 1).strip_edges()
+		texture = _pixel_text_renderer.number_texture("%s..." % remaining_text, color)
 	if texture == null or texture.get_width() > max_width:
+		return null
+	return texture
+
+
+func _draw_pixel_label(target: CanvasItem, position: Vector2, text: String, color: Color, max_width: float, alignment: int = HORIZONTAL_ALIGNMENT_LEFT) -> void:
+	var texture := _fit_pixel_label_texture(text, color, max_width)
+	if texture == null:
 		return
 	var x_position := position.x
 	if alignment == HORIZONTAL_ALIGNMENT_CENTER:

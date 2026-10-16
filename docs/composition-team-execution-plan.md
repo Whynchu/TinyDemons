@@ -63,7 +63,7 @@ bridge and `coord/status-codex.md`; preserve opencode's runner/Pages claim.
 | E2 Item lifecycle | P4 / X12 / X17 | Catalog-owned create/remove, generated manifest and cache parity, editor undo/redo | Technical smoke passes on 4.7.1 including both replacement guards and post-save rollback; real editor history/reopen acceptance open |
 | E3 Entry points | E2 | CLI item scaffolding reaches the same fresh registry; guide describes actual editor/CLI paths | CLI creation, fresh-process preview and fixture-inclusive validation pass; original manifests and fixture absence restored |
 | E4 Source reconciliation | P4 / X14, X18 | Correct stale room-spec/policy/folder claims using field-to-consumer evidence | Typed RoomSpec/ConnectionSpec and policy consumption already exist; assign only remaining real parity/validation defects |
-| E5 Agent usability | E1-E4 | Independent LOW agent follows docs for supported enemy/item/room tasks | Record time, files/docs consulted, errors, interventions, central runtime edits, fixture cleanup and save/preview proof; repair and repeat failures |
+| E5 Agent usability | E1-E4 | Independent LOW agent follows docs for supported enemy/item/room tasks | Item terminal exercise passes in about 9 minutes with zero production edits; enemy/room mutation exercises and human editor acceptance open |
 | E6 Migration evidence | P1/P2/P3 | Current-source family swap, file-backed restore, brain/steering and preview evidence | Focused checks pass; earlier P3 user acceptance remains valid; do not misreport previously unrun checks |
 | E7 Export lifecycle | P4/M1 | Authored fixture and manifest references survive export/reload; runtime MCP autoload inert | Exported-content inventory and actual browser/runtime proof; no conclusion from packaging alone |
 | E8 Content authority | Remaining P4 | Reconcile item/element/room field ownership, remove remaining unsupported schemas only with evidence | Consumer ledger closed; stable saves preserved. New-flame proof uses disposable data; shipping new gameplay/art requires a product decision |
@@ -95,8 +95,11 @@ The parent reviews changes, commits only the package's paths plus coordination,
 and publishes to the authorized review branch. Refresh Graphify once after a
 completed verified code batch, not after every individual edit.
 
-Existing gate debt includes Chroma default expectations, binding-smoke teardown,
-R6+ elite-vault expectations, and a removed run-theme API call. Classify each
+Initial gate debt included Chroma default expectations, binding-smoke teardown,
+R6+ elite support scaling, and a removed run-theme API call. Chroma and run-theme
+fixtures now pass; the elite support runtime defect is fixed in `221d387` with
+R6+ and support-component checks passing on 4.7.1. Binding teardown remains
+open. Classify each
 failure using the current source and accepted gameplay contract. Repair
 relevant regressions before runtime extraction; keep independent packages moving.
 
@@ -169,3 +172,87 @@ The first preview attempt used a nonexistent driver name; the corrected
 enabled the editor MCP plugin briefly; subsequent isolated import probes must
 temporarily disable both editor plugins and the runtime autoload, restoring the
 exact original configuration. No GUI editor was opened.
+
+## Independent item authoring exercise
+
+Participant: a separate Luna LOW worker starting at published `094cdef5`.
+Elapsed: approximately nine minutes. Parent supplied the worktree, engine path,
+allowed fixture paths and verification limits, and isolated the review project's
+plugins/autoload with an exact configuration backup. The worker used the team
+skill, AGENTS, coordination, authoring guide/traps, Graphify, CLI scripts and
+ItemDefinition source. It made no production code changes.
+
+1. `tools/dev.ps1 new item agent_probe_20261015`: exit 0, `ITEM_CREATE_OK`.
+2. Edited only the new resource's description and price (37).
+3. Fresh `tools/dev.ps1 preview item agent_probe_20261015`: exit 0,
+   requested ID, weapon slot, editable card preview.
+4. `tools/validate_definitions.ps1`: exit 0, 111/111.
+5. Removed its reserved resource (no UID existed), then
+   `tools/dev.ps1 manifest refresh`: exit 0, 110 entries.
+
+Parent independently confirmed fixture absence and byte-identical restoration
+of all three manifests, then restored the exact project configuration. No
+unrelated source, profile, catalog-owned item or main-worktree file was edited.
+This proves a terminal authoring path; it does not prove visual quality,
+editor save/reopen or export acceptance.
+
+Friction: the worker initially used invalid PowerShell condition syntax, hit a
+broken `pwsh` app alias, mistyped the provided Mono engine filename, and paused
+on normal headless import's `loading_editor_layout` text. These failed before
+content mutation or were corrected before proceeding. Parent confirmed that
+only the original main editor remained after the headless worker exited.
+The guide now documents Windows PowerShell fallback, exact engine selection
+and import-result interpretation. Expected certificate/editor-cache warnings
+remained; a Mono Timer teardown warning appeared in the cleanup import, while
+the refresh exited 0. No crash occurred.
+
+## Additional findings before the next batch
+
+The initial enemy CLI wrote a raw resource with the removed
+`encounter_min_rank` property and leaves manifests stale. Parent reproduced
+creation exit 0 followed by an unknown-ID warning and a false preview success:
+the requested fixture was reported as `healer_slime`. The preview command
+checked readiness without checking selected identity. MAX implemented guarded
+catalog creation after old-source failures. The real CLI now creates and
+previews the requested fixture in a fresh process, rejects unknown IDs and
+rejects `-Force` without changing resource bytes. The starter uses the actual
+`encounter_min_run_number = 3` consumer.
+
+The P1 report linked from the plan was missing in this branch, and the branch's
+recovery smoke covered in-memory JSON rather than the file-backed/live
+path documented in the separate dirty primary checkout. A branch-specific
+[P1 report](composition-p1-characterization.md) now records the stronger proof:
+the guarded file-backed save/load and live restore check passes on 4.7.1.
+P1/P2 remain partial pending export and the supervised standalone gate.
+
+Long generated enemy names exposed a first-draw freeze: label clipping removed
+one character and appended three dots to the same string on every iteration.
+The parent replaced it with a shrinking raw prefix and bounded width result.
+A diagnostic reaches the first frame and the real CLI preview exits 0 for the
+long fixture ID. The existing preview lifecycle smoke passes on 4.7.1 with
+width-boundary and long-name draw checks. Fixture-inclusive validation passes
+111/111; after API cleanup the three manifests match their original bytes.
+Godot reserializes the catalog with different bytes; the parent harness restores
+its exact original bytes along with the configuration and fixture absence.
+
+Thorn also found that comparing disk state with the mutable draft breaks
+Undo Create after an unsaved edit. Parent reproduced dirty-undo and UID-sidecar
+directory failures in both existing catalog smokes. MAX implemented persisted
+semantic snapshots and pre-mutation directory guards; both smokes now pass on
+4.7.1. Both tests also cover an explicit save updating the persisted baseline,
+followed by a different dirty draft, and a post-delete manifest failure followed
+by successful dirty removal. The latter exposed another bug: Godot can report
+a parse error yet return an old cached manifest. Cache adoption now requires a
+fresh disk load and complete typed entries matching declared paths. Both smokes
+pass after the fix, with exact original catalog/manifest bytes before harness
+restoration. Expected loader errors come from the reserved invalid resource;
+there are no script failures. Real editor history acceptance remains open.
+
+The standard 4.7.1 build produced a fresh Web artifact; the installed Mono build
+refused Web export. Parent verified the standard archive against its official
+published SHA256 before use. An isolated native process launched the Web PCK
+outside the source worktree and loaded 110 authored resources, 74 item IDs and
+Slime/Skeleton factory output. Packaging used temporary plugin/autoload isolation
+and the committed Compatibility renderer setting; original config was restored.
+This does not prove the export plugin, shipped MCP guard or browser runtime.
+The browser bridge reports no IAB/Chrome provider. Those checks remain open.
