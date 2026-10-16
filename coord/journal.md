@@ -1604,3 +1604,8 @@ Closed the X04 registration batch: three ordered cohorts cover 27 production ser
 Continuing X04 with remaining non-performance GameplayBootstrap attachments. Preserve node parents, order, and immediate setup callbacks; keep PerformanceCaptureService outside this slice.
 ## 2026-10-16T15:39Z - codex - done
 X04 service-registration batch: 42 production services in seven cohorts; focused Godot checks and composition guards pass; curated gate is 30 pass / 12 fail / 3 timeout; Graphify refreshed from the review checkout.
+[2026-10-16 15:42:51Z] - codex - claim
+Title-only GameplayBootstrap named-step extraction. Preserving the ordered boot operations and diagnostic phase keys in the review worktree.## 2026-10-16T15:50Z - codex - claim
+Expanding the same X04 build-step batch to the full gameplay visual/UI sequence while preserving each rendered-frame boundary.
+## 2026-10-16T16:15Z - codex - done
+X04 build-step batch: named typed queues cover loading, title-only, and gameplay visual/UI assembly; all 26 diagnostic phase keys are preserved and root.call is down from 37 to one save hook. Godot title and enemy-room smokes, composition guards, script index, and Graphify refresh pass.

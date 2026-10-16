@@ -1,6 +1,6 @@
 # Composition team execution
 
-Status: active execution plan, 2026-10-15
+Status: active execution plan, 2026-10-16
 
 Owner: parent Codex agent; implementation delegated by bounded file ownership.
 
@@ -77,17 +77,22 @@ The broad plan is not complete merely because E0-E3 land.
 
 ### E9 checkpoint (2026-10-16)
 
-The X04 registrar now covers 42 production services in seven ordered cohorts.
-Title boot, enemy-room entrance, EnemyBrain, steering-world, and slime-spawn
-smokes pass on Godot 4.7.2; composition self-test and strict audit pass. The
-strict audit reports two `_add_runtime_node(` matches: one remaining direct
-attachment plus the helper declaration. The current 45-path gate is 30 pass /
-12 fail / 3 timeout; the 12 failures are the recorded red list, and generated
-bound reachability passed. Timeouts were generated layout, generated run scene,
-and touch controls. Main-scene headless verification passed; Web export remains
-blocked by missing Godot 4.7.2 Web templates. Stage 3.2 still needs production
-append-one-row acceptance, 31 named build steps, typed spawn-service contexts,
-and phase interfaces. See `docs/composition-plan-2026.md` for the full current
+The X04 registrar covers 42 production services in seven ordered cohorts. The
+new typed `GameplayBootstrap.BuildStep` contract carries a name, enum phase,
+action, and optional frame yield. Ordered queues now cover shared loading,
+title-only assembly, and full gameplay animation/visual/UI construction while
+preserving all diagnostic keys and ten gameplay UI frame boundaries. The title
+boot and enemy-room entrance smokes pass on Godot 4.7.2. Bootstrap `root.call`
+invocations fell from 37 to one concrete-Gameplay save hook; the strict
+composition self-test and audit pass. The remaining X04 work is production
+append-one-row acceptance and typed `RoomEnemySpawnServices` contexts. The
+direct `PerformanceCaptureService` attachment remains outside this slice.
+
+The current 45-path gate remains 30 pass / 12 fail / 3 timeout; the 12 failures
+are the recorded red list, and generated bound reachability passed. Timeouts
+were generated layout, generated run scene, and touch controls. Main-scene
+headless verification passed; Web export remains blocked by missing Godot
+4.7.2 Web templates. See `docs/composition-plan-2026.md` for the full current
 record.
 
 ### E5 checkpoint (2026-10-16)

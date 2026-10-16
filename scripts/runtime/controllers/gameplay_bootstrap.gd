@@ -1,6 +1,80 @@
 extends Node
 class_name GameplayBootstrap
 
+class BuildStep extends RefCounted:
+	enum Phase {
+		LOADING_SCREEN,
+		PLAYER_ANIMATION,
+		TITLE_SCREEN,
+		CLOUD_PANEL,
+		SETTINGS,
+		SCENE_TRANSITION_AND_LAYOUT,
+		TITLE_STATE,
+		FINALIZE,
+		FIRE_AND_DEMON,
+		ENEMY_HEALTH_UI,
+		INTERACT_PROMPT,
+		NPC_DIALOGUE,
+		ROOM_NUMBER,
+		GAME_OVER,
+		RUN_COMPLETE,
+		HUB_UI,
+		REFRESH_PLAYER_CLOAK_VISUAL,
+		MUSIC_PRELOAD,
+		PREWARM_TRANSITION_ASSETS,
+		BUILD_SLIME_TEXTURES,
+		INITIALIZE_PLAYER,
+		INITIALIZE_WALKABLE_AREA,
+		INITIALIZE_SLIMES,
+		ROOM_STATE_AND_ROUTE,
+		PLAYER_EQUIPMENT_VISUAL,
+		PLAYER_AFTER_EQUIPMENT,
+	}
+
+	var name: StringName
+	var phase: Phase
+	var action: Callable
+	var yield_after_frame := false
+
+	func _init(step_name: StringName, step_phase: Phase, step_action: Callable, step_yield_after_frame: bool = false) -> void:
+		name = step_name
+		phase = step_phase
+		action = step_action
+		yield_after_frame = step_yield_after_frame
+
+	static func diagnostic_label_for(build_phase: Phase) -> StringName:
+		match build_phase:
+			Phase.LOADING_SCREEN: return &"build_loading_screen"
+			Phase.PLAYER_ANIMATION: return &"build_player_animation"
+			Phase.TITLE_SCREEN: return &"build_ui_title"
+			Phase.CLOUD_PANEL: return &"build_ui_cloud_panel"
+			Phase.SETTINGS: return &"build_ui_settings"
+			Phase.SCENE_TRANSITION_AND_LAYOUT: return &"build_ui_scene_transition_and_layout"
+			Phase.TITLE_STATE: return &"set_title_state"
+			Phase.FINALIZE: return &"finalize"
+			Phase.FIRE_AND_DEMON: return &"build_fire_and_demon"
+			Phase.ENEMY_HEALTH_UI: return &"build_ui_enemy_health"
+			Phase.INTERACT_PROMPT: return &"build_ui_interact_prompt"
+			Phase.NPC_DIALOGUE: return &"build_ui_npc_dialogue"
+			Phase.ROOM_NUMBER: return &"build_ui_room_number"
+			Phase.GAME_OVER: return &"build_ui_game_over"
+			Phase.RUN_COMPLETE: return &"build_ui_run_complete"
+			Phase.HUB_UI: return &"build_ui_hub"
+			Phase.REFRESH_PLAYER_CLOAK_VISUAL: return &"refresh_player_cloak_visual"
+			Phase.MUSIC_PRELOAD: return &"music_preload"
+			Phase.PREWARM_TRANSITION_ASSETS: return &"prewarm_transition_assets"
+			Phase.BUILD_SLIME_TEXTURES: return &"build_slime_textures"
+			Phase.INITIALIZE_PLAYER: return &"initialize_player"
+			Phase.INITIALIZE_WALKABLE_AREA: return &"initialize_walkable_area"
+			Phase.INITIALIZE_SLIMES: return &"initialize_slimes"
+			Phase.ROOM_STATE_AND_ROUTE: return &"room_state_and_route"
+			Phase.PLAYER_EQUIPMENT_VISUAL: return &"initialize_player_equipment_visual"
+			Phase.PLAYER_AFTER_EQUIPMENT: return &"initialize_player_after_equipment"
+		return &""
+
+	func diagnostic_label() -> StringName:
+		return diagnostic_label_for(phase)
+
 const PLAYER_CHROMA_COMPONENT_SCRIPT = preload("res://scripts/components/player_chroma_component.gd")
 const FEEDBACK_ANIMATION_REGISTRY_SCRIPT = preload("res://scripts/services/feedback_animation_registry.gd")
 const PLAYER_ASPECT_ABILITY_COMPONENT_SCRIPT = preload("res://scripts/components/player_aspect_ability_component.gd")
@@ -28,9 +102,11 @@ static func begin_boot_diagnostics() -> void:
 	_phase_label = &""
 
 
-static func _phase(label: StringName) -> void:
+static func _phase(phase: BuildStep.Phase) -> void:
 	if not boot_diagnostics_enabled:
 		return
+	var label := BuildStep.diagnostic_label_for(phase)
+	assert(not label.is_empty(), "Boot phases require a diagnostic label.")
 	var now := Time.get_ticks_usec()
 	if _phase_start_usec > 0:
 		boot_phases[_phase_label] = int(boot_phases.get(_phase_label, 0)) + (now - _phase_start_usec)
@@ -46,6 +122,142 @@ func _add_runtime_node(root: GameplayState, script: Script, node_name: StringNam
 	node.name = node_name
 	(parent if parent != null else root).add_child(node)
 	return node
+
+
+func _run_build_steps(root: Node, steps: Array[BuildStep]) -> void:
+	for step in steps:
+		assert(step != null and step.action.is_valid(), "Build steps require an executable action.")
+		_phase(step.phase)
+		step.action.call()
+		if step.yield_after_frame:
+			await root.get_tree().process_frame
+
+
+func _loading_screen_build_steps(root: GameplayState) -> Array[BuildStep]:
+	var steps: Array[BuildStep] = []
+	steps.append(BuildStep.new(&"loading_screen", BuildStep.Phase.LOADING_SCREEN, func() -> void:
+		root._build_loading_screen()
+		root.loading_screen_active = true
+		root.loading_screen_fading = false
+		root.loading_screen_timer = 0.0
+		var boot_loading := root.loading_screen_overlay
+		if boot_loading != null:
+			boot_loading.visible = true
+			boot_loading.modulate.a = 1.0
+		root.boot_active = true
+	))
+	return steps
+
+
+func _player_animation_build_step(root: GameplayState, yield_after_frame: bool = false) -> BuildStep:
+	return BuildStep.new(&"player_animation", BuildStep.Phase.PLAYER_ANIMATION, func() -> void:
+		root.player_animation_component = _ensure_player_component(root.player, PlayerAnimationComponent, "Animation") as PlayerAnimationComponent
+		root.player_animation_component.build_frames(root.gameplay_frame_controller.animation_context(root))
+	, yield_after_frame)
+
+
+func _gameplay_player_animation_build_steps(root: GameplayState) -> Array[BuildStep]:
+	var steps: Array[BuildStep] = []
+	steps.append(_player_animation_build_step(root, true))
+	return steps
+
+
+func _title_only_build_steps(root: GameplayState, boot_loading: CanvasItem) -> Array[BuildStep]:
+	var steps: Array[BuildStep] = []
+	steps.append(_player_animation_build_step(root))
+	steps.append(BuildStep.new(&"title_screen", BuildStep.Phase.TITLE_SCREEN, func() -> void:
+		root._build_title_screen()
+	))
+	steps.append(BuildStep.new(&"cloud_panel", BuildStep.Phase.CLOUD_PANEL, func() -> void:
+		root.cloud_save_panel.build(root.ui)
+	))
+	steps.append(BuildStep.new(&"settings", BuildStep.Phase.SETTINGS, func() -> void:
+		root._build_settings_ui()
+	))
+	steps.append(BuildStep.new(&"scene_transition_and_layout", BuildStep.Phase.SCENE_TRANSITION_AND_LAYOUT, func() -> void:
+		root._build_scene_transition()
+		root._on_display_view_size_changed(root.display_controller.view_size_value())
+	))
+	steps.append(BuildStep.new(&"title_state", BuildStep.Phase.TITLE_STATE, func() -> void:
+		root.screen_state_controller.set_state(&"title")
+		_show_title_after_boot(root, boot_loading)
+		root.gameplay_frame_controller.invalidate_contexts()
+	))
+	steps.append(BuildStep.new(&"finalize", BuildStep.Phase.FINALIZE, func() -> void:
+		root.boot_active = false
+	))
+	return steps
+
+
+func _gameplay_visual_build_steps(root: GameplayState) -> Array[BuildStep]:
+	var steps: Array[BuildStep] = []
+	steps.append(BuildStep.new(&"fire_and_demon", BuildStep.Phase.FIRE_AND_DEMON, func() -> void:
+		root._build_rest_fire_frames()
+		root._build_cloaked_demon_frames()
+		root._build_player_sprite_shadow()
+		root._build_cloaked_demon_sprite_shadow()
+	, true))
+	return steps
+
+
+func _gameplay_ui_build_steps(root: GameplayState, profile: PlayerProfile, requested_route: String) -> Array[BuildStep]:
+	var steps: Array[BuildStep] = []
+	steps.append(BuildStep.new(&"enemy_health_ui", BuildStep.Phase.ENEMY_HEALTH_UI, func() -> void:
+		root._build_enemy_health_ui()
+	, true))
+	steps.append(BuildStep.new(&"interact_prompt", BuildStep.Phase.INTERACT_PROMPT, func() -> void:
+		root._build_interact_prompt()
+	, true))
+	steps.append(BuildStep.new(&"npc_dialogue", BuildStep.Phase.NPC_DIALOGUE, func() -> void:
+		root._build_npc_dialogue()
+	, true))
+	steps.append(BuildStep.new(&"room_number", BuildStep.Phase.ROOM_NUMBER, func() -> void:
+		root._build_room_number_indicator()
+	, true))
+	steps.append(BuildStep.new(&"game_over_ui", BuildStep.Phase.GAME_OVER, func() -> void:
+		root._build_game_over_ui()
+	, true))
+	steps.append(BuildStep.new(&"run_complete_ui", BuildStep.Phase.RUN_COMPLETE, func() -> void:
+		root._build_run_complete_ui()
+	, true))
+	steps.append(BuildStep.new(&"title_screen", BuildStep.Phase.TITLE_SCREEN, func() -> void:
+		root._build_title_screen()
+		if profile.has_started and (requested_route == "hub" or requested_route == "run"):
+			var route_screens := root.screen_state_controller as ScreenStateController
+			if route_screens.title_presenter.overlay != null:
+				route_screens.title_presenter.overlay.visible = false
+	, true))
+	steps.append(BuildStep.new(&"cloud_panel", BuildStep.Phase.CLOUD_PANEL, func() -> void:
+		root.cloud_save_panel.build(root.ui)
+	, true))
+	steps.append(BuildStep.new(&"settings", BuildStep.Phase.SETTINGS, func() -> void:
+		root._build_settings_ui()
+	, true))
+	steps.append(BuildStep.new(&"hub_ui", BuildStep.Phase.HUB_UI, func() -> void:
+		root._build_hub_ui()
+	, true))
+	steps.append(BuildStep.new(&"scene_transition_and_layout", BuildStep.Phase.SCENE_TRANSITION_AND_LAYOUT, func() -> void:
+		root._build_scene_transition()
+		root._on_display_view_size_changed(root.display_controller.view_size_value())
+	))
+	steps.append(BuildStep.new(&"refresh_player_cloak_visual", BuildStep.Phase.REFRESH_PLAYER_CLOAK_VISUAL, func() -> void:
+		root._refresh_player_cloak_visual()
+	))
+	steps.append(BuildStep.new(&"title_state", BuildStep.Phase.TITLE_STATE, func() -> void:
+		var screens := root.screen_state_controller as ScreenStateController
+		var enters_saved_route: bool = profile.has_started and (requested_route == "hub" or requested_route == "run")
+		if enters_saved_route:
+			# Full run boot may still construct the title scene for shared UI assets, but
+			# an active save route must never expose that overlay between loading and play.
+			if screens.title_presenter.overlay != null:
+				screens.title_presenter.overlay.visible = false
+			if screens.archetype_presenter.overlay != null:
+				screens.archetype_presenter.overlay.visible = false
+			screens.set_state(&"loading")
+		else:
+			screens.set_state(&"title")
+	))
+	return steps
 
 
 func initialize(root: GameplayState, preview_session: RefCounted = null) -> void:
@@ -104,7 +316,7 @@ func initialize(root: GameplayState, preview_session: RefCounted = null) -> void
 	assert(screen_state_errors.is_empty(), "Invalid screen state service registration: %s" % "; ".join(screen_state_errors))
 	if not screen_state_errors.is_empty():
 		return
-	root.call("_apply_profile_to_runtime")
+	root._apply_profile_to_runtime()
 	var gameplay_frame_rows := RuntimeServiceRegistrationPlan.gameplay_frame_service_registrations(root)
 	var gameplay_frame_errors := RuntimeServiceRegistrationPlan.register_all(gameplay_frame_rows)
 	assert(gameplay_frame_errors.is_empty(), "Invalid gameplay frame service registration: %s" % "; ".join(gameplay_frame_errors))
@@ -135,16 +347,8 @@ func initialize(root: GameplayState, preview_session: RefCounted = null) -> void
 	# Establish a visible loading boundary before dungeon generation, room layout,
 	# actor setup, and presentation caches begin. The browser must get a rendered
 	# frame before the expensive gameplay preparation starts.
-	_phase(&"build_loading_screen")
-	root.call("_build_loading_screen")
-	root.set("loading_screen_active", true)
-	root.set("loading_screen_fading", false)
-	root.set("loading_screen_timer", 0.0)
-	var boot_loading := root.get("loading_screen_overlay") as ColorRect
-	if boot_loading != null:
-		boot_loading.visible = true
-		boot_loading.modulate.a = 1.0
-	root.set("boot_active", true)
+	await _run_build_steps(root, _loading_screen_build_steps(root))
+	var boot_loading := root.loading_screen_overlay
 	await root.get_tree().process_frame
 	if title_only_boot:
 		# A title boot does not need room generation, actor initialization, enemy
@@ -153,25 +357,7 @@ func initialize(root: GameplayState, preview_session: RefCounted = null) -> void
 		# can be reached before a run. Starting a run transitions into a fresh scene,
 		# where the complete gameplay path below is initialized with its normal
 		# dependencies.
-		_phase(&"build_player_animation")
-		var title_player := root.get("player") as Sprite2D
-		root.player_animation_component = _ensure_player_component(title_player, PlayerAnimationComponent, "Animation") as PlayerAnimationComponent
-		root.player_animation_component.build_frames(root.gameplay_frame_controller.animation_context(root))
-		_phase(&"build_ui_title")
-		root.call("_build_title_screen")
-		_phase(&"build_ui_cloud_panel")
-		root.cloud_save_panel.build(root.ui)
-		_phase(&"build_ui_settings")
-		root.call("_build_settings_ui")
-		_phase(&"build_ui_scene_transition_and_layout")
-		root.call("_build_scene_transition")
-		root.call("_on_display_view_size_changed", root.display_controller.view_size_value())
-		_phase(&"set_title_state")
-		(root.get("screen_state_controller") as ScreenStateController).set_state(&"title")
-		_show_title_after_boot(root, boot_loading)
-		root.gameplay_frame_controller.invalidate_contexts()
-		_phase(&"finalize")
-		root.set("boot_active", false)
+		await _run_build_steps(root, _title_only_build_steps(root, boot_loading))
 		return
 	var rng := root.rng
 	if preview_session == null:
@@ -216,8 +402,8 @@ func initialize(root: GameplayState, preview_session: RefCounted = null) -> void
 	await root.get_tree().process_frame
 	var player := root.get("player") as Sprite2D; var chest := root.get("chest") as Sprite2D; var demon := root.get("cloaked_demon") as Sprite2D; var fire := root.get("rest_fire") as Sprite2D
 	_place_debug_player_at_boss_entry(root, player)
-	root.set("player_start_position", player.global_position); root.set("chest_start_position", chest.position); root.set("cloaked_demon_start_position", demon.position); root.set("chest_gray_texture", chest.texture); root.set("chest_normal_texture", root.call("_load_texture_or_null", "res://assets/artwork/Chest.png"))
-	fire.visible = false; fire.frame = 0; root.call("_configure_room_sockets", false)
+	root.set("player_start_position", player.global_position); root.set("chest_start_position", chest.position); root.set("cloaked_demon_start_position", demon.position); root.set("chest_gray_texture", chest.texture); root.set("chest_normal_texture", root._load_texture_or_null("res://assets/artwork/Chest.png"))
+	fire.visible = false; fire.frame = 0; root._configure_room_sockets(false)
 	var slimes: Array[Sprite2D] = _build_slime_roster(root); root.set("slimes", slimes)
 	var actors: Array[Sprite2D] = [player]; actors.append_array(slimes); root.set("actor_sprites", actors)
 	geometry_debug.configure(actors, Callable(root, "_actor_foot"), Callable(root, "_collision_rect"), Callable(root, "_slime_body_polygon"))
@@ -236,34 +422,29 @@ func initialize(root: GameplayState, preview_session: RefCounted = null) -> void
 	root.set("player_shadow_offset", Vector2(-8.0, -9.0)); root.set("player_shadow_scale", player_shadow.global_scale); player_shadow.z_as_relative = false
 	root.set("cloaked_demon_shadow_offset", demon_shadow.global_position - demon.global_position); root.set("cloaked_demon_shadow_scale", demon_shadow.global_scale); demon_shadow.z_as_relative = false
 	var attack_visual := root.get("player_attack_visual") as Sprite2D; attack_visual.z_as_relative = false; attack_visual.visible = false
-	root.call("_hide_editor_only_guides")
+	root._hide_editor_only_guides()
 	(root.get("hp_overhead") as Sprite2D).z_as_relative = false; (root.get("hp_overhead_fill") as Sprite2D).z_as_relative = false
 	var ui := root.get("ui") as Node
 	var player_hud := ui.get_node_or_null("PlayerHud") as Node2D
 	if player_hud != null: player_hud.visible = true
 	root.set("target_health_bar_size", (root.get("target_health_fill") as Sprite2D).texture.get_size()); root.set("player_health_fill_size", (root.get("player_health_fill") as Sprite2D).texture.get_size())
-	root.call("_build_depth_lists"); occlusion.register_sprites(actors, root.get("occluder_sprites"))
+	root._build_depth_lists(); occlusion.register_sprites(actors, root.get("occluder_sprites"))
 	await root.get_tree().process_frame
 	# Warm long-running music after the loading screen has had a frame to draw;
 	# the first flame-room transition can then start its track from memory.
-	_phase(&"music_preload")
+	_phase(BuildStep.Phase.MUSIC_PRELOAD)
 	root.sound_manager.preload_music_tracks()
 	# Parse and instantiate the boss authoring templates while the boot loading
 	# screen is visible. Room entry can then reuse them without loading a second
 	# main-scene tree or cloning a fresh boss guide source on the transition
 	# frame.
-	_phase(&"prewarm_transition_assets")
+	_phase(BuildStep.Phase.PREWARM_TRANSITION_ASSETS)
 	if not title_only_boot:
 		root.room_controller.prewarm_transition_assets(root.hub_stone_accent_layer)
 	await root.get_tree().process_frame
-	_phase(&"build_player_animation")
-	root.player_animation_component = _ensure_player_component(player, PlayerAnimationComponent, "Animation") as PlayerAnimationComponent
-	root.player_animation_component.build_frames(root.gameplay_frame_controller.animation_context(root))
-	await root.get_tree().process_frame
-	_phase(&"build_fire_and_demon")
-	root.call("_build_rest_fire_frames"); root.call("_build_cloaked_demon_frames"); root.call("_build_player_sprite_shadow"); root.call("_build_cloaked_demon_sprite_shadow")
-	await root.get_tree().process_frame
-	_phase(&"build_slime_textures")
+	await _run_build_steps(root, _gameplay_player_animation_build_steps(root))
+	await _run_build_steps(root, _gameplay_visual_build_steps(root))
+	_phase(BuildStep.Phase.BUILD_SLIME_TEXTURES)
 	var starts_in_title := title_only_boot
 	if starts_in_title:
 		# Slime frame generation is the largest boot phase. The loading screen at
@@ -271,76 +452,29 @@ func initialize(root: GameplayState, preview_session: RefCounted = null) -> void
 		pass
 	else:
 		await root.actor_presentation_runtime_controller.ensure_slime_visuals_ready(root)
-	_phase(&"build_ui_enemy_health")
-	root.call("_build_enemy_health_ui")
-	await root.get_tree().process_frame
-	_phase(&"build_ui_interact_prompt")
-	root.call("_build_interact_prompt")
-	await root.get_tree().process_frame
-	_phase(&"build_ui_npc_dialogue")
-	root.call("_build_npc_dialogue")
-	await root.get_tree().process_frame
-	_phase(&"build_ui_room_number")
-	root.call("_build_room_number_indicator")
-	await root.get_tree().process_frame
-	_phase(&"build_ui_game_over")
-	root.call("_build_game_over_ui")
-	await root.get_tree().process_frame
-	_phase(&"build_ui_run_complete")
-	root.call("_build_run_complete_ui")
-	await root.get_tree().process_frame
-	_phase(&"build_ui_title")
-	root.call("_build_title_screen")
-	if profile.has_started and (requested_route == "hub" or requested_route == "run"):
-		var route_screens := root.get("screen_state_controller") as ScreenStateController
-		if route_screens.title_presenter.overlay != null: route_screens.title_presenter.overlay.visible = false
-	await root.get_tree().process_frame
-	_phase(&"build_ui_cloud_panel")
-	root.cloud_save_panel.build(root.ui)
-	await root.get_tree().process_frame
-	_phase(&"build_ui_settings")
-	root.call("_build_settings_ui")
-	await root.get_tree().process_frame
-	_phase(&"build_ui_hub")
-	root.call("_build_hub_ui")
-	await root.get_tree().process_frame
-	_phase(&"build_ui_scene_transition_and_layout")
-	root.call("_build_scene_transition"); root.call("_on_display_view_size_changed", root.display_controller.view_size_value())
-	_phase(&"refresh_player_cloak_visual")
-	root.call("_refresh_player_cloak_visual")
-	_phase(&"set_title_state")
-	var screens := root.get("screen_state_controller") as ScreenStateController
-	var enters_saved_route: bool = profile.has_started and (requested_route == "hub" or requested_route == "run")
-	if enters_saved_route:
-		# Full run boot may still construct the title scene for shared UI assets, but
-		# an active save route must never expose that overlay between loading and play.
-		if screens.title_presenter.overlay != null: screens.title_presenter.overlay.visible = false
-		if screens.archetype_presenter.overlay != null: screens.archetype_presenter.overlay.visible = false
-		screens.set_state(&"loading")
-	else:
-		screens.set_state(&"title")
-	_phase(&"initialize_player")
+	await _run_build_steps(root, _gameplay_ui_build_steps(root, profile, requested_route))
+	_phase(BuildStep.Phase.INITIALIZE_PLAYER)
 	_initialize_player(root, player)
 	await root.get_tree().process_frame
-	_phase(&"initialize_walkable_area")
+	_phase(BuildStep.Phase.INITIALIZE_WALKABLE_AREA)
 	_initialize_walkable_area(root, 0.35, 1.25)
 	await root.get_tree().process_frame
-	_phase(&"initialize_slimes")
+	_phase(BuildStep.Phase.INITIALIZE_SLIMES)
 	_initialize_slimes(root, slimes)
 	await root.get_tree().process_frame
-	_phase(&"room_state_and_route")
+	_phase(BuildStep.Phase.ROOM_STATE_AND_ROUTE)
 	root.room_controller.initialize_boss_jump_phase_pool(root)
 	root._apply_room_state(); root._build_depth_lists()
 	await root.get_tree().process_frame
 	if bool(root.get("debug_start_in_boss_room")) or bool(ProjectSettings.get_setting("debug/benchmark_start_in_boss_room", false)):
 		# Initialize normal run resources without replacing the dungeon and boss room
 		# that were already selected and applied above.
-		root.call("_begin_new_run", true)
+		root._begin_new_run(true)
 		_place_debug_player_at_boss_entry(root, player)
 		root.set("player_start_position", player.global_position)
 		root.player_animation_component.apply_frame(root.gameplay_frame_controller.animation_context(root))
-		root.call("_update_player_shadow")
-		root.call("_build_depth_lists")
+		root._update_player_shadow()
+		root._build_depth_lists()
 		root.actor_presentation_runtime_controller.set_title_world_visible(root, true)
 		_enter_debug_gameplay(root)
 		root.set("loading_screen_active", false)
@@ -366,7 +500,7 @@ func initialize(root: GameplayState, preview_session: RefCounted = null) -> void
 	# dependencies. Discard them so the first active frame rebuilds against fully
 	# wired state.
 	root.gameplay_frame_controller.invalidate_contexts()
-	_phase(&"finalize")
+	_phase(BuildStep.Phase.FINALIZE)
 	root.set("boot_active", false)
 
 
@@ -516,9 +650,9 @@ func _initialize_player(root: GameplayState, player: Sprite2D) -> void:
 	root.player_aspect_ability_component = _ensure_player_component(player, PLAYER_ASPECT_ABILITY_COMPONENT_SCRIPT, "AspectAbility")
 	root.player_aspect_ability_component.call("configure_mode_cooldowns", 2.0, root.GREY_MAGIC_COOLDOWN)
 	var equipment_visual := _ensure_player_component(player, PlayerEquipmentVisualComponent, "EquipmentVisual") as PlayerEquipmentVisualComponent
-	_phase(&"initialize_player_equipment_visual")
+	_phase(BuildStep.Phase.PLAYER_EQUIPMENT_VISUAL)
 	equipment_visual.initialize(root.gameplay_frame_controller.equipment_visual_context(root)); root.player_equipment_visual_component = equipment_visual
-	_phase(&"initialize_player_after_equipment")
+	_phase(BuildStep.Phase.PLAYER_AFTER_EQUIPMENT)
 	root._set_target_ui_visible(false)
 	var player_health: float = root._player_max_health(); health.maximum_health = player_health; health.reset(player_health); root.player_display_health = player_health; root._update_player_health_ui()
 	root._update_player_mp_ui()
@@ -552,13 +686,13 @@ func _initialize_slimes(root: Object, slimes: Array[Sprite2D]) -> void:
 	var rng := root.get("rng") as RandomNumberGenerator; var tuning := root.get("slime_tuning") as SlimeTuning
 	for slime in slimes:
 		var actor := slime as EnemyActor
-		if actor != null: actor.reset_runtime_state(slime.position, root.call("_nearest_slime_walkable_point", root.call("_actor_foot", slime)), rng.randf_range(tuning.repath_min, tuning.repath_max), rng.randf_range(tuning.hold_min, tuning.hold_max), rng.randf_range(0.0, tuning.idle_breath_time), rng.randf_range(0.2, 0.6))
-		root.call("_update_slime_attack_guides", slime); root.call("_apply_enemy_room_level", slime)
-		var maximum := float(root.call("_enemy_max_health", slime)); var slime_actor := slime as EnemyActor
+		if actor != null: actor.reset_runtime_state(slime.position, root._nearest_slime_walkable_point(root._actor_foot(slime)), rng.randf_range(tuning.repath_min, tuning.repath_max), rng.randf_range(tuning.hold_min, tuning.hold_max), rng.randf_range(0.0, tuning.idle_breath_time), rng.randf_range(0.2, 0.6))
+		root._update_slime_attack_guides(slime); root._apply_enemy_room_level(slime)
+		var maximum: float = root._enemy_max_health(slime); var slime_actor := slime as EnemyActor
 		if slime_actor != null: slime_actor.ensure_components()
-		var health := root.call("_slime_health", slime) as HealthComponent
+		var health := slime.get_node_or_null("Health") as HealthComponent
 		if slime_actor != null: health = slime_actor.configure_health(maximum, tuning.regen_delay, tuning.regen_interval, tuning.regen_amount)
-		health.damaged.connect(Callable(root, "_on_slime_health_damaged").bind(slime)); health.healed.connect(Callable(root, "_on_slime_health_healed").bind(slime)); health.health_changed.connect(Callable(root, "_on_slime_health_changed").bind(slime)); var presenter := root.call("_slime_health_presenter", slime) as SlimeHealthPresenter; presenter.display_health = maximum; presenter.damage_fill_hold_timer = 0.0
+		health.damaged.connect(Callable(root, "_on_slime_health_damaged").bind(slime)); health.healed.connect(Callable(root, "_on_slime_health_healed").bind(slime)); health.health_changed.connect(Callable(root, "_on_slime_health_changed").bind(slime)); var presenter := EnemyActor.component(slime, "HealthPresenter", SlimeHealthPresenter) as SlimeHealthPresenter; presenter.display_health = maximum; presenter.damage_fill_hold_timer = 0.0
 
 
 func _build_slime_roster(root: Object) -> Array[Sprite2D]:

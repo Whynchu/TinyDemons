@@ -2,7 +2,7 @@
 
 _Only codex writes this file._
 
-**Focus:** Completed the current X04 service-registration batch on review/composition-cleanup-plan. Seven ordered cohorts cover 42 production services. Stage 3.2 still needs production append-one-row acceptance, 31 named build steps, typed spawn contexts, and phase interfaces.
+**Focus:** X04 named build steps and typed phases are implemented, verified, documented, and Graphify-refreshed on review/composition-cleanup-plan; this batch is ready for commit/push. Remaining Stage 3.2 work is production append-one-row acceptance and typed RoomEnemySpawnServices contexts. The user asked to leave the PerformanceCaptureService attachment out of the current focus.
 **Updated:** 2026-10-16
 
 ## 2026-10-16 handoff
@@ -2414,3 +2414,24 @@ Graphify refreshed from the review checkout: 21,684 nodes, 49,090 edges, and
 811 communities; graph.json, HTML, and report are current. The saved-label set
 has 768 labels for 811 communities; no LLM relabel pass was run. Other board
 claims remain owned by codex export proof and opencode.
+
+## 2026-10-16 X04 ordered build-step continuation
+
+`GameplayBootstrap.BuildStep` now carries a name, typed phase, action, and
+optional frame yield. Ordered build queues cover the shared loading screen,
+title-only boot, gameplay animation and visual construction, and gameplay UI
+construction. Every old diagnostic phase key maps through the typed enum; the
+full gameplay UI queue retains its ten frame boundaries. The title boot smoke
+asserts step order, diagnostic mappings, and frame-boundary declarations.
+
+Godot 4.7.2 title boot and enemy-room entrance smokes pass. The headless editor
+parse exits 0 and shows only the known shutdown warning (180 leaked objects / 155
+resources). Composition self-test, strict audit (100%), index generation
+(311 scripts), and `git diff --check` pass. Bootstrap `root.call` matches fell
+from 37 on the branch head to one remaining concrete-gameplay save hook. The
+curated gate has not been rerun; its previously recorded 30 pass / 12 fail / 3
+timeout result is unchanged. Graphify refreshed from this review worktree to
+21,752 nodes / 49,171 edges / 776 communities; `graph.json`, `graph.html`, and
+`GRAPH_REPORT.md` are current. The focused path query confirms
+`GameplayBootstrap --contains--> BuildStep`. The existing 811 labels were
+retained; no LLM relabel pass ran.

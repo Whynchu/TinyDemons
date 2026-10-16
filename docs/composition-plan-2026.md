@@ -27,7 +27,7 @@ approved component contract in
 those documents describe the component contract and the migration record, this
 document describes what happens *after* both are considered complete.
 
-Updated: 2026-10-04
+Updated: 2026-10-16
 
 Audit date: 2026-10-04, against version `0.3.32` / commit `45db00b`
 
@@ -1347,13 +1347,19 @@ is 876 lines; the 800-line Stage 3.1 target remains open.
 
 ### 3.2 `gameplay_bootstrap.gd` — declarative assembly
 
-Convert the remaining 16 `_add_runtime_node` invocation expressions into rows
-consumed by the shared registrar, and replace the 31 `root.call(...)` build
-dispatches with named build steps in an ordered list.
+Register runtime Node services through the shared registrar and express boot
+build operations as named `BuildStep` entries in ordered lists. The source
+reconciliation on 2026-10-16 found seven cohorts covering 42 production
+services, with one direct attachment left for `PerformanceCaptureService`.
+The historical 31 `root.call(...)` build-dispatch count is no longer current:
+title and gameplay build sequences now use `BuildStep`, and only the concrete
+Gameplay save hook remains a `root.call(...)` in `GameplayBootstrap`.
 
 Then collapse `RoomEnemySpawnServices` — a 46-member field bag — into typed
-context objects of the `MagicRuntimeContext` shape, and give each boot phase a
-real interface instead of a `_phase()` string label.
+context objects of the `MagicRuntimeContext` shape. Boot phase purposes now use
+the typed `BuildStep.Phase` enum while retaining their diagnostic keys; move
+remaining inline setup phases into action steps only where the frame and
+dependency boundaries stay explicit.
 
 **Acceptance bar, per the "second piece of the same kind" rule already in
 [`component-composition-design.md`](component-composition-design.md):** a new
@@ -1374,16 +1380,28 @@ steering-world, and slime-spawn smokes pass on Godot 4.7.2; the composition
 self-test and strict audit pass. The audit reports two `_add_runtime_node(`
 matches (one remaining direct attachment plus the helper declaration).
 
-Stage 3.2 remains partial: one direct service attachment, 31 named build
-steps, typed RoomEnemySpawnServices contexts, phase interfaces, and production
-append-one-row/no-existing-script-edit acceptance remain open. The synthetic
-row-extension fixture proves generic row creation only. The current supervised
-45-path gate reports 30 pass, 12 fail, and 3 timeouts; the 12 failures match
-the recorded red list, and `generated_bound_reachability_smoke` passed this
-run. The timeouts were generated layout, generated run scene, and touch
-controls. Main-scene headless verification passed; Web export remains blocked
-by missing Godot 4.7.2 Web templates. See `coord/status-codex.md` for the
-remaining failure names.
+**Implementation record (2026-10-16, ordered build steps):** Added the typed
+`GameplayBootstrap.BuildStep` contract: each entry has a name, enum phase,
+action, and optional frame boundary. Ordered steps now cover the shared loading
+screen, title-only assembly, and full gameplay animation, visual, and UI build
+sequence. The phase enum maps every existing diagnostic key without changing
+the emitted names; the gameplay sequence retains its ten frame yields. The
+title smoke checks the step order, diagnostic mapping, and yield declarations;
+the Godot 4.7.2 enemy-room entrance smoke exercises the full path. Bootstrap
+`root.call` invocations fell from 37 to one; the remaining call is the save hook
+implemented on the concrete `Gameplay` scene script. The script index is
+regenerated.
+
+Stage 3.2 remains partial: `PerformanceCaptureService` is the one direct
+service attachment; `RoomEnemySpawnServices` still needs typed context
+extraction; and the production append-one-row/no-existing-script-edit
+acceptance remains open. The synthetic row-extension fixture proves generic
+row creation only. The current supervised 45-path gate reports 30 pass, 12
+fail, and 3 timeouts; the 12 failures match the recorded red list, and
+`generated_bound_reachability_smoke` passed this run. The timeouts were
+generated layout, generated run scene, and touch controls. Main-scene headless
+verification passed; Web export remains blocked by missing Godot 4.7.2 Web
+templates. See `coord/status-codex.md` for the remaining failure names.
 
 ---
 

@@ -3,6 +3,32 @@ extends SceneTree
 
 func _initialize() -> void:
 	var failures: Array[String] = []
+	var bootstrap_probe := GameplayBootstrap.new()
+	var diagnostics_were_enabled := GameplayBootstrap.boot_diagnostics_enabled
+	GameplayBootstrap.boot_diagnostics_enabled = false
+	var remaining_boot_phase_labels: Array[StringName] = [
+		GameplayBootstrap.BuildStep.diagnostic_label_for(GameplayBootstrap.BuildStep.Phase.MUSIC_PRELOAD),
+		GameplayBootstrap.BuildStep.diagnostic_label_for(GameplayBootstrap.BuildStep.Phase.PREWARM_TRANSITION_ASSETS),
+		GameplayBootstrap.BuildStep.diagnostic_label_for(GameplayBootstrap.BuildStep.Phase.BUILD_SLIME_TEXTURES),
+		GameplayBootstrap.BuildStep.diagnostic_label_for(GameplayBootstrap.BuildStep.Phase.INITIALIZE_PLAYER),
+		GameplayBootstrap.BuildStep.diagnostic_label_for(GameplayBootstrap.BuildStep.Phase.INITIALIZE_WALKABLE_AREA),
+		GameplayBootstrap.BuildStep.diagnostic_label_for(GameplayBootstrap.BuildStep.Phase.INITIALIZE_SLIMES),
+		GameplayBootstrap.BuildStep.diagnostic_label_for(GameplayBootstrap.BuildStep.Phase.ROOM_STATE_AND_ROUTE),
+		GameplayBootstrap.BuildStep.diagnostic_label_for(GameplayBootstrap.BuildStep.Phase.PLAYER_EQUIPMENT_VISUAL),
+		GameplayBootstrap.BuildStep.diagnostic_label_for(GameplayBootstrap.BuildStep.Phase.PLAYER_AFTER_EQUIPMENT),
+	]
+	_expect(remaining_boot_phase_labels == [&"music_preload", &"prewarm_transition_assets", &"build_slime_textures", &"initialize_player", &"initialize_walkable_area", &"initialize_slimes", &"room_state_and_route", &"initialize_player_equipment_visual", &"initialize_player_after_equipment"], "remaining boot phase enums preserve their diagnostic keys", failures)
+	var executed_step_names: Array[StringName] = []
+	var step_fixture: Array[GameplayBootstrap.BuildStep] = []
+	step_fixture.append(GameplayBootstrap.BuildStep.new(&"first", GameplayBootstrap.BuildStep.Phase.LOADING_SCREEN, func() -> void:
+		executed_step_names.append(&"first")
+	))
+	step_fixture.append(GameplayBootstrap.BuildStep.new(&"second", GameplayBootstrap.BuildStep.Phase.TITLE_SCREEN, func() -> void:
+		executed_step_names.append(&"second")
+	))
+	await bootstrap_probe._run_build_steps(get_root(), step_fixture)
+	_expect(executed_step_names == [&"first", &"second"], "named build steps execute in their declared order", failures)
+	GameplayBootstrap.boot_diagnostics_enabled = diagnostics_were_enabled
 	var row_test_parent := Node.new()
 	var early_service_rows := RuntimeServiceRegistrationPlan.early_service_registrations(row_test_parent)
 	_expect(RuntimeServiceRegistrationPlan.registration_errors(early_service_rows).is_empty(), "valid early service registration rows are accepted", failures)
@@ -149,6 +175,30 @@ func _initialize() -> void:
 	_expect(not bool(gameplay.get("boot_active")), "boot sequence completes", failures)
 	var loading := gameplay.get("loading_screen_overlay") as CanvasItem
 	_expect(loading == null or not loading.visible, "loading cover releases after title boot", failures)
+	var loading_build_steps := bootstrap_probe._loading_screen_build_steps(live_gameplay_state)
+	_expect(loading_build_steps.size() == 1 and loading_build_steps[0].name == &"loading_screen" and loading_build_steps[0].diagnostic_label() == &"build_loading_screen", "loading screen has a named step with its original diagnostic phase", failures)
+	var title_build_steps := bootstrap_probe._title_only_build_steps(live_gameplay_state, loading)
+	var title_step_names: Array[StringName] = []
+	var title_phase_labels: Array[StringName] = []
+	for step in title_build_steps:
+		title_step_names.append(step.name)
+		title_phase_labels.append(step.diagnostic_label())
+	_expect(title_step_names == [&"player_animation", &"title_screen", &"cloud_panel", &"settings", &"scene_transition_and_layout", &"title_state", &"finalize"], "title-only build operations are explicitly ordered", failures)
+	_expect(title_phase_labels == [&"build_player_animation", &"build_ui_title", &"build_ui_cloud_panel", &"build_ui_settings", &"build_ui_scene_transition_and_layout", &"set_title_state", &"finalize"], "title-only steps retain every existing diagnostic phase key", failures)
+	var gameplay_visual_steps := bootstrap_probe._gameplay_visual_build_steps(live_gameplay_state)
+	_expect(gameplay_visual_steps.size() == 1 and gameplay_visual_steps[0].name == &"fire_and_demon" and gameplay_visual_steps[0].diagnostic_label() == &"build_fire_and_demon" and gameplay_visual_steps[0].yield_after_frame, "gameplay visual build is a named step with its frame boundary", failures)
+	var gameplay_ui_steps := bootstrap_probe._gameplay_ui_build_steps(live_gameplay_state, PlayerProfile.new(), "")
+	var gameplay_ui_step_names: Array[StringName] = []
+	var gameplay_ui_phase_labels: Array[StringName] = []
+	var gameplay_ui_frame_boundaries: Array[bool] = []
+	for step in gameplay_ui_steps:
+		gameplay_ui_step_names.append(step.name)
+		gameplay_ui_phase_labels.append(step.diagnostic_label())
+		gameplay_ui_frame_boundaries.append(step.yield_after_frame)
+	_expect(gameplay_ui_step_names == [&"enemy_health_ui", &"interact_prompt", &"npc_dialogue", &"room_number", &"game_over_ui", &"run_complete_ui", &"title_screen", &"cloud_panel", &"settings", &"hub_ui", &"scene_transition_and_layout", &"refresh_player_cloak_visual", &"title_state"], "gameplay UI build operations are explicitly ordered", failures)
+	_expect(gameplay_ui_phase_labels == [&"build_ui_enemy_health", &"build_ui_interact_prompt", &"build_ui_npc_dialogue", &"build_ui_room_number", &"build_ui_game_over", &"build_ui_run_complete", &"build_ui_title", &"build_ui_cloud_panel", &"build_ui_settings", &"build_ui_hub", &"build_ui_scene_transition_and_layout", &"refresh_player_cloak_visual", &"set_title_state"], "gameplay UI steps retain every existing diagnostic phase key", failures)
+	_expect(gameplay_ui_frame_boundaries == [true, true, true, true, true, true, true, true, true, true, false, false, false], "gameplay UI steps preserve their original frame boundaries", failures)
+	bootstrap_probe.free()
 	gameplay.queue_free()
 	await process_frame
 	_finish(failures)
