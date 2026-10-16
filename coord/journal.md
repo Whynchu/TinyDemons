@@ -1609,3 +1609,8 @@ Title-only GameplayBootstrap named-step extraction. Preserving the ordered boot 
 Expanding the same X04 build-step batch to the full gameplay visual/UI sequence while preserving each rendered-frame boundary.
 ## 2026-10-16T16:15Z - codex - done
 X04 build-step batch: named typed queues cover loading, title-only, and gameplay visual/UI assembly; all 26 diagnostic phase keys are preserved and root.call is down from 37 to one save hook. Godot title and enemy-room smokes, composition guards, script index, and Graphify refresh pass.
+## 2026-10-16T16:20Z - codex - claim
+X05 roster canonicalization. Removing the duplicated RoomEnemySpawnServices slot array and routing family replacement, room contexts, and temporary popcorn membership through EnemyRoster.
+
+## 2026-10-16T16:45Z - codex - done
+X05 roster slice: removed the RoomEnemySpawnServices.slimes duplicate; context, family swap, and boss-phase membership now use EnemyRoster. Encounter family swap, special respawn, enemy-room entrance, strict composition audit/self-test, and Graphify refresh pass. Two boss debug smokes reproduce their failures on the committed X04 baseline.

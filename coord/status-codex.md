@@ -2,7 +2,7 @@
 
 _Only codex writes this file._
 
-**Focus:** X04 named build steps and typed phases are implemented, verified, documented, and Graphify-refreshed on review/composition-cleanup-plan; this batch is ready for commit/push. Remaining Stage 3.2 work is production append-one-row acceptance and typed RoomEnemySpawnServices contexts. The user asked to leave the PerformanceCaptureService attachment out of the current focus.
+**Focus:** X05 roster canonicalization is implemented, verified, documented, and Graphify-refreshed on review/composition-cleanup-plan. RoomEnemySpawnServices no longer carries its duplicate slimes list; room contexts and family/pool replacement use EnemyRoster. The family-swap, respawn-policy, and normal enemy-room entrance smokes pass; two boss debug smoke failures reproduce on the committed X04 baseline. Strict composition checks pass. Graphify is current at 21,753 nodes / 49,170 edges / 768 communities; this slice is ready to commit/push.
 **Updated:** 2026-10-16
 
 ## 2026-10-16 handoff

@@ -232,7 +232,7 @@ assembly path. Load-bearing ordering — display controller before
 `effects_spawner.configure_item_acquisition_delivery` — is expressed purely as
 statement order. The UI-build sub-sequence is **duplicated** between the
 title-only boot branch (192–218) and the full path (306–370). The single
-aggregation object, `RoomEnemySpawnServices`, is a 46-member field bag with no
+aggregation object, `RoomEnemySpawnServices`, is a 45-member field bag with no
 enumeration and no per-member validation.
 
 Consequence: adding a runtime system means editing a 616-line imperative
@@ -1355,8 +1355,8 @@ The historical 31 `root.call(...)` build-dispatch count is no longer current:
 title and gameplay build sequences now use `BuildStep`, and only the concrete
 Gameplay save hook remains a `root.call(...)` in `GameplayBootstrap`.
 
-Then collapse `RoomEnemySpawnServices` — a 46-member field bag — into typed
-context objects of the `MagicRuntimeContext` shape. Boot phase purposes now use
+Then collapse `RoomEnemySpawnServices` — a 45-member field bag — into typed
+context objects of the `MagicRuntimeContext` shape. The 2026-10-16 X05 slice removed its duplicate mutable `slimes` list: room contexts, family replacement, and boss-phase pool membership now use `EnemyRoster` as the canonical slot owner. The remaining service still has 40 stored fields, so broader typed-context extraction remains open. Boot phase purposes now use
 the typed `BuildStep.Phase` enum while retaining their diagnostic keys; move
 remaining inline setup phases into action steps only where the frame and
 dependency boundaries stay explicit.

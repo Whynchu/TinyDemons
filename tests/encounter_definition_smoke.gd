@@ -136,7 +136,6 @@ func _initialize() -> void:
 	hud.target_overhead_damage_fills[actor_slot] = hud_children["HpOverheadDamageFill"]
 	hud.target_overhead_aggro_markers[actor_slot] = hud_children["AggroMarker"]
 	var spawn_services := EnemySpawnServicesScript.new() as RoomEnemySpawnServices
-	spawn_services.slimes = actor_pool
 	spawn_services.enemy_roster = roster
 	spawn_services.actor_sprites = actor_sprites
 	spawn_services.collision_sprites = collision_sprites
@@ -167,7 +166,7 @@ func _initialize() -> void:
 	combat_runtime.free()
 	var skeleton_slot_name := skeleton_slot.name
 	_expect(skeleton_slot.texture != null and skeleton_slot.self_modulate == Color.WHITE, "replacement skeleton has artwork and clears the prior transient tint", failures)
-	_expect(roster.slot_index(skeleton_slot) == 0 and roster.members[0] == spawn_services.slimes[0] and actor_sprites[0] == skeleton_slot and collision_sprites[0] == skeleton_slot and depth_sprites[0] == skeleton_slot and occluder_sprites[0] == skeleton_slot and occlusion_renderer.occluders[0] == skeleton_slot, "all actor, collision, depth, and occlusion lists follow family replacement", failures)
+	_expect(roster.slot_index(skeleton_slot) == 0 and roster.members[0] == actor_pool[0] and actor_sprites[0] == skeleton_slot and collision_sprites[0] == skeleton_slot and depth_sprites[0] == skeleton_slot and occluder_sprites[0] == skeleton_slot and occlusion_renderer.occluders[0] == skeleton_slot, "all actor, collision, depth, and occlusion lists follow family replacement", failures)
 	_expect(skeleton_slot.get_index() == 1, "replacement remains at the same sibling index as its room slot", failures)
 	_expect(skeleton_slot.position == Vector2(17.0, 28.0) and is_equal_approx(skeleton_slot.rotation, 0.3) and is_equal_approx(skeleton_slot.skew, 0.12) and skeleton_slot.z_index == 9 and not skeleton_slot.z_as_relative, "replacement preserves slot position, rotation, skew, and depth", failures)
 	_expect(skeleton_slot.modulate == Color.WHITE and skeleton_slot.scale == Vector2.ONE, "replacement clears transient tint and uses the new family's authored scale", failures)

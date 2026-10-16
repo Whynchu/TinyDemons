@@ -480,20 +480,20 @@ func configure_enemy_spawn_services(services: RoomEnemySpawnServices) -> void:
 
 
 func enemy_spawn_context() -> RoomSpawnContext:
-	if enemy_spawn_services == null:
+	if enemy_spawn_services == null or enemy_spawn_services.enemy_roster == null:
 		return null
 	var player_foot := enemy_spawn_services.actor_foot(enemy_spawn_services.player) if enemy_spawn_services.player != null else Vector2.ZERO
 	var chest_rect := enemy_spawn_services.current_chest_rect()
 	var state := room_states.get(current_room_id, {}) as Dictionary
-	return RoomSpawnContext.new(current_room_id, current_room_type, enemy_spawn_services.slimes, enemy_spawn_services.player, enemy_spawn_services.chest, player_foot, chest_rect, enemy_spawn_services, state)
+	return RoomSpawnContext.new(current_room_id, current_room_type, enemy_spawn_services.enemy_roster.members, enemy_spawn_services.player, enemy_spawn_services.chest, player_foot, chest_rect, enemy_spawn_services, state)
 
 
 func enemy_respawn_context() -> RoomRespawnContext:
-	if enemy_spawn_services == null:
+	if enemy_spawn_services == null or enemy_spawn_services.enemy_roster == null:
 		return null
 	var player_foot := enemy_spawn_services.actor_foot(enemy_spawn_services.player) if enemy_spawn_services.player != null else Vector2.ZERO
 	var chest_rect := enemy_spawn_services.current_chest_rect()
-	return RoomRespawnContext.new(current_room_id, current_room_type, enemy_spawn_services.slimes, enemy_spawn_services.player, enemy_spawn_services.chest, player_foot, chest_rect, enemy_spawn_services)
+	return RoomRespawnContext.new(current_room_id, current_room_type, enemy_spawn_services.enemy_roster.members, enemy_spawn_services.player, enemy_spawn_services.chest, player_foot, chest_rect, enemy_spawn_services)
 
 
 func enter_room(room_id: StringName, room_type: StringName, arrival_socket: StringName = &"") -> void:
@@ -1422,6 +1422,10 @@ func record_popcorn_enemy_death(context: RoomRespawnContext, slime: Sprite2D) ->
 
 
 func begin_boss_jump_phase_popcorn(root: Object, boss: Sprite2D, anchor: Vector2) -> int:
+	var enemy_roster := enemy_spawn_services.enemy_roster if enemy_spawn_services != null else null
+	if enemy_roster == null:
+		push_error("Boss jump-phase popcorn requires the room EnemyRoster.")
+		return 0
 	var wave: Array[Sprite2D] = []
 	for index in 3:
 		var popcorn := _acquire_boss_jump_phase_slot(root)
@@ -1449,9 +1453,7 @@ func begin_boss_jump_phase_popcorn(root: Object, boss: Sprite2D, anchor: Vector2
 			presenter.damage_fill_hold_timer = 0.0
 		root.call("_prepare_slime_idle_visual", popcorn)
 		popcorn.visible = true
-		var enemy_roster := enemy_spawn_services.enemy_roster if enemy_spawn_services != null else null
-		if enemy_roster != null: enemy_roster.append(popcorn)
-		elif not (root.get("slimes") as Array[Sprite2D]).has(popcorn): (root.get("slimes") as Array[Sprite2D]).append(popcorn)
+		enemy_roster.append(popcorn)
 		(root.get("actor_sprites") as Array[Sprite2D]).append(popcorn)
 		(root.get("collision_sprites") as Array[Sprite2D]).append(popcorn)
 		(root.get("depth_sprites") as Array[Sprite2D]).append(popcorn)
@@ -1479,6 +1481,10 @@ func clear_boss_jump_phase_popcorn(boss: Sprite2D) -> void:
 
 
 func initialize_boss_jump_phase_pool(root: Object) -> void:
+	var enemy_roster := enemy_spawn_services.enemy_roster if enemy_spawn_services != null else null
+	if enemy_roster == null:
+		push_error("Boss jump-phase pool requires the room EnemyRoster.")
+		return
 	if not boss_jump_phase_pool.is_empty():
 		return
 	var template := root.get("slime_green") as Sprite2D
@@ -1498,15 +1504,11 @@ func initialize_boss_jump_phase_pool(root: Object) -> void:
 			health.healed.connect(Callable(root, "_on_slime_health_healed").bind(popcorn))
 			health.health_changed.connect(Callable(root, "_on_slime_health_changed").bind(popcorn))
 		_deactivate_boss_jump_phase_slot(popcorn)
-	var enemy_roster := enemy_spawn_services.enemy_roster if enemy_spawn_services != null else null
-	var slimes := root.get("slimes") as Array[Sprite2D]
 	for popcorn in boss_jump_phase_pool:
-		if enemy_roster != null: enemy_roster.append(popcorn)
-		else: slimes.append(popcorn)
+		enemy_roster.append(popcorn)
 	root.call("_build_slime_direction_textures")
 	for popcorn in boss_jump_phase_pool:
-		if enemy_roster != null: enemy_roster.remove(popcorn)
-		else: slimes.erase(popcorn)
+		enemy_roster.remove(popcorn)
 	var hud := root.get("hud_controller") as HudController
 	if hud != null:
 		for popcorn in boss_jump_phase_pool:
@@ -1516,16 +1518,17 @@ func initialize_boss_jump_phase_pool(root: Object) -> void:
 func prepare_boss_jump_phase_pool(services: RoomEnemySpawnServices, variant: String) -> void:
 	if services == null or boss_jump_phase_pool.is_empty():
 		return
+	if services.enemy_roster == null:
+		push_error("Boss jump-phase preparation requires the room EnemyRoster.")
+		return
 	for popcorn in boss_jump_phase_pool:
 		services.configure_slime_variant(popcorn, variant)
 		popcorn.set_meta("encounter_scale", 1.0)
 		popcorn.set_meta("prepared_boss_variant", variant)
-		if services.enemy_roster != null: services.enemy_roster.append(popcorn)
-		else: services.slimes.append(popcorn)
+		services.enemy_roster.append(popcorn)
 	services.prepare_enemy_visuals_direct()
 	for popcorn in boss_jump_phase_pool:
-		if services.enemy_roster != null: services.enemy_roster.remove(popcorn)
-		else: services.slimes.erase(popcorn)
+		services.enemy_roster.remove(popcorn)
 
 
 func _acquire_boss_jump_phase_slot(root: Object) -> Sprite2D:

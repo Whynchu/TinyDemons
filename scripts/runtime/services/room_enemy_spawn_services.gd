@@ -20,7 +20,6 @@ var hud_controller: HudController = null
 var occlusion_renderer: OcclusionRenderer = null
 var player: Sprite2D = null
 var chest: Sprite2D = null
-var slimes: Array[Sprite2D] = []
 var enemy_roster: EnemyRoster = null
 var collision_rect: Callable = Callable()
 var actor_sprites: Array[Sprite2D] = []
@@ -140,6 +139,9 @@ func _replace_actor_family_for_definition(current_actor: Sprite2D, definition: E
 	var needs_skeleton_actor := definition.type_id == &"skeleton"
 	if (current_slime is SkeletonActor) == needs_skeleton_actor:
 		return current_actor
+	if enemy_roster == null:
+		push_error("Enemy roster slot '%s' has no configured EnemyRoster owner." % current_actor.name)
+		return null
 	var parent := current_actor.get_parent()
 	if parent == null:
 		push_error("Cannot replace detached enemy roster slot '%s'." % current_actor.name)
@@ -163,18 +165,11 @@ func _replace_actor_family_for_definition(current_actor: Sprite2D, definition: E
 	var old_sibling_index := current_actor.get_index()
 	parent.add_child(replacement)
 	parent.move_child(replacement, old_sibling_index)
+	if enemy_roster.replace(current_actor, replacement) < 0:
+		push_error("Enemy roster no longer contains replacement slot '%s'." % current_actor.name)
+		replacement.queue_free()
+		return null
 	_transfer_enemy_hud_children(current_actor, replacement)
-	if enemy_roster != null:
-		if enemy_roster.replace(current_actor, replacement) < 0:
-			push_error("Enemy roster no longer contains replacement slot '%s'." % current_actor.name)
-			return null
-	else:
-		var old_enemy := current_actor as EnemyActor
-		var new_enemy := replacement as EnemyActor
-		if old_enemy != null and new_enemy != null:
-			new_enemy.roster_slot_id = old_enemy.roster_slot_id
-		current_actor.remove_from_group(&"enemies")
-		_replace_actor_reference(slimes, current_actor, replacement)
 	_replace_actor_reference(actor_sprites, current_actor, replacement)
 	_replace_actor_reference(collision_sprites, current_actor, replacement)
 	_replace_actor_reference(depth_sprites, current_actor, replacement)
