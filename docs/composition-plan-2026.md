@@ -1387,7 +1387,7 @@ screen, title-only assembly, and full gameplay animation, visual, and UI build
 sequence. The phase enum maps every existing diagnostic key without changing
 the emitted names; the gameplay sequence retains its ten frame yields. The
 title smoke checks the step order, diagnostic mapping, and yield declarations;
-the Godot 4.7.2 enemy-room entrance smoke exercises the full path. Bootstrap
+it also appends one dependency-bound row to the live Gameplay cohort and validates the prerequisite and live node metadata. The Godot 4.7.2 enemy-room entrance smoke exercises the full path. Bootstrap
 `root.call` invocations fell from 37 to one; the remaining call is the save hook
 implemented on the concrete `Gameplay` scene script. The script index is
 regenerated.

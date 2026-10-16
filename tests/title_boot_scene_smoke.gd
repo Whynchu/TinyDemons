@@ -87,6 +87,26 @@ func _initialize() -> void:
 	_expect(RuntimeServiceRegistrationPlan.live_registration_errors(live_service_rows).is_empty(), "live early service nodes match their registration rows", failures)
 	var live_gameplay_service_rows := RuntimeServiceRegistrationPlan.gameplay_service_registrations(gameplay as GameplayState)
 	_expect(RuntimeServiceRegistrationPlan.live_registration_errors(live_gameplay_service_rows).is_empty(), "live gameplay service nodes match their registration rows", failures)
+	var production_extension_rows: Array[RuntimeServiceRegistrationPlan.Row] = live_gameplay_service_rows.duplicate()
+	var production_extension_row := RuntimeServiceRegistrationPlan.Row.new(
+		&"ProductionExtensionProbe",
+		generic_registration_rows[0].service_script,
+		gameplay,
+		[&"ProfileRuntimeController"]
+	)
+	production_extension_rows.append(production_extension_row)
+	_expect(RuntimeServiceRegistrationPlan.registration_errors(production_extension_rows).is_empty(), "a single appended production row resolves its existing prerequisite", failures)
+	var missing_production_dependency: Array[RuntimeServiceRegistrationPlan.Row] = production_extension_rows.duplicate()
+	for index in range(missing_production_dependency.size() - 1, -1, -1):
+		if missing_production_dependency[index].node_name == &"ProfileRuntimeController":
+			missing_production_dependency.remove_at(index)
+	_expect(not RuntimeServiceRegistrationPlan.registration_errors(missing_production_dependency).is_empty(), "a production-row extension rejects a missing prerequisite", failures)
+	var production_extension_node := production_extension_row.service_script.new() as Node
+	production_extension_node.name = production_extension_row.node_name
+	gameplay.add_child(production_extension_node)
+	_expect(RuntimeServiceRegistrationPlan.live_registration_errors(production_extension_rows).is_empty(), "one appended production row validates against the live cohort and dependency order", failures)
+	production_extension_node.queue_free()
+	await process_frame
 	var live_world_service_rows := RuntimeServiceRegistrationPlan.world_service_registrations(gameplay as GameplayState)
 	_expect(RuntimeServiceRegistrationPlan.live_registration_errors(live_world_service_rows).is_empty(), "live world support nodes match their registration rows", failures)
 	var live_actor_service_rows := RuntimeServiceRegistrationPlan.actor_service_registrations(gameplay as GameplayState)

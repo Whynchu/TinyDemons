@@ -1614,3 +1614,9 @@ X05 roster canonicalization. Removing the duplicated RoomEnemySpawnServices slot
 
 ## 2026-10-16T16:45Z - codex - done
 X05 roster slice: removed the RoomEnemySpawnServices.slimes duplicate; context, family swap, and boss-phase membership now use EnemyRoster. Encounter family swap, special respawn, enemy-room entrance, strict composition audit/self-test, and Graphify refresh pass. Two boss debug smokes reproduce their failures on the committed X04 baseline.
+
+## 2026-10-16T16:48Z - codex - claim
+X04 registration acceptance. Extending the title boot smoke from a generic no-setup row to a single dependency-valid row appended to a live production cohort, without changing production service wiring.
+
+## 2026-10-16T16:49Z - codex - done
+X04 test slice: the title boot smoke now validates a one-row extension against the live Gameplay cohort, including a real prerequisite and missing-prerequisite rejection. Godot 4.7.2 title boot smoke passes. The broader no-existing-script-edit production acceptance remains open.
