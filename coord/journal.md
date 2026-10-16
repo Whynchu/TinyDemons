@@ -1719,3 +1719,9 @@ X05 placement input. Move WalkableArea from the long-lived RoomEnemySpawnService
 
 2026-10-16T21:22Z - codex - done
 X05 placement input landed: RoomEnemySpawnServices dropped from 25 to 24 fields, and RoomController now passes WalkableArea through each typed spawn/respawn context to the unchanged placement solver. Godot 4.7.2 enemy-room, special-respawn, slime-variant, and boss-variant smokes pass; popcorn_respawn_smoke reproduces its recorded baseline failure that the boss encounter exposes at least two support slots. Composition self-test/strict audit, 110/110 definition validation, UID validation (473), script index (312), and diff checks pass. Graphify refreshed to 21,769 nodes / 49,199 edges / 780 communities; the new RoomEnemyContext-to-WalkableArea edge is present.
+
+2026-10-16T21:25Z - codex - claim
+Use the normal generated Run 30 boss encounter in popcorn_respawn_smoke so its popcorn assertions exercise production boss support slots instead of the fixed debug stress roster.
+
+2026-10-16T21:30Z - codex - done
+Corrected the popcorn respawn smoke to duplicate the Run 30 debug configuration and disable only the stress roster for that test. The smoke now exercises generated boss popcorn support and passes on Godot 4.7.2; no production behavior or tuning changed.

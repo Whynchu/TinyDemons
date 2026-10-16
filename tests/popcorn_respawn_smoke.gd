@@ -9,6 +9,16 @@ func _initialize() -> void:
 		_finish(failures)
 		return
 	var gameplay := packed.instantiate()
+	var debug_configuration := load("res://resources/debug/run30_profile_configuration.tres") as DebugRunConfiguration
+	_expect(debug_configuration != null, "Run 30 debug configuration loads for popcorn respawn coverage", failures)
+	if debug_configuration == null:
+		_finish(failures)
+		return
+	# This smoke covers production popcorn support. The stress fixture deliberately
+	# builds a fixed roster whose support-caster slots are not popcorn.
+	debug_configuration = debug_configuration.duplicate() as DebugRunConfiguration
+	debug_configuration.boss_stress_encounter = false
+	gameplay.set("debug_run_configuration", debug_configuration)
 	get_root().add_child(gameplay)
 	for _frame in 90:
 		await process_frame
@@ -35,7 +45,7 @@ func _initialize() -> void:
 		elif not big_threats.has(slimes[slot]):
 			regular_enemies.append(slimes[slot])
 	_expect(boss != null, "boss encounter exposes a scaled big threat", failures)
-	_expect(supports.size() >= 2, "boss encounter exposes at least two popcorn support slots", failures)
+	_expect(supports.size() >= 2, "generated boss encounter exposes at least two popcorn support slots", failures)
 	var profile := gameplay.get("player_profile") as PlayerProfile
 	var expected_popcorn_level := maxi(1, profile.level - 5) if profile != null else 1
 	for support in supports:
