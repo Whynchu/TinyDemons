@@ -3,6 +3,51 @@ extends SceneTree
 
 func _initialize() -> void:
 	var failures: Array[String] = []
+	var row_test_parent := Node.new()
+	var early_service_rows := RuntimeServiceRegistrationPlan.early_service_registrations(row_test_parent)
+	_expect(RuntimeServiceRegistrationPlan.registration_errors(early_service_rows).is_empty(), "valid early service registration rows are accepted", failures)
+	var forward_service_rows := early_service_rows.duplicate()
+	forward_service_rows.reverse()
+	_expect(not RuntimeServiceRegistrationPlan.registration_errors(forward_service_rows).is_empty(), "forward service dependency is rejected", failures)
+	var missing_service_rows := early_service_rows.duplicate()
+	for index in range(missing_service_rows.size() - 1, -1, -1):
+		if missing_service_rows[index].node_name == &"InputRouter":
+			missing_service_rows.remove_at(index)
+	_expect(not RuntimeServiceRegistrationPlan.registration_errors(missing_service_rows).is_empty(), "missing service dependency is rejected", failures)
+	var duplicate_service_rows := early_service_rows.duplicate()
+	duplicate_service_rows.append(early_service_rows[0])
+	_expect(not RuntimeServiceRegistrationPlan.registration_errors(duplicate_service_rows).is_empty(), "duplicate service registration is rejected", failures)
+	row_test_parent.free()
+	var generic_registration_parent := Node.new()
+	var generic_registration_rows := RuntimeServiceRegistrationPlan.early_service_registrations(generic_registration_parent)
+	generic_registration_rows.append(RuntimeServiceRegistrationPlan.Row.new(
+		&"RegistrationProbe",
+		generic_registration_rows[0].service_script,
+		generic_registration_parent,
+		[&"TouchControlsLayer"]
+	))
+	var generic_registration_errors := RuntimeServiceRegistrationPlan.register_all(generic_registration_rows)
+	_expect(generic_registration_errors.is_empty(), "generic registrar accepts an appended no-setup production service row", failures)
+	_expect(generic_registration_parent.get_node_or_null("RegistrationProbe") != null, "generic registrar creates the appended no-setup node", failures)
+	generic_registration_parent.free()
+	var wrong_script_parent := Node.new()
+	var wrong_script_rows := RuntimeServiceRegistrationPlan.early_service_registrations(wrong_script_parent)
+	_add_registration_fixture(wrong_script_rows, &"DisplayController")
+	_expect(not RuntimeServiceRegistrationPlan.live_registration_errors(wrong_script_rows).is_empty(), "unexpected live service script is rejected", failures)
+	wrong_script_parent.free()
+	var wrong_parent := Node.new()
+	var wrong_parent_rows := RuntimeServiceRegistrationPlan.early_service_registrations(wrong_parent)
+	_add_registration_fixture(wrong_parent_rows, &"", &"DisplayController")
+	_expect(not RuntimeServiceRegistrationPlan.live_registration_errors(wrong_parent_rows).is_empty(), "unexpected live service parent is rejected", failures)
+	wrong_parent.free()
+	var wrong_order_parent := Node.new()
+	var wrong_order_rows := RuntimeServiceRegistrationPlan.early_service_registrations(wrong_order_parent)
+	_add_registration_fixture(wrong_order_rows)
+	var settings_node := wrong_order_parent.get_node("SettingsService")
+	var display_node := wrong_order_parent.get_node("DisplayController")
+	wrong_order_parent.move_child(settings_node, display_node.get_index() + 1)
+	_expect(not RuntimeServiceRegistrationPlan.live_registration_errors(wrong_order_rows).is_empty(), "live prerequisite order is enforced", failures)
+	wrong_order_parent.free()
 	var packed := load("res://scenes/main.tscn") as PackedScene
 	_expect(packed != null, "main scene loads for title boot characterization", failures)
 	if packed == null:
@@ -12,9 +57,44 @@ func _initialize() -> void:
 	get_root().add_child(gameplay)
 	for _frame in 120:
 		await process_frame
+	var live_service_rows := RuntimeServiceRegistrationPlan.early_service_registrations(gameplay)
+	_expect(RuntimeServiceRegistrationPlan.live_registration_errors(live_service_rows).is_empty(), "live early service nodes match their registration rows", failures)
 	var screens := gameplay.get("screen_state_controller") as ScreenStateController
+	var settings := gameplay.get("settings_service") as SettingsService
+	var display := gameplay.get("display_controller") as DisplayController
+	var router := gameplay.get("input_router") as InputRouter
+	var tracker := gameplay.get("input_device_tracker") as InputDeviceTracker
+	var touch := gameplay.get("touch_controls_layer") as TouchControlsLayer
+	var debug_session := gameplay.get_node_or_null("DebugSessionController") as DebugSessionController
+	_expect(settings != null and settings.get_parent() == gameplay, "settings service is registered on the gameplay root", failures)
+	_expect(display != null and display.get_parent() == gameplay, "display controller is registered on the gameplay root", failures)
+	_expect(router != null and router.get_parent() == gameplay, "input router is registered on the gameplay root", failures)
+	_expect(tracker != null and tracker.get_parent() == gameplay, "device tracker is registered on the gameplay root", failures)
+	_expect(touch != null and touch.get_parent() == gameplay, "touch controls are registered on the gameplay root", failures)
+	_expect(debug_session != null and debug_session.get_parent() == gameplay, "debug session controller is registered on the gameplay root", failures)
+	if settings != null and display != null and router != null and tracker != null and touch != null:
+		_expect(display.settings_service == settings, "display setup binds the registered settings service", failures)
+		_expect(touch.get_node_or_null("TouchControlsRoot") != null, "touch setup builds controls before input binding", failures)
+		_expect(router.touch_provider == touch, "input router binds the touch layer after construction", failures)
+		_expect(tracker.device_changed.is_connected(Callable(touch, "set_last_input_device")), "device changes are wired to touch prompts", failures)
+		_expect(router.context == InputRouter.Context.MENU, "touch controls start in menu input context", failures)
 	_expect(screens != null, "screen state owner is composed during boot", failures)
 	if screens != null:
+		var gameplay_state := gameplay as GameplayState
+		var background: CanvasItem = gameplay_state.background_environment if gameplay_state != null else null
+		var map: CanvasItem = gameplay_state.map_root if gameplay_state != null else null
+		var actors := gameplay.get_node_or_null("Actors") as CanvasItem
+		_expect(background != null and map != null and actors != null, "menu visibility contract has all three world layers", failures)
+		if background != null and map != null and actors != null:
+			var background_was_visible := background.visible
+			var map_was_visible := map.visible
+			var actors_were_visible := actors.visible
+			screens.set_menu_world_hidden(gameplay, true)
+			_expect(not background.visible and not map.visible and not actors.visible, "full-screen menu hides background, map, and actors", failures)
+			screens.set_menu_world_hidden(gameplay, true)
+			screens.set_menu_world_hidden(gameplay, false)
+			_expect(background.visible == background_was_visible and map.visible == map_was_visible and actors.visible == actors_were_visible, "menu visibility restores each layer's captured state after repeated hide", failures)
+			screens.set_menu_world_hidden(gameplay, false)
 		_expect(screens.title_presenter.overlay != null, "title overlay is built during boot", failures)
 		_expect(screens.title_presenter.overlay != null and screens.title_presenter.overlay.visible, "title overlay is visible after boot", failures)
 		var ui := gameplay.get("ui") as Node
@@ -61,3 +141,22 @@ func _finish(failures: Array[String]) -> void:
 func _expect(condition: bool, label: String, failures: Array[String]) -> void:
 	if not condition:
 		failures.append(label)
+
+func _add_registration_fixture(
+	registrations: Array[RuntimeServiceRegistrationPlan.Row],
+	wrong_script_for: StringName = &"",
+	wrong_parent_for: StringName = &""
+) -> void:
+	var unexpected_parent := Node.new()
+	unexpected_parent.name = &"UnexpectedParent"
+	registrations[0].parent.add_child(unexpected_parent)
+	for registration in registrations:
+		var script := registration.service_script
+		var parent := registration.parent
+		if registration.node_name == wrong_script_for:
+			script = registrations[0].service_script
+		if registration.node_name == wrong_parent_for:
+			parent = unexpected_parent
+		var node := script.new() as Node
+		node.name = registration.node_name
+		parent.add_child(node)

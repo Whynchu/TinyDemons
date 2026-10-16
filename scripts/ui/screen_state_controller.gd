@@ -24,6 +24,7 @@ const ScreenRouteControllerScript = preload("res://scripts/ui/screen_route_contr
 const HubListScrollControllerScript = preload("res://scripts/ui/hub_list_scroll_controller.gd")
 const ScreenLayoutControllerScript = preload("res://scripts/ui/screen_layout_controller.gd")
 const ScreenAssemblyControllerScript = preload("res://scripts/ui/screen_assembly_controller.gd")
+const MenuWorldVisibilityControllerScript = preload("res://scripts/ui/menu_world_visibility_controller.gd")
 const HubScreenSetupControllerScript = preload("res://scripts/ui/hub_screen_setup_controller.gd")
 const MenuWidgetFactoryScript = preload("res://scripts/ui/menu_widget_factory.gd")
 const MenuCursorAnimatorScript = preload("res://scripts/ui/menu_cursor_animator.gd")
@@ -235,10 +236,7 @@ var _hub_legacy_widget_visibility_presenter: HubLegacyWidgetVisibilityPresenterS
 # Used by hub_list_scroll_controller.gd. Godot only checks this class for use.
 @warning_ignore("unused_private_class_variable")
 var _hub_legacy_widget_scroll_presenter: HubLegacyWidgetScrollPresenterScript = HubLegacyWidgetScrollPresenterScript.new() as HubLegacyWidgetScrollPresenterScript
-var _menu_world_hidden := false
-var _menu_world_background_visible := true
-var _menu_world_map_visible := true
-var _menu_world_actors_visible := true
+var _menu_world_visibility_controller: MenuWorldVisibilityController = MenuWorldVisibilityControllerScript.new() as MenuWorldVisibilityController
 var hub_overlay: ColorRect = null
 var hub_summary_text: Sprite2D = null
 var hub_points_text: Sprite2D:
@@ -711,35 +709,7 @@ func set_state(new_state: StringName) -> void:
 
 
 func set_menu_world_hidden(root: Object, hidden: bool) -> void:
-	var gameplay := root as GameplayState
-	if gameplay == null:
-		return
-	var background: CanvasItem = gameplay.background_environment
-	var map: CanvasItem = gameplay.map_root
-	var actors := gameplay.get_node_or_null("Actors") as CanvasItem
-	if hidden:
-		if _menu_world_hidden:
-			return
-		_menu_world_hidden = true
-		if background != null:
-			_menu_world_background_visible = background.visible
-			background.visible = false
-		if map != null:
-			_menu_world_map_visible = map.visible
-			map.visible = false
-		if actors != null:
-			_menu_world_actors_visible = actors.visible
-			actors.visible = false
-		return
-	if not _menu_world_hidden:
-		return
-	_menu_world_hidden = false
-	if background != null:
-		background.visible = _menu_world_background_visible
-	if map != null:
-		map.visible = _menu_world_map_visible
-	if actors != null:
-		actors.visible = _menu_world_actors_visible
+	_menu_world_visibility_controller.set_hidden(root as GameplayState, hidden)
 
 
 # --- Game-over and run-complete screens ---

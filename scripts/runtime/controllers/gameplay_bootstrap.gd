@@ -24,7 +24,6 @@ const DUNGEON_MINIMAP_CONTROLLER_SCRIPT = preload("res://scripts/ui/dungeon_mini
 const INPUT_DEVICE_TRACKER_SCRIPT = preload("res://scripts/services/input_device_tracker.gd")
 const TOUCH_CONTROLS_LAYER_SCRIPT = preload("res://scripts/ui/touch_controls_layer.gd")
 const PERFORMANCE_CAPTURE_SERVICE_SCRIPT = preload("res://scripts/services/performance_capture_service.gd")
-const DEBUG_SESSION_CONTROLLER_SCRIPT = preload("res://scripts/editor/debug_session_controller.gd")
 const CLOUD_SAVE_SERVICE_SCRIPT = preload("res://scripts/services/cloud_save_service.gd")
 const CLOUD_SAVE_PANEL_SCRIPT = preload("res://scripts/ui/cloud_save_panel.gd")
 const ROOM_PREFAB_HOST_SCRIPT = preload("res://scripts/runtime/controllers/room_prefab_host.gd")
@@ -95,13 +94,26 @@ func initialize(root: GameplayState, preview_session: RefCounted = null) -> void
 		print("DEBUG ENEMY TEST ACTIVE: %s (%s)" % [debug_enemy_test_id, EnemyFactory.definition(debug_enemy_test_id).display_name])
 	root.debug_enemy_test_id = debug_enemy_test_id
 	var title_only_boot := not root.debug_start_in_boss_room and not debug_enemy_test_enabled and not benchmark_mode and not (profile.has_started and (requested_route == "hub" or requested_route == "run"))
-	root.settings_service = _add_runtime_node(root, SettingsService, "SettingsService") as SettingsService
-	root.settings_service.load_settings()
-	root.display_controller = _add_runtime_node(root, DisplayController, "DisplayController") as DisplayController
-	root.display_controller.initialize(root, root.settings_service)
-	root.input_router = _add_runtime_node(root, InputRouter, "InputRouter") as InputRouter
-	var input_device_tracker := _add_runtime_node(root, INPUT_DEVICE_TRACKER_SCRIPT, "InputDeviceTracker") as InputDeviceTracker
-	var touch_controls_layer := _add_runtime_node(root, TOUCH_CONTROLS_LAYER_SCRIPT, "TouchControlsLayer") as TouchControlsLayer
+	var early_service_rows := RuntimeServiceRegistrationPlan.early_service_registrations(root)
+	var settings_registration := RuntimeServiceRegistrationPlan.row_for(early_service_rows, &"SettingsService")
+	settings_registration.configure_callable = func(service: Node) -> void:
+		root.settings_service = service as SettingsService
+		root.settings_service.load_settings()
+	var display_registration := RuntimeServiceRegistrationPlan.row_for(early_service_rows, &"DisplayController")
+	display_registration.configure_callable = func(service: Node) -> void:
+		root.display_controller = service as DisplayController
+		root.display_controller.initialize(root, root.settings_service)
+	var router_registration := RuntimeServiceRegistrationPlan.row_for(early_service_rows, &"InputRouter")
+	router_registration.configure_callable = func(service: Node) -> void:
+		root.input_router = service as InputRouter
+	var tracker_registration := RuntimeServiceRegistrationPlan.row_for(early_service_rows, &"InputDeviceTracker")
+	var touch_registration := RuntimeServiceRegistrationPlan.row_for(early_service_rows, &"TouchControlsLayer")
+	var early_service_registration_errors := RuntimeServiceRegistrationPlan.register_all(early_service_rows)
+	assert(early_service_registration_errors.is_empty(), "Invalid early service registration: %s" % "; ".join(early_service_registration_errors))
+	if not early_service_registration_errors.is_empty():
+		return
+	var input_device_tracker := tracker_registration.parent.get_node(NodePath(String(tracker_registration.node_name))) as InputDeviceTracker
+	var touch_controls_layer := touch_registration.parent.get_node(NodePath(String(touch_registration.node_name))) as TouchControlsLayer
 	root.input_device_tracker = input_device_tracker
 	root.touch_controls_layer = touch_controls_layer
 	input_device_tracker.device_changed.connect(Callable(touch_controls_layer, "set_last_input_device"))
@@ -112,7 +124,6 @@ func initialize(root: GameplayState, preview_session: RefCounted = null) -> void
 	root.profile_runtime_controller = _add_runtime_node(root, PROFILE_RUNTIME_CONTROLLER_SCRIPT, "ProfileRuntimeController")
 	root.pickup_runtime_controller = _add_runtime_node(root, PICKUP_RUNTIME_CONTROLLER_SCRIPT, "PickupRuntimeController") as PickupRuntimeController
 	root.run_flow_controller = _add_runtime_node(root, RUN_FLOW_CONTROLLER_SCRIPT, "RunFlowController") as RunFlowController
-	_add_runtime_node(root, DEBUG_SESSION_CONTROLLER_SCRIPT, "DebugSessionController")
 	root.dungeon_map_controller = _add_runtime_node(root, DUNGEON_MAP_CONTROLLER_SCRIPT, "DungeonMapController") as DungeonMapController
 	root.hub_flow_controller = _add_runtime_node(root, HUB_FLOW_CONTROLLER_SCRIPT, "HubFlowController")
 	root.save_flow_controller = _add_runtime_node(root, SAVE_FLOW_CONTROLLER_SCRIPT, "SaveFlowController")

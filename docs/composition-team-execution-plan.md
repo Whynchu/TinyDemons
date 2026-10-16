@@ -33,11 +33,9 @@ connector published the same tree after its public-journal disclosure check.
 
 ## Team and ownership
 
-Use the [team skill](../.agents/skills/tiny-demons-team/SKILL.md) and
-[agent workflow](agent-workflow.md). The live cap is parent plus one child.
-Run advisors and workers serially; the parent can review unrelated material
-while the child works. Never claim parallel implementation capacity that the
-session does not provide.
+Use the team skill and agent workflow. The project config permits four concurrent child agents (five total including the parent); this live chat currently caps at four total.
+Parallelize independent reviews and disjoint worker packets with explicit board claims. Serialize overlapping edits.
+The parent owns Godot/editor access, status coordination, integration, and acceptance. Never claim capacity beyond the active session.
 
 | Responsibility | Assignment | Evidence expected |
 | --- | --- | --- |
@@ -63,7 +61,7 @@ bridge and `coord/status-codex.md`; preserve opencode's runner/Pages claim.
 | E2 Item lifecycle | P4 / X12 / X17 | Catalog-owned create/remove, generated manifest and cache parity, editor undo/redo | Technical smoke passes on 4.7.1 including both replacement guards and post-save rollback; real editor history/reopen acceptance open |
 | E3 Entry points | E2 | CLI item scaffolding reaches the same fresh registry; guide describes actual editor/CLI paths | CLI creation, fresh-process preview and fixture-inclusive validation pass; original manifests and fixture absence restored |
 | E4 Source reconciliation | P4 / X14, X18 | Correct stale room-spec/policy/folder claims using field-to-consumer evidence | Typed RoomSpec/ConnectionSpec and policy consumption already exist; assign only remaining real parity/validation defects |
-| E5 Agent usability | E1-E4 | Independent LOW agent follows docs for supported enemy/item/room tasks | Item terminal exercise passes in about 9 minutes with zero production edits; enemy/room mutation exercises and human editor acceptance open |
+| E5 Agent usability | E1-E4 | Independent LOW agent follows docs for supported enemy/item/room tasks | Item exercise passes; isolated enemy create/preview plus fixture-inclusive 111/111 validation and manifest check pass on Godot 4.7.2. Room authoring is not data-only; human editor acceptance remains open (details below) |
 | E6 Migration evidence | P1/P2/P3 | Current-source family swap, file-backed restore, brain/steering and preview evidence | Focused checks pass; earlier P3 user acceptance remains valid; do not misreport previously unrun checks |
 | E7 Export lifecycle | P4/M1 | Authored fixture and manifest references survive export/reload; runtime MCP autoload inert | Exported-content inventory and actual browser/runtime proof; no conclusion from packaging alone |
 | E8 Content authority | Remaining P4 | Reconcile item/element/room field ownership, remove remaining unsupported schemas only with evidence | Consumer ledger closed; stable saves preserved. New-flame proof uses disposable data; shipping new gameplay/art requires a product decision |
@@ -76,6 +74,41 @@ P0 disposition is complete; P3 shared-brain architecture is accepted. P1/P2
 acceptance is partial. P4 is in progress, and P5-P7 remain open. Performance
 acceptance stays owner-deferred; it cannot be silently relabeled as passed.
 The broad plan is not complete merely because E0-E3 land.
+
+### E9 checkpoint (2026-10-16)
+
+The X04 pilot now executes six production services through typed registration
+rows and one shared registrar. After the row-only extension fix, the focused
+current-tree Godot 4.7.2 title boot smoke and composition/manifest/definition/
+UID preflights pass. The composition audit reports 38 `_add_runtime_node(` regex matches against
+a 44-match regression ceiling: 37 invocation expressions plus the helper
+declaration. This is a guard, not the Stage 3.2 completion criterion. The last
+supervised 45-path curated gate ran immediately before the sixth no-setup row
+was added and was red at 29 pass / 12 fail / 4 timeout. The full gate was not
+rerun after that row; aggregate counts and named outcomes are recorded in `coord/status-codex.md`.
+The referenced per-test CSV is absent from both available worktrees, so logs
+are unavailable and individual failures and timeouts remain unclassified
+pending a base comparison. The generic registrar now
+accepts and creates an appended no-setup row; its declared rows are the source
+of truth, with no duplicate required-name list. End-to-end production
+append-one-row acceptance, remaining registrations, named build steps, typed
+spawn-service contexts, and phase interfaces remain open.
+
+### E5 checkpoint (2026-10-16)
+
+A LOW worker found no data-only room workflow: the prefab factory still uses an
+explicit code registry, while authored run resources carry dictionary room
+entries without `prefab_id`. A follow-up isolated E5 trial used Godot 4.7.2 via
+a temporary CLI shim: `new variant codex_e5_probe`, same-ID enemy preview,
+definition validation (111/111), and manifest check (111 entries) passed. The
+fixture was removed and the three changed catalog/manifest resources restored
+to their captured SHA-256 values; the disposable checkout is clean. The first
+content-suite run passed seven paths before finding stale Slime, boss-selection,
+and enemy-room assertions; each corrected smoke passed individually on the
+review branch. A fresh one-command 10-path rerun and human Godot-editor checks
+remain open. The attempted one-command rerun was not started after its safety
+preflight observed a Godot GUI process. Adding a data-driven room definition
+path is still needed before a producer can author a new room.
 
 ## Checks and integration
 

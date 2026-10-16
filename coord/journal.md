@@ -1554,3 +1554,41 @@ P4 item visual metadata disposition. Inspecting and editing item schema/resource
 2026-10-15 | codex | handoff | Final expanded enemy/item lifecycle smokes pass standard4.7.1: explicit save updates baseline; post-delete manifest failure restores exact files/cache/signature and dirty retry succeeds. Fresh independent manifest load plus declared path matching rejects stale partial cache. Expected loader errors only from unique invalid-resource fixtures; all original catalog/manifests exact before harness restoration.
 2026-10-15 | codex | claim | Thorn approved narrow shared manifest helper: Luna LOW moves only duplicate ordered path/count comparison to ContentDefinitionManifestService; catalog typing, two-pass loads and adoption remain with catalog owners. Parent reruns focused checks.
 2026-10-15 | codex | done | Integrated LOW shared manifest helper after Thorn ownership review; final expanded enemy/item smokes pass standard4.7.1 with exact catalog/manifests before restoration. Strict composition, manifest160/158/45 and UID469 pass. Publish authoring/recovery package, excluding preexisting project.godot renderer edit; export/runtime proof remains active.
+
+
+
+
+## 2026-10-16T10:32:15Z - codex - claim
+Started a bounded X04 runtime-registration pilot for the early settings/display/input services; preserve existing setup order and keep Stage 3 open.
+
+## 2026-10-16T10:32:15Z - codex - handoff
+Received the first LOW worker implementation. Parent is checking whether its order contract represents actual registrations before verification.
+
+2026-10-16 | codex | done | X04 early-service pilot now uses typed rows for service scripts, parents, and prerequisites; static rejection fixtures and live parent/script/dependency-order checks pass. Godot 4.7.2 title_boot_scene_smoke, composition self-test/strict, manifest160/158/45, UID470, and diff checks pass. Existing setup order is preserved; the full Stage 3.2 one-row goal remains open. Graphify map refresh was attempted but not completed.
+
+2026-10-16 | codex | done | X04 early-service rows now execute through a shared registrar with optional immediate setup callbacks; the synthetic no-setup row plus live script/parent/order rejection checks pass in the isolated Godot 4.7.1 title smoke. Stage 3.2 remains open.
+2026-10-16 | codex | done | X04 early registration pilot expanded to six production rows, including no-setup DebugSessionController; focused Godot 4.7.1 title boot smoke and composition/definition/manifest/UID preflights pass. The 45-path curated gate is 29 pass, 12 fail, 4 timeout; exact current-tree debt is recorded in status-codex. Stage 3.2 remains open.
+2026-10-16 | codex | handoff | The last full curated gate result was run on the five-row pilot immediately before the DebugSessionController row was added; no full rerun followed. Focused title smoke and all runner preflights pass on the final six-row tree.
+2026-10-16 | codex | done | Removed duplicate required-name registry; appended no-setup row fixture and focused Godot 4.7.2 title boot smoke pass with all runner preflights; project.godot byte-identically restored. Full 45-path gate not rerun.
+
+
+## 2026-10-16 — codex — claim
+Update project-local concurrency and workflow guidance for five total agents; run independent E5 authoring and menu-visibility slices with separate path claims, subject to the live four-agent total cap.
+2026-10-16T12:50Z | codex-item-visual | claim | Retire unconsumed item visual metadata; preserve slot-level art; fix the focused smoke teardown.
+
+## 2026-10-16T13:00:18Z — codex — done
+The menu visibility extraction passed the composition regression audit after its new controller boundary was typed. E5 source review found the Godot CLI unavailable and no data-only room authoring path; the disposable checkout remained clean. The five-agent project cap is documented; the live session remains capped at four total.
+2026-10-16 | codex | clarification | The prior curated-gate aggregate (29/45 pass, 12 fail, 4 timeout) remains a historical five-row result, not a verified current-tree run. The referenced smoke-results.csv is absent from both available worktrees; individual causes remain unclassified pending logs and base comparison.
+
+2026-10-16 | codex | done | Published item visual/report follow-through as 1fb9c67 after focused Godot 4.7.2 drop-art and catalog-report checks.
+2026-10-16 | codex | claim | Independently verify and publish the completed runtime-service registration and menu-world visibility extraction; leave the separately claimed project.godot/export proof untouched.
+
+2026-10-16 | codex | handoff | Godot 4.7.2 is available; retry the blocked E5 Slime variant workflow in the clean disposable checkout before closing its status.
+
+2026-10-16 | codex | claim | Repair tests/slime_variant_smoke.gd fixtures found during the E5 content suite: provide the gameplay stats callback and typed element-theme arrays.
+
+2026-10-16 | codex | claim | Repair the same untyped Array call pattern in tests/boss_variant_selection_smoke.gd found during the content acceptance batch.
+
+2026-10-16 | codex | claim | Align tests/enemy_room_entrance_scene_smoke.gd with Run 3 guard eligibility and the EnemyActor factory materialization contract.
+
+2026-10-16 | codex | done | Verified X04 registration and menu-world visibility, corrected stale Slime/boss/enemy-room smoke fixtures, passed isolated E5 variant create/preview and 111/111 definition plus manifest checks, and refreshed Graphify at 21638 nodes / 49054 edges / 768 communities.

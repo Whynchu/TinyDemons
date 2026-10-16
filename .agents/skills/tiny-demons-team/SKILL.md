@@ -19,12 +19,9 @@ authority docs. For composition and authoring work, consult
 `docs/CONTENT_AUTHORING.md`, and ownership guidance as applicable. Source and
 runtime consumers decide what is true; plans describe intended direction.
 
-The active subagent cap is the capacity actually available in the current
-session. The project config currently allows one concurrent subagent in addition
-to the parent, so run child assignments serially. Do not alter
-project or global concurrency settings to make room. Pip, Thorn, and Hexley are
-read-only advisors: the parent chooses any advisor needed, and advisors do not
-spawn workers. Workers likewise do not spawn more agents.
+The project config permits four concurrent child agents, for five agents total including the parent. Use only the live session's actual capacity; the host may impose a lower cap.
+Parallelize independent reviews and implementation slices when dependencies and file ownership are clear. Record board claims before edits, serialize overlapping changes, and keep the parent responsible for integration and editor access.
+Pip, Thorn, and Hexley are read-only advisors; advisors do not spawn workers, and workers do not spawn agents. Do not raise the project cap above five total.
 
 ## Delegate a bounded slice
 

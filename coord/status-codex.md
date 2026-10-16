@@ -2,8 +2,12 @@
 
 _Only codex writes this file._
 
-**Focus:** Composition cleanup P4 catalog authority on `review/composition-cleanup-plan`.
-**Updated:** 2026-10-15
+**Focus:** Closed the verified X04/MenuWorldVisibility slice and E5 authoring proof on review/composition-cleanup-plan. The next open acceptance is the Stage 3.2 production append-one-row check; Stage 3.1's 800-line target and the one-command content rerun remain open.
+**Updated:** 2026-10-16
+
+## 2026-10-16 handoff
+
+The user asked to raise the repo delegation limit to five total agents and use concurrent independent work. The live Codex tool surface currently permits four total agents including the parent. Pip, Thorn, and Hexley completed read-only reviews; their shared recommendation is to prioritize an E5 enemy/room authoring exercise, with the MenuWorldVisibilityController extraction as separate technical progress. Current worktree changes and the unrelated project.godot renderer deletion remain preserved.
 
 ## In flight: Delegated composition completion
 
@@ -2292,3 +2296,89 @@ validation passes at 110/110. Strict composition, manifest (160/158/45), UID
 worktree with its MCP runtime autoload temporarily disabled and its project
 configuration restored byte-for-byte. The main-worktree editor was untouched.
 The existing pending Web renderer override change remains outside this batch.
+
+
+
+
+
+## Completed: X04 early runtime-registration pilot (2026-10-16)
+
+SettingsService, DisplayController, InputRouter, InputDeviceTracker,
+TouchControlsLayer, and DebugSessionController now use typed registration rows
+carrying node name, script, parent, and declared prerequisites. The bootstrap
+creates them through one shared registrar. Optional setup callbacks run
+immediately after attachment, preserving settings loading before display
+initialization. Tracker/touch wiring still follows live validation. Static
+checks reject missing, duplicate, and forward dependencies; the live check
+compares scripts, parents, and sibling order. DebugSessionController has no
+`_init`, `_ready`, or configuration hook; its construction moved earlier, while
+its consumers still access it later.
+
+The earlier Godot 4.7.1 `title_boot_scene_smoke` passed after adding
+DebugSessionController. After removing the duplicate required-name registry,
+the current tree also passed `title_boot_scene_smoke` on standard Godot 4.7.2
+with isolated user data and no other Godot process active. The test includes
+negative live fixtures for wrong scripts, wrong parents, and prerequisite
+order, plus a synthetic appended no-setup row. Runner preflights pass:
+composition self-test and strict targets, definitions at 110/110, manifest at
+160 rows / 158 runnable / 45 gate, content manifest freshness at 110 entries,
+and UID validation at 470 sidecars. Temporary MCP/plugin isolation restored
+`project.godot` byte-for-byte (SHA256
+`0E9AAD5506D1693797F50822C1E8B4D7FD0AE9A484DD180E018860552E61CDCB`).
+`docs/SCRIPT_INDEX.md` was regenerated.
+
+This remains a six-service pilot. The declared rows are now the source of
+truth; the duplicate required-name list has been removed. A focused fixture
+appends a generic no-setup row and verifies that the registrar creates it,
+proving row-level extension support. Full Stage 3.2 acceptance remains open
+until a new production service is added and booted through that path with one
+row and no edits to existing scripts. The 31 named build steps, full row table,
+and visual/player acceptance also remain open.
+
+The standalone Godot 4.7.1 curated gate ran with isolated profiles in the
+review checkout. This full run was just before DebugSessionController
+became the sixth row; the focused current-tree title smoke and preflights pass,
+but the full gate was not rerun after that no-setup row. The full run's
+preflights passed; 29 of 45 selected smoke paths passed, 12 failed, and 4
+timed out. Failures: `chroma_pickup_smoke`,
+`chroma_projectile_scene_smoke`, `cloud_save_contract_smoke`,
+`display_responsive_scene_smoke`, `equipment_menu_scene_smoke`,
+`imbue_spell_scene_smoke`, `item_economy_smoke`, `menu_route_scene_smoke`,
+`pause_menu_scene_smoke`, `player_hud_scene_smoke`,
+`settings_panel_scene_smoke`, and `wall_socket_geometry_smoke`. Timeouts:
+`generated_bound_reachability_smoke`, `generated_layout_smoke`,
+`generated_run_scene_smoke`, and `touch_controls_smoke`. The focused title
+smoke and gate paths for input tracking, input routing, settings service, and
+display layout passed. These results have not been compared with the base
+commit or final six-row tree, so they remain unclassified gate debt. The
+ancillary Web export smoke also failed because the
+worktree's pre-existing `project.godot` change removes the Web renderer
+override; that edit remains untouched and outside this slice. The referenced `work/godot-x04-row-executor/curated-gate/smoke-results.csv`
+is absent from both available worktrees, so per-test logs are unavailable
+here. The counts and path names above remain the prior run summary; each
+failure and timeout is unclassified pending logs and a base comparison.
+
+The composition forward metric counts 38 `_add_runtime_node(` pattern matches
+against a 44-match ceiling: 37 invocations plus the helper declaration. It is
+a regression guard, not Stage 3.2 acceptance.
+Graphify refresh was retried after this code batch, but the shared map's
+`.rebuild.lock` under `G:\dev\Games\TinyDemons` returned `PermissionError`.
+No graph artifact changed and no refresh is claimed.
+
+## 2026-10-16 continuation
+
+The project agent setting now allows four child agents (five total with the parent); this live tool surface supports four total. Two bounded LOW workers ran in parallel. The menu visibility extraction is integrated in MenuWorldVisibilityController; the composition regression audit passes. Follow-up E5 trial in a clean disposable checkout passed `new variant codex_e5_probe`, same-ID preview, definition validation at 111/111, and a fresh 111-entry manifest check. The temporary resource was removed and three generated resource hashes restored exactly; the checkout is clean. Room authoring still needs code-backed prefab registration and a data-driven room definition path. Details and remaining acceptance are recorded in docs/composition-team-execution-plan.md.
+
+The six-service X04 registration pilot still has typed dependency, parent,
+script, and live order checks in title_boot_scene_smoke.gd. Its composition
+metric counts 38 `_add_runtime_node(` pattern matches (37 invocations plus the
+helper declaration) against a 44-match ceiling; that is not completion. The
+full curated gate was not rerun after the row-only extension, and prior red
+results remain unclassified. The focused Godot 4.7.2 title smoke now checks the
+registration table and facade-level world hide/restore; full Hub/Settings route
+acceptance remains open.
+
+Final integration checks: the regenerated script index contains 311 entries;
+all 311 scripts have UID sidecars; the UID validator found 471 sidecars with
+no duplicate or mismatched scene IDs. The composition audit and self-test
+passed, as did `git diff --check`. Slime, boss-selection, and enemy-room content smokes were corrected to match typed themes, the unified catalog, and the shared EnemyActor contract; focused reruns pass. The single-command 10-path content rerun was not started after its safety preflight observed a Godot GUI process. The full curated gate was not rerun after the row-only extension, and prior red results remain unclassified. Graphify's structural refresh completed at 21,638 nodes, 49,054 edges, and 768 communities; 742 saved community labels remain and no LLM relabel pass was run. The existing coordination journal was read as CP1252 and left unchanged in encoding.

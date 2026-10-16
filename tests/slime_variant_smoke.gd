@@ -6,6 +6,11 @@ const MATERIAL_SCRIPT = preload("res://scripts/actors/actor_palette_material.gd"
 const EnemyFactoryScript = preload("res://scripts/content/enemy_factory.gd")
 const TargetingRuntimeControllerScript = preload("res://scripts/runtime/controllers/targeting_runtime_controller.gd")
 
+class TargetingRoot extends Node:
+	func _slime_stats(actor: Sprite2D) -> StatsComponent:
+		return actor.get_node_or_null("Stats") as StatsComponent
+
+
 var _finished := false
 
 
@@ -24,9 +29,10 @@ func _initialize() -> void:
 		_expect(ElementCatalogScript.is_valid(definition.element), "%s element is valid" % variant, failures)
 		_expect(not definition.damage_contract.is_empty(), "%s damage contract is explicit" % variant, failures)
 		_expect(not definition.display_name.is_empty() and not definition.visual_source.is_empty(), "%s has display and visual identity" % variant, failures)
-	_expect(CatalogScript.display_name_for_id(&"grey") == "Normal Slime", "Gray variant displays as Normal Slime", failures)
+	var grey_definition := EnemyFactoryScript.definition(&"grey")
+	_expect(CatalogScript.display_name_for_id(&"grey") == grey_definition.display_name, "Gray variant display name comes from its authored definition", failures)
 	var targeting := TargetingRuntimeControllerScript.new()
-	var name_root := Node.new()
+	var name_root := TargetingRoot.new()
 	var slime_actor := EnemyFactoryScript.assemble(EnemyFactoryScript.definition(&"grey"))
 	var skeleton_actor := EnemyFactoryScript.assemble(EnemyFactoryScript.definition(&"skeleton"))
 	_expect(targeting.slime_display_name(name_root, slime_actor) == "lv.1 Normal Slime", "target label shows variant before Slime family", failures)
@@ -71,7 +77,7 @@ func _initialize() -> void:
 	var ice_seen_before_run_five := false
 	rooms.progression_run_rank = 1
 	rooms.progression_run_number = 1
-	rooms.set_run_element_theme([])
+	rooms.set_run_element_theme(_typed_theme([]))
 	for seed in 256:
 		for variant in rooms._generate_enemy_encounter(seed, 0, false, false)["variants"] as Array:
 			gray_seen = gray_seen or String(variant) == "grey"
@@ -80,7 +86,7 @@ func _initialize() -> void:
 			ice_seen_before_run_five = ice_seen_before_run_five or String(variant) == "aquamarine"
 	rooms.progression_run_rank = 1
 	rooms.progression_run_number = 4
-	rooms.set_run_element_theme([ElementCatalogScript.Element.FIRE, ElementCatalogScript.Element.WATER])
+	rooms.set_run_element_theme(_typed_theme([ElementCatalogScript.Element.FIRE, ElementCatalogScript.Element.WATER]))
 	for seed in 256:
 		for variant in rooms._generate_enemy_encounter(seed + 4000, 0, false, false)["variants"] as Array:
 			yellow_seen_before_run_five = yellow_seen_before_run_five or String(variant) == "yellow"
@@ -89,7 +95,7 @@ func _initialize() -> void:
 	rooms.progression_run_rank = 1
 	rooms.progression_run_number = 5
 	for theme in [[ElementCatalogScript.Element.ELECTRIC], [ElementCatalogScript.Element.GROUND], [ElementCatalogScript.Element.ICE]]:
-		rooms.set_run_element_theme(theme)
+		rooms.set_run_element_theme(_typed_theme(theme))
 		for seed in 256:
 			for variant in rooms._generate_enemy_encounter(seed + 8000, 0, false, false)["variants"] as Array:
 				yellow_seen_at_run_five = yellow_seen_at_run_five or String(variant) == "yellow"
@@ -105,7 +111,7 @@ func _initialize() -> void:
 	rooms.matchup_policy = "shadow_bound"
 	rooms.progression_run_rank = 1
 	rooms.progression_run_number = 5
-	rooms.set_run_element_theme([ElementCatalogScript.Element.SHADOW])
+	rooms.set_run_element_theme(_typed_theme([ElementCatalogScript.Element.SHADOW]))
 	var shadow_bound_grey := 0
 	var shadow_bound_purple := 0
 	var shadow_ambush_count := 0
@@ -163,3 +169,10 @@ func _finish(failures: Array[String]) -> void:
 func _expect(condition: bool, label: String, failures: Array[String]) -> void:
 	if not condition:
 		failures.append("FAILED: %s" % label)
+
+
+func _typed_theme(elements: Array) -> Array[int]:
+	var theme: Array[int] = []
+	for element: int in elements:
+		theme.append(element)
+	return theme

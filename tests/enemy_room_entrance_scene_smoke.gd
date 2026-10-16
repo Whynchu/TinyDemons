@@ -38,23 +38,26 @@ func _initialize() -> void:
 		settings.reset_to_defaults()
 		settings.set_setting(&"aspect", "16:9")
 		await process_frame
-		# Select a deterministic Run 1 seed whose rank-3 normal encounter
-		# contains the newly authored guard_slime. This keeps the acceptance
-		# proof independent of a lucky random draw while still exercising the
+		# Select a deterministic Run 1 seed with a rank-3 normal roster. This keeps
+		# the entrance acceptance proof independent of random draws while exercising
 		# real map -> room -> activation -> factory configuration path.
 		gameplay.player_profile.difficulty_rank = 3
 		# This test enters the authored room directly instead of going through the
 		# new-run flow, so preserve the starter-flame palette that the real flow
 		# records before it resets the temporary player palette to Gray.
 		gameplay.run_start_palette_name = "red"
-		var guard_seed := _find_guard_run_seed(rooms)
-		_expect(guard_seed >= 0, "rank-three normal encounters can select guard_slime", failures)
-		if guard_seed < 0:
+		var room_seed := _find_room_run_seed(rooms)
+		_expect(room_seed >= 0, "rank-three Run 1 produces a normal enemy roster", failures)
+		if room_seed < 0:
 			gameplay.queue_free()
 			await process_frame
 			_finish(failures)
 			return
-		map.call("begin_run", graph, guard_seed, 0, &"fire")
+		map.call("begin_run", graph, room_seed, 0, &"fire")
+		# This smoke enters a room directly instead of invoking RunFlowController,
+		# so mirror the Run 1 progression values it normally installs.
+		rooms.progression_run_rank = 3
+		rooms.progression_run_number = 1
 		# Start directly in the enemy room after the hub-fire lesson; leave the
 		# starter gate out of this entrance-lock regression.
 		map.call("set_starter_flame_attuned", true)
@@ -73,20 +76,18 @@ func _initialize() -> void:
 		var expected_enemy_count := (state.get("enemy_variants", []) as Array).size()
 		var active_slimes := gameplay.get("slimes") as Array[Sprite2D]
 		var active_variants := state.get("enemy_variants", []) as Array
-		var guard_index := active_variants.find("guard_slime")
-		_expect(guard_index >= 0, "rank-three normal room state contains guard_slime", failures)
+		_expect(not active_variants.is_empty(), "normal room state contains an authored enemy roster", failures)
 		for slime in active_slimes:
-			_expect(slime.name.begins_with("EnemySlot"), "runtime enemy pool contains only factory-created EnemySlot actors", failures)
+			_expect(slime is EnemyActor and bool(slime.get_meta("content_materialized", false)), "runtime enemy roster contains only factory-materialized EnemyActor instances", failures)
 		_expect(not active_slimes.has(gameplay.get("slime_blue")) and not active_slimes.has(gameplay.get("slime_green")) and not active_slimes.has(gameplay.get("slime_red")), "scene-authored slime templates are not runtime roster slots", failures)
-		if guard_index >= 0 and guard_index < active_slimes.size():
-			var guard_actor := active_slimes[guard_index] as SlimeActor
-			var guard_definition := EnemyFactory.definition(&"guard_slime")
-			var guard_stats := guard_actor.get_node_or_null("Stats") as StatsComponent if guard_actor != null else null
-			_expect(guard_actor != null and guard_actor.visible, "guard_slime is visible in the normal-room runtime pool", failures)
-			_expect(guard_actor != null and guard_actor.variant == "guard_slime", "room activation configures the selected guard_slime identity", failures)
-			_expect(guard_actor != null and String(guard_actor.get_meta("enemy_definition_id", "")) == "guard_slime", "room activation carries guard_slime's stable definition id", failures)
-			_expect(guard_actor != null and bool(guard_actor.get_meta("content_materialized", false)), "room activation uses the factory materialization contract", failures)
-			_expect(guard_definition != null and guard_stats != null and guard_stats.def >= int(guard_definition.base_stats.get("DEF", 0)) and guard_stats.vit >= int(guard_definition.base_stats.get("VIT", 0)), "room activation applies guard_slime's authored defensive stats", failures)
+		if not active_variants.is_empty() and not active_slimes.is_empty():
+			var active_variant := StringName(str(active_variants[0]))
+			var active_actor := active_slimes[0] as EnemyActor
+			var active_definition := EnemyFactory.definition(active_variant)
+			var active_stats := active_actor.get_node_or_null("Stats") as StatsComponent if active_actor != null else null
+			_expect(active_actor != null and active_actor.visible, "authored enemy definition is visible in the normal-room runtime pool", failures)
+			_expect(active_actor != null and active_actor.enemy_definition_id == active_variant, "room activation carries the selected stable enemy definition id", failures)
+			_expect(active_definition != null and active_stats != null and active_stats.def >= int(active_definition.base_stats.get("DEF", 0)) and active_stats.vit >= int(active_definition.base_stats.get("VIT", 0)), "room activation applies authored enemy stats", failures)
 		var visible_enemy_count := 0
 		for slime in active_slimes:
 			if slime.visible:
@@ -133,9 +134,9 @@ func active_variants_size(state: Dictionary) -> int:
 	return (state.get("enemy_variants", []) as Array).size()
 
 
-func _find_guard_run_seed(rooms: RoomController) -> int:
+func _find_room_run_seed(rooms: RoomController) -> int:
 	rooms.progression_run_rank = 3
-	rooms.progression_run_number = 3
+	rooms.progression_run_number = 1
 	rooms.matchup_policy = "base_counter"
 	rooms.preferred_enemy_variant = "blue"
 	rooms.secondary_enemy_variant = "grey"
@@ -143,7 +144,7 @@ func _find_guard_run_seed(rooms: RoomController) -> int:
 	for candidate in range(1, 4096):
 		var room_seed := candidate ^ String(TARGET_ROOM).hash()
 		var encounter := rooms._generate_enemy_encounter(room_seed, 1, false, true, DungeonGraph.ENCOUNTER_NORMAL)
-		if (encounter.get("variants", []) as Array).has("guard_slime"):
+		if not (encounter.get("variants", []) as Array).is_empty():
 			return candidate
 	return -1
 

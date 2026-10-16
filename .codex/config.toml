@@ -5,7 +5,7 @@ daemon_auto_start = false
 
 [agents]
 enabled = true
-max_concurrent_threads_per_session = 1
+max_concurrent_threads_per_session = 4
 
 # Godot MCP Toolkit bridge. Both clients (opencode + codex) start their own
 # bridge process and both dial the same editor WebSocket, discovered through

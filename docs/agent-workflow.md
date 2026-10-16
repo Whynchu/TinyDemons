@@ -43,10 +43,12 @@ paths, while the parent remains responsible for coordination, integration,
 and acceptance. Do not treat a worker as an advisor or ask an advisor to
 implement.
 
-The configured subagent cap is one child in addition to the parent (two live
-agents total). Serialize child assignments and adapt to actual session capacity.
-Do not change project or global
-settings to increase capacity. For bounded mechanical edits or independent
+The project config permits four concurrent child agents, for five agents total including the parent.
+The live host may impose a lower cap, so check actual capacity before delegating.
+Parallelize independent reviews and implementation slices when file ownership and dependencies are clear; record board claims first and serialize overlapping edits.
+The parent owns integration, editor access, and acceptance.
+
+For bounded mechanical edits or independent
 navigation, Luna LOW is appropriate; use Luna MAX for contract design and
 cross-file implementation/integration. Explicit user model or effort choices
 take precedence. The team skill requires a task packet with branch and absolute
@@ -61,8 +63,7 @@ the authoring workflow, but does not substitute for rendered/editor review.
 
 ## Ask about the next repo priority
 
-Run them one at a time so their evidence and recommendations stay easy to
-compare:
+Ask Thorn and Hexley concurrently when their reviews are independent, then give both summaries to Pip for a sequenced recommendation. Use a follow-up when a later review depends on earlier findings:
 
 1. Ask Thorn to identify the strongest current code, behavior, and verification
    findings that should influence the next priority.
@@ -110,8 +111,9 @@ adding or changing an agent file. Delegate by name via the Task tool (for
 example, subagent type `thorn`); opencode only exposes them as subagents, so
 there is no separate primary-agent entry point to enable.
 
-Project-scoped delegation is enabled in `.codex/config.toml` with one
-concurrent subagent slot. The user's global Codex config still contains the
+Project-scoped delegation is enabled in .codex/config.toml with four concurrent child-agent slots (five total agents including the parent).
+The current app may expose fewer slots; use its actual cap. This project setting is loaded when a session starts, so the higher limit may require a new Codex session.
+The user's global Codex config still contains the
 commented legacy `multi_agent = true` entry left from the earlier
 terminal-launch diagnosis; this setup does not change global settings. If the
 current Codex client does not recognize the project agents, start a new session

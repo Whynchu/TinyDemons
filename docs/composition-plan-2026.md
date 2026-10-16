@@ -1335,11 +1335,21 @@ Next: continue Stage 3.1 toward the 800-line target only where a remaining
 responsibility has a clear owner. Then proceed to Stage 3.2's declarative
 GameplayBootstrap assembly.
 
+**Implementation record (2026-10-16):** Extracted the saved menu-world visibility
+latch and background/map/Actors visibility snapshot into MenuWorldVisibilityController;
+the existing ScreenStateController facade and Hub/Settings callers remain in
+place. Repeated hide/show requests remain idempotent, prior visibility is
+restored, and a missing Actors node is tolerated. The composition regression
+audit passes after typing the new controller boundary. The focused Godot 4.7.2
+title boot smoke verifies registration plus facade-level world hide/restore
+idempotence; route-level Hub/Settings acceptance remains open. ScreenStateController
+is 876 lines; the 800-line Stage 3.1 target remains open.
+
 ### 3.2 `gameplay_bootstrap.gd` — declarative assembly
 
-Replace the 44 hand-written `_add_runtime_node` calls with a registration table
-of `[node_name, script, parent, configure_callable]` rows, and the 31
-`root.call(...)` build dispatches with named build steps in an ordered list.
+Convert the remaining 37 `_add_runtime_node` invocation expressions into rows
+consumed by the shared registrar, and replace the 31 `root.call(...)` build
+dispatches with named build steps in an ordered list.
 
 Then collapse `RoomEnemySpawnServices` — a 46-member field bag — into typed
 context objects of the `MagicRuntimeContext` shape, and give each boot phase a
@@ -1350,6 +1360,21 @@ real interface instead of a `_phase()` string label.
 runtime system is added by appending **one table row and zero edits to any
 existing script**, and a validator asserts every registered system's
 dependencies resolve.
+
+**Implementation record (2026-10-16):** A bounded X04 pilot now declares six
+early services as typed rows and executes them through a shared registrar with
+optional immediate setup callbacks. The cohort covers settings, display,
+input routing, device tracking, touch controls, and DebugSessionController.
+Static and live checks reject missing/duplicate/forward dependencies and wrong
+live scripts, parents, or prerequisite order. The current tree's focused title
+boot smoke and runner preflights pass on Godot 4.7.2. This is partial Stage 3.2
+progress: 37 `_add_runtime_node` invocations, the 31 named build steps, typed
+RoomEnemySpawnServices contexts,
+phase interfaces, and end-to-end production append-one-row/no-existing-script-
+edit acceptance remain open. Registration rows are the source of truth, and a
+synthetic appended no-setup row proves the shared registrar accepts and creates
+an extension row without a second required-name registry. See
+`coord/status-codex.md` for the current curated-gate results.
 
 ---
 

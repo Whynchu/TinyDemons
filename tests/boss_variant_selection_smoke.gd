@@ -2,15 +2,17 @@ extends SceneTree
 
 const CatalogScript = preload("res://scripts/content/enemy_catalog.gd")
 const ElementCatalogScript = preload("res://scripts/content/element_catalog.gd")
+const EnemyFactoryScript = preload("res://scripts/content/enemy_factory.gd")
 const RoomControllerScript = preload("res://scripts/runtime/controllers/room_controller.gd")
 
 func _initialize() -> void:
 	var failures: Array[String] = []
 	var rooms := RoomControllerScript.new()
 	rooms.progression_run_rank = 2
-	for variant in CatalogScript.ids():
+	var slime_variants := EnemyFactoryScript.variants_for_type(&"slime")
+	for variant in slime_variants:
 		var element := CatalogScript.element_for_id(variant)
-		rooms.set_run_element_theme([element] if element > ElementCatalogScript.Element.NEUTRAL else [])
+		rooms.set_run_element_theme(_typed_theme([element] if element > ElementCatalogScript.Element.NEUTRAL else []))
 		rooms.progression_run_number = 10
 		rooms.boss_variant_selection = variant
 		var encounter := rooms._generate_boss_encounter(1000, 12)
@@ -25,13 +27,14 @@ func _initialize() -> void:
 	rooms.progression_run_number = 10
 	var seen: Dictionary = {}
 	for element in range(ElementCatalogScript.Element.FIRE, ElementCatalogScript.element_count()):
-		rooms.set_run_element_theme([element])
+		rooms.set_run_element_theme(_typed_theme([element]))
 		for seed in 64:
 			seen[StringName((rooms._generate_boss_encounter(seed + element * 512, 12)["variants"] as Array)[0])] = true
-	_expect(seen.size() == CatalogScript.ids().size(), "seeded selection reaches every catalog variant", failures)
+	var eligible_boss_variants := EnemyFactoryScript.variants_for_type(&"slime", &"support")
+	_expect(seen.size() == eligible_boss_variants.size(), "seeded selection reaches every eligible Slime boss variant", failures)
 	rooms.progression_run_rank = 1
 	rooms.progression_run_number = 1
-	rooms.set_run_element_theme([])
+	rooms.set_run_element_theme(_typed_theme([]))
 	var run_one_encounter := rooms._generate_boss_encounter(1000, 12)
 	for run_one_variant in run_one_encounter["variants"] as Array:
 		_expect(String(run_one_variant) != "purple", "Run 1 boss rooms exclude Shadow slimes", failures)
@@ -49,3 +52,10 @@ func _finish(exit_code: int) -> void:
 func _expect(condition: bool, label: String, failures: Array[String]) -> void:
 	if not condition:
 		failures.append("FAILED: %s" % label)
+
+
+func _typed_theme(elements: Array) -> Array[int]:
+	var theme: Array[int] = []
+	for element: int in elements:
+		theme.append(element)
+	return theme
