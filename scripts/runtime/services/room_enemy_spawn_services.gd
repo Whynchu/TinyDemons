@@ -17,8 +17,7 @@ var dungeon_graph: DungeonGraph = null
 var dungeon_map_controller: DungeonMapController = null
 var effects_spawner: EffectsSpawner = null
 var sound_manager: SoundManager = null
-var player: Sprite2D = null
-var chest: Sprite2D = null
+
 var actor_runtime: EnemyActorRuntimeServices = EnemyActorRuntimeServices.new()
 var collision_rect: Callable = Callable()
 var actor_foot_offset := Vector2.ZERO
@@ -53,10 +52,10 @@ func actor_foot(actor: Sprite2D) -> Vector2:
 	return ActorGeometry.foot(actor, actor_foot_offset)
 
 
-func current_chest_rect() -> Rect2:
-	if chest == null or not collision_rect.is_valid():
+func current_chest_rect(chest_actor: Sprite2D) -> Rect2:
+	if chest_actor == null or not collision_rect.is_valid():
 		return Rect2()
-	return collision_rect.call(chest) as Rect2
+	return collision_rect.call(chest_actor) as Rect2
 
 
 func play_sound(sound_name: String, volume_db: float = 0.0, pitch_scale: float = 1.0) -> void:

@@ -46,6 +46,8 @@ var boss_jump_phase_pool: Array[Sprite2D] = []
 var _enemy_visual_preparation_signature := ""
 var last_spawn_result: RoomSpawnResult = null
 var enemy_spawn_services: RoomEnemySpawnServices = null
+var enemy_spawn_player: Sprite2D = null
+var enemy_spawn_chest: Sprite2D = null
 var geometry_controller: RefCounted = null
 var current_room_type: StringName = &""
 
@@ -475,25 +477,27 @@ func set_current_room(room_id: StringName, room_type: StringName) -> void:
 	room_entered.emit(room_id, room_type)
 
 
-func configure_enemy_spawn_services(services: RoomEnemySpawnServices) -> void:
+func configure_enemy_spawn_services(services: RoomEnemySpawnServices, player: Sprite2D, chest: Sprite2D) -> void:
 	enemy_spawn_services = services
+	enemy_spawn_player = player
+	enemy_spawn_chest = chest
 
 
 func enemy_spawn_context() -> RoomSpawnContext:
 	if enemy_spawn_services == null or enemy_spawn_services.actor_runtime == null or enemy_spawn_services.actor_runtime.enemy_roster == null:
 		return null
-	var player_foot := enemy_spawn_services.actor_foot(enemy_spawn_services.player) if enemy_spawn_services.player != null else Vector2.ZERO
-	var chest_rect := enemy_spawn_services.current_chest_rect()
+	var player_foot := enemy_spawn_services.actor_foot(enemy_spawn_player) if enemy_spawn_player != null else Vector2.ZERO
+	var chest_rect := enemy_spawn_services.current_chest_rect(enemy_spawn_chest)
 	var state := room_states.get(current_room_id, {}) as Dictionary
-	return RoomSpawnContext.new(current_room_id, current_room_type, enemy_spawn_services.actor_runtime.enemy_roster.members, enemy_spawn_services.player, enemy_spawn_services.chest, player_foot, chest_rect, enemy_spawn_services, state)
+	return RoomSpawnContext.new(current_room_id, current_room_type, enemy_spawn_services.actor_runtime.enemy_roster.members, enemy_spawn_player, enemy_spawn_chest, player_foot, chest_rect, enemy_spawn_services, state)
 
 
 func enemy_respawn_context() -> RoomRespawnContext:
 	if enemy_spawn_services == null or enemy_spawn_services.actor_runtime == null or enemy_spawn_services.actor_runtime.enemy_roster == null:
 		return null
-	var player_foot := enemy_spawn_services.actor_foot(enemy_spawn_services.player) if enemy_spawn_services.player != null else Vector2.ZERO
-	var chest_rect := enemy_spawn_services.current_chest_rect()
-	return RoomRespawnContext.new(current_room_id, current_room_type, enemy_spawn_services.actor_runtime.enemy_roster.members, enemy_spawn_services.player, enemy_spawn_services.chest, player_foot, chest_rect, enemy_spawn_services)
+	var player_foot := enemy_spawn_services.actor_foot(enemy_spawn_player) if enemy_spawn_player != null else Vector2.ZERO
+	var chest_rect := enemy_spawn_services.current_chest_rect(enemy_spawn_chest)
+	return RoomRespawnContext.new(current_room_id, current_room_type, enemy_spawn_services.actor_runtime.enemy_roster.members, enemy_spawn_player, enemy_spawn_chest, player_foot, chest_rect, enemy_spawn_services)
 
 
 func enter_room(room_id: StringName, room_type: StringName, arrival_socket: StringName = &"") -> void:

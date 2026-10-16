@@ -1671,3 +1671,9 @@ X05 context actor naming expanded to RoomEnemyRuntimeContext after focused Godot
 
 2026-10-16T19:25Z - codex - done
 X05 room roster naming: both typed room actor contexts use enemy_actors; special respawn, enemy room entrance, and encounter definition smokes pass. Composition self-test and strict targets pass; script index has 312 entries, UID validation has 473 sidecars, and Graphify refreshed to 21,771 nodes / 49,192 edges / 789 communities.
+
+2026-10-16T19:27Z - codex - claim
+X05 service context ownership. Move player/chest references out of RoomEnemySpawnServices and into typed RoomController context construction; preserve room context snapshots.
+
+2026-10-16T19:43Z - codex - done
+X05 service context ownership: RoomController now receives player/chest when configured and builds the same typed room snapshots; RoomEnemySpawnServices is down to 26 stored fields from 40. Godot 4.7.2 enemy-room entrance, special-respawn, and encounter-definition smokes pass. Strict composition, UID 473, and refreshed Graphify 21,771 / 49,191 / 742 pass.
