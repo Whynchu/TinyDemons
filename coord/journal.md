@@ -1644,3 +1644,9 @@ X05 actor setup ownership. Move family variant/ambush configuration and max-heal
 
 2026-10-16T18:12Z - codex - done
 X05 actor setup ownership: EnemyActorRuntimeServices now configures enemy variants and ambush state, and owns max-health cache invalidation. RoomEnemySpawnServices dropped these duplicate methods and its cache callback, falling from 30 to 29 stored fields. Encounter-definition, room-entry, respawn, slime-variant, and boss-variant smokes pass; ambush conceal/reveal and cache invalidation are asserted. Composition self-test, strict targets, UID validation, and script index pass. Graphify refreshed: 21,768 nodes / 49,186 edges / 773 communities; RoomController -> RoomEnemySpawnServices -> EnemyActorRuntimeServices path confirmed.
+
+2026-10-16T18:13Z - codex - claim
+X05 remove the RoomController-to-itself boss-pool callback from RoomEnemySpawnServices. Replace the indirection with a direct typed call and update the field ledger.
+
+2026-10-16T18:27Z - codex - done
+X05 direct boss-pool call: removed the RoomEnemySpawnServices callback that pointed back to RoomController; the controller now calls its own typed method directly. RoomEnemySpawnServices dropped from 29 to 28 fields. Godot 4.7.2 boss_variant_selection_smoke, composition self-test, strict targets, UID validation, script index, and diff checks pass. Graphify refreshed: 21,767 nodes / 49,184 edges / 776 communities; graph confirms the call from _prepare_enemy_slot_visuals to prepare_boss_jump_phase_pool.

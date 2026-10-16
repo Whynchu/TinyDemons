@@ -1838,7 +1838,7 @@ func _prepare_enemy_slot_visuals(context: RoomEnemyContext, state: Dictionary) -
 	_enemy_visual_preparation_signature = signature
 	services.prepare_enemy_visuals_direct()
 	if not active_variants.is_empty() and not active_scales.is_empty() and float(active_scales[0]) > 1.0:
-		services.prepare_boss_jump_phase_pool.call(services, String(active_variants[0]))
+		prepare_boss_jump_phase_pool(services, String(active_variants[0]))
 
 
 func _is_elite_enemy_slot(state: Dictionary, slot: int) -> bool:

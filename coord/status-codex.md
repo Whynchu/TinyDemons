@@ -2,7 +2,7 @@
 
 _Only codex writes this file._
 
-**Focus:** X05 actor variant/ambush setup and max-health cache invalidation now belong to `EnemyActorRuntimeServices`; `RoomEnemySpawnServices` is down from 30 to 29 stored fields. Focused enemy/room smokes, strict composition targets, self-test, UID validation, and Graphify all pass. Graphify is current at 21,768 nodes / 49,186 edges / 773 communities. Next, map the remaining spawn-service values to their consumers before extracting further.
+**Focus:** X05 actor lifecycle/setup ownership is verified; `RoomEnemySpawnServices` is down to 28 stored fields, including removal of its callback back into `RoomController`. Boss variant smoke, strict composition targets, self-test, and UID validation pass. Graphify is current at 21,767 nodes / 49,184 edges / 776 communities. Next, map the remaining service values to their consumers before extracting further.
 **Updated:** 2026-10-16
 
 ## 2026-10-16 handoff
