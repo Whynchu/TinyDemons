@@ -2,7 +2,7 @@
 
 _Only codex writes this file._
 
-**Focus:** Published-ready canonical `GameplayState.ACTOR_FOOT_OFFSET` use across enemy spawning and room camera geometry; four focused Godot smokes, strict composition audit, script index, UID checks, and Graphify refresh pass.
+**Focus:** X04 final `GameplayBootstrap` reflection seam now calls `ProfileSaveService` directly; title-boot smoke, strict composition, 312-script index, UID, and Graphify checks pass. Geometry cleanup `f82d957` is pushed.
 **Updated:** 2026-10-16
 
 ## 2026-10-16 handoff

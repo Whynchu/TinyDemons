@@ -497,7 +497,7 @@ func initialize(root: GameplayState, preview_session: RefCounted = null) -> void
 		var route := requested_route
 		profile.pending_route = "title"
 		profile.open_hub_on_load = false
-		if has_active_profile: root.call("_save_player_profile")
+		if has_active_profile: ProfileSaveService.save_profile(profile)
 		var has_recovery_checkpoint := ACTIVE_RUN_SAVE_SERVICE_SCRIPT.has_valid_snapshot(ProfileSaveService.current_slot())
 		if (route == "hub" or route == "run") and profile.has_started:
 			# A normal browser reload returns to the title screen so Continue can

@@ -1695,3 +1695,9 @@ X05 shared geometry source. Remove the duplicate actor-foot offset constant and 
 
 2026-10-16T20:21Z - codex - done
 Canonical actor-foot geometry consolidation: removed the spawn-service offset field and duplicate RoomController/RoomGeometryController constants; room spawning and camera geometry reference GameplayState.ACTOR_FOOT_OFFSET. Four focused Godot 4.7.2 smokes, strict composition self-test/audit, 312-script index, 473 UID validation, and Graphify 21,768 / 49,188 / 782 pass.
+
+2026-10-16T20:22Z - codex - claim
+X04 final reflective save seam. The root parameter is typed GameplayState; route active-profile persistence through ProfileSaveService after confirming the loaded profile is the same object used by the Gameplay child hook and null-save behavior remains equivalent.
+
+2026-10-16T20:39Z - codex - done
+X04 final Bootstrap reflection seam: replaced root.call to the Gameplay-only save hook with the equivalent direct ProfileSaveService.save_profile(profile) call; profile identity and active-profile condition are preserved. title_boot_scene_smoke passes Godot 4.7.2; composition self-test/strict audit, index 312, UID 473, diff check, and Graphify 21,768 / 49,189 / 777 pass. Bootstrap root.call count is zero.

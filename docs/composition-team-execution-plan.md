@@ -82,9 +82,10 @@ new typed `GameplayBootstrap.BuildStep` contract carries a name, enum phase,
 action, and optional frame yield. Ordered queues now cover shared loading,
 title-only assembly, and full gameplay animation/visual/UI construction while
 preserving all diagnostic keys and ten gameplay UI frame boundaries. The title
-boot and enemy-room entrance smokes pass on Godot 4.7.2. Bootstrap `root.call`
-invocations fell from 37 to one concrete-Gameplay save hook; the strict
-composition self-test and audit pass. The remaining X04 work is production
+boot and enemy-room entrance smokes pass on Godot 4.7.2. Bootstrap
+`root.call` invocations fell from 37 to zero; active-profile persistence
+now calls `ProfileSaveService` directly. The strict composition self-test
+and audit pass. The remaining X04 work is production
 append-one-row acceptance and typed `RoomEnemySpawnServices` contexts. The
 direct `PerformanceCaptureService` attachment remains outside this slice.
 
