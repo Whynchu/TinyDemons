@@ -1,5 +1,7 @@
 extends SceneTree
 
+const REGISTRATION_PROBE_SERVICE_SCRIPT = preload("res://tests/registration_probe_service.gd")
+
 
 func _initialize() -> void:
 	var failures: Array[String] = []
@@ -48,13 +50,16 @@ func _initialize() -> void:
 	var generic_registration_rows := RuntimeServiceRegistrationPlan.early_service_registrations(generic_registration_parent)
 	generic_registration_rows.append(RuntimeServiceRegistrationPlan.Row.new(
 		&"RegistrationProbe",
-		generic_registration_rows[0].service_script,
+		REGISTRATION_PROBE_SERVICE_SCRIPT,
 		generic_registration_parent,
 		[&"TouchControlsLayer"]
 	))
 	var generic_registration_errors := RuntimeServiceRegistrationPlan.register_all(generic_registration_rows)
-	_expect(generic_registration_errors.is_empty(), "generic registrar accepts an appended no-setup production service row", failures)
-	_expect(generic_registration_parent.get_node_or_null("RegistrationProbe") != null, "generic registrar creates the appended no-setup node", failures)
+	var generic_probe_node := generic_registration_parent.get_node_or_null("RegistrationProbe") as Node
+	_expect(generic_registration_errors.is_empty(), "generic registrar accepts a new test-only service row without production script edits", failures)
+	_expect(generic_probe_node != null and generic_probe_node.get_script() == REGISTRATION_PROBE_SERVICE_SCRIPT, "generic registrar instantiates the declared new service script", failures)
+	if generic_probe_node != null:
+		_expect(generic_probe_node.get_parent() == generic_registration_parent and generic_probe_node.get_index() > generic_registration_parent.get_node("TouchControlsLayer").get_index(), "new service is parented and ordered after its declared dependency", failures)
 	generic_registration_parent.free()
 	var wrong_script_parent := Node.new()
 	var wrong_script_rows := RuntimeServiceRegistrationPlan.early_service_registrations(wrong_script_parent)
@@ -90,7 +95,7 @@ func _initialize() -> void:
 	var production_extension_rows: Array[RuntimeServiceRegistrationPlan.Row] = live_gameplay_service_rows.duplicate()
 	var production_extension_row := RuntimeServiceRegistrationPlan.Row.new(
 		&"ProductionExtensionProbe",
-		generic_registration_rows[0].service_script,
+		REGISTRATION_PROBE_SERVICE_SCRIPT,
 		gameplay,
 		[&"ProfileRuntimeController"]
 	)
@@ -105,6 +110,7 @@ func _initialize() -> void:
 	production_extension_node.name = production_extension_row.node_name
 	gameplay.add_child(production_extension_node)
 	_expect(RuntimeServiceRegistrationPlan.live_registration_errors(production_extension_rows).is_empty(), "one appended production row validates against the live cohort and dependency order", failures)
+	_expect(production_extension_node.get_script() == REGISTRATION_PROBE_SERVICE_SCRIPT and production_extension_node.get_parent() == gameplay and production_extension_node.get_index() > (gameplay.get_node("ProfileRuntimeController") as Node).get_index(), "new script validates as an ordered live production-cohort extension", failures)
 	production_extension_node.queue_free()
 	await process_frame
 	var live_world_service_rows := RuntimeServiceRegistrationPlan.world_service_registrations(gameplay as GameplayState)

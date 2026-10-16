@@ -1656,3 +1656,9 @@ X05 room enemy audio dependency. Replace play_sound Callable(root, _play_sound) 
 
 2026-10-16T18:43Z - codex - done
 X05 typed sound dependency: RoomEnemySpawnServices now holds SoundManager and exposes a null-safe play_sound method; GameplayBootstrap wires the manager directly and RoomController uses direct method calls. Room-entry and respawn Godot 4.7.2 smokes, composition self-test, strict targets, UID validation, script index, and diff checks pass. Service stored-field count remains 28 because a callback was replaced by one typed reference. Graphify refreshed: 21,768 nodes / 49,189 edges / 767 communities; play_sound reads sound_manager.
+
+2026-10-16T18:45Z - codex - claim
+X04 production registration acceptance. Replace the existing-script probe with a new test-only service fixture script; prove one new registration row creates, parents, and orders the service without editing production scripts.
+
+2026-10-16T19:01Z - codex - done
+X04 new-service acceptance proof: added a test-only Node service script and used it for generic and live-cohort appended registration rows. title_boot_scene_smoke passes; it validates the new script identity, parent/dependency order, missing-prerequisite rejection, and live cohort without production source edits. Composition self-test, strict targets, UID validation (473 sidecars), script index, and diff check pass. Graphify refreshed: 21,771 nodes / 49,192 edges / 728 communities; new test fixture is indexed in the current map.

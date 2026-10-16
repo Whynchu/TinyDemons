@@ -2,7 +2,7 @@
 
 _Only codex writes this file._
 
-**Focus:** X05 now uses a direct typed `SoundManager` for room enemy spawn cues; `RoomEnemySpawnServices` remains at 28 stored fields. Room-entry and respawn smokes, strict composition targets, self-test, UID validation, and script index pass. Graphify is current at 21,768 nodes / 49,189 edges / 767 communities, and the graph shows `RoomEnemySpawnServices.play_sound()` reading `sound_manager`. Map remaining service values before extracting further.
+**Focus:** X04 registration acceptance is now demonstrated with a new test-only service script and one appended row; the title boot smoke proves script identity, dependency order, and live-parent validation without production source edits. X04 remains open for typed `RoomEnemySpawnServices` contexts and the non-build step-queue decision. X05 actor ownership remains pushed through `8c6772a` with 28 spawn-service fields. Graphify is current at 21,771 nodes / 49,192 edges / 728 communities.
 **Updated:** 2026-10-16
 
 ## 2026-10-16 handoff
