@@ -2,13 +2,10 @@ extends Node
 class_name GameplayBootstrap
 
 const PLAYER_CHROMA_COMPONENT_SCRIPT = preload("res://scripts/components/player_chroma_component.gd")
-const SOUL_PICKUP_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/soul_pickup_controller.gd")
-const GOLD_PICKUP_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/gold_pickup_controller.gd")
 const FEEDBACK_ANIMATION_REGISTRY_SCRIPT = preload("res://scripts/services/feedback_animation_registry.gd")
 const PLAYER_ASPECT_ABILITY_COMPONENT_SCRIPT = preload("res://scripts/components/player_aspect_ability_component.gd")
 const ENEMY_CATALOG_SCRIPT = preload("res://scripts/content/enemy_catalog.gd")
 const ACTIVE_RUN_SAVE_SERVICE_SCRIPT = preload("res://scripts/runtime/services/active_run_save_service.gd")
-const DUNGEON_MINIMAP_CONTROLLER_SCRIPT = preload("res://scripts/ui/dungeon_minimap_controller.gd")
 const INPUT_DEVICE_TRACKER_SCRIPT = preload("res://scripts/services/input_device_tracker.gd")
 const TOUCH_CONTROLS_LAYER_SCRIPT = preload("res://scripts/ui/touch_controls_layer.gd")
 const PERFORMANCE_CAPTURE_SERVICE_SCRIPT = preload("res://scripts/services/performance_capture_service.gd")
@@ -80,23 +77,12 @@ func initialize(root: GameplayState, preview_session: RefCounted = null) -> void
 	root.debug_enemy_test_id = debug_enemy_test_id
 	var title_only_boot := not root.debug_start_in_boss_room and not debug_enemy_test_enabled and not benchmark_mode and not (profile.has_started and (requested_route == "hub" or requested_route == "run"))
 	var early_service_rows := RuntimeServiceRegistrationPlan.early_service_registrations(root)
-	var settings_registration := RuntimeServiceRegistrationPlan.row_for(early_service_rows, &"SettingsService")
-	settings_registration.configure_callable = func(service: Node) -> void:
-		root.settings_service = service as SettingsService
-		root.settings_service.load_settings()
-	var display_registration := RuntimeServiceRegistrationPlan.row_for(early_service_rows, &"DisplayController")
-	display_registration.configure_callable = func(service: Node) -> void:
-		root.display_controller = service as DisplayController
-		root.display_controller.initialize(root, root.settings_service)
-	var router_registration := RuntimeServiceRegistrationPlan.row_for(early_service_rows, &"InputRouter")
-	router_registration.configure_callable = func(service: Node) -> void:
-		root.input_router = service as InputRouter
-	var tracker_registration := RuntimeServiceRegistrationPlan.row_for(early_service_rows, &"InputDeviceTracker")
-	var touch_registration := RuntimeServiceRegistrationPlan.row_for(early_service_rows, &"TouchControlsLayer")
 	var early_service_registration_errors := RuntimeServiceRegistrationPlan.register_all(early_service_rows)
 	assert(early_service_registration_errors.is_empty(), "Invalid early service registration: %s" % "; ".join(early_service_registration_errors))
 	if not early_service_registration_errors.is_empty():
 		return
+	var tracker_registration := RuntimeServiceRegistrationPlan.row_for(early_service_rows, &"InputDeviceTracker")
+	var touch_registration := RuntimeServiceRegistrationPlan.row_for(early_service_rows, &"TouchControlsLayer")
 	var input_device_tracker := tracker_registration.parent.get_node(NodePath(String(tracker_registration.node_name))) as InputDeviceTracker
 	var touch_controls_layer := touch_registration.parent.get_node(NodePath(String(touch_registration.node_name))) as TouchControlsLayer
 	root.input_device_tracker = input_device_tracker
@@ -113,9 +99,17 @@ func initialize(root: GameplayState, preview_session: RefCounted = null) -> void
 		return
 	root.player_profile = profile
 	root.has_persistent_profile = has_profile
-	root.screen_state_controller = _add_runtime_node(root, ScreenStateController, "ScreenStateController") as ScreenStateController
+	var screen_state_rows := RuntimeServiceRegistrationPlan.screen_state_service_registrations(root)
+	var screen_state_errors := RuntimeServiceRegistrationPlan.register_all(screen_state_rows)
+	assert(screen_state_errors.is_empty(), "Invalid screen state service registration: %s" % "; ".join(screen_state_errors))
+	if not screen_state_errors.is_empty():
+		return
 	root.call("_apply_profile_to_runtime")
-	root.gameplay_frame_controller = _add_runtime_node(root, GameplayFrameController, "GameplayFrameController") as GameplayFrameController
+	var gameplay_frame_rows := RuntimeServiceRegistrationPlan.gameplay_frame_service_registrations(root)
+	var gameplay_frame_errors := RuntimeServiceRegistrationPlan.register_all(gameplay_frame_rows)
+	assert(gameplay_frame_errors.is_empty(), "Invalid gameplay frame service registration: %s" % "; ".join(gameplay_frame_errors))
+	if not gameplay_frame_errors.is_empty():
+		return
 	root.feedback_animation_registry = FEEDBACK_ANIMATION_REGISTRY_SCRIPT.new() as FeedbackAnimationRegistry
 	root.performance_capture_service = _add_runtime_node(root, PERFORMANCE_CAPTURE_SERVICE_SCRIPT, "PerformanceCaptureService")
 	var world_service_rows := RuntimeServiceRegistrationPlan.world_service_registrations(root)
@@ -126,27 +120,18 @@ func initialize(root: GameplayState, preview_session: RefCounted = null) -> void
 	var geometry_debug := root.actor_geometry_debug_drawer
 	var occlusion := root.occlusion_renderer
 	root.dungeon_map_controller.connect(&"map_state_changed", Callable(root, "_on_dungeon_map_state_changed"))
-	root.shadow_controller = _add_runtime_node(root, ShadowController, "ShadowController") as ShadowController
-	root.interaction_component = _add_runtime_node(root, InteractionComponent, "InteractionComponent") as InteractionComponent
-	root.chest_controller = _add_runtime_node(root, ChestController, "ChestController", root.chest) as ChestController
-	root.chest_controller.configure_reward_boundary(root.run_flow_controller, root.room_controller, root.pickup_runtime_controller)
+	var actor_service_rows := RuntimeServiceRegistrationPlan.actor_service_registrations(root)
+	var actor_service_errors := RuntimeServiceRegistrationPlan.register_all(actor_service_rows)
+	assert(actor_service_errors.is_empty(), "Invalid actor service registration: %s" % "; ".join(actor_service_errors))
+	if not actor_service_errors.is_empty():
+		return
 	var cloaked_demon := root.cloaked_demon
-	root.npc_controller = _add_runtime_node(root, NpcController, "NpcController", cloaked_demon) as NpcController
 	_initialize_npc_status(cloaked_demon)
-	root.rest_fire_controller = _add_runtime_node(root, RestFireController, "RestFireController", root.rest_fire) as RestFireController
-	root.hud_controller = _add_runtime_node(root, HudController, "HudController", root.ui) as HudController
-	root.hud_controller.feedback_animation_registry = root.feedback_animation_registry
-	root.dungeon_minimap_controller = _add_runtime_node(root, DUNGEON_MINIMAP_CONTROLLER_SCRIPT, "DungeonMinimapController", root.ui) as Node
-	root.sound_manager = _add_runtime_node(root, SoundManager, "SoundManager") as SoundManager
-	root.sound_manager.configure_settings(root.settings_service)
-	root.effects_spawner = _add_runtime_node(root, EffectsSpawner, "EffectsSpawner") as EffectsSpawner
-	root.effects_spawner.configure_item_acquisition_delivery(root.ui, root.hud_controller, root.feedback_animation_registry, root.screen_state_controller, root.dungeon_minimap_controller, Callable(root, "_play_sound"))
-	root.pickup_runtime_controller.configure_acquisition_presentation(Callable(root.effects_spawner, "spawn_pickup_acquisition_delivery"))
-	var gold_pickup_controller := _add_runtime_node(root, GOLD_PICKUP_CONTROLLER_SCRIPT, "GoldPickupController", root.pickup_runtime_controller) as GoldPickupController
-	root.pickup_runtime_controller.gold_pickup_controller = gold_pickup_controller
-	root.magic_projectile_controller = _add_runtime_node(root, MagicProjectileController, "MagicProjectileController") as MagicProjectileController
-	root.chroma_pickup_controller = _add_runtime_node(root, ChromaPickupController, "ChromaPickupController") as ChromaPickupController
-	root.soul_pickup_controller = _add_runtime_node(root, SOUL_PICKUP_CONTROLLER_SCRIPT, "SoulPickupController") as SoulPickupController
+	var gameplay_ui_rows := RuntimeServiceRegistrationPlan.gameplay_ui_service_registrations(root)
+	var gameplay_ui_errors := RuntimeServiceRegistrationPlan.register_all(gameplay_ui_rows)
+	assert(gameplay_ui_errors.is_empty(), "Invalid gameplay UI service registration: %s" % "; ".join(gameplay_ui_errors))
+	if not gameplay_ui_errors.is_empty():
+		return
 	# Establish a visible loading boundary before dungeon generation, room layout,
 	# actor setup, and presentation caches begin. The browser must get a rendered
 	# frame before the expensive gameplay preparation starts.

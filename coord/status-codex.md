@@ -2,7 +2,7 @@
 
 _Only codex writes this file._
 
-**Focus:** Closed the verified X04/MenuWorldVisibility slice and E5 authoring proof on review/composition-cleanup-plan. The next open acceptance is the Stage 3.2 production append-one-row check; Stage 3.1's 800-line target and the one-command content rerun remain open.
+**Focus:** Completed the current X04 service-registration batch on review/composition-cleanup-plan. Seven ordered cohorts cover 42 production services. Stage 3.2 still needs production append-one-row acceptance, 31 named build steps, typed spawn contexts, and phase interfaces.
 **Updated:** 2026-10-16
 
 ## 2026-10-16 handoff
@@ -2383,29 +2383,34 @@ all 311 scripts have UID sidecars; the UID validator found 471 sidecars with
 no duplicate or mismatched scene IDs. The composition audit and self-test
 passed, as did `git diff --check`. Slime, boss-selection, and enemy-room content smokes were corrected to match typed themes, the unified catalog, and the shared EnemyActor contract; focused reruns pass. The single-command 10-path content rerun was not started after its safety preflight observed a Godot GUI process. The full curated gate was not rerun after the row-only extension, and prior red results remain unclassified. Graphify's structural refresh completed at 21,638 nodes, 49,054 edges, and 768 communities; 742 saved community labels remain and no LLM relabel pass was run. The existing coordination journal was read as CP1252 and left unchanged in encoding.
 
-## Completed: X04 service registration cohorts (2026-10-16)
+## X04 ordered service registration checkpoint (2026-10-16)
 
-Three ordered cohorts now register 27 production services: six early services,
-14 gameplay services, and seven world-support/room services. Setup callbacks
-preserve the old attach-time order, including CloudSavePanel configuration,
-debug geometry, occlusion scale, RoomPrefabHost placement, and RoomController
-geometry/signal wiring. `GameplayBootstrap` now has 16 `_add_runtime_node`
-invocations left; the audit reports 17 pattern matches including the helper
-declaration, against a 44-match regression ceiling. This does not complete
-Stage 3.2: 16 calls, 31 named build steps, typed RoomEnemySpawnServices
-contexts, phase interfaces, and production append-one-row acceptance remain.
+Seven ordered cohorts register 42 production services: six early, 14 gameplay,
+seven world-support, four actor, nine gameplay UI/acquisition, one screen-state,
+and one gameplay-frame service. Setup preserves parent, sibling order, immediate
+callbacks, RoomPrefabHost placement, room geometry/signals, chest rewards, HUD
+feedback, pickup delivery, and profile application between the screen and frame
+controllers.
 
-Current Godot 4.7.2 focused title-boot and enemy-room entrance smokes pass. The
-composition self-test and strict audit pass; definition validation loaded
-110/110, the manifest reports 160 rows / 158 runnable / 45 gate, the UID check
-found 471 script sidecars, and the generated index contains 311 scripts. The
-45-path curated gate ran after the gameplay cohort but before the seven
-world-support/room rows: 29 passed, 12 failed, and 4 timed out. Those outcomes
-match the earlier red list and remain unclassified; the full list is recorded
-above. Web export was blocked by missing Godot 4.7.2 Web templates. Headless
-imports emitted the known MCP Toolkit shutdown leak warnings (180 ObjectDB
-instances / 155 resources); focused smoke runs exited 0.
+One direct `_add_runtime_node` call remains for PerformanceCaptureService (two
+pattern matches including the helper). Stage 3.2 still needs production
+append-one-row acceptance, 31 named build steps, typed RoomEnemySpawnServices
+contexts, and phase interfaces.
 
-The shared Graphify map predates this final code batch and still needs one
-refresh before handoff. Other board claims remain owned by codex export proof
-and opencode.
+Godot 4.7.2 title boot, enemy-room entrance, EnemyBrain, steering-world, and
+slime-spawn smokes pass. Composition self-test and strict audit pass. The
+curated 45-path gate reports 30 pass, 12 fail, and 3 timeout. Failures are
+`chroma_pickup_smoke`, `chroma_projectile_scene_smoke`,
+`cloud_save_contract_smoke`, `display_responsive_scene_smoke`,
+`equipment_menu_scene_smoke`, `imbue_spell_scene_smoke`, `item_economy_smoke`,
+`menu_route_scene_smoke`, `pause_menu_scene_smoke`, `player_hud_scene_smoke`,
+`settings_panel_scene_smoke`, and `wall_socket_geometry_smoke`. Timeouts are
+`generated_layout_smoke`, `generated_run_scene_smoke`, and
+`touch_controls_smoke`; `generated_bound_reachability_smoke` passed. The main
+scene passes; Web export needs the missing Godot 4.7.2 templates. Headless
+editor import still reports the known 180 ObjectDB/155 resource shutdown leak.
+
+Graphify refreshed from the review checkout: 21,684 nodes, 49,090 edges, and
+811 communities; graph.json, HTML, and report are current. The saved-label set
+has 768 labels for 811 communities; no LLM relabel pass was run. Other board
+claims remain owned by codex export proof and opencode.

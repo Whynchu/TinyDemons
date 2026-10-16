@@ -1599,3 +1599,8 @@ Gameplay-service registration slice: typed ordered rows for the adjacent service
 
 ## 2026-10-16T14:43Z - codex - done
 Closed the X04 registration batch: three ordered cohorts cover 27 production services, the strict composition audit passes at 17 bootstrap-registration matches, and current title-boot/enemy-room smokes pass. The full curated gate remains 29 pass / 12 fail / 4 timeout; see coord/status-codex.md.
+
+## 2026-10-16T14:45Z - codex - claim
+Continuing X04 with remaining non-performance GameplayBootstrap attachments. Preserve node parents, order, and immediate setup callbacks; keep PerformanceCaptureService outside this slice.
+## 2026-10-16T15:39Z - codex - done
+X04 service-registration batch: 42 production services in seven cohorts; focused Godot checks and composition guards pass; curated gate is 30 pass / 12 fail / 3 timeout; Graphify refreshed from the review checkout.

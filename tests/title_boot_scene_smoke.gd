@@ -63,13 +63,25 @@ func _initialize() -> void:
 	_expect(RuntimeServiceRegistrationPlan.live_registration_errors(live_gameplay_service_rows).is_empty(), "live gameplay service nodes match their registration rows", failures)
 	var live_world_service_rows := RuntimeServiceRegistrationPlan.world_service_registrations(gameplay as GameplayState)
 	_expect(RuntimeServiceRegistrationPlan.live_registration_errors(live_world_service_rows).is_empty(), "live world support nodes match their registration rows", failures)
+	var live_actor_service_rows := RuntimeServiceRegistrationPlan.actor_service_registrations(gameplay as GameplayState)
+	_expect(RuntimeServiceRegistrationPlan.live_registration_errors(live_actor_service_rows).is_empty(), "live actor service nodes match their registration rows", failures)
+	var live_ui_service_rows := RuntimeServiceRegistrationPlan.gameplay_ui_service_registrations(gameplay as GameplayState)
+	_expect(RuntimeServiceRegistrationPlan.live_registration_errors(live_ui_service_rows).is_empty(), "live gameplay UI service nodes match their registration rows", failures)
+	var live_screen_state_rows := RuntimeServiceRegistrationPlan.screen_state_service_registrations(gameplay as GameplayState)
+	_expect(RuntimeServiceRegistrationPlan.live_registration_errors(live_screen_state_rows).is_empty(), "live screen state service nodes match their registration rows", failures)
+	var live_gameplay_frame_rows := RuntimeServiceRegistrationPlan.gameplay_frame_service_registrations(gameplay as GameplayState)
+	_expect(RuntimeServiceRegistrationPlan.live_registration_errors(live_gameplay_frame_rows).is_empty(), "live gameplay frame service nodes match their registration rows", failures)
 	var live_gameplay_state := gameplay as GameplayState
 	var room_prefab_host := live_gameplay_state.map_root.get_node_or_null("RoomPrefabHost") as RoomPrefabHost if live_gameplay_state != null else null
 	_expect(room_prefab_host != null, "room prefab host registers under the map root", failures)
 	if live_gameplay_state != null and room_prefab_host != null and live_gameplay_state.hub_stone_accent_layer != null:
 		_expect(room_prefab_host.get_index() < live_gameplay_state.hub_stone_accent_layer.get_index(), "room prefab host retains its position ahead of the stone accent layer", failures)
 	_expect(live_gameplay_state != null and live_gameplay_state.room_controller != null, "room controller is configured through the world service cohort", failures)
+	_expect(live_gameplay_state != null and live_gameplay_state.chest_controller != null and live_gameplay_state.chest_controller.reward_controller == live_gameplay_state.run_flow_controller, "chest reward boundary retains its registered run service", failures)
+	_expect(live_gameplay_state != null and live_gameplay_state.hud_controller.feedback_animation_registry == live_gameplay_state.feedback_animation_registry, "HUD uses the registered feedback animation registry", failures)
+	_expect(live_gameplay_state != null and live_gameplay_state.effects_spawner.item_delivery_hud == live_gameplay_state.hud_controller and live_gameplay_state.effects_spawner.item_delivery_minimap == live_gameplay_state.dungeon_minimap_controller, "pickup effects retain the configured HUD and minimap services", failures)
 	var screens := gameplay.get("screen_state_controller") as ScreenStateController
+	var frame_controller := gameplay.get("gameplay_frame_controller") as GameplayFrameController
 	var settings := gameplay.get("settings_service") as SettingsService
 	var display := gameplay.get("display_controller") as DisplayController
 	var router := gameplay.get("input_router") as InputRouter
@@ -89,6 +101,9 @@ func _initialize() -> void:
 		_expect(tracker.device_changed.is_connected(Callable(touch, "set_last_input_device")), "device changes are wired to touch prompts", failures)
 		_expect(router.context == InputRouter.Context.MENU, "touch controls start in menu input context", failures)
 	_expect(screens != null, "screen state owner is composed during boot", failures)
+	_expect(frame_controller != null and frame_controller.get_parent() == gameplay, "frame controller is registered after profile application", failures)
+	if screens != null and frame_controller != null:
+		_expect(screens.get_index() < frame_controller.get_index(), "screen state attaches before the gameplay frame controller", failures)
 	if screens != null:
 		var gameplay_state := gameplay as GameplayState
 		var background: CanvasItem = gameplay_state.background_environment if gameplay_state != null else null

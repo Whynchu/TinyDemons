@@ -77,18 +77,18 @@ The broad plan is not complete merely because E0-E3 land.
 
 ### E9 checkpoint (2026-10-16)
 
-The X04 registrar now covers 27 production services in three ordered cohorts.
-The focused current-tree Godot 4.7.2 title boot and enemy-room smokes pass; the
-composition audit reports 17 `_add_runtime_node(` matches against a 44-match
-regression ceiling (16 invocations plus the helper declaration). This is a
-guard, not the Stage 3.2 completion criterion. The supervised 45-path gate ran
-after the 14-service gameplay cohort and before the seven world-support/room rows; it
-remained 29 pass / 12 fail / 4 timeout. Those failures match the earlier list
-and remain unclassified. Web export could not run because the local Godot 4.7.2
-Web templates are missing. The generic registrar still accepts an appended
-no-setup row, but production append-one-row acceptance, 16 remaining
-registrations, 31 named build steps, typed spawn-service contexts, and phase
-interfaces remain open.
+The X04 registrar now covers 42 production services in seven ordered cohorts.
+Title boot, enemy-room entrance, EnemyBrain, steering-world, and slime-spawn
+smokes pass on Godot 4.7.2; composition self-test and strict audit pass. The
+strict audit reports two `_add_runtime_node(` matches: one remaining direct
+attachment plus the helper declaration. The current 45-path gate is 30 pass /
+12 fail / 3 timeout; the 12 failures are the recorded red list, and generated
+bound reachability passed. Timeouts were generated layout, generated run scene,
+and touch controls. Main-scene headless verification passed; Web export remains
+blocked by missing Godot 4.7.2 Web templates. Stage 3.2 still needs production
+append-one-row acceptance, 31 named build steps, typed spawn-service contexts,
+and phase interfaces. See `docs/composition-plan-2026.md` for the full current
+record.
 
 ### E5 checkpoint (2026-10-16)
 

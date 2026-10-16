@@ -1,6 +1,9 @@
 extends RefCounted
 class_name RuntimeServiceRegistrationPlan
 
+# Owner: GameplayBootstrap
+# Responsibility: declare and validate ordered runtime-service registration cohorts.
+
 const PROFILE_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/profile_runtime_controller.gd")
 const PICKUP_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/pickup_runtime_controller.gd")
 const RUN_FLOW_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/run_flow_controller.gd")
@@ -16,6 +19,9 @@ const COMBAT_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controll
 const SLIME_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/slime_runtime_controller.gd")
 const ACTOR_PRESENTATION_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/actor_presentation_runtime_controller.gd")
 const ROOM_PREFAB_HOST_SCRIPT = preload("res://scripts/runtime/controllers/room_prefab_host.gd")
+const DUNGEON_MINIMAP_CONTROLLER_SCRIPT = preload("res://scripts/ui/dungeon_minimap_controller.gd")
+const GOLD_PICKUP_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/gold_pickup_controller.gd")
+const SOUL_PICKUP_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/soul_pickup_controller.gd")
 
 ## GameplayBootstrap-owned declarations and validation for ordered runtime services.
 class Row:
@@ -46,9 +52,41 @@ class Row:
 ## visible and unchanged.
 static func early_service_registrations(root: Node) -> Array[Row]:
 	var registrations: Array[Row] = []
-	registrations.append(Row.new(&"SettingsService", SettingsService, root))
-	registrations.append(Row.new(&"DisplayController", DisplayController, root, [&"SettingsService"]))
-	registrations.append(Row.new(&"InputRouter", InputRouter, root))
+	registrations.append(Row.new(
+		&"SettingsService",
+		SettingsService,
+		root,
+		[],
+		func(service: Node) -> void:
+			var gameplay := root as GameplayState
+			if gameplay == null:
+				return
+			gameplay.settings_service = service as SettingsService
+			gameplay.settings_service.load_settings()
+	))
+	registrations.append(Row.new(
+		&"DisplayController",
+		DisplayController,
+		root,
+		[&"SettingsService"],
+		func(service: Node) -> void:
+			var gameplay := root as GameplayState
+			if gameplay == null:
+				return
+			gameplay.display_controller = service as DisplayController
+			gameplay.display_controller.initialize(gameplay, gameplay.settings_service)
+	))
+	registrations.append(Row.new(
+		&"InputRouter",
+		InputRouter,
+		root,
+		[],
+		func(service: Node) -> void:
+			var gameplay := root as GameplayState
+			if gameplay == null:
+				return
+			gameplay.input_router = service as InputRouter
+	))
 	registrations.append(Row.new(&"InputDeviceTracker", preload("res://scripts/services/input_device_tracker.gd"), root))
 	registrations.append(Row.new(&"TouchControlsLayer", preload("res://scripts/ui/touch_controls_layer.gd"), root, [&"InputRouter", &"InputDeviceTracker"]))
 	registrations.append(Row.new(&"DebugSessionController", DebugSessionController, root))
@@ -261,6 +299,169 @@ static func world_service_registrations(root: GameplayState) -> Array[Row]:
 				Callable(root.dungeon_map_controller, "on_room_completed_result"))
 			root.room_controller.room_cleared.connect(
 				Callable(root, "_on_room_cleared_for_checkpoint"))
+	))
+	return registrations
+
+
+## Preserves the actor/service attach order and the chest's immediate reward
+## boundary setup. NPC status components are configured by GameplayBootstrap
+## immediately after this cohort returns, as before.
+static func actor_service_registrations(root: GameplayState) -> Array[Row]:
+	var registrations: Array[Row] = []
+	registrations.append(Row.new(
+		&"ShadowController",
+		ShadowController,
+		root,
+		[],
+		func(service: Node) -> void:
+			root.shadow_controller = service as ShadowController
+	))
+	registrations.append(Row.new(
+		&"InteractionComponent",
+		InteractionComponent,
+		root,
+		[],
+		func(service: Node) -> void:
+			root.interaction_component = service as InteractionComponent
+	))
+	registrations.append(Row.new(
+		&"ChestController",
+		ChestController,
+		root.chest,
+		[],
+		func(service: Node) -> void:
+			root.chest_controller = service as ChestController
+			root.chest_controller.configure_reward_boundary(
+				root.run_flow_controller,
+				root.room_controller,
+				root.pickup_runtime_controller)
+	))
+	registrations.append(Row.new(
+		&"NpcController",
+		NpcController,
+		root.cloaked_demon,
+		[],
+		func(service: Node) -> void:
+			root.npc_controller = service as NpcController
+	))
+	return registrations
+
+
+## Declares the presentation/acquisition cohort in its existing order. Each
+## configuration callback runs before the next row is attached so downstream
+## effect delivery and pickup ownership are ready before gameplay starts.
+static func gameplay_ui_service_registrations(root: GameplayState) -> Array[Row]:
+	var registrations: Array[Row] = []
+	registrations.append(Row.new(
+		&"RestFireController",
+		RestFireController,
+		root.rest_fire,
+		[],
+		func(service: Node) -> void:
+			root.rest_fire_controller = service as RestFireController
+	))
+	registrations.append(Row.new(
+		&"HudController",
+		HudController,
+		root.ui,
+		[],
+		func(service: Node) -> void:
+			root.hud_controller = service as HudController
+			root.hud_controller.feedback_animation_registry = root.feedback_animation_registry
+	))
+	registrations.append(Row.new(
+		&"DungeonMinimapController",
+		DUNGEON_MINIMAP_CONTROLLER_SCRIPT,
+		root.ui,
+		[],
+		func(service: Node) -> void:
+			root.dungeon_minimap_controller = service
+	))
+	registrations.append(Row.new(
+		&"SoundManager",
+		SoundManager,
+		root,
+		[],
+		func(service: Node) -> void:
+			root.sound_manager = service as SoundManager
+			root.sound_manager.configure_settings(root.settings_service)
+	))
+	registrations.append(Row.new(
+		&"EffectsSpawner",
+		EffectsSpawner,
+		root,
+		[],
+		func(service: Node) -> void:
+			root.effects_spawner = service as EffectsSpawner
+			root.effects_spawner.configure_item_acquisition_delivery(
+				root.ui,
+				root.hud_controller,
+				root.feedback_animation_registry,
+				root.screen_state_controller,
+				root.dungeon_minimap_controller,
+				Callable(root, "_play_sound"))
+			root.pickup_runtime_controller.configure_acquisition_presentation(
+				Callable(root.effects_spawner, "spawn_pickup_acquisition_delivery"))
+	))
+	registrations.append(Row.new(
+		&"GoldPickupController",
+		GOLD_PICKUP_CONTROLLER_SCRIPT,
+		root.pickup_runtime_controller,
+		[],
+		func(service: Node) -> void:
+			root.pickup_runtime_controller.gold_pickup_controller = service as GoldPickupController
+	))
+	registrations.append(Row.new(
+		&"MagicProjectileController",
+		MagicProjectileController,
+		root,
+		[],
+		func(service: Node) -> void:
+			root.magic_projectile_controller = service as MagicProjectileController
+	))
+	registrations.append(Row.new(
+		&"ChromaPickupController",
+		ChromaPickupController,
+		root,
+		[],
+		func(service: Node) -> void:
+			root.chroma_pickup_controller = service as ChromaPickupController
+	))
+	registrations.append(Row.new(
+		&"SoulPickupController",
+		SOUL_PICKUP_CONTROLLER_SCRIPT,
+		root,
+		[],
+		func(service: Node) -> void:
+			root.soul_pickup_controller = service as SoulPickupController
+	))
+	return registrations
+
+
+## Keeps screen state attachment before profile application, with the frame
+## controller registered immediately after that application as in the bootstrap.
+static func screen_state_service_registrations(root: GameplayState) -> Array[Row]:
+	var registrations: Array[Row] = []
+	registrations.append(Row.new(
+		&"ScreenStateController",
+		ScreenStateController,
+		root,
+		[],
+		func(service: Node) -> void:
+			root.screen_state_controller = service as ScreenStateController
+	))
+	return registrations
+
+
+static func gameplay_frame_service_registrations(root: GameplayState) -> Array[Row]:
+	var registrations: Array[Row] = []
+	registrations.append(Row.new(
+		&"GameplayFrameController",
+		GameplayFrameController,
+		root,
+		[],
+		func(service: Node) -> void:
+			root.gameplay_frame_controller = service as GameplayFrameController
 	))
 	return registrations
 

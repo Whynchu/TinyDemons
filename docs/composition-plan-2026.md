@@ -1361,22 +1361,29 @@ runtime system is added by appending **one table row and zero edits to any
 existing script**, and a validator asserts every registered system's
 dependencies resolve.
 
-**Implementation record (2026-10-16):** Three typed registration cohorts now
-cover 27 production services: six early services, 14 gameplay services, and
-seven world-support services. The registrar preserves sibling order and runs
-each setup callback immediately after attachment; this includes CloudSavePanel
-configuration, geometry-debug setup, and the platform-specific occlusion scale.
-Static and live checks cover declared dependencies, scripts, parents, and
-prerequisite order. The focused title-boot and enemy-room smokes pass on Godot
-4.7.2. The audit now reports 17 `_add_runtime_node(` matches against the 44
-regression ceiling (16 invocations plus the helper declaration). This remains
-partial Stage 3.2: 16 invocations, 31 named build steps, typed
-RoomEnemySpawnServices contexts, phase interfaces, and end-to-end production
+**Implementation record (2026-10-16):** Seven ordered typed registration
+cohorts now cover 42 production services: six early, 14 gameplay, seven
+world-support, four actor, nine gameplay UI/acquisition, one screen-state, and
+one gameplay-frame service. The registrar preserves sibling order and runs
+each setup callback immediately after attachment, including CloudSavePanel,
+room geometry and signal setup, chest rewards, HUD feedback, and pickup
+delivery. Static and live checks cover declared dependencies, scripts,
+parents, prerequisite order, and the profile-application boundary between
+screen and frame services. Title boot, enemy-room entrance, EnemyBrain,
+steering-world, and slime-spawn smokes pass on Godot 4.7.2; the composition
+self-test and strict audit pass. The audit reports two `_add_runtime_node(`
+matches (one remaining direct attachment plus the helper declaration).
+
+Stage 3.2 remains partial: one direct service attachment, 31 named build
+steps, typed RoomEnemySpawnServices contexts, phase interfaces, and production
 append-one-row/no-existing-script-edit acceptance remain open. The synthetic
-row-extension fixture still proves generic row creation. The curated 45-path
-gate ran after the gameplay cohort and before the world-support cohort: 29
-passed, 12 failed, and 4 timed out; see `coord/status-codex.md` for the paths
-and current export limitation.
+row-extension fixture proves generic row creation only. The current supervised
+45-path gate reports 30 pass, 12 fail, and 3 timeouts; the 12 failures match
+the recorded red list, and `generated_bound_reachability_smoke` passed this
+run. The timeouts were generated layout, generated run scene, and touch
+controls. Main-scene headless verification passed; Web export remains blocked
+by missing Godot 4.7.2 Web templates. See `coord/status-codex.md` for the
+remaining failure names.
 
 ---
 
