@@ -13,6 +13,7 @@ var player: Sprite2D = null
 var chest: Sprite2D = null
 var player_foot := Vector2.ZERO
 var chest_rect := Rect2()
+var walkable_area: WalkableArea = null
 var services: RoomEnemySpawnServices = null
 
 
@@ -24,7 +25,8 @@ func _init(
 	new_chest: Sprite2D,
 	new_player_foot: Vector2,
 	new_chest_rect: Rect2,
-	new_services: RoomEnemySpawnServices
+	new_services: RoomEnemySpawnServices,
+	new_walkable_area: WalkableArea = null
 ) -> void:
 	room_id = new_room_id
 	room_type = new_room_type
@@ -33,6 +35,7 @@ func _init(
 	chest = new_chest
 	player_foot = new_player_foot
 	chest_rect = new_chest_rect
+	walkable_area = new_walkable_area
 	services = new_services
 
 

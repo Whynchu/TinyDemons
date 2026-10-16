@@ -1359,10 +1359,15 @@ now has no `root.call` references. Active-profile persistence calls
 Continue narrowing `RoomEnemySpawnServices` along typed responsibilities.
 The 2026-10-16 X05 work removed the duplicate mutable `slimes` list and
 actor-foot-offset field; canonical `EnemyRoster` and
-`GameplayState.ACTOR_FOOT_OFFSET` now supply those shared values.
+`GameplayState.ACTOR_FOOT_OFFSET` now supply those shared values. The
+2026-10-16 X05 placement-input slice also moved `WalkableArea` out of the
+persistent service bag and into each typed spawn/respawn context, where the
+room placement solver reads it directly. `RoomEnemySpawnServices` now measures
+24 fields; focused room-entry coverage asserts both context snapshots retain
+the configured walkability object.
 `EnemyActorRuntimeServices` owns roster-backed query lists, family replacement,
 reset/restoration, and related HUD/occlusion/position rebinding. The ledger
-currently measures 25 `RoomEnemySpawnServices` fields, down from the historical
+currently measures 24 `RoomEnemySpawnServices` fields, down from the historical
 40. Keep typed context extraction focused on real room inputs and enemy
 lifecycle responsibilities; the broader slice remains open.
 

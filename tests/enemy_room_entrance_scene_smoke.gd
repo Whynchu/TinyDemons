@@ -78,18 +78,21 @@ func _initialize() -> void:
 		var active_variants := state.get("enemy_variants", []) as Array
 		var context_player := gameplay.get("player") as Sprite2D
 		var context_chest := gameplay.get("chest") as Sprite2D
+		var context_walkable_area := gameplay.get("walkable_area") as WalkableArea
 		var expected_context_foot: Vector2 = gameplay.call("_actor_foot", context_player)
 		var expected_context_chest_rect: Rect2 = gameplay.call("_collision_rect", context_chest)
 		var spawn_context_snapshot := rooms.enemy_spawn_context()
 		_expect(spawn_context_snapshot != null, "room controller builds a typed spawn context from its configured services", failures)
 		if spawn_context_snapshot != null:
 			_expect(spawn_context_snapshot.player == context_player and spawn_context_snapshot.chest == context_chest, "spawn context preserves the configured player and chest references", failures)
+			_expect(spawn_context_snapshot.walkable_area == context_walkable_area, "spawn context preserves the configured room walkability input", failures)
 			_expect(spawn_context_snapshot.enemy_actors == active_slimes, "spawn context preserves canonical EnemyRoster members and slot order", failures)
 			_expect(spawn_context_snapshot.player_foot == expected_context_foot and spawn_context_snapshot.chest_rect == expected_context_chest_rect, "spawn context preserves derived player and chest geometry", failures)
 		var respawn_context_snapshot := rooms.enemy_respawn_context()
 		_expect(respawn_context_snapshot != null, "room controller builds a typed respawn context from its configured services", failures)
 		if respawn_context_snapshot != null:
 			_expect(respawn_context_snapshot.player == context_player and respawn_context_snapshot.chest == context_chest, "respawn context preserves the configured player and chest references", failures)
+			_expect(respawn_context_snapshot.walkable_area == context_walkable_area, "respawn context preserves the configured room walkability input", failures)
 			_expect(respawn_context_snapshot.enemy_actors == active_slimes and respawn_context_snapshot.player_foot == expected_context_foot and respawn_context_snapshot.chest_rect == expected_context_chest_rect, "respawn context preserves canonical roster slots and derived geometry", failures)
 		_expect(not active_variants.is_empty(), "normal room state contains an authored enemy roster", failures)
 		for slime in active_slimes:

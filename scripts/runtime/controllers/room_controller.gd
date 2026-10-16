@@ -48,6 +48,7 @@ var last_spawn_result: RoomSpawnResult = null
 var enemy_spawn_services: RoomEnemySpawnServices = null
 var enemy_spawn_player: Sprite2D = null
 var enemy_spawn_chest: Sprite2D = null
+var enemy_walkable_area: WalkableArea = null
 var geometry_controller: RefCounted = null
 var current_room_type: StringName = &""
 
@@ -476,10 +477,11 @@ func set_current_room(room_id: StringName, room_type: StringName) -> void:
 	room_entered.emit(room_id, room_type)
 
 
-func configure_enemy_spawn_services(services: RoomEnemySpawnServices, player: Sprite2D, chest: Sprite2D) -> void:
+func configure_enemy_spawn_services(services: RoomEnemySpawnServices, player: Sprite2D, chest: Sprite2D, walkable_area: WalkableArea) -> void:
 	enemy_spawn_services = services
 	enemy_spawn_player = player
 	enemy_spawn_chest = chest
+	enemy_walkable_area = walkable_area
 
 
 func enemy_spawn_context() -> RoomSpawnContext:
@@ -488,7 +490,7 @@ func enemy_spawn_context() -> RoomSpawnContext:
 	var player_foot := enemy_spawn_services.actor_foot(enemy_spawn_player) if enemy_spawn_player != null else Vector2.ZERO
 	var chest_rect := enemy_spawn_services.current_chest_rect(enemy_spawn_chest)
 	var state := room_states.get(current_room_id, {}) as Dictionary
-	return RoomSpawnContext.new(current_room_id, current_room_type, enemy_spawn_services.actor_runtime.enemy_roster.members, enemy_spawn_player, enemy_spawn_chest, player_foot, chest_rect, enemy_spawn_services, state)
+	return RoomSpawnContext.new(current_room_id, current_room_type, enemy_spawn_services.actor_runtime.enemy_roster.members, enemy_spawn_player, enemy_spawn_chest, player_foot, chest_rect, enemy_spawn_services, state, enemy_walkable_area)
 
 
 func enemy_respawn_context() -> RoomRespawnContext:
@@ -496,7 +498,7 @@ func enemy_respawn_context() -> RoomRespawnContext:
 		return null
 	var player_foot := enemy_spawn_services.actor_foot(enemy_spawn_player) if enemy_spawn_player != null else Vector2.ZERO
 	var chest_rect := enemy_spawn_services.current_chest_rect(enemy_spawn_chest)
-	return RoomRespawnContext.new(current_room_id, current_room_type, enemy_spawn_services.actor_runtime.enemy_roster.members, enemy_spawn_player, enemy_spawn_chest, player_foot, chest_rect, enemy_spawn_services)
+	return RoomRespawnContext.new(current_room_id, current_room_type, enemy_spawn_services.actor_runtime.enemy_roster.members, enemy_spawn_player, enemy_spawn_chest, player_foot, chest_rect, enemy_spawn_services, enemy_walkable_area)
 
 
 func enter_room(room_id: StringName, room_type: StringName, arrival_socket: StringName = &"") -> void:
@@ -2108,13 +2110,13 @@ func _apply_authored_boss_geometry(slime: Sprite2D) -> void:
 func _choose_enemy_spawn_position_context(context: RoomEnemyContext, slime: Sprite2D, layout_rng: RandomNumberGenerator, occupied: Array[Vector2]) -> Vector2:
 	if context == null:
 		return Vector2(INF, INF)
-	return ROOM_ENEMY_PLACEMENT_SCRIPT.choose_spawn_position(context.services.walkable_area, slime, layout_rng, occupied, context.player_foot, context.chest_rect, GameplayState.ACTOR_FOOT_OFFSET, active_door_sockets, active_entrance_sockets, ENEMY_MIN_PLAYER_DISTANCE, ENEMY_MIN_SPAWN_DISTANCE, ENEMY_MIN_SOCKET_DISTANCE)
+	return ROOM_ENEMY_PLACEMENT_SCRIPT.choose_spawn_position(context.walkable_area, slime, layout_rng, occupied, context.player_foot, context.chest_rect, GameplayState.ACTOR_FOOT_OFFSET, active_door_sockets, active_entrance_sockets, ENEMY_MIN_PLAYER_DISTANCE, ENEMY_MIN_SPAWN_DISTANCE, ENEMY_MIN_SOCKET_DISTANCE)
 
 
 func _valid_enemy_spawn_foot_context(context: RoomEnemyContext, slime: Sprite2D, candidate_foot: Vector2, player_foot: Vector2, chest_rect: Rect2, occupied: Array[Vector2]) -> bool:
 	if context == null:
 		return false
-	return ROOM_ENEMY_PLACEMENT_SCRIPT.valid_spawn_foot(slime, candidate_foot, player_foot, chest_rect, occupied, context.services.walkable_area, GameplayState.ACTOR_FOOT_OFFSET, active_door_sockets, active_entrance_sockets, ENEMY_MIN_PLAYER_DISTANCE, ENEMY_MIN_SPAWN_DISTANCE, ENEMY_MIN_SOCKET_DISTANCE)
+	return ROOM_ENEMY_PLACEMENT_SCRIPT.valid_spawn_foot(slime, candidate_foot, player_foot, chest_rect, occupied, context.walkable_area, GameplayState.ACTOR_FOOT_OFFSET, active_door_sockets, active_entrance_sockets, ENEMY_MIN_PLAYER_DISTANCE, ENEMY_MIN_SPAWN_DISTANCE, ENEMY_MIN_SOCKET_DISTANCE)
 
 
 func apply_room_geometry(_root: Object = null) -> void:

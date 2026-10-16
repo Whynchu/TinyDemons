@@ -2,7 +2,7 @@
 
 _Only codex writes this file._
 
-**Focus:** X06 is implemented and verified. Continue composition cleanup from source-backed plan opportunities; X04 production-row proof and X05 typed room-context extraction remain open acceptance items.
+**Focus:** X05 placement input is implemented and verified: WalkableArea now flows through typed room enemy snapshots and RoomEnemySpawnServices is at 24 fields. Continue only with another source-justified dependency transfer; X04's real production-row acceptance remains open.
 **Updated:** 2026-10-16
 
 ## 2026-10-16 handoff

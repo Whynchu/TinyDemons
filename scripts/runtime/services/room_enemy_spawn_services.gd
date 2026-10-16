@@ -12,7 +12,6 @@ var slime_tuning: SlimeTuning = null
 var rng: RandomNumberGenerator = null
 var player_profile: PlayerProfile = null
 var run_state: RunState = null
-var walkable_area: WalkableArea = null
 var dungeon_graph: DungeonGraph = null
 var dungeon_map_controller: DungeonMapController = null
 var effects_spawner: EffectsSpawner = null

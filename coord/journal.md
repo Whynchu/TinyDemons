@@ -1713,3 +1713,9 @@ X06 narrow save dispatch. Replace the three GameplayState self-call string dispa
 
 2026-10-16T20:45Z - codex - done
 Completed X06: all three GameplayState profile-save self-reflections now call ProfileSaveService directly. The title boot smoke, composition self-test and strict audit, script index generation, UID validation, diff check, and Graphify refresh passed. The profile-writing fire-exchange smoke was not run because it can modify the user's profile data.
+
+2026-10-16T21:03Z - codex - claim
+X05 placement input. Move WalkableArea from the long-lived RoomEnemySpawnServices bag into each typed RoomEnemyContext snapshot, wired by RoomController; keep the placement solver and room behavior unchanged.
+
+2026-10-16T21:22Z - codex - done
+X05 placement input landed: RoomEnemySpawnServices dropped from 25 to 24 fields, and RoomController now passes WalkableArea through each typed spawn/respawn context to the unchanged placement solver. Godot 4.7.2 enemy-room, special-respawn, slime-variant, and boss-variant smokes pass; popcorn_respawn_smoke reproduces its recorded baseline failure that the boss encounter exposes at least two support slots. Composition self-test/strict audit, 110/110 definition validation, UID validation (473), script index (312), and diff checks pass. Graphify refreshed to 21,769 nodes / 49,199 edges / 780 communities; the new RoomEnemyContext-to-WalkableArea edge is present.
