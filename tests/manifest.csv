@@ -128,7 +128,7 @@
 "screen_shake_smoke","owner","unverified","player combat","frame-driven combat screen shake","pure",""
 "attack_shadow_scene_smoke","reference","unverified","player combat","attack shadow scene visual reference","main",""
 "boss_visual_palette_smoke","reference","unverified","slime enemies","boss palette and frames reference","pure",""
-"drop_art_smoke","reference","unverified","gear & fusion","gear drop art and slot reference","pure",""
+"drop_art_smoke","reference","verified","gear & fusion","gear drop art and slot reference","pure","2026-10-16 focused Godot 4.7.2 pass; controller is freed after validation to avoid test teardown leak"
 "entry_orb_visual_smoke","reference","unverified","dungeon topology","entry orb visual frames reference","pure",""
 "palette_smoke","reference","verified","slime enemies","slime palette pixel reference","pure","2026-10-14 focused pass; ability-icon highlight quantizes to the nearest RGBA8 color"
 "puzzle_map_grid_smoke","reference","unverified","generated layouts","puzzle map grid pixel/reference contract","pure",""

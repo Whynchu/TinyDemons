@@ -83,7 +83,7 @@ func _report_generation_policy() -> void:
 	if policy == null:
 		_failures.append("dungeon_generation_policy.tres")
 		return
-	print("dungeon_generation_policy: candidates=%d risk_candidates=%d first_orb=%d first_special=%d flames=%s" % [policy.generated_candidate_count, policy.risk_reward_candidate_count, policy.first_orb_depth, policy.first_special_depth, ", ".join(policy.primary_flames.map(func(f): return String(f)))])
+	print("dungeon_generation_policy: candidates=%d risk_candidates=%d risk_min_y=%d boss_margin=%d vault_cap=%d shortcut_advantage=%d" % [policy.generated_candidate_count, policy.risk_reward_candidate_count, policy.risk_choice_min_y, policy.risk_choice_boss_margin, policy.elemental_vault_cap, policy.risk_route_shortcut_advantage])
 
 
 func _report_reward_definition() -> void:

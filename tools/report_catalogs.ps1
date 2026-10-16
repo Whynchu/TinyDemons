@@ -27,9 +27,16 @@ New-Item -ItemType Directory -Force -Path $userDataDir | Out-Null
 if ($LASTEXITCODE -ne 0) {
 	throw "Godot import failed with exit code $LASTEXITCODE"
 }
-& $GodotBin --headless --audio-driver Dummy --user-data-dir $userDataDir --path $ProjectRoot --log-file $logFile -s "res://tools/report_catalogs.gd"
+$reportOutput = @(& $GodotBin --headless --audio-driver Dummy --user-data-dir $userDataDir --path $ProjectRoot --log-file $logFile -s "res://tools/report_catalogs.gd" 2>&1)
 $exitCode = $LASTEXITCODE
+$scriptErrors = @($reportOutput | Where-Object { $_.ToString() -match "SCRIPT ERROR:|Parse Error:" })
 if (Test-Path $logFile) {
-    Get-Content $logFile | Select-String "===|item_catalog|enemy_catalog|slime_variant_catalog|encounter_definition|room_definition|dungeon_generation_policy|dungeon_layout_run|puzzle_map|LOAD_FAILED|ERROR" | ForEach-Object { Write-Host $_.Line.Trim() }
+    $logLines = @(Get-Content $logFile)
+    $scriptErrors += @($logLines | Select-String "SCRIPT ERROR:|Parse Error:")
+    $logLines | Select-String "===|item_catalog|enemy_catalog|slime_variant_catalog|encounter_definition|room_definition|dungeon_generation_policy|dungeon_layout_run|puzzle_map|LOAD_FAILED|ERROR" | ForEach-Object { Write-Host $_.Line.Trim() }
+}
+if ($scriptErrors.Count -gt 0) {
+    $scriptErrors | ForEach-Object { Write-Host ("CATALOG_REPORT_SCRIPT_ERROR " + $_.ToString().Trim()) -ForegroundColor Red }
+    exit 1
 }
 exit $exitCode

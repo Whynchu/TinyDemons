@@ -32,6 +32,7 @@ func _initialize() -> void:
 			covered[actual_slot] = int(covered.get(actual_slot, 0)) + 1
 	for slot in ItemCatalog.SLOTS:
 		_expect(covered.get(slot, 0) > 0, "live slot %s has drop art coverage" % slot, failures)
+	pickup.free()
 	if failures.is_empty():
 		print("DROP_ART_SMOKE_OK")
 		quit(0)
