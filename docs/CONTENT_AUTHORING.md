@@ -680,6 +680,15 @@ Current ownership: `screen_state_controller.gd` composes the screen owners;
 their presentation and selection models. Pause Items specifically uses
 `pause_items_presenter.gd` and `pause_items_model.gd`.
 
+Pause **Stats** is the read-only `STATUS_PAGE` route. Its layout and displayed
+values belong to `PausePageDataPresenter`: a build identity header, health and
+Chroma bars, level progress, and separate attribute/combat windows. Values use
+`MenuPlayerContext` and the shared combat/tuning formulas; the page identifies
+them as gear-inclusive values before temporary effects. Keep labels separate
+from right-aligned numbers, use the complete page width for both columns, and
+anchor the point reminder and Back control to the footer. Stat allocation stays
+at the Demon Hub. At the level cap, show completion instead of another XP goal.
+
 Start from the Pause and Demon Hub visual contracts. At native 240×160, use the
 existing panel/frame, right-side list, cursor anchor/movement, SELECT/BACK
 footer, clipping, prompt, and responsive-anchor conventions. A menu route must

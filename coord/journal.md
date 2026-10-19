@@ -1611,3 +1611,5 @@ Fix currency icons reappearing on Pause child pages; bump and push main.
 
 ## 2026-10-19 — codex — done
 Currency refresh respects Pause page visibility; five-page focused probe and manifest pass. Version 0.3.95 prepared for main. Claim released.
+- 2026-10-19 codex claim: refresh pause Stats page only; preserve read-only route and shared MenuScreen/MenuWindow skin, prepare for owner review.
+- 2026-10-19 codex handoff: Pause Stats polish ready for owner review. Four script diagnostics, offscreen three-size presenter/data/bounds probe, manifest and composition regression pass. Gameplay/input acceptance remains for owner; preview captures in ignored analysis/pause-stats-review/.

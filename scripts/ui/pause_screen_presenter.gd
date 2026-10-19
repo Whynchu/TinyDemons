@@ -13,7 +13,6 @@ const PausePageDataPresenterScript = preload("res://scripts/ui/pause_page_data_p
 const DebugMenuLayoutScript = preload("res://scripts/editor/debug_menu_layout.gd")
 const PauseDebugMenuContextScript = preload("res://scripts/ui/pause_debug_menu_context.gd")
 const SoulVisualsScript = preload("res://scripts/runtime/services/soul_visuals.gd")
-const STATUS_LEFT_ROW_COUNT := 10
 
 var overlay: ColorRect = null
 var title_text: Sprite2D = null
@@ -105,10 +104,10 @@ func build(
 	var equipment_title := equipment_page.get_node_or_null("Title") as Sprite2D
 	var items_title := items_page.get_node_or_null("Title") as Sprite2D
 	if status_page is MenuScreen:
-		status_title = (status_page as MenuScreen).set_heading("Title", "STATUS", pixel_texture)
+		status_title = (status_page as MenuScreen).set_heading("Title", "STATS", pixel_texture)
 	if items_page is MenuScreen:
 		items_title = (items_page as MenuScreen).set_heading("Title", "ITEMS", pixel_texture)
-	if status_title != null: status_title.texture = pixel_texture.call("STATUS", Color.WHITE) as Texture2D
+	if status_title != null: status_title.texture = pixel_texture.call("STATS", Color.WHITE) as Texture2D
 	if equipment_title != null: equipment_title.texture = pixel_texture.call("EQUIPMENT", Color.WHITE) as Texture2D
 	if items_title != null: items_title.texture = pixel_texture.call("ITEMS", Color.WHITE) as Texture2D
 	page_roots = {
@@ -123,11 +122,7 @@ func build(
 	player_card_texts.clear()
 	for index in PauseMenuLayoutScript.PLAYER_CARD_TEXT_POSITIONS.size():
 		player_card_texts.append(widget_factory.create_sprite(root_page, "PauseCardText%d" % index, null, PauseMenuLayoutScript.PLAYER_CARD_TEXT_POSITIONS[index], false))
-	status_texts.clear()
-	for index in 16:
-		var column := 0 if index < STATUS_LEFT_ROW_COUNT else 1
-		var row := index if index < STATUS_LEFT_ROW_COUNT else index - STATUS_LEFT_ROW_COUNT
-		status_texts.append(widget_factory.create_sprite(status_page, "PauseStatus%d" % index, null, Vector2(14 + column * 108, 28 + row * 10), false))
+	status_texts = _page_data_presenter.build_status(status_page as MenuScreen, pixel_texture, widget_factory)
 	equipment_texts.clear()
 	for index in 8:
 		equipment_texts.append(widget_factory.create_sprite(equipment_page, "PauseEquipment%d" % index, null, Vector2(14, 28 + index * 12), false))
@@ -137,10 +132,10 @@ func build(
 	gold_text = widget_factory.create_sprite(built_overlay, "PauseGoldText", null, PauseMenuLayoutScript.resource_text_position(view_size, 0.0, false), false)
 	soul_text = widget_factory.create_sprite(built_overlay, "PauseSoulText", null, PauseMenuLayoutScript.resource_text_position(view_size, 0.0, true), false)
 	menu_buttons.clear()
-	var labels := ["STATUS", "EQUIPMENT", "ITEMS", "SETTINGS", "DEBUG", "QUIT TITLE"]
+	var labels := ["STATS", "EQUIPMENT", "ITEMS", "SETTINGS", "DEBUG", "QUIT TITLE"]
 	for index in labels.size():
 		var button := widget_factory.make_menu_command_button(labels[index], PauseMenuLayoutScript.command_button_position(view_size, index), PauseMenuLayoutScript.COMMAND_BUTTON_SIZE, pixel_texture)
-		button.name = "Pause%s" % labels[index].replace(" ", "").capitalize()
+		button.name = "PauseStatus" if index == 0 else "Pause%s" % labels[index].replace(" ", "").capitalize()
 		button.focus_mode = Control.FOCUS_NONE
 		if index == 0:
 			if actions.pause_status.is_valid(): button.pressed.connect(actions.pause_status)
@@ -232,17 +227,15 @@ func position_controls(view_size: Vector2) -> void:
 	if debug_menu_layout != null: debug_menu_layout.apply_layout(view_size)
 	if items_presenter != null:
 		items_presenter.position_controls(view_size)
-	if back_button != null: back_button.position = PauseMenuLayoutScript.back_button_position(view_size)
+	if back_button != null:
+		var stats_page := page_roots.get(PauseMenuStateScript.STATUS_PAGE) as Control
+		back_button.position = Vector2(view_size.x - 56, view_size.y - 18) if stats_page != null and stats_page.visible else PauseMenuLayoutScript.back_button_position(view_size)
 	if player_portrait != null:
 		player_portrait.position = Vector2(PauseMenuLayoutScript.left_field_x(PauseMenuLayoutScript.PLAYER_PORTRAIT_POSITION.x, width), PauseMenuLayoutScript.PLAYER_PORTRAIT_POSITION.y)
 	for index in player_card_texts.size():
 		var authored_position: Vector2 = PauseMenuLayoutScript.PLAYER_CARD_TEXT_POSITIONS[index] if index < PauseMenuLayoutScript.PLAYER_CARD_TEXT_POSITIONS.size() else PauseMenuLayoutScript.PLAYER_CARD_TEXT_POSITIONS.back()
 		player_card_texts[index].position = Vector2(PauseMenuLayoutScript.left_field_x(authored_position.x, width), authored_position.y)
-	for index in status_texts.size():
-		var column := 0 if index < STATUS_LEFT_ROW_COUNT else 1
-		var row := index if index < STATUS_LEFT_ROW_COUNT else index - STATUS_LEFT_ROW_COUNT
-		var authored_x := 14.0 if column == 0 else 122.0
-		status_texts[index].position = Vector2(PauseMenuLayoutScript.left_field_x(authored_x, width), 28 + row * 10)
+	_page_data_presenter.position_status(view_size)
 	for index in equipment_texts.size(): equipment_texts[index].position = Vector2(14, 28 + index * 12)
 	if equipment_menu != null:
 		equipment_menu.position = Vector2.ZERO

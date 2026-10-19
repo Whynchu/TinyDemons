@@ -149,6 +149,25 @@ func _initialize() -> void:
 		_expect(screens.pause_page == 1 and screens.pause_status_texts[0].visible and not screens.hub_overlay.visible, "pause Status opens a read-only page without hub controls", failures)
 		_expect(screens.pause_page_roots[1] is MenuScreen and status_background != null and status_background.size.x == screens.display_view_size.x and status_title != null and status_title.texture != null, "pause Status uses the shared menu shell and upper-left title window", failures)
 		_expect(screens.pause_page_roots[1].get_node_or_null("TitleTab") == null and screens.pause_page_roots[1].get_node_or_null("TitleRule") == null, "Status removes the legacy title tab and separator", failures)
+		# Stats uses the whole child page, including widened browser surfaces.
+		# Numeric columns must remain inside their frames without covering labels.
+		var stats_page := screens.pause_page_roots[1] as MenuScreen
+		var stats_context := (gameplay as GameplayState)._menu_player_context()
+		var stats_pixel := Callable(gameplay, "_pixel_text_texture")
+		for stats_size in [Vector2(240, 160), Vector2(360, 160), Vector2(240, 240)]:
+			screens._pause_screen_presenter.position_controls(stats_size)
+			screens._pause_screen_presenter.update_status(stats_context, stats_pixel)
+			for window_name in ["AttributesWindow", "CombatWindow"]:
+				var window := stats_page.get_node(window_name) as Control
+				for row in 6:
+					var row_label := window.get_node("Label%d" % row) as Sprite2D
+					var row_value := window.get_node("Value%d" % row) as Sprite2D
+					_expect(row_label.position.x + row_label.texture.get_width() + 3 <= row_value.position.x, "Stats labels and values stay separated at %s" % stats_size, failures)
+					_expect(row_value.position.x + row_value.texture.get_width() <= window.size.x - 5, "Stats values stay inside the frame at %s" % stats_size, failures)
+			var stats_hint := stats_page.get_node("StatPointsHint") as Sprite2D
+			_expect(stats_hint.position.x + stats_hint.texture.get_width() < screens._pause_screen_presenter.back_button.position.x, "Stats point reminder stays clear of Back", failures)
+			_expect(screens.pause_description_text.texture == null, "read-only Stats does not advertise a Select action", failures)
+		screens._pause_screen_presenter.position_controls(screens.display_view_size)
 		if screens.pause_menu_buttons.size() > 2:
 			screens.pause_menu_buttons[2].pressed.emit()
 		var items_page := screens.pause_page_roots.get(PauseMenuState.ITEMS_PAGE) as Control

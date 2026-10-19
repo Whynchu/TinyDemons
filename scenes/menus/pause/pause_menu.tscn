@@ -147,7 +147,9 @@ region_rect = Rect2(0, 0, 16, 16)
 
 [node name="PauseStatusPage" parent="." unique_id=1220148250 instance=ExtResource("shared_menu_screen")]
 visible = false
-heading = "STATUS"
+heading = "STATS"
+show_header_window = true
+title_width = 60.0
 
 
 

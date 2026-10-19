@@ -1,3 +1,22 @@
+# Latest handoff - 2026-10-19 pause Stats polish
+
+Pause > Stats is ready for owner review. Full-name attribute and combat rows
+use separate right-aligned values, framed groups, HP/Chroma/XP bars, player
+identity and level, an unspent-points reminder, and the shared Back action.
+The level cap shows completion. The existing typed snapshot and formulas remain
+the data source; stat allocation stays in the Demon Hub.
+
+Four changed scripts pass MCP diagnostics. A temporary offscreen editor probe
+built the actual Pause presenter, rendered 240x160, 360x160 and 240x240, checked
+label/value/footer bounds, known snapshot/tuning values, zero-capacity Chroma,
+max level, hidden child-page currencies and restored root/Back placement; all
+passed. Screenshots are under ignored analysis/pause-stats-review/. Temporary
+probe was removed. No foreground gameplay or input was started. Existing Pause
+scene smoke now covers the layout bounds, but its full main-scene rerun remains
+unverified. Manifest and composition regression checks pass. Review is limited
+to this page before moving to the next menu.
+
+---
 # Latest handoff — 2026-10-19 currency visibility / 0.3.95
 
 Pause resource refresh no longer forces gold/soul icons visible after the route
@@ -2489,3 +2508,9 @@ Release checks: 75/75 changed/new non-plugin GDScript files pass MCP script_chec
 ## Corrective release 0.3.94
 
 GitHub run 39184718741 passed definition validation (44/44), composition self-test and regression audit; web smoke caught the missing explicit gl_compatibility web renderer override. Restored it. Local web configuration preflight passes; actual export deferred to GitHub (local expected Godot executable absent). Title version script diagnostic passes. Publishing 0.3.94 and monitoring replacement deployment.
+
+## In flight - pause Stats polish (2026-10-19)
+
+Refurbishing only the pause Stats page: vitals/progress, grouped attribute and combat totals, readable labels and responsive alignment. Preserving the shared shell and pause navigation. Owner reviews before proceeding to another menu.
+
+Map maintenance: one incremental Graphify refresh (update . --no-cluster) is still CPU-processing in exec session 94427 at handoff. Process tree began 2026-10-19 16:33:52; inspect completion before starting another map writer. This ignored analysis job does not affect the reviewable Stats page or its passing checks.
