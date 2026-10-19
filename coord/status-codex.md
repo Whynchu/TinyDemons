@@ -1,3 +1,16 @@
+# Latest handoff — 2026-10-19 currency visibility / 0.3.95
+
+Pause resource refresh no longer forces gold/soul icons visible after the route
+has hidden them. Root currency panel remains enabled; Status, Equipment, Items,
+and Debug keep icons and counts hidden. Hub retains its authored resource panel.
+Existing menu-route smoke adds root/Status/return visibility assertions.
+Focused headless presenter probe passed all five pages plus return to root
+(Godot 4.7.2, exit 0); no gameplay or foreground interaction. Environment log
+and MCP registry write warnings occurred. Probe and UID removed. Manifest
+validation passes (160 rows); diff whitespace passes. Full gameplay gate and
+rendered acceptance were not run. Version updated from 0.3.94 to 0.3.95.
+
+---
 # codex — status
 
 _Only codex writes this file._

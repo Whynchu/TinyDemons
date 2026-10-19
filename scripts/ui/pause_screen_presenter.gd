@@ -366,10 +366,7 @@ func update_player_info(context: MenuPlayerContext, pixel_texture: Callable, vie
 func update_resources(profile: PlayerProfile, pixel_texture: Callable, view_size: Vector2) -> void:
 	if profile == null:
 		return
-	if gold_icon != null:
-		gold_icon.visible = true
 	if resource_icon != null:
-		resource_icon.visible = true
 		resource_icon.texture = SoulVisualsScript.texture()
 	if gold_text != null:
 		gold_text.texture = pixel_texture.call(str(profile.gold), PauseMenuLayoutScript.GOLD_TEXT_COLOR) as Texture2D

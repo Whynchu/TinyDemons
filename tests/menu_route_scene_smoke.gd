@@ -63,6 +63,7 @@ func _initialize() -> void:
 		await process_frame
 		_expect(screens.pause_overlay.is_visible_in_tree() and not screens.hub_overlay.is_visible_in_tree(), "pause replaces hub with its own overlay", failures)
 		_expect(screens.pause_root_page.is_visible_in_tree() and screens.pause_menu_buttons.all(func(button: Button) -> bool: return button.is_visible_in_tree()), "pause root exposes only its command rail", failures)
+		_expect(screens.pause_gold_icon.is_visible_in_tree() and screens.pause_resource_icon.is_visible_in_tree(), "pause root shows currency in its resource panel", failures)
 		_expect(touch.call("_active_menu_root") == screens.pause_overlay, "touch hit-testing is scoped to the active pause overlay", failures)
 		router.set("_menu_direction_events", {&"ui_down": true})
 		gameplay.call("_update_pause_input")
@@ -74,11 +75,13 @@ func _initialize() -> void:
 		await process_frame
 		_expect(screens.pause_page == 1 and not screens.pause_root_page.is_visible_in_tree() and screens.pause_page_roots[1].is_visible_in_tree(), "Pause command input activates Status and replaces the command root", failures)
 		_expect(screens.pause_menu_buttons.all(func(button: Button) -> bool: return not button.is_visible_in_tree()), "pause commands are unavailable on Status", failures)
+		_expect(not screens.pause_gold_icon.is_visible_in_tree() and not screens.pause_resource_icon.is_visible_in_tree() and not screens.pause_gold_text.is_visible_in_tree() and not screens.pause_soul_text.is_visible_in_tree(), "Status hides currency icons and counts after player data refresh", failures)
 		_set_menu_edge(router, false, true)
 		gameplay.call("_update_pause_input")
 		_clear_menu_edge(router)
 		await process_frame
 		_expect(screens.pause_page == 0 and screens.pause_root_page.is_visible_in_tree(), "pause BACK returns from read-only Status", failures)
+		_expect(screens.pause_gold_icon.is_visible_in_tree() and screens.pause_resource_icon.is_visible_in_tree(), "returning to pause root restores currency icons", failures)
 		screens.pause_settings_button.pressed.emit()
 		await process_frame
 		_expect(screens.settings_presenter.overlay.is_visible_in_tree() and not screens.pause_overlay.is_visible_in_tree() and not screens.hub_overlay.is_visible_in_tree(), "Settings replaces pause without an overlay stack", failures)

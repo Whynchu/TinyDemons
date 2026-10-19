@@ -1605,3 +1605,9 @@ MenuScreen hides unused right-hand header window by default; opt-in provided. Eq
 - 2026-10-18 codex done: version 0.3.93 synchronized; manifest (160 rows/46 gate), composition self-test and strict audit pass. MCP script_check passes all 75 changed/new application and test scripts; plugin source protected from MCP validation. Corrected stale ContactRoot type and spin-damage override signatures. No gameplay suite launched with shared editor active.
 - 2026-10-18 codex blocker: GitHub run 39184718741 passed definitions and composition but web config failed because renderer/rendering_method.web override was missing. Restoring required gl_compatibility override and preparing 0.3.94 corrective release.
 - 2026-10-18 codex done: restored web Compatibility override; local WEB_EXPORT_CONFIG_OK, title script diagnostics pass; publish corrective 0.3.94.
+
+## 2026-10-19 — codex — claim
+Fix currency icons reappearing on Pause child pages; bump and push main.
+
+## 2026-10-19 — codex — done
+Currency refresh respects Pause page visibility; five-page focused probe and manifest pass. Version 0.3.95 prepared for main. Claim released.
