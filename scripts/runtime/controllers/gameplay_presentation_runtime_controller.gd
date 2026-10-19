@@ -16,6 +16,8 @@ static func present(root: GameplayState, delta: float) -> void:
 	var run_complete_overlay := screens.run_complete_presenter.overlay if screens != null else null
 	if run_complete_overlay != null and run_complete_overlay.visible:
 		return
+	var capture_service: Node = root.performance_capture_service
+	var scope_capture_enabled := capture_service != null and bool(capture_service.get("capturing")) and bool(capture_service.get("scope_capture_enabled"))
 	# Catch-up steps may update HUD targets repeatedly; render only final values.
 	root._update_mp_desaturation()
 	root._update_player_health_ui(0.0)
@@ -32,13 +34,19 @@ static func present(root: GameplayState, delta: float) -> void:
 		for slime in root.slimes:
 			if is_instance_valid(slime) and slime.visible and slime.is_visible_in_tree():
 				actor_presentation.sync_slime_shadow(root, slime)
+	var actor_occlusion_started_usec: int = Time.get_ticks_usec() if scope_capture_enabled else 0
 	root._update_actor_occlusion(delta)
+	if scope_capture_enabled:
+		capture_service.call("record_scope", &"frame_actor_occlusion", Time.get_ticks_usec() - actor_occlusion_started_usec)
 	root._update_player_palette_flash(delta)
 	root._update_player_shadow()
 	root._update_cloaked_demon_shadow()
 	if root.effects_spawner != null:
 		root.effects_spawner.sync_status_particle_depths()
+	var map_lighting_started_usec: int = Time.get_ticks_usec() if scope_capture_enabled else 0
 	MAP_LIGHTING_CONTROLLER_SCRIPT.refresh_for_actor(root.player)
+	if scope_capture_enabled:
+		capture_service.call("record_scope", &"frame_map_lighting_refresh", Time.get_ticks_usec() - map_lighting_started_usec)
 
 
 static func present_actor_status_auras(root: GameplayState) -> void:
@@ -62,7 +70,7 @@ static func maintain_enemy_regen_lock(root: GameplayState, delta: float) -> void
 
 
 static func _present_actor_status_aura(actor: Sprite2D) -> void:
-	var slime_actor := actor as SlimeActor
+	var slime_actor := actor as EnemyActor
 	var component: StatusComponent = slime_actor._status_component if slime_actor != null and is_instance_valid(slime_actor._status_component) else actor.get_node_or_null("Status") as StatusComponent
 	if component == null:
 		return

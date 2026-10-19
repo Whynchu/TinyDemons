@@ -32,11 +32,14 @@ var _contact_broadphase_max_radius := 0.0
 var _contact_broadphase_ready_for_separation := false
 var _contact_broadphase_root_id := 0
 var _contact_broadphase_physics_frame := -1
+var _status_contact_snapshot: Array[StatusContactPair] = []
+var _status_contact_pair_pool: Array[StatusContactPair] = []
+var _status_contact_pair_cursor := 0
 
 
 func stabilize_guides(actors_to_stabilize: Array[Sprite2D], update_attack_guides: Callable) -> void:
 	for actor in actors_to_stabilize:
-		var is_slime := actor is SlimeActor
+		var is_slime := actor is EnemyActor
 		var actor_scale := actor.scale
 		if absf(actor_scale.x) < 0.001 or absf(actor_scale.y) < 0.001:
 			continue
@@ -99,6 +102,7 @@ func resolve_slime_contacts(slimes: Array[Sprite2D], root: GameplayState, max_pa
 		return 0
 	var actor_foot := Callable(root, "_actor_foot")
 	var is_spawn_locked := Callable(root, "_is_slime_spawn_locked") if root.has_method("_is_slime_spawn_locked") else Callable()
+	var has_spawn_locked_method := is_spawn_locked.is_valid()
 	# The frame cache normally builds the broad-phase grid; build it lazily so the
 	# resolver stays correct for direct callers.
 	if not _slime_grid_valid:
@@ -112,6 +116,10 @@ func resolve_slime_contacts(slimes: Array[Sprite2D], root: GameplayState, max_pa
 	_contact_broadphase_ready_for_separation = false
 	var separation_attempts := 0
 	for separation_pass in max_passes:
+		# Status transmission runs immediately before separation and may change an
+		# actor's spawn/death eligibility. Rebuild this cache once per pass, then
+		# reuse it while candidate pairs move only positions.
+		_contact_eligibility_cache.clear()
 		if separation_pass > 0:
 			# Separation moved actors after the previous pass. Rebuild their cells
 			# before searching again so the next pass remains complete for large
@@ -125,7 +133,7 @@ func resolve_slime_contacts(slimes: Array[Sprite2D], root: GameplayState, max_pa
 		var resolved_this_pass := false
 		for actor_index in slimes.size():
 			var actor := slimes[actor_index]
-			if not is_instance_valid(actor) or not actor.visible or bool(actor.get_meta("boss_airborne", false)) or (root.has_method("_is_slime_spawn_locked") and bool(root.call("_is_slime_spawn_locked", actor))):
+			if not _separation_actor_is_eligible(root, actor, has_spawn_locked_method):
 				continue
 			# Keep the legacy search window during a pass because earlier pairs can
 			# move actors while their grid cells remain fixed. Expand it when an
@@ -134,7 +142,7 @@ func resolve_slime_contacts(slimes: Array[Sprite2D], root: GameplayState, max_pa
 			var query_radius := maxf(contact_distance, contact_envelope)
 			_fill_slime_grid_candidates(actor_foot.call(actor), query_radius, _grid_candidate_scratch)
 			for other in _grid_candidate_scratch:
-				if other == actor or not is_instance_valid(other) or not other.visible or bool(other.get_meta("boss_airborne", false)) or (root.has_method("_is_slime_spawn_locked") and bool(root.call("_is_slime_spawn_locked", other))):
+				if other == actor or not _separation_actor_is_eligible(root, other, has_spawn_locked_method):
 					continue
 				if slime_grid_position(other) <= actor_index:
 					continue
@@ -156,6 +164,20 @@ func resolve_slime_contacts(slimes: Array[Sprite2D], root: GameplayState, max_pa
 	return resolved_pairs
 
 
+func _separation_actor_is_eligible(root: GameplayState, actor: Sprite2D, has_spawn_locked_method: bool) -> bool:
+	if actor == null or not is_instance_valid(actor):
+		return false
+	if _contact_eligibility_cache.has(actor):
+		return bool(_contact_eligibility_cache[actor])
+	var eligible := actor.visible and not bool(actor.get_meta("boss_airborne", false))
+	if eligible:
+		var enemy_actor := actor as EnemyActor
+		var spawn_locked := enemy_actor.is_spawn_locked() if enemy_actor != null else (has_spawn_locked_method and bool(root.call("_is_slime_spawn_locked", actor)))
+		eligible = not spawn_locked
+	_contact_eligibility_cache[actor] = eligible
+	return eligible
+
+
 func capture_status_contact_pairs(
 	slimes: Array[Sprite2D],
 	player: Sprite2D,
@@ -164,7 +186,12 @@ func capture_status_contact_pairs(
 	is_spawn_locked: Callable,
 	is_dead: Callable
 ) -> Array[StatusContactPair]:
-	var contacts: Array[StatusContactPair] = []
+	# The caller consumes this snapshot synchronously before the next physics
+	# tick, so reuse its storage and pair objects instead of allocating them on
+	# every movement callback.
+	var contacts := _status_contact_snapshot
+	contacts.clear()
+	_status_contact_pair_cursor = 0
 	_contact_eligibility_cache.clear()
 	_contact_foot_cache.clear()
 	_contact_radius_cache.clear()
@@ -190,9 +217,7 @@ func capture_status_contact_pairs(
 				continue
 			if _contact_capture_push_vector(root, actor, other, _contact_foot_cache, _contact_radius_cache, _contact_collision_rect_cache, actor_foot) == Vector2.ZERO:
 				continue
-			var pair := StatusContactPair.new()
-			pair.configure(actor, other)
-			contacts.append(pair)
+			contacts.append(_acquire_status_contact_pair(actor, other))
 	if player != null and is_instance_valid(player):
 		var player_foot_position := _contact_capture_actor_foot(player, _contact_foot_cache, actor_foot)
 		var player_query_radius := _contact_capture_broadphase_radius(root, player, actor_foot, _contact_foot_cache, _contact_radius_cache, _contact_collision_rect_cache, _contact_broadphase_radius_cache) + _contact_broadphase_max_radius
@@ -200,13 +225,23 @@ func capture_status_contact_pairs(
 		for slime in _grid_candidate_scratch:
 			if not _contact_capture_actor_is_eligible_cached(slime, _contact_eligibility_cache, is_spawn_locked, is_dead) or _contact_capture_push_vector(root, slime, player, _contact_foot_cache, _contact_radius_cache, _contact_collision_rect_cache, actor_foot) == Vector2.ZERO:
 				continue
-			var pair := StatusContactPair.new()
-			pair.configure(slime, player)
-			contacts.append(pair)
+			contacts.append(_acquire_status_contact_pair(slime, player))
 	_contact_broadphase_ready_for_separation = true
 	_contact_broadphase_root_id = _contact_broadphase_key(slimes, player)
 	_contact_broadphase_physics_frame = Engine.get_physics_frames()
 	return contacts
+
+
+func _acquire_status_contact_pair(first: Sprite2D, second: Sprite2D) -> StatusContactPair:
+	var pair: StatusContactPair
+	if _status_contact_pair_cursor < _status_contact_pair_pool.size():
+		pair = _status_contact_pair_pool[_status_contact_pair_cursor]
+	else:
+		pair = StatusContactPair.new()
+		_status_contact_pair_pool.append(pair)
+	_status_contact_pair_cursor += 1
+	pair.configure(first, second)
+	return pair
 
 
 func _contact_broadphase_key(slimes: Array[Sprite2D], fallback: Sprite2D = null) -> int:
@@ -491,7 +526,7 @@ func try_move_swept(actor: Sprite2D, movement: Vector2, max_step: float, can_sta
 
 
 func can_actor_stand(actor: Sprite2D, slimes: Array[Sprite2D], foot: Callable, is_walkable: Callable, is_slime_walkable: Callable, collision_rect: Callable, collision_polygon: Callable, collision_polygon_walkability: Callable = Callable()) -> bool:
-	var actor_is_slime := actor is SlimeActor
+	var actor_is_slime := actor is EnemyActor
 	if not actor_is_slime:
 		actor_is_slime = slimes.has(actor)
 	if not actor_is_slime:

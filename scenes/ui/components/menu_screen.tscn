@@ -1,0 +1,37 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/menu_screen.gd" id="1_screen"]
+[ext_resource type="PackedScene" path="res://scenes/ui/components/menu_window.tscn" id="2_window"]
+
+[node name="MenuScreen" type="ColorRect"]
+offset_right = 240.0
+offset_bottom = 160.0
+color = Color(0, 0, 0, 1)
+texture_filter = 1
+script = ExtResource("1_screen")
+metadata/display_full_view = true
+
+[node name="TitleWindow" parent="." instance=ExtResource("2_window")]
+offset_right = 90.0
+offset_bottom = 21.0
+
+[node name="HeaderWindow" parent="." instance=ExtResource("2_window")]
+visible = false
+offset_left = 90.0
+offset_right = 240.0
+offset_bottom = 21.0
+
+[node name="ContentWindow" parent="." instance=ExtResource("2_window")]
+offset_top = 21.0
+offset_right = 240.0
+offset_bottom = 136.0
+
+[node name="FooterWindow" parent="." instance=ExtResource("2_window")]
+offset_top = 136.0
+offset_right = 240.0
+offset_bottom = 160.0
+
+[node name="Heading" type="Sprite2D" parent="."]
+position = Vector2(13, 8)
+centered = false
+texture_filter = 1

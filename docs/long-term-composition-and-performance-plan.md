@@ -1,5 +1,10 @@
 # Tiny Demons — Long-Term Composition and Performance Plan
 
+> Current composition execution entry point: [COMPOSITION_STATUS.md](COMPOSITION_STATUS.md).
+> This document preserves detailed decisions and evidence. Its remaining
+> composition checklist is supporting backlog, not an instruction to resume
+> a broad refactor. Authoring and performance work retain their own authorities.
+
 Status: active plan
 
 Scope: long-term content composition, runtime modularity, authoring workflows,

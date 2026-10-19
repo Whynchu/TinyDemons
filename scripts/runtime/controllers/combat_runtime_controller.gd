@@ -4,7 +4,7 @@ class_name CombatRuntimeController
 const SKELETON_KNOCKBACK_MULTIPLIER := 1.2
 
 const ProgressionControllerScript = preload("res://scripts/runtime/controllers/progression_controller.gd")
-const SlimeVariantCatalogScript = preload("res://scripts/content/slime_variant_catalog.gd")
+const EnemyCatalogScript = preload("res://scripts/content/enemy_catalog.gd")
 const ElementCatalogScript = preload("res://scripts/content/element_catalog.gd")
 const CombatDamageRequestScript = preload("res://scripts/content/combat_damage_request.gd")
 const ActorStatusRuntimeControllerScript = preload("res://scripts/runtime/controllers/actor_status_runtime_controller.gd")
@@ -68,6 +68,13 @@ const RESOURCE_DROP_LATERAL_OFFSET := 3.0
 
 var _actor_status_runtime: ActorStatusRuntimeController = ActorStatusRuntimeControllerScript.new() as ActorStatusRuntimeController
 var _feedback_presenter: CombatFeedbackPresenter = CombatFeedbackPresenterScript.new() as CombatFeedbackPresenter
+
+## Knockback runs once per live enemy on every scheduled physics tick. Keep its
+## actor callbacks alongside the persistent controller rather than rebuilding
+## two Callable values for each actor every frame.
+var _knockback_callbacks_root: Object
+var _try_knockback_callback: Callable
+var _reset_scoot_callback: Callable
 
 ## Enemy max health is static for the life of a room, but the per-frame health
 ## UI reads it several times per slime. Cache it for the frame to avoid repeated
@@ -380,7 +387,7 @@ func configure_slime_variant(root: Object, slime: Sprite2D, variant: String) -> 
 	slime.set_meta("element", definition.element)
 	slime.set_meta("damage_contract", String(definition.damage_contract))
 	slime.set_meta("visual_source", definition.visual_source)
-	var actor := slime as SlimeActor
+	var actor := slime as EnemyActor
 	if actor != null:
 		EnemyFactory.configure_actor(actor, definition)
 	var stats := root.call("_slime_stats", slime) as StatsComponent
@@ -420,7 +427,7 @@ func knockback_slime(root: Object, slime: Sprite2D, knockback_multiplier: float 
 	var combat := root.call("_slime_combat", slime) as SlimeCombatComponent
 	combat.knockback_velocity = root.call("_perspective_movement", direction.normalized() * (player_tuning.attack_knockback * combo * multiplier / slime_tuning.knockback_duration))
 	combat.knockback_timer = slime_tuning.knockback_duration
-	var brain := root.call("_slime_brain", slime) as SlimeBrain
+	var brain := root.call("_enemy_brain", slime) as EnemyBrain
 	brain.scoot_start = slime.position
 	brain.scoot_target = slime.position
 	brain.scoot_timer = 0.0
@@ -485,6 +492,9 @@ func kill_slime(root: Object, slime: Sprite2D) -> void:
 
 
 func is_slime_dead(root: Object, slime: Sprite2D) -> bool:
+	var enemy_actor := slime as EnemyActor
+	if enemy_actor != null:
+		return enemy_actor.is_defeated()
 	return bool((root.call("_slime_combat", slime) as SlimeCombatComponent).dead)
 
 
@@ -559,7 +569,7 @@ func reconcile_empty_combat_room(root: GameplayState) -> void:
 func slime_element(slime: Sprite2D) -> int:
 	if slime == null:
 		return ElementCatalogScript.Element.NEUTRAL
-	var actor := slime as SlimeActor
+	var actor := slime as EnemyActor
 	if actor != null:
 		return ElementCatalogScript.normalize(actor.combat_element)
 	var palette := String(slime.get("variant"))
@@ -573,7 +583,7 @@ func slime_attack_damage_result(root: Object, slime: Sprite2D) -> CombatCalculat
 	var element := slime_element(slime)
 	var variant := StringName(str(slime.get("variant")))
 	var request: RefCounted
-	if element != ElementCatalogScript.Element.NEUTRAL and SlimeVariantCatalogScript.is_elemental_variant(variant):
+	if element != ElementCatalogScript.Element.NEUTRAL and EnemyCatalogScript.has_elemental_damage_contract(variant):
 		var player_defense_element := ElementCatalogScript.Element.NEUTRAL
 		if root.has_method("_current_player_element"):
 			player_defense_element = ElementCatalogScript.normalize(int(root.call("_current_player_element"))) as ElementCatalogScript.Element
@@ -747,11 +757,19 @@ func apply_player_hit_knockback(root: Object, slime: Sprite2D, knockback_multipl
 
 
 func update_slime_knockback(root: Object, slime: Sprite2D, delta: float) -> bool:
-	return bool((root.call("_slime_combat", slime) as SlimeCombatComponent).tick_knockback(delta, slime, Callable(root, "_try_knockback_slime"), Callable(root, "_reset_slime_scoot")))
+	if _knockback_callbacks_root != root or not _try_knockback_callback.is_valid():
+		_knockback_callbacks_root = root
+		_try_knockback_callback = Callable(root, "_try_knockback_slime")
+		_reset_scoot_callback = Callable(root, "_reset_slime_scoot")
+	var enemy_actor := slime as EnemyActor
+	var combat: SlimeCombatComponent = enemy_actor._combat_component if enemy_actor != null else null
+	if combat == null:
+		combat = root.call("_slime_combat", slime) as SlimeCombatComponent
+	return bool(combat.tick_knockback(delta, slime, _try_knockback_callback, _reset_scoot_callback))
 
 
 func reset_slime_scoot(root: Object, slime: Sprite2D) -> void:
-	var brain := root.call("_slime_brain", slime) as SlimeBrain
+	var brain := root.call("_enemy_brain", slime) as EnemyBrain
 	brain.scoot_start = slime.position
 	brain.scoot_target = slime.position
 	brain.scoot_timer = 0.0

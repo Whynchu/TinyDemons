@@ -1,6 +1,6 @@
 extends SceneTree
 
-const CatalogScript = preload("res://scripts/content/slime_variant_catalog.gd")
+const CatalogScript = preload("res://scripts/content/enemy_catalog.gd")
 const ElementCatalogScript = preload("res://scripts/content/element_catalog.gd")
 const MATERIAL_SCRIPT = preload("res://scripts/actors/actor_palette_material.gd")
 const EnemyFactoryScript = preload("res://scripts/content/enemy_factory.gd")
@@ -13,7 +13,7 @@ func _initialize() -> void:
 	call_deferred("_watchdog")
 	var failures: Array[String] = []
 	var stats := StatsComponent.new()
-	for variant in CatalogScript.variants():
+	for variant in CatalogScript.ids():
 		var definition := EnemyFactoryScript.definition(variant)
 		_expect(definition != null and definition.id == variant, "%s resolves to its typed registry definition" % variant, failures)
 		if definition == null:
@@ -24,7 +24,7 @@ func _initialize() -> void:
 		_expect(ElementCatalogScript.is_valid(definition.element), "%s element is valid" % variant, failures)
 		_expect(not definition.damage_contract.is_empty(), "%s damage contract is explicit" % variant, failures)
 		_expect(not definition.display_name.is_empty() and not definition.visual_source.is_empty(), "%s has display and visual identity" % variant, failures)
-	_expect(CatalogScript.display_name_for_variant(&"grey") == "Normal Slime", "Gray variant displays as Normal Slime", failures)
+	_expect(CatalogScript.display_name_for_id(&"grey") == "Normal Slime", "Gray variant displays as Normal Slime", failures)
 	var targeting := TargetingRuntimeControllerScript.new()
 	var name_root := Node.new()
 	var slime_actor := EnemyFactoryScript.assemble(EnemyFactoryScript.definition(&"grey"))
@@ -37,26 +37,26 @@ func _initialize() -> void:
 	targeting.free()
 
 	var yellow := StatsComponent.new()
-	var yellow_definition := CatalogScript.definition(&"yellow")
+	var yellow_definition := CatalogScript.record_for_id(&"yellow")
 	yellow.apply_enemy_variant_profile(yellow_definition["base_stats"], yellow_definition["growth_weights"], &"yellow")
 	yellow.level = 25
 	_expect(yellow.speed > yellow.def, "Yellow growth favors SPD over DEF", failures)
 
 	var purple := StatsComponent.new()
-	var purple_definition := CatalogScript.definition(&"purple")
+	var purple_definition := CatalogScript.record_for_id(&"purple")
 	purple.apply_enemy_variant_profile(purple_definition["base_stats"], purple_definition["growth_weights"], &"purple")
 	purple.level = 25
 	_expect(purple.speed > purple.vit and purple.strength > purple.def, "Purple growth preserves SPD/STR pressure", failures)
 	_expect(purple.speed + purple.strength > purple.vit + purple.def, "Purple growth stays offensively weighted", failures)
 
 	var ground := StatsComponent.new()
-	var ground_definition := CatalogScript.definition(&"orange")
+	var ground_definition := CatalogScript.record_for_id(&"orange")
 	ground.apply_enemy_variant_profile(ground_definition["base_stats"], ground_definition["growth_weights"], &"orange")
 	ground.level = 25
 	_expect(ground.def > ground.speed and ground.vit > ground.strength, "Ground growth preserves sturdy pressure", failures)
 
 	var ice := StatsComponent.new()
-	var ice_definition := CatalogScript.definition(&"aquamarine")
+	var ice_definition := CatalogScript.record_for_id(&"aquamarine")
 	ice.apply_enemy_variant_profile(ice_definition["base_stats"], ice_definition["growth_weights"], &"aquamarine")
 	ice.level = 25
 	_expect(ice.speed > ice.def and ice.speed > ice.vit, "Ice growth preserves SPD pressure", failures)

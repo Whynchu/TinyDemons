@@ -1482,7 +1482,7 @@ func _room_enemy_runtime_context() -> RoomEnemyRuntimeContext:
 	var combat_components: Array[SlimeCombatComponent] = []
 	var health_components: Array[HealthComponent] = []
 	for slime in room_slimes:
-		combat_components.append(SlimeActor.component(slime, "Combat", SlimeCombatComponent) as SlimeCombatComponent)
+		combat_components.append(EnemyActor.component(slime, "Combat", SlimeCombatComponent) as SlimeCombatComponent)
 		health_components.append(slime.get_node_or_null("Health") as HealthComponent)
 	return RoomEnemyRuntimeContext.new(current_room_id, state.get("enemy_variants", []) as Array, room_slimes, combat_components, health_components)
 

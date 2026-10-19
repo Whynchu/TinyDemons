@@ -120,7 +120,7 @@ func _initialize() -> void:
 		_expect(screens.pause_cursor_text != null and screens.pause_cursor_text.z_index >= 4095 and screens.pause_cursor_text.has_method("move_to"), "pause cursor owns top draw order and unified motion", failures)
 		_expect(screens.pause_status_texts.size() >= 16 and screens.pause_equipment_texts.size() >= 4, "pause owns read-only status and equipment pages", failures)
 		var debug_page := screens.pause_page_roots.get(PauseMenuState.DEBUG_PAGE) as Control
-		var debug_frame := debug_page.get_node_or_null("Background") as NinePatchRect if debug_page != null else null
+		var debug_frame := debug_page.get_node_or_null("ContentWindow") as NinePatchRect if debug_page != null else null
 		var debug_title := debug_page.get_node_or_null("Title") as Sprite2D if debug_page != null else null
 		var debug_cursor := debug_page.get_node_or_null("DebugCursor") as Sprite2D if debug_page != null else null
 		_expect(debug_frame != null and debug_frame.texture != null and debug_frame.patch_margin_left == 3, "Debug page uses the pause menu's pixel frame artwork", failures)
@@ -144,16 +144,25 @@ func _initialize() -> void:
 		screens.call("set_pause_page", gameplay, PauseMenuState.COMMAND_PAGE)
 		if screens.pause_status_button != null:
 			screens.pause_status_button.pressed.emit()
-		var status_background := screens.pause_page_roots[1].get_node_or_null("Background") as NinePatchRect
+		var status_background := screens.pause_page_roots[1].get_node_or_null("ContentWindow") as NinePatchRect
 		var status_title := screens.pause_page_roots[1].get_node_or_null("Title") as Sprite2D
 		_expect(screens.pause_page == 1 and screens.pause_status_texts[0].visible and not screens.hub_overlay.visible, "pause Status opens a read-only page without hub controls", failures)
-		_expect(status_background != null and status_background.size == screens.display_view_size and status_title != null and status_title.texture != null, "pause Status owns a full-screen background and upper-left title card", failures)
+		_expect(screens.pause_page_roots[1] is MenuScreen and status_background != null and status_background.size.x == screens.display_view_size.x and status_title != null and status_title.texture != null, "pause Status uses the shared menu shell and upper-left title window", failures)
+		_expect(screens.pause_page_roots[1].get_node_or_null("TitleTab") == null and screens.pause_page_roots[1].get_node_or_null("TitleRule") == null, "Status removes the legacy title tab and separator", failures)
 		if screens.pause_menu_buttons.size() > 2:
 			screens.pause_menu_buttons[2].pressed.emit()
 		var items_page := screens.pause_page_roots.get(PauseMenuState.ITEMS_PAGE) as Control
-		var items_background := items_page.get_node_or_null("Background") as NinePatchRect if items_page != null else null
+		var items_background := items_page.get_node_or_null("ContentWindow") as NinePatchRect if items_page != null else null
 		var items_title := items_page.get_node_or_null("Title") as Sprite2D if items_page != null else null
 		_expect(screens.pause_page == PauseMenuState.ITEMS_PAGE and items_page != null and items_page.visible and items_background != null and items_background.texture != null and items_title != null and items_title.texture != null, "pause Items opens on the shared framed page structure", failures)
+		_expect(items_page is MenuScreen and items_page.get_node_or_null("TitleTab") == null and items_page.get_node_or_null("PauseItemsDivider") == null, "Items replaces the legacy page chrome and divider", failures)
+		var items_presenter := screens._pause_screen_presenter.items_presenter
+		var list_interior := Rect2(items_presenter.list_window.position + Vector2(3, 3), items_presenter.list_window.size - Vector2(6, 6))
+		_expect(list_interior.encloses(Rect2(items_presenter.sort_button.position, items_presenter.sort_button.size)), "Items sort control fits inside its list window", failures)
+		for button in items_presenter.row_buttons:
+			_expect(list_interior.encloses(Rect2(button.position, button.size)), "Items rows fit above the footer inside their window", failures)
+		var last_detail := items_presenter.detail_texts.back() as Sprite2D
+		_expect(last_detail.position.y + 5.0 <= items_presenter.detail_window.position.y + items_presenter.detail_window.size.y - 3.0, "Items detail lines fit inside their framed window", failures)
 		_expect(screens._pause_screen_presenter.items_model != null and screens._pause_screen_presenter.items_model.row_count() > 0, "pause Items lists the profile's current owned gear", failures)
 		if screens._pause_screen_presenter.items_model != null:
 			var duplicate_group_found := false

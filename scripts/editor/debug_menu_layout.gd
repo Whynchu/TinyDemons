@@ -3,7 +3,7 @@ class_name DebugMenuLayout
 
 signal action_requested(action: StringName, amount: int)
 
-const MENU_FRAME_TEXTURE: Texture2D = preload("res://assets/artwork/frame 16x16.png")
+const MENU_SCREEN_SCENE: PackedScene = preload("res://scenes/ui/components/menu_screen.tscn")
 
 var page: Control
 var run_value: Sprite2D
@@ -16,42 +16,17 @@ var buttons: Array[Button] = []
 
 
 func build(parent: Control, pixel_texture: Callable, button_factory: Callable, cursor_texture: Texture2D) -> Dictionary:
-	page = Control.new()
+	var menu := MENU_SCREEN_SCENE.instantiate() as MenuScreen
+	menu.footer_height = 26.0
+	page = menu
 	page.name = "PauseDebugPage"
 	page.position = Vector2.ZERO
 	page.size = Vector2(240, 160)
 	page.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	page.mouse_filter = Control.MOUSE_FILTER_STOP
 	page.visible = false
+	menu.set_heading("Title", "DEBUG", pixel_texture)
 	parent.add_child(page)
-	var background := NinePatchRect.new()
-	background.name = "Background"
-	background.texture = MENU_FRAME_TEXTURE
-	background.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	background.position = Vector2.ZERO
-	background.size = page.size
-	background.patch_margin_left = 3
-	background.patch_margin_top = 3
-	background.patch_margin_right = 3
-	background.patch_margin_bottom = 3
-	background.axis_stretch_horizontal = NinePatchRect.AXIS_STRETCH_MODE_TILE
-	background.axis_stretch_vertical = NinePatchRect.AXIS_STRETCH_MODE_TILE
-	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	page.add_child(background)
-	var title := Sprite2D.new()
-	title.name = "Title"
-	title.texture = pixel_texture.call("DEBUG", Color.WHITE) as Texture2D
-	title.position = Vector2(14, 9)
-	title.centered = false
-	title.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	page.add_child(title)
-	var rule := ColorRect.new()
-	rule.name = "TitleRule"
-	rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	rule.position = Vector2(8, 22)
-	rule.size = Vector2(224, 1)
-	rule.color = Color8(91, 120, 146)
-	page.add_child(rule)
 	var run_label := _label("RUN", Vector2(14, 28), pixel_texture, Color8(255, 219, 142))
 	page.add_child(run_label)
 	var run_minus := _button("-", Vector2(14, 35), Vector2(27, 14), &"run_decrease", pixel_texture, button_factory)
@@ -106,9 +81,6 @@ func apply_layout(view_size: Vector2) -> void:
 	if page == null:
 		return
 	page.size = view_size
-	var background := page.get_node_or_null("Background") as NinePatchRect
-	if background != null:
-		background.size = view_size
 	if cursor != null:
 		cursor.visible = page.visible
 

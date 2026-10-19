@@ -1407,7 +1407,7 @@ Begin Phase 0/1 in graphify-godot: select the pinned GDScript grammar and implem
 ## 2026-10-11 - codex - done
 Added the pinned optional GDScript extra and initial .gd discovery/extraction in the local godot-support branch. Five focused tests pass; 605 Tiny Demons scripts have zero extractor exceptions and seven grammar-recovery files. Refreshed the fork code graph. Next: .tres/.tscn parsing and resource resolution.
 
-## 2026-10-11T19:30Z � codex � claim
+## 2026-10-11T19:30Z — codex — claim
 Implementing the shared Godot text-resource parser and resource-link resolution in the local Graphify fork. Files: graphify-godot/graphify and graphify-godot/tests.
 
 ## 2026-10-11T20:17Z - codex - done
@@ -1437,13 +1437,13 @@ Adding explicit test-to-source and test-runner relationships to Graphify Godot s
 ## 2026-10-11 - codex - done
 Connected all 157 manifest entries to GDScript tests, linked all 157 tests to explicit gameplay references (615 edges), and connected run_all_smoke.ps1 to manifest.csv. Refreshed ignored aggregate and focused HTML; focused Graphify tests passed 395/19.
 
-## 2026-10-11 � codex � claim
+## 2026-10-11 — codex — claim
 Plan GDScript completion and source-group filters; documentation and coordination only.
 
-## 2026-10-11 � codex � done
+## 2026-10-11 — codex — done
 Added GDScript completion and viewer filter plan with staged acceptance gates. Next implementation: V1 source-group filters in the Graphify fork.
 
-## 2026-10-11 � codex � claim
+## 2026-10-11 — codex — claim
 Implement Graphify source-group viewer filters and continue GDScript support in the nested fork. Existing outer project file changes remain untouched.
 
 ## 2026-10-11T23:20Z - codex - done
@@ -1498,3 +1498,108 @@ Reconciled and verified the Tiny Demons map/query documentation. The Graphify fo
 2026-10-12 | codex | claim | Reconcile detailed extraction ledger against current source and add to review-only plan.
 
 2026-10-12 | codex | done | Added source-reconciled extraction ledger; corrected stale build_hub and HubMenuState notes; updated review branch documentation.
+
+2026-10-12 | codex | claim | Complete P0: disposition every mapped graph community and tracked file unmapped by the census with owners, evidence and risks.
+
+2026-10-12 | codex | done | Completed and validated P0 dispositions for all 727 Graphify communities and 2,110 unmapped paths; reconciled both P0 outputs and census.
+2026-10-12 | codex | claim | Begin P1 migration-floor characterization: mixed-family slot replacement, file-backed active-run restore, preview/export/UID state, verification baseline, and existing Run 30 performance evidence.
+
+2026-10-12 | codex | done | P1 evidence batch: live file-backed profile/run restore, same-slot family replacement, UID validation, Graphify exclusion and PCK load proof; focused validators pass.
+2026-10-12 | codex | handoff | P1 remains open for editor-visible preview acceptance, the editor Run 30 capture, and clean Web HTML/WASM export/runtime proof; no editor peer or Web templates were available. See docs/composition-p1-characterization.md.
+2026-10-13 | codex | claim | Close P1 formal gates and implement P2 generic EnemyActor/ordered roster while preserving serialized IDs, slot order, and gameplay behavior; avoid opencode's smoke-runner and Pages claim.
+2026-10-13 | codex | claim | Extend P1/P2 claim to include slime_brain.gd and the measured movement-cost pass; preserve one-editor safety and the active opencode claim.
+2026-10-13 | codex | blocker | P1/P2 implementation and focused evidence are documented. Strict Run 30 remains below the exact average/p99 bar; the rebuilt Web export has packaging proof but needs fresh browser runtime proof; the curated 45-path gate must wait until no MCP Godot editor/runtime is active. See docs/composition-p1-characterization.md.
+2026-10-13T13:00Z | codex | claim | Continue P1/P2 acceptance, resolve the latest EnemyFactory type failure, and start a bounded P3 behavior slice. The shared Godot MCP editor/runtime is active; use MCP diagnostics and defer the curated suite.
+2026-10-13T13:49Z | codex | blocker | P1/P2 acceptance evidence is updated and the P3 steering-world slice passes MCP diagnostics/playtest. P1 performance remains below its strict targets; rebuilt-Web content/autoload runtime proof and the 45-path gate remain open. The new P3 smoke is registered but unverified while the MCP editor is active.
+2026-10-13T13:53Z | codex | blocker | Graphify update . re-extracted changed scripts but held the rebuild lock for several minutes without replacing graph.json or GRAPH_REPORT.md; stopped the stalled refresh. The local map remains at its previous build.
+2026-10-13T14:56Z | codex | update | P1/P2 runtime batch caches actor attack/knockback callbacks and core component reads; script diagnostics and composition audit pass. Run 30 remains below strict average/p99 thresholds; latest shared-editor EnemyFactory type mismatch blocks current factory confirmation. Focused smokes, Web runtime proof, and curated gate still wait for an inactive editor.
+2026-10-13T15:22Z | codex | update | Fresh MCP Run 30 assembled and swapped a mixed enemy roster, but a later unscoped run reproduced the EnemyFactory SlimeActor/EnemyActor type error and failed the 60 FPS/p99 targets. Capture saved as diagnostic evidence; standalone acceptance still waits for the shared editor to close.
+2026-10-13T16:19Z | codex | claim | Add measured frame-phase scopes and skip empty status-result allocation in the shared runtime path; preserve actor timing and status behavior.
+2026-10-13T16:19Z | codex | update | Fresh warmed unscoped Run 30 remains at the 60 Hz ceiling but fails the strict wall p99; phase scopes localize 7.8 ms to enemy runtime. Factory path is clean in a 16-enemy MCP runtime. Static validators pass; standalone acceptance gates wait for an inactive MCP editor/runtime.
+
+2026-10-13T16:42Z | codex | update | Graphify map rebuilt after source changes (21,246 nodes, 46,609 edges, 784 communities); scoped query traced the generic enemy runtime path. Normalized eight legacy CP1252 dash bytes in this journal to valid UTF-8. P1 performance and inactive-editor acceptance gates remain open.
+2026-10-13T17:33Z | codex | update | Focused P1/P2 smoke set and static validators pass; fresh focused Run 30 remains below strict average/p99 thresholds (59.940526 FPS, p99 28.602 ms). The user reports a normal local playtest. Staged the official Godot 4.7.1 standard engine and existing matching Web template in temp for a rebuilt browser check. The shared editor is still open; Web rebuild/browser proof and curated 45-path gate wait for an editor-free session. P3 remains outside current scope.
+2026-10-13T17:45Z | codex | update | Added a capture-only map-lighting scope and measured 0.0232 ms/rendered frame; it is not a justified optimization target. The focused scoped capture reported enemy runtime 7.581 ms/frame and presentation 2.911, with instrumentation-affected wall p99 30.01 ms; it is diagnostic only. MCP runtime stopped cleanly with no logged errors; the shared editor remains active, so Web rebuild/browser proof and curated gate still wait.
+2026-10-13T17:58Z | codex | update | The scoped result showed map-light refresh at 0.0232 ms/frame; the unscoped follow-up (scopes disabled) recorded 58.934100 FPS, 16.9681 ms average wall interval, p99 33.462 ms, and 145.460 ms worst over 36.176 s. No runtime errors or warnings appeared. The strict performance gate remains open. The incremental Graphify refresh was stopped after several minutes of CPU work; the previous graph.json, HTML, and report remain intact.
+2026-10-13T18:02Z | codex | update | Added a capture-only actor-occlusion scope and reran focused diagnostics: actor occlusion 0.1492 ms/frame, map lighting 0.0233 ms, enemy runtime 7.820 ms, presentation 2.924 ms. Changed script diagnostics passed and the MCP runtime reported no errors or warnings. Neither measured presentation subsystem supports a source change; strict Run 30, Web browser proof, and curated gate remain open. P2 is identity/roster scope; reusable behavior extraction remains P3 by plan.
+2026-10-13T18:03Z | codex | update | Verified `encounter_definition_smoke.gd` explicitly checks stable `roster_slot_id`, `enemies` group transfer, actor/collision/depth/occlusion list replacement, and the return swap; file-backed recovery and definition round-trip smokes cover save compatibility. Strict composition, UID (463), manifest (45 gate), and diff checks pass. The remaining standalone acceptance still requires the shared editor to be inactive.
+2026-10-13 18:04 UTC | claim | codex | User reauthorized P3 after Thorn/Hexley/Pip review; advance steering-world proof and typed EnemyBrain/family behavior composition while preserving the open P1/P2 gates and MCP-first verification.
+2026-10-13 | codex | update | User playtested normally and reprioritized completion of P1/P2 only. Removed P3 work from the active claim; left its existing uncommitted files untouched. The shared Godot 4.7.2 editor is still active, so standalone smoke, Web export/browser proof, and curated release gate remain deferred until an editor-free window.
+2026-10-13T18:18Z | codex | update | Hoisted invariant calculations from the SlimeBrain steering candidate loop; MCP script diagnostics pass. A fresh unscoped Run 30 reached 59.634 FPS / 16.7689 ms average wall / 28.532 ms p99 (strict perf bar still fails); paired scoped scoot time was 1.837 ms/frame vs 1.912 prior, not controlled. Current MCP BossRoomDebug reached 16 enemy-group members and a Slime/Skeleton/Slime swap retained enemy_slot_0000 with no runtime warnings/errors. Strict composition audit now flags untracked unbaselined P3 `enemy_brain.gd`; left it untouched. Web/browser and curated release gates still wait for inactive editor.
+2026-10-13T18:25Z | codex | update | Re-ran the current strict composition audit and self-test after the shared P3 source tree changed: both pass at 308 scripts with zero unclassified files. UID validation passes at 468 sidecars; manifest validation passes at 159 rows / 157 runnable / 45-path gate. The deleted `enemy_brain.gd` source left editor class-cache diagnostics resolving `EnemyBrain` to that old path; a clean editor filesystem refresh/restart and compile check are still needed. P3 files remain outside this claim. Performance, Web runtime proof, and curated gate remain open.
+2026-10-13T18:32Z | codex | correction | The 18:18 steering-hoist entry and paired Run 30 captures describe the source at capture time only. A later shared-worktree rewrite moved `class_name EnemyBrain` into `slime_brain.gd`; its current candidate loop computes orbit and cone values inside the loop. The captures are historical and do not validate current source. Current compile and focused smoke reruns remain open after editor class-cache refresh.
+2026-10-13T18:41Z | codex | update | Re-scoped the active claim to P1/P2 only per the latest user direction; existing P3 behavior files remain untouched. Current BossRoomDebug launched from the current tree at debug Run 30, reached `boot_active=false`, and had 16 enemies. Offline MCP diagnostics pass for the host/factory/roster/bootstrap and four focused smoke sources but fail five dependents against the old EnemyBrain path; runtime launch is clean. Added two byte-identical-to-source JSON captures: the boot-confirmed unscoped run measured 50.815396 FPS / 77.267 ms p99, with a 5.886 FPS later throughput window, so strict performance acceptance remains open. Composition strict audit/self-test pass; UID (468) and manifest (159 rows/157 runnable/45 gate) pass. MCP runtime/editor remain active; focused standalone smokes, Web browser proof, and curated gate remain pending. `docs/AUDIT.md` unchanged.
+2026-10-13T18:42Z | codex | update | Stopped the BossRoomDebug MCP runtime started for this turn. The shared Godot editor (PID 9420) remains open, so standalone tests, Web rebuild/browser proof, and the curated release gate remain deferred. A scoped capture attempt did not produce a report; no source optimization was chosen from its results.
+2026-10-13T18:49Z | codex | update | Rechecked all 14 current GDScript `EnemyBrain` references after the fresh filesystem scan; all `script_check` calls pass. A current MCP Run 30 probe swapped slot `enemy_slot_0000` yellow Slime -> `skeleton_grass` Skeleton -> yellow and verified stable roster index/group membership plus family behavior-component replacement; game log showed no warnings/errors. Strict composition audit/self-test, UID 468, test manifest 159/157/45-gate, and diff checks pass. A new unscoped capture attempt lost capture state during the polling window while the shared runtime logged additional MCP inspections; no report was produced and it is discarded. P1 current-source performance, focused current-source smokes, Web browser proof, and curated gate remain open. P3 work was not advanced; `docs/AUDIT.md` remains unchanged.
+2026-10-13T18:54Z | codex | update | User reports normal local P1/P2 gameplay and directed goal completion. The live MCP game log still shows another peer inspecting the active runtime, so it was left untouched. Reconfirmed strict composition audit/self-test (308 scripts, zero unclassified), UID integrity (467 sidecars), test manifest (159 rows/157 runnable/45-path gate), and `git diff --check`. P1 performance, current-source focused smoke reruns, rebuilt-Web runtime proof, and curated gate remain open pending a safe editor-free verification window.
+2026-10-13T19:01Z | codex | update | P3 family brain behavior now has a shared EnemyBrain host with typed Slime/Skeleton preferred-distance policies and family-actor installation; the repeatable Slime→Skeleton→Slime replacement smoke now asserts component rebinding. Pip, Thorn, and Hexley reviewed the slice. MCP script diagnostics and manifest validation pass; edited replacement smoke is marked unverified pending safe execution with the editor inactive. Current-source performance, Web runtime, curated gate, and player-facing readability remain open. Graphify refresh is running.
+
+2026-10-13T19:03Z | codex | update | Latest internal goal keeps scope at P1/P2, so the coordination board/status now suspend P3 work. Rechecked current P1/P2 source diagnostics: 18 of 19 pass; gameplay_state.gd:391 returns the known clone-context compile diagnostic. Godot PIDs 9420 and 33136 and MCP runtime port 6570 remain active. The 4.7.1 console engine and matching Web template are available. Static composition/self-test, UID (467), manifest (159 rows/157 runnable/45-path gate), and diff checks pass; focused smokes, strict Run 30, Web runtime, and curated gate remain open.
+2026-10-13T19:20Z | codex | handoff | Completed bounded P3 family brain behavior with Pip, Thorn, and Hexley review: shared EnemyBrain delegates preferred distance to typed Slime/Skeleton components installed through actor-family hooks; the factory type check was fixed by global EnemyActor inheritance; replacement characterization checks strategy rebinding. MCP script diagnostics, manifest validation, composition audit/self-test, UID validation, and diff check pass. Focused smokes remain unrun while the Godot editor/runtime is active; the one-Slime/one-Skeleton readability check remains open. Graphify refreshed from final source: 21,297 nodes, 46,713 edges, 776 communities; graph.json, graph.html, and GRAPH_REPORT.md updated without LLM relabeling. P1/P2 formal acceptance remains open.
+2026-10-13 | codex | claim | Resolve the GameplayState MCP script-check failure and run user-authorized headless verification; preserve opencode's release-runner/Pages claim.
+
+2026-10-13 | codex | handoff | Fixed the MCP in-memory class_name self-type false positive with a narrow same-class/same-URI filter and regression smoke. Focused Godot 4.7.1 headless smoke and active-run recovery smoke pass; curated 46-path gate: 29 pass, 14 fail, 3 timeout (Web export and main scene pass). Definitions/catalogs, composition checks, UID validation, manifest and diff checks pass. The connected peer still has the pre-patch checker cached after extension rescan; reload is pending. Graphify refresh completed at 21,307 nodes / 46,729 edges / 785 communities. Unrelated P3 enemy and gate failures remain documented in coord/status-codex.md; docs/AUDIT.md unchanged.
+2026-10-13 | codex | claim | Remove the self-type warning diagnostic from the successful GameplayState MCP check, add a focused response assertion, and verify the next P1/P2 step without touching the release-runner claim.
+2026-10-13 | codex | done | The fresh MCP GameplayState check now returns valid with no diagnostics; edited toolkit/smoke checks pass and the focused identity smoke prints SCRIPT_CHECK_IDENTITY_SMOKE_OK. The standalone run also emitted the documented certificate and restricted user-data warnings, while the live editor debugger remains clear.
+2026-10-13 | codex | claim | Capture a foreground-only, unscoped Run 30 on current source and record the result; select any code optimization only when the measurement identifies a justified hotspot.
+2026-10-13 | codex | handoff | User reprioritized the task to the active authoring-plan M1 work; stop performance capture and verify the unverified authoring-dock and preview-session contracts instead.
+2026-10-13 | codex | claim | Verify the M1 authoring-dock and isolated PreviewSession contract smokes, then continue along the authoring plan's acceptance sequence.
+2026-10-13 | codex | handoff | Both M1 focused contract smokes pass. Elevated Godot editor MCP verification confirmed 26-ID refresh, ready Crimson Design state, and a live Play/Stop session with seed 41723; the child wrote a heartbeat, stopped, and its temp session directory was removed. Eight active profile/settings file hashes stayed unchanged and the editor warning/error filter was empty. Saved-resource, canvas geometry drag/undo, and reliable rendered-palette acceptance remain open.
+2026-10-13 | codex | claim | Reopen the elevated editor after sandbox-denied MCP token writes; verify editor-visible M1 Design refresh and isolated Play/Stop lifecycle without saving authored resources.
+2026-10-13 | codex | done | Verified the M1 dock refresh and isolated preview process through the connected editor. The child stopped and temp data was removed; eight settings/profile hashes were unchanged. Kept the remaining design work open for saved-resource lifecycle, actual geometry input/undo, and reliable rendered-palette capture.
+2026-10-13 | codex | claim | Exercise M1 saved-resource creation and catalog refresh with a uniquely named temporary enemy definition; clean up through the editor-managed content path.
+2026-10-13 | codex | handoff | Re-scoped the pending M1 probe from saved-resource creation to design-preview geometry editing/undo; avoid mutating the enemy catalog because no unregister path exists.
+2026-10-13 | codex | claim | Verify the enemy preview workbench geometry edit and undo/redo sequence in the live editor without saving authored resources.
+2026-10-13 | codex | done | M1 live-editor follow-up verified geometry drag-helper edit/undo/redo, dirty-status presentation, and invalid-ID feedback then restored the clean Healer preview. No authored resource or scene was saved. Saved-resource creation remains deferred until the shared catalog mutation has a reversible cleanup path; performance work is out of scope.
+
+## 2026-10-14T10:25Z — codex — claim
+Record the user's acceptance of the shared EnemyBrain architecture and current Slime/Skeleton behavior; update P3 documentation without marking unrun smokes as passed.
+
+## 2026-10-14T10:26Z — codex — claim
+Prepare the accepted enemy-composition work for the existing `review/composition-cleanup-plan` branch; keep unrelated local changes out of the push.
+
+## 2026-10-14T10:40Z — codex — blocker
+Automatic review rejected pushing fd99745 to origin/review/composition-cleanup-plan because it classified the source/docs payload as potentially private and requested explicit approval for that exact destination. The commit is preserved on the local refactor branch; no remote update occurred.
+
+2026-10-14 | codex | done | After the user explicitly approved the payload and destination, pushed fd99745 to review/composition-cleanup-plan. Remote ls-remote confirms the branch tip; main remains untouched. P3 smoke rows remain unverified and no tests were run in this push step.
+
+2026-10-14 | codex | claim | Begin P4 mixed-family EnemyCatalog ownership migration; preserve old resource identity and keep the editor preview compatible with EnemyActor siblings.
+2026-10-14 | codex | done | Published P4 catalog API migration as ed08069 to review/composition-cleanup-plan. MCP script diagnostics and BossRoomDebug targeting probe pass; strict composition, UID, and manifest validators pass. M1 saved-resource lifecycle and item/element/room authority work remain open; focused smoke suites and curated gate were not run with the MCP editor active. EnemyDefinition geometry authority is documented; field removal is deferred to P6.
+
+## 2026-10-17 ? codex ? claim
+Documentation consolidation and composition closeout navigation. Preserve pre-existing runtime and documentation edits; no runtime refactor.
+
+## 2026-10-17 ? codex ? done
+Consolidated documentation entry points and composition status; retired broad cleanup instructions into supporting history/backlog. Preserved stable paths and pre-existing edits. Navigation links and whitespace checked; no runtime tests or source changes. Changes remain uncommitted in the shared working tree.
+
+## 2026-10-18 ? codex ? claim
+Fix player status clearing on room entry; focused doorway regression and live-editor verification.
+
+## 2026-10-18 ? codex ? done
+Room entry preserves player StatusComponent records and timing; expanded doorway regression and marked its runtime rerun pending in manifest. Both script checks and diff whitespace pass. Active editor/runtime left undisturbed. Graphify update still processing at handoff; see status.
+
+## 2026-10-18 ? codex ? claim
+Shared menu window/screen composition and inconsistent-screen migration. Owner confirmed preserve current Pause/Equipment/Hub layouts. Existing routes and actions remain with presenters.
+
+## 2026-10-18 ? codex ? handoff
+Shared MenuWindow skin and MenuScreen composition implemented across inconsistent menus; authored reference geometry preserved. Static checks pass, route regression expanded but unrun. Owner requested no playtests while using computer; rendered/input acceptance deferred. Graphify update session 33192 still processing; inspect before another writer. Source changes remain uncommitted.
+
+## 2026-10-18 - codex - claim
+Correct misplaced ext_resource declarations introduced by menu migration. No game execution; verify actual resource loads.
+
+## 2026-10-18 - codex - done
+Repaired invalid late ext_resource declarations in four menu scenes. All ten affected menu/component/preview preloads pass; screen/pause/plugin script diagnostics and declaration-order checks pass. Temporary probe removed. No game execution.
+
+## 2026-10-18 - codex - claim
+Owner excludes main/title screen from menu migration. Status/Items still contain old full-background/title/rule geometry; replace that chrome with shared MenuScreen. No playtests.
+
+## 2026-10-18 - codex - done
+Restored main title splash; replaced partial Status/Items chrome with full MenuScreen instances and framed Items list/details. Static diagnostics/preloads/manifest pass; runtime acceptance remains deferred under no-playtest instruction. Graphify refresh running; see status.
+
+## 2026-10-18 - codex - claim
+Hide unused right-hand header window by default in common menu shell; Equipment/Hub custom headers retained. No playtests.
+
+## 2026-10-18 - codex - done
+MenuScreen hides unused right-hand header window by default; opt-in provided. Equipment/Hub headers retained, Cloud Save opts in for Back. Static diagnostics/preloads pass; no game execution. Graphify refresh running.
+- 2026-10-18 codex claim: prepare full current composition working tree and local main history for 0.3.93 web testing release, authorized by owner.
+- 2026-10-18 codex done: version 0.3.93 synchronized; manifest (160 rows/46 gate), composition self-test and strict audit pass. MCP script_check passes all 75 changed/new application and test scripts; plugin source protected from MCP validation. Corrected stale ContactRoot type and spin-damage override signatures. No gameplay suite launched with shared editor active.

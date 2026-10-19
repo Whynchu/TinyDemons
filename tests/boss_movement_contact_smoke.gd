@@ -1,8 +1,7 @@
 extends SceneTree
 
-class ContactRoot extends Node:
+class ContactRoot extends GameplayState:
 	var invalid_foot := false
-	var chest: Sprite2D = null
 
 	func _actor_foot(actor: Sprite2D) -> Vector2:
 		return Vector2(NAN, NAN) if invalid_foot else actor.position

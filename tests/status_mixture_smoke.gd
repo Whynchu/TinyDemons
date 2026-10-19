@@ -144,7 +144,7 @@ func _assert_status_marker_draw_order(freeze: StatusEffectDefinition, failures: 
 	var marker := aura._status_outline as Sprite2D
 	_expect(marker != null and marker.top_level and not marker.z_as_relative, "status marker uses an absolute world-space draw layer", failures)
 	_expect(marker != null and marker.z_index < actor.z_index, "status marker renders underneath its character sprite", failures)
-	_expect(marker != null and marker.texture != null and marker.texture.get_size() == Vector2i(4, 4), "sprite outline byte scan preserves the one-pixel border", failures)
+	_expect(marker != null and marker.texture != null and Vector2i(marker.texture.get_size()) == Vector2i(4, 4), "sprite outline byte scan preserves the one-pixel border", failures)
 	var second_actor := Sprite2D.new()
 	second_actor.texture = shared_texture
 	second_actor.z_index = 4
@@ -169,8 +169,12 @@ func _assert_status_marker_draw_order(freeze: StatusEffectDefinition, failures: 
 	_expect(enemy_badge != null and enemy_badge.top_level and not enemy_badge.z_as_relative and enemy_badge.z_index < actor.z_index, "enemy status badge renders behind its actor sprite", failures)
 	hud.free()
 	var effects := EffectsSpawnerScript.new() as EffectsSpawner
-	var edge_positions := effects._status_edge_positions(actor)
-	_expect(edge_positions.size() == 4, "status particle edge scan keeps the complete outline boundary", failures)
+	var particle := Sprite2D.new()
+	particle.texture = shared_texture
+	var outside_particle_position := actor.global_position + Vector2(100.0, 100.0)
+	var constrained_particle_position := effects._constrain_status_particle_position(
+		outside_particle_position, particle, {"bound_actor": actor, "depth_offset": 1})
+	_expect(constrained_particle_position.x <= actor.global_position.x + 2.0 and constrained_particle_position.y <= actor.global_position.y + 2.0, "status particle positions stay within the current actor bounds", failures)
 	effects.free()
 	world.queue_free()
 
@@ -205,37 +209,42 @@ func _assert_boss_resistance(freeze: StatusEffectDefinition, failures: Array[Str
 
 func _assert_frozen_enemy_pauses_attack(freeze: StatusEffectDefinition, failures: Array[String]) -> void:
 	var enemy := SlimeActorScript.new() as SlimeActor
-	get_root().add_child(enemy)
 	var status := StatusComponent.new()
 	status.name = "Status"
 	enemy.add_child(status)
 	var combat := SlimeCombatComponent.new()
 	combat.name = "Combat"
 	enemy.add_child(combat)
+	get_root().add_child(enemy)
 	status.apply_effect(freeze, ElementCatalogScript.Element.ICE)
+	_attack_update_count = 0
 	enemy.tick_runtime(
 		0.1,
-		Callable(self, "_never_dead"),
 		Callable(self, "_noop_update"),
 		Callable(self, "_count_attack_update"),
 		Callable(self, "_never_aggroed"),
-		Callable(self, "_no_target"),
+		Callable(self, "_noop_update"),
+		true,
 		Callable(self, "_noop_update")
 	)
 	_expect(_attack_update_count == 0, "a frozen enemy does not advance or start an attack", failures)
+	status.clear_all()
+	combat.dead = true
+	enemy.tick_runtime(
+		0.1,
+		Callable(self, "_noop_update"),
+		Callable(self, "_count_attack_update"),
+		Callable(self, "_never_aggroed"),
+		Callable(self, "_noop_update"),
+		true,
+		Callable(self, "_noop_update")
+	)
+	_expect(_attack_update_count == 0, "a defeated enemy does not advance runtime updates", failures)
 	enemy.queue_free()
-
-
-func _never_dead(_actor: Node) -> bool:
-	return false
 
 
 func _never_aggroed(_actor: Node) -> bool:
 	return false
-
-
-func _no_target(_actor: Node) -> Node:
-	return null
 
 
 func _count_attack_update(_actor: Node, _delta: float) -> bool:

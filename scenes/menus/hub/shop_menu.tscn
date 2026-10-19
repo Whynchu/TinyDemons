@@ -1,6 +1,7 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/shop_menu_layout.gd" id="1_layout"]
+[ext_resource type="Script" path="res://scripts/ui/menu_window.gd" id="shared_menu_window"]
 [ext_resource type="Texture2D" path="res://assets/artwork/frame 16x16.png" id="2_frame"]
 [ext_resource type="Texture2D" path="res://assets/artwork/cursor.png" id="3_cursor"]
 [ext_resource type="Script" path="res://scripts/ui/menu_cursor.gd" id="4_cursor_script"]
@@ -17,6 +18,7 @@ border_width_top = 0
 border_width_right = 0
 border_width_bottom = 0
 
+
 [node name="ShopMenu" type="Control"]
 layout_mode = 3
 anchors_preset = 0
@@ -26,6 +28,7 @@ mouse_filter = 2
 script = ExtResource("1_layout")
 
 [node name="ShopModePanel" type="NinePatchRect" parent="."]
+script = ExtResource("shared_menu_window")
 texture_filter = 1
 layout_mode = 0
 offset_top = 21.0
@@ -41,6 +44,7 @@ axis_stretch_horizontal = 1
 axis_stretch_vertical = 1
 
 [node name="ShopListPanel" type="NinePatchRect" parent="."]
+script = ExtResource("shared_menu_window")
 texture_filter = 1
 layout_mode = 0
 offset_top = 42.0
@@ -56,6 +60,7 @@ axis_stretch_horizontal = 1
 axis_stretch_vertical = 1
 
 [node name="ShopStatsPanel" type="NinePatchRect" parent="."]
+script = ExtResource("shared_menu_window")
 texture_filter = 1
 layout_mode = 0
 offset_left = 148.0

@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://bu2wfk2v0dqwc"]
 
 [ext_resource type="Script" uid="uid://b5ru3w1e58ed5" path="res://scripts/ui/equipment_menu_layout.gd" id="1_layout"]
+[ext_resource type="Script" path="res://scripts/ui/menu_window.gd" id="shared_menu_window"]
 [ext_resource type="Texture2D" uid="uid://nlrds6fyw3cf" path="res://assets/artwork/frame 16x16.png" id="2_frame"]
 [ext_resource type="Texture2D" uid="uid://w0q3q1th3lep" path="res://assets/artwork/player_UI_portrait.png" id="3_portrait"]
 [ext_resource type="Texture2D" uid="uid://drv786nww2aif" path="res://assets/artwork/WEAPON5x5.png" id="4_weapon"]
@@ -279,6 +280,7 @@ data = {
 [sub_resource type="ImageTexture" id="ImageTexture_a7hqm"]
 image = SubResource("Image_g7xc7")
 
+
 [node name="EquipmentMenu" type="Control" unique_id=1435568226]
 z_index = 5
 layout_mode = 3
@@ -296,6 +298,7 @@ mouse_filter = 2
 color = Color(0.01, 0.014, 0.024, 1)
 
 [node name="TopPanel" type="NinePatchRect" parent="." unique_id=1330324738]
+script = ExtResource("shared_menu_window")
 texture_filter = 1
 layout_mode = 0
 offset_left = 0.0
@@ -311,6 +314,7 @@ axis_stretch_horizontal = 1
 axis_stretch_vertical = 1
 
 [node name="CommandPanel" type="NinePatchRect" parent="." unique_id=331013823]
+script = ExtResource("shared_menu_window")
 texture_filter = 1
 layout_mode = 0
 offset_left = 90.0
@@ -326,6 +330,7 @@ axis_stretch_horizontal = 1
 axis_stretch_vertical = 1
 
 [node name="SummaryPanel" type="NinePatchRect" parent="." unique_id=1277940419]
+script = ExtResource("shared_menu_window")
 texture_filter = 1
 layout_mode = 0
 offset_left = 0.0
@@ -341,6 +346,7 @@ axis_stretch_horizontal = 1
 axis_stretch_vertical = 1
 
 [node name="DescriptionPanel" type="NinePatchRect" parent="." unique_id=1291878542]
+script = ExtResource("shared_menu_window")
 texture_filter = 1
 layout_mode = 0
 offset_left = 0.0
@@ -356,6 +362,7 @@ axis_stretch_horizontal = 1
 axis_stretch_vertical = 1
 
 [node name="StatPanel" type="NinePatchRect" parent="." unique_id=371720276]
+script = ExtResource("shared_menu_window")
 texture_filter = 1
 layout_mode = 0
 offset_left = 0.0
@@ -371,6 +378,7 @@ axis_stretch_horizontal = 1
 axis_stretch_vertical = 1
 
 [node name="NavigationPanel" type="NinePatchRect" parent="." unique_id=1742333267]
+script = ExtResource("shared_menu_window")
 texture_filter = 1
 layout_mode = 0
 offset_left = 161.0

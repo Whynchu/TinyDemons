@@ -4,17 +4,17 @@ class_name EnemyFactory
 ## Assembles enemy actors from EnemyDefinition contracts. The factory is the
 ## single materialization point: type_id selects the actor family, while the
 ## definition's variant_id configures its identity, combat element, damage
-## contract, stats profile, and geometry. Runtime components are still ensured
-## by the selected actor implementation.
+## contract, stats profile, and family geometry profile. Runtime components are
+## still ensured by the selected actor implementation.
 
-const SLIME_VARIANT_CATALOG_SCRIPT = preload("res://scripts/content/slime_variant_catalog.gd")
+const ENEMY_CATALOG_SCRIPT = preload("res://scripts/content/enemy_catalog.gd")
 const SLIME_SUPPORT_COMPONENT_SCRIPT = preload("res://scripts/components/slime_support_component.gd")
 const EDITOR_COLLISION_GUIDE_SCRIPT = preload("res://scripts/editor/editor_collision_guide.gd")
 const TYPE_SLIME: StringName = &"slime"
 const TYPE_SKELETON: StringName = &"skeleton"
 
 
-static func assemble(enemy_definition: EnemyDefinition) -> SlimeActor:
+static func assemble(enemy_definition: EnemyDefinition) -> EnemyActor:
 	if enemy_definition == null:
 		return null
 	var actor := _new_actor_for_type(enemy_definition.type_id)
@@ -26,10 +26,11 @@ static func assemble(enemy_definition: EnemyDefinition) -> SlimeActor:
 		actor.offset = SkeletonActor.FRAME_OFFSET
 	actor.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	configure_actor(actor, enemy_definition)
+	actor.add_to_group(&"enemies")
 	return actor
 
 
-static func _new_actor_for_type(type_id: StringName) -> SlimeActor:
+static func _new_actor_for_type(type_id: StringName) -> EnemyActor:
 	match type_id:
 		TYPE_SLIME:
 			return SlimeActor.new()
@@ -38,7 +39,7 @@ static func _new_actor_for_type(type_id: StringName) -> SlimeActor:
 	return null
 
 
-static func configure_actor(actor: SlimeActor, enemy_definition: EnemyDefinition) -> void:
+static func configure_actor(actor: EnemyActor, enemy_definition: EnemyDefinition) -> void:
 	if actor == null or enemy_definition == null:
 		return
 	if enemy_definition.type_id not in [TYPE_SLIME, TYPE_SKELETON]:
@@ -49,6 +50,9 @@ static func configure_actor(actor: SlimeActor, enemy_definition: EnemyDefinition
 		(actor as SkeletonActor).apply_authored_visuals()
 	apply_geometry(actor, enemy_definition)
 	actor.variant = String(enemy_definition.variant_id)
+	actor.enemy_definition_id = enemy_definition.variant_id
+	actor.enemy_variant_id = enemy_definition.variant_id
+	actor.enemy_type_id = enemy_definition.type_id
 	actor.combat_element = enemy_definition.element
 	actor.set_meta("element", enemy_definition.element)
 	actor.set_meta("damage_contract", String(enemy_definition.damage_contract))
@@ -90,12 +94,13 @@ static func definition(variant_id: StringName) -> EnemyDefinition:
 
 
 static func is_variant(variant_id: StringName) -> bool:
-	return SLIME_VARIANT_CATALOG_SCRIPT.is_variant(variant_id)
+	## Compatibility alias. New callers should query EnemyCatalog.contains_id().
+	return ENEMY_CATALOG_SCRIPT.contains_id(variant_id)
 
 
 static func variants_for_type(type_id: StringName, excluded_role: StringName = &"") -> Array[StringName]:
 	var matches: Array[StringName] = []
-	for variant_id in SLIME_VARIANT_CATALOG_SCRIPT.variants():
+	for variant_id in ENEMY_CATALOG_SCRIPT.ids():
 		var enemy_definition := definition(variant_id)
 		if enemy_definition != null and enemy_definition.type_id == type_id and (excluded_role.is_empty() or enemy_definition.encounter_role != excluded_role):
 			matches.append(variant_id)
@@ -146,7 +151,7 @@ static func resolve_variant_id(value: StringName) -> StringName:
 	if is_variant(normalized_id):
 		return normalized_id
 	var display_name := trimmed.to_lower()
-	for variant_id in SLIME_VARIANT_CATALOG_SCRIPT.variants():
+	for variant_id in ENEMY_CATALOG_SCRIPT.ids():
 		var candidate := definition(variant_id)
 		if candidate != null and candidate.display_name.strip_edges().to_lower() == display_name:
 			return variant_id
@@ -156,14 +161,14 @@ static func resolve_variant_id(value: StringName) -> StringName:
 static func geometry_profile(enemy_definition: EnemyDefinition) -> Resource:
 	if enemy_definition == null:
 		return null
-	return SLIME_VARIANT_CATALOG_SCRIPT.family_geometry_profile(enemy_definition.type_id)
+	return ENEMY_CATALOG_SCRIPT.family_geometry_profile(enemy_definition.type_id)
 
 
 static func family_geometry_profile(type_id: StringName) -> Resource:
-	return SLIME_VARIANT_CATALOG_SCRIPT.family_geometry_profile(type_id)
+	return ENEMY_CATALOG_SCRIPT.family_geometry_profile(type_id)
 
 
-static func apply_geometry(actor: SlimeActor, enemy_definition: EnemyDefinition) -> void:
+static func apply_geometry(actor: EnemyActor, enemy_definition: EnemyDefinition) -> void:
 	if actor == null or enemy_definition == null:
 		return
 	var geometry: Resource = geometry_profile(enemy_definition)

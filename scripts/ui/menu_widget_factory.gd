@@ -1,6 +1,19 @@
 extends RefCounted
 class_name MenuWidgetFactory
 
+const MENU_SCREEN_SCENE: PackedScene = preload("res://scenes/ui/components/menu_screen.tscn")
+
+
+func create_menu_screen(parent: Node, screen_name: String, view_size: Vector2, z_index: int, title_name: String, heading: String, pixel_texture: Callable) -> MenuScreen:
+	var screen := MENU_SCREEN_SCENE.instantiate() as MenuScreen
+	screen.name = screen_name
+	screen.size = view_size
+	screen.z_index = z_index
+	screen.visible = false
+	screen.set_heading(title_name, heading, pixel_texture)
+	parent.add_child(screen)
+	return screen
+
 
 func retro_button_alpha(timer: float) -> float:
 	var phase := fmod(timer, 2.4)
@@ -96,33 +109,12 @@ func make_menu_command_button(label: String, button_position: Vector2, size: Vec
 	return button
 
 
-func add_menu_frame(overlay: ColorRect, panel_size: Vector2) -> void:
-	var outer := Panel.new()
-	outer.name = "FrameOuter"
-	outer.position = Vector2.ZERO
-	outer.size = panel_size
-	outer.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var outer_style := StyleBoxFlat.new()
-	outer_style.bg_color = Color.TRANSPARENT
-	outer_style.border_color = Color(0.78, 0.82, 0.92, 0.95)
-	outer_style.set_border_width_all(1)
-	outer.add_theme_stylebox_override("panel", outer_style)
-	overlay.add_child(outer)
-	var inner := Panel.new()
-	inner.name = "FrameInner"
-	inner.position = Vector2(3, 3)
-	inner.size = panel_size - Vector2(6, 6)
-	inner.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var inner_style := StyleBoxFlat.new()
-	inner_style.bg_color = Color.TRANSPARENT
-	inner_style.border_color = Color(0.30, 0.34, 0.44, 0.92)
-	inner_style.set_border_width_all(1)
-	inner.add_theme_stylebox_override("panel", inner_style)
-	overlay.add_child(inner)
-
-
 func resize_menu_frame(overlay: ColorRect, panel_size: Vector2) -> void:
 	if overlay == null:
+		return
+	if overlay is MenuScreen:
+		overlay.size = panel_size
+		(overlay as MenuScreen).apply_layout()
 		return
 	var outer := overlay.get_node_or_null("FrameOuter") as Panel
 	if outer != null:
@@ -130,40 +122,10 @@ func resize_menu_frame(overlay: ColorRect, panel_size: Vector2) -> void:
 	var inner := overlay.get_node_or_null("FrameInner") as Panel
 	if inner != null:
 		inner.size = panel_size - Vector2(6, 6)
-	var title_rule := overlay.get_node_or_null("RunCompleteTitleRule") as ColorRect
-	if title_rule != null:
-		title_rule.size = Vector2(maxf(panel_size.x - 16.0, 16.0), 1.0)
 
 
-func add_menu_title(overlay: ColorRect, title_name: String, label: String, pixel_texture: Callable, view_size: Vector2) -> Sprite2D:
-	var tab := Panel.new()
-	tab.name = "%sTab" % title_name
-	tab.position = Vector2(8, 0)
-	tab.size = Vector2(82, 16)
-	tab.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var tab_style := StyleBoxFlat.new()
-	tab_style.bg_color = Color(0.035, 0.045, 0.075, 1.0)
-	tab_style.border_color = Color(0.78, 0.82, 0.92, 0.95)
-	tab_style.set_border_width_all(1)
-	tab.add_theme_stylebox_override("panel", tab_style)
-	overlay.add_child(tab)
-	var title := create_sprite(overlay, title_name, pixel_texture.call(label, Color.WHITE) as Texture2D, Vector2(13, 4), false)
-	var rule := ColorRect.new()
-	rule.name = "%sRule" % title_name
-	rule.position = Vector2(8, 17)
-	rule.size = Vector2(maxf(view_size.x - 16.0, 16.0), 1)
-	rule.color = Color(0.36, 0.40, 0.52, 0.85)
-	rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	overlay.add_child(rule)
-	return title
-
-
-func menu_card_style() -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.035, 0.045, 0.075, 0.90)
-	style.border_color = Color(0.42, 0.48, 0.62, 0.9)
-	style.set_border_width_all(1)
-	return style
+func menu_card_style() -> StyleBoxTexture:
+	return MenuWindow.panel_style()
 
 
 func make_menu_card(parent: Node, card_name: String, card_position: Vector2, card_size: Vector2) -> Panel:

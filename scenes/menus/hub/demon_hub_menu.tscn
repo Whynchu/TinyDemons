@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://ukxfdr8udu7t"]
 
 [ext_resource type="PackedScene" path="res://scenes/ui/components/menu_panel_8_piece.tscn" id="1_panel"]
+[ext_resource type="Script" path="res://scripts/ui/menu_window.gd" id="shared_menu_window"]
 [ext_resource type="Texture2D" uid="uid://nlrds6fyw3cf" path="res://assets/artwork/frame 16x16.png" id="2_frame"]
 [ext_resource type="Script" uid="uid://bebr38dquidlx" path="res://scripts/editor/demon_hub_menu_preview.gd" id="3_preview"]
 [ext_resource type="PackedScene" uid="uid://bu2wfk2v0dqwc" path="res://scenes/menus/hub/equipment_menu.tscn" id="4_equipment"]
@@ -251,13 +252,6 @@ data = {
 [sub_resource type="ImageTexture" id="ImageTexture_0x4fi"]
 image = SubResource("Image_fp27s")
 
-[sub_resource type="StyleBoxFlat" id="StyleBox_title"]
-bg_color = Color(0.035, 0.045, 0.075, 1)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.78, 0.82, 0.92, 0.95)
 
 [sub_resource type="Image" id="Image_5jhbf"]
 data = {
@@ -271,6 +265,7 @@ data = {
 [sub_resource type="ImageTexture" id="ImageTexture_m62yd"]
 image = SubResource("Image_5jhbf")
 
+
 [node name="DemonHubOverlay" type="ColorRect" unique_id=1162604880]
 z_index = 3
 offset_right = 240.0
@@ -283,6 +278,7 @@ visible = false
 anchors_preset = 0
 
 [node name="HubTitlePanel" type="NinePatchRect" parent="." unique_id=1270110847]
+script = ExtResource("shared_menu_window")
 texture_filter = 1
 layout_mode = 0
 offset_right = 89.0
@@ -296,6 +292,7 @@ axis_stretch_horizontal = 1
 axis_stretch_vertical = 1
 
 [node name="HubCommandPanel" type="NinePatchRect" parent="." unique_id=1379547495]
+script = ExtResource("shared_menu_window")
 texture_filter = 1
 layout_mode = 0
 offset_left = 90.0
@@ -310,6 +307,7 @@ axis_stretch_horizontal = 1
 axis_stretch_vertical = 1
 
 [node name="HubContentPanel" type="NinePatchRect" parent="." unique_id=371966815]
+script = ExtResource("shared_menu_window")
 texture_filter = 1
 layout_mode = 0
 offset_top = 21.0
@@ -324,6 +322,7 @@ axis_stretch_horizontal = 1
 axis_stretch_vertical = 1
 
 [node name="HubFooterPanel" type="NinePatchRect" parent="." unique_id=950154800]
+script = ExtResource("shared_menu_window")
 texture_filter = 1
 layout_mode = 0
 offset_top = 136.0
@@ -338,6 +337,7 @@ axis_stretch_horizontal = 1
 axis_stretch_vertical = 1
 
 [node name="HubResourcePanel" type="NinePatchRect" parent="." unique_id=1452116459]
+script = ExtResource("shared_menu_window")
 texture_filter = 1
 layout_mode = 0
 offset_left = 177.0
@@ -517,14 +517,14 @@ offset_right = 240.0
 offset_bottom = 160.0
 mouse_filter = 2
 
-[node name="TitleTab" type="Panel" parent="HubRootPage" unique_id=75525570]
+[node name="TitleTab" type="NinePatchRect" parent="HubRootPage" unique_id=75525570]
+script = ExtResource("shared_menu_window")
 visible = false
 layout_mode = 0
 offset_left = 8.0
 offset_right = 90.0
 offset_bottom = 16.0
 mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBox_title")
 
 [node name="Title" type="Sprite2D" parent="HubRootPage" unique_id=1974563755]
 texture_filter = 1
@@ -550,6 +550,7 @@ offset_bottom = 160.0
 mouse_filter = 2
 
 [node name="Background" type="NinePatchRect" parent="HubStatusPage" unique_id=340533029]
+script = ExtResource("shared_menu_window")
 texture_filter = 1
 layout_mode = 0
 offset_right = 240.0
@@ -562,13 +563,13 @@ patch_margin_bottom = 3
 axis_stretch_horizontal = 1
 axis_stretch_vertical = 1
 
-[node name="TitleTab" type="Panel" parent="HubStatusPage" unique_id=582336821]
+[node name="TitleTab" type="NinePatchRect" parent="HubStatusPage" unique_id=582336821]
+script = ExtResource("shared_menu_window")
 layout_mode = 0
 offset_left = 8.0
 offset_right = 90.0
 offset_bottom = 16.0
 mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBox_title")
 
 [node name="Title" type="Sprite2D" parent="HubStatusPage" unique_id=1871648011]
 texture_filter = 1
@@ -592,6 +593,7 @@ offset_bottom = 160.0
 mouse_filter = 2
 
 [node name="Background" type="NinePatchRect" parent="HubAllocatePage" unique_id=1217898478]
+script = ExtResource("shared_menu_window")
 texture_filter = 1
 layout_mode = 0
 offset_right = 240.0
@@ -604,13 +606,13 @@ patch_margin_bottom = 3
 axis_stretch_horizontal = 1
 axis_stretch_vertical = 1
 
-[node name="TitleTab" type="Panel" parent="HubAllocatePage" unique_id=1127407296]
+[node name="TitleTab" type="NinePatchRect" parent="HubAllocatePage" unique_id=1127407296]
+script = ExtResource("shared_menu_window")
 layout_mode = 0
 offset_left = 8.0
 offset_right = 90.0
 offset_bottom = 16.0
 mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBox_title")
 
 [node name="Title" type="Sprite2D" parent="HubAllocatePage" unique_id=1416143123]
 texture_filter = 1
@@ -635,6 +637,7 @@ offset_bottom = 160.0
 mouse_filter = 2
 
 [node name="Background" type="NinePatchRect" parent="HubItemsPage" unique_id=8773860]
+script = ExtResource("shared_menu_window")
 texture_filter = 1
 layout_mode = 0
 offset_right = 240.0
@@ -647,13 +650,13 @@ patch_margin_bottom = 3
 axis_stretch_horizontal = 1
 axis_stretch_vertical = 1
 
-[node name="TitleTab" type="Panel" parent="HubItemsPage" unique_id=44404195]
+[node name="TitleTab" type="NinePatchRect" parent="HubItemsPage" unique_id=44404195]
+script = ExtResource("shared_menu_window")
 layout_mode = 0
 offset_left = 8.0
 offset_right = 90.0
 offset_bottom = 16.0
 mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBox_title")
 
 [node name="Title" type="Sprite2D" parent="HubItemsPage" unique_id=2061336803]
 texture_filter = 1
@@ -690,6 +693,7 @@ offset_bottom = 160.0
 mouse_filter = 2
 
 [node name="Background" type="NinePatchRect" parent="HubBindPage" unique_id=1083877772]
+script = ExtResource("shared_menu_window")
 texture_filter = 1
 layout_mode = 0
 offset_right = 240.0
@@ -702,13 +706,13 @@ patch_margin_bottom = 3
 axis_stretch_horizontal = 1
 axis_stretch_vertical = 1
 
-[node name="TitleTab" type="Panel" parent="HubBindPage" unique_id=984763690]
+[node name="TitleTab" type="NinePatchRect" parent="HubBindPage" unique_id=984763690]
+script = ExtResource("shared_menu_window")
 layout_mode = 0
 offset_left = 8.0
 offset_right = 90.0
 offset_bottom = 16.0
 mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBox_title")
 
 [node name="Title" type="Sprite2D" parent="HubBindPage" unique_id=1548546483]
 texture_filter = 1

@@ -263,6 +263,8 @@ static func _web_remove_item(key: String) -> void:
 
 
 static func _web_has_profile(slot: int) -> bool:
+	if not _is_web():
+		return false
 	return _parse_profile_json(_web_get_item(_web_slot_key(slot))) != null
 
 

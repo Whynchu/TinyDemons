@@ -353,13 +353,7 @@ static func _validate_gdscript(source: String) -> Dictionary:
 		var error_entries: Array = error_log.get("entries", [])
 		var error_count := int(error_log.get("total_lines", error_entries.size()))
 		if error_count == error_entries.size() and _only_self_identity_errors(error_entries, declared_class_name):
-			return {
-				"valid": true,
-				"diagnostics": [{
-					"severity": "warning",
-					"message": "Ignored %d in-memory self-type diagnostic(s): this script declares class_name %s, but GDScript.new().reload() assigns self a synthetic gdscript:// identity. Headless project validation remains authoritative." % [error_entries.size(), declared_class_name],
-				}],
-			}
+			return _self_identity_validation_result()
 
 	var diagnostics: Array = []
 	if not is_valid:
@@ -387,6 +381,10 @@ static func _validate_gdscript(source: String) -> Dictionary:
 				"message": hint,
 			})
 	return MCPToolkitSuccess.ok({"valid": is_valid, "diagnostics": diagnostics})
+
+
+static func _self_identity_validation_result() -> Dictionary:
+	return {"valid": true, "diagnostics": []}
 
 
 ## The in-memory script used by script_check is anonymous after class_name is

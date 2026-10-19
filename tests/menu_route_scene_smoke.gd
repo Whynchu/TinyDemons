@@ -24,6 +24,11 @@ func _initialize() -> void:
 	var touch := gameplay.get("touch_controls_layer") as TouchControlsLayer
 	_expect(screens != null and router != null and touch != null, "menu route owners are composed", failures)
 	if screens != null and router != null and touch != null:
+		var card_style := screens._menu_widget_factory.menu_card_style()
+		_expect(card_style.texture == MenuWindow.FRAME_TEXTURE, "compatibility Panel cards share the menu frame artwork", failures)
+		_expect(not (screens.title_presenter.overlay is MenuScreen) and screens.title_presenter.overlay.get_node_or_null("TitleWindow") == null, "main title screen preserves its original splash presentation", failures)
+		for menu in [screens.settings_presenter.overlay, screens.name_entry_controller.widgets.overlay, screens.save_select_presenter.overlay, screens.archetype_presenter.overlay, screens.run_complete_presenter.overlay, screens._game_over_screen_presenter.overlay]:
+			_check_menu_shell(menu as ColorRect, failures)
 		gameplay.call("_show_hub", true, false)
 		await process_frame
 		_expect(screens.hub_overlay.is_visible_in_tree() and screens.state == &"hub", "hub root is the active full-screen route", failures)
@@ -126,6 +131,47 @@ func _clear_menu_edge(router: InputRouter) -> void:
 	router.set("_current", {&"menu_confirm": false, &"menu_back": false})
 	router.set("_previous_menu_directions", {})
 	router.set("_menu_directions", {})
+
+
+func _check_menu_shell(overlay: ColorRect, failures: Array[String]) -> void:
+	_expect(overlay is MenuScreen, "standard menu uses the shared screen shell", failures)
+	var menu := overlay as MenuScreen
+	if menu == null:
+		return
+	for window_name in ["TitleWindow", "HeaderWindow", "ContentWindow", "FooterWindow"]:
+		var window := menu.get_node_or_null(NodePath(window_name)) as NinePatchRect
+		_expect(window != null, "%s provides %s" % [menu.name, window_name], failures)
+		if window == null:
+			continue
+		_expect(window.texture != null and window.texture.resource_path == "res://assets/artwork/frame 16x16.png", "menu window consumes the canonical frame asset", failures)
+		_expect(window.mouse_filter == Control.MOUSE_FILTER_IGNORE, "decorative windows leave input to the screen controls", failures)
+		_expect(window.patch_margin_left == 3 and window.axis_stretch_horizontal == NinePatchRect.AXIS_STRETCH_MODE_TILE, "menu window tiles native pixel borders", failures)
+	var original_size := menu.size
+	var original_header_visibility := menu.show_header_window
+	var child_count := menu.get_child_count()
+	for width in [320.0, 240.0]:
+		menu.size = Vector2(width, 160)
+		menu.apply_layout()
+		var header := menu.get_node("HeaderWindow") as Control
+		var content := menu.get_node("ContentWindow") as Control
+		var footer := menu.get_node("FooterWindow") as Control
+		var title := menu.get_node("TitleWindow") as Control
+		_expect(header.visible == original_header_visibility, "resize preserves the screen's optional header visibility", failures)
+		_expect(title.visible and title.position == Vector2.ZERO, "the title remains in the top-left window", failures)
+		_expect(header.position.x == menu.title_width and header.position.x + header.size.x == width, "header expands beside the fixed title window", failures)
+		_expect(content.size.x == width and content.position.y == menu.header_height, "content window follows the logical viewport", failures)
+		if menu.footer_height > 0.0:
+			_expect(footer.visible and footer.position.y + footer.size.y == 160.0, "footer remains bottom anchored", failures)
+		else:
+			_expect(not footer.visible, "screens can omit the footer without adding a different shell", failures)
+		_expect(menu.get_child_count() == child_count, "resize preserves existing controls", failures)
+	menu.show_header_window = true
+	_expect((menu.get_node("HeaderWindow") as Control).visible, "screens with header controls can enable the right-hand window", failures)
+	menu.show_header_window = false
+	_expect(not (menu.get_node("HeaderWindow") as Control).visible, "empty header windows can be removed without changing the title", failures)
+	menu.show_header_window = original_header_visibility
+	menu.size = original_size
+	menu.apply_layout()
 
 
 func _watchdog() -> void:

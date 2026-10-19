@@ -7,18 +7,11 @@ The public README describes the game; this document describes how to work on it.
 
 ## Read first
 
-1. [`README.md`](../README.md) — the product entry point.
-2. [`docs/DOCUMENTATION_MAP.md`](DOCUMENTATION_MAP.md) — document authority and lifecycle.
-3. [`docs/AUDIT.md`](AUDIT.md) — measured source-backed state and the preservation contract.
-4. [`docs/ROADMAP.md`](ROADMAP.md) — the active sequence.
-5. [`docs/KNOWN_ISSUES.md`](KNOWN_ISSUES.md) — open behavior, verification, and infrastructure findings.
-6. [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) — ownership and runtime boundaries.
-7. [`docs/CONTENT_AUTHORING.md`](CONTENT_AUTHORING.md) — adding content, and the traps in the current data path.
-8. [`docs/GAMEPLAY_TUNING.md`](GAMEPLAY_TUNING.md) — the designer-facing balance index.
-9. [`docs/SCRIPT_INDEX.md`](SCRIPT_INDEX.md) — generated script/class/function navigation.
-
-`AGENTS.md` at the repository root is the condensed map for agents and new
-contributors.
+Read [`AGENTS.md`](../AGENTS.md) for contributor rules, then use
+[`FEATURE_MAP.md`](FEATURE_MAP.md) to find the owner for your task.
+[`DOCUMENTATION_MAP.md`](DOCUMENTATION_MAP.md) routes specific questions to
+current authorities. Read the relevant source and contract; historical plans
+are optional background.
 
 ## Build clean contract
 
@@ -45,21 +38,15 @@ reintroducing structural debt:
 
 ## Current engineering focus
 
-0.3.x is an **architecture cleanup** cycle, not a feature cycle. The composition
-refactor is complete under the strict scorecard, but the remaining targets are:
+The composition foundation is in place; current closeout and exceptions live
+in [`COMPOSITION_STATUS.md`](COMPOSITION_STATUS.md). Extend it through explicit
+capabilities and narrow owners. Further extraction needs a demonstrated
+extension problem, rather than a file-size or coupling-count target alone.
 
-- the `screen_state_controller.gd` monolith (title, save-select, character
-  creation, settings, pause, hub UI, name entry, particles);
-- the `save_flow_controller` ↔ `screen_state_controller` title-flow cycle;
-- the `hub_flow_controller` facade over `screen_state_controller`;
-- 2,200 dynamic `root.call/get/set` sites, concentrated in `screen_state_controller`,
-  `combat_runtime_controller`, `room_controller`, and `slime_runtime_controller`;
-- dead and duplicated code (orphan editor guides, a no-op per-frame regen call,
-  the duplicated pixel-glyph table, the unused `family_mastery` path);
-- synchronous file I/O in frame paths and the boss-entry slow path.
-
-The exit intent is that architecture stops being a roadmap topic: later work is
-feature, content, and feel, built on clean ground.
+[`CONTENT_AUTHORING.md`](CONTENT_AUTHORING.md) describes available workflows.
+[`ROADMAP.md`](ROADMAP.md) tracks product work and
+[`KNOWN_ISSUES.md`](KNOWN_ISSUES.md) tracks unresolved behavior and verification.
+A pending acceptance check does not mean the corresponding feature is absent.
 
 ## Project layout
 
@@ -148,7 +135,7 @@ runtime or per-content test edit.
 
 ## Web build
 
-Current game version: `0.3.83`. Every push to `main` increments the patch version
+Current game version: `0.3.93`. Every push to `main` increments the patch version
 by at least `0.0.01`; update the in-game title-menu version and both READMEs in
 the same commit.
 

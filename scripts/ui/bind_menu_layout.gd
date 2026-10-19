@@ -4,7 +4,7 @@ class_name BindMenuLayout
 
 const NATIVE_SIZE := Vector2(240.0, 160.0)
 const CURSOR: Texture2D = preload("res://assets/artwork/cursor.png")
-const FRAME: Texture2D = preload("res://assets/artwork/frame 16x16.png")
+const MenuWindowScript = preload("res://scripts/ui/menu_window.gd")
 const EffectsSpawnerScript = preload("res://scripts/runtime/services/effects_spawner.gd")
 const BindMenuModelScript = preload("res://scripts/ui/bind_menu_model.gd")
 const RESPONSIVE_LAYOUT_SCRIPT = preload("res://scripts/ui/menu_responsive_layout.gd")
@@ -32,7 +32,7 @@ func _notification(what: int) -> void:
 
 func _build_nodes() -> void:
 	if _action != null: return
-	var panel := NinePatchRect.new(); panel.name = "BindPanel"; panel.position = Vector2(14, 33); panel.size = Vector2(212, 72); panel.texture = FRAME; panel.patch_margin_left = 3; panel.patch_margin_top = 3; panel.patch_margin_right = 3; panel.patch_margin_bottom = 3; panel.mouse_filter = Control.MOUSE_FILTER_IGNORE; add_child(panel)
+	var panel := MenuWindowScript.new(); panel.name = "BindPanel"; panel.position = Vector2(14, 33); panel.size = Vector2(212, 72); add_child(panel)
 	for index in 5:
 		var text := Sprite2D.new(); text.name = "BindText%d" % index; text.centered = false; text.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST; text.position = Vector2(22, 41 + index * (12 if index < 4 else 14)); add_child(text); _texts.append(text)
 	_action = _make_button("BindActionButton", Vector2(156, 119), Vector2(64, 13)); _action.pressed.connect(action_pressed.emit)

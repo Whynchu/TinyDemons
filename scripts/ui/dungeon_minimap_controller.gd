@@ -5,7 +5,6 @@ const REVIEW_EXPORTER_SCRIPT = preload("res://tools/export_dungeon_maps.gd")
 const MAP_FRAME_SCENE = preload("res://scenes/ui/components/menu_panel_8_piece.tscn")
 const CURSOR_TEXTURE = preload("res://assets/artwork/cursor.png")
 const PAUSE_LAYOUT = preload("res://scripts/ui/pause_menu_layout.gd")
-const HUB_FRAME_TEXTURE = preload("res://assets/artwork/frame 16x16.png")
 ## The full-map overlay anchors a fixed map screen on the left of the content
 ## area and a destination list beside it. The dark backdrop is sized to exactly
 ## enclose the rendered map so no orphaned box floats around it.
@@ -579,16 +578,8 @@ func _add_overlay_sprite(sprite_name: String, texture: Texture2D = null) -> Spri
 
 
 func _add_hub_panel(panel_name: String) -> NinePatchRect:
-	var panel := NinePatchRect.new()
+	var panel := preload("res://scripts/ui/menu_window.gd").new()
 	panel.name = panel_name
-	panel.texture = HUB_FRAME_TEXTURE
-	panel.patch_margin_left = 3
-	panel.patch_margin_top = 3
-	panel.patch_margin_right = 3
-	panel.patch_margin_bottom = 3
-	panel.axis_stretch_horizontal = NinePatchRect.AXIS_STRETCH_MODE_TILE
-	panel.axis_stretch_vertical = NinePatchRect.AXIS_STRETCH_MODE_TILE
-	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	map_overlay.add_child(panel)
 	return panel
 

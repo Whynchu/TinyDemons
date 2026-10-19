@@ -1,6 +1,6 @@
 # Tiny Demons — Component Composition Design
 
-Status: active plan (approved direction)
+Status: current component contract; dated migration/proof sections are supporting history
 
 Scope: reusable, interchangeable entity components; the component contract, wiring
 rules, factory/definition boundary, and the interchangeability proof
@@ -33,11 +33,12 @@ disciplined component contract plus a definition/factory boundary so that
 adding a feature (a new enemy, a shared behavior, a new pickup) no longer
 requires editing a central state bag or a large coordinator.
 
-The repository already has physical composition: 20 `*Component` classes are
-attached as child nodes of the player and slimes by `GameplayBootstrap`. What it
-lacks is contract composition. Measured on 2026-09-16, several components still
-reach through the shared root at runtime, and there is no data layer or factory,
-so nothing is genuinely interchangeable yet.
+The enemy path now has typed definitions, a catalog, factory assembly, sibling
+`EnemyActor` families, and injected brain behavior. Other owners still contain
+migration seams. The contract below describes the standard for reusable
+components; it is not a claim that every existing component already meets it.
+See [COMPOSITION_STATUS.md](COMPOSITION_STATUS.md) for current exceptions and
+acceptance. Later dated migration sections preserve the original proof sequence.
 
 ## Component contract
 
@@ -79,9 +80,13 @@ be refined through its owning slice, not treated as proof of composition.
   `tick_regeneration`, `is_dead`;
 - zero `root.call/get/set` sites.
 
-`SlimeCombatComponent`, `SlimeAnimationComponent`, `SlimeBrain`,
-`CombatMomentumComponent`, `EnemyTacticsComponent`, `StatsComponent`, and
-`EquipmentComponent` also meet the contract.
+`EnemyBrain` is still a migration seam: steering uses an injected
+`EnemySteeringWorld`, while target acquisition retains a gameplay-root
+parameter. `SlimeBrainBehaviorComponent` and
+`SkeletonBrainBehaviorComponent` receive typed steering values and hold their
+family-specific preferred-range rules. `SlimeCombatComponent`,
+`SlimeAnimationComponent`, `CombatMomentumComponent`, `EnemyTacticsComponent`,
+`StatsComponent`, and `EquipmentComponent` also meet the contract.
 
 ### Adapters to refine (measured 2026-09-16)
 
@@ -229,8 +234,10 @@ both remaining levers:
   configured / 12 both of 20.
 - **Definition surfaces moved from code dictionaries to editor-inspectable
   `Resource` + `.tres` files** (the T2 migration), one per catalog:
-  - `SlimeVariantCatalog` loads `resources/definitions/slime_variant_catalog.tres`
-    (via `SlimeVariantCatalogData`), keeping its static lookup API.
+  - `EnemyCatalog` owns the mixed-family lookup API. The historical
+    `SlimeVariantCatalog` script forwards to it, and it loads
+    `resources/definitions/slime_variant_catalog.tres` (via the preserved
+    `SlimeVariantCatalogData` class).
   - `ElementCatalog` loads `resources/definitions/element_catalog.tres` (via
     `ElementCatalogData`); the stable `Element` enum stays in code, the lookup
     tables and matchup policy move to the resource. The retired const accessors

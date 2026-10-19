@@ -10,4 +10,3 @@ enemy = "Slime"
 variant = "Healer"
 facing_direction = 0
 preview_actor_size = 1
-show_geometry_guides = false

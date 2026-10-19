@@ -1,6 +1,6 @@
 # Script Role Map 2026
 
-Status: Stage 1 migration complete (235 original scripts and UID sidecars moved)
+Status: historical completed role-folder migration; current navigation is [FEATURE_MAP.md](FEATURE_MAP.md) and [SCRIPT_INDEX.md](SCRIPT_INDEX.md)
 
 Scope: Stage 1 of [`composition-plan-2026.md`](composition-plan-2026.md) - assign every
 tracked `scripts/*.gd` file to exactly one of the eight Stage 1 role folders, with runtime subfolders for responsibility

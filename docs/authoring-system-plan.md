@@ -10,7 +10,8 @@ previews, contract validation, one command surface, and truthful documentation
 Owner: repository architecture and gameplay systems
 
 Current code: the definition resources under `resources/definitions/`, the
-catalogs and factories (`enemy_factory.gd`, `slime_variant_catalog.gd`,
+catalogs and factories (`enemy_factory.gd`, `enemy_catalog.gd`,
+`slime_variant_catalog.gd` compatibility adapter,
 `item_catalog.gd`, `element_catalog.gd`, the `dungeon_layout_*` and
 `puzzle_*` builders), imported art under `assets/`, preview scenes,
 `gameplay_bootstrap.gd`, `gameplay_frame_controller.gd`,
@@ -28,7 +29,7 @@ and the factory/definition contract in
 not change the T1/T3 direction, the product contract, or the explicit frame
 schedule.
 
-Updated: 2026-10-12
+Updated: 2026-10-14
 
 > **Family geometry decision (2026-09-27):** collision, body-hitbox, and attack
 > guide geometry is family-authored. Editing any elemental variant updates the
@@ -1111,6 +1112,17 @@ central roster, save ID, or release-gate edit is required.
 ### Slice 4 — Menu platform
 
 Goal: a new route or row is a scene and a presenter, not a controller surgery.
+
+Shared-window implementation (2026-10-18): `MenuWindow` owns the frame artwork
+and nine-patch skin; `MenuScreen` provides the configurable title/header/content/
+footer shell. Standard overlays now use it through `MenuWidgetFactory`;
+authored Hub/Pause-command/Equipment rectangles share the skin without layout
+changes. Status/Items use the complete shared shell, and the main title splash
+is explicitly excluded from the window migration.
+See [menu authoring](CONTENT_AUTHORING.md#adding-menu-content). This closes the
+duplicated window-construction seam; per-route scenes, registry/input lifecycle,
+and rendered acceptance below remain open. Script diagnostics pass; gameplay
+verification is deferred at the owner's request while using the computer.
 
 Work items:
 

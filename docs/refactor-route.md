@@ -1,6 +1,6 @@
 # Refactor Route — Typed, Feature-Oriented Consolidation
 
-Status: accepted execution plan
+Status: historical execution record for the completed 0.2.x route; see [COMPOSITION_STATUS.md](COMPOSITION_STATUS.md)
 
 Plan date: 2026-08-22
 

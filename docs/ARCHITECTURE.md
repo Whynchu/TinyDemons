@@ -46,13 +46,24 @@ together through the shared `gameplay_state.gd` state bag. Components are
 created at runtime by `gameplay_bootstrap.gd`; `gameplay_frame_controller.gd`
 orders the per-frame update.
 
-This describes the current implementation, not the desired endpoint. The active
-migration keeps one explicit frame schedule while replacing shared-state reach-ins
-and string dispatch one feature slice at a time. See
-[`refactor-route.md`](refactor-route.md).
+This describes the current implementation, not the desired endpoint. Further ownership changes preserve the explicit frame schedule and address
+one demonstrated extension problem at a time. See
+[composition status](COMPOSITION_STATUS.md) for current exceptions; the old
+refactor route is historical.
 
 Encrypted-vault deployment and operational verification are documented in
 [`cloud-save-deployment.md`](cloud-save-deployment.md).
+
+## Menu composition
+
+`MenuWindow` owns the shared tiled frame artwork and nine-patch rules.
+`MenuScreen` assembles title, header, content, and footer windows; presenters
+supply their controls and actions through `MenuWidgetFactory`. Existing
+Pause-command/Equipment/Hub authored layouts retain their rectangles and share
+the window primitive. Status/Items use the complete shared shell; the main
+title screen keeps its original splash. `ScreenRouteController` retains navigation and back behavior;
+`ScreenLayoutController` supplies the visible logical size. Keep gameplay and
+save transactions out of the window/screen primitives.
 
 ## Scripts by responsibility
 
@@ -60,7 +71,11 @@ Encrypted-vault deployment and operational verification are documented in
   `player_attack_component`, `player_guard_component`,
   `player_animation_component`, `player_equipment_visual_component`,
   `player_hud`.
-- **Enemies**: `slime_actor`, `slime_brain`, `slime_combat_component`,
+- **Enemies**: `enemy_actor`, shared `EnemyBrain` (kept at the historical
+  `slime_brain.gd` resource path), family brain behaviors
+  (`slime_brain_behavior_component`, `skeleton_brain_behavior_component`),
+  `enemy_catalog` (historical `slime_variant_catalog.gd` forwards to it),
+  `enemy_factory`, `slime_actor`, `slime_combat_component`,
   `slime_animation_component`, `slime_visual_component`,
   `slime_health_presenter`, `slime_ambush_component`,
   `enemy_tactics_component`. The shared Normal and eight-element boss behavior,
@@ -115,7 +130,7 @@ Encrypted-vault deployment and operational verification are documented in
   `GameplayFrameController` and `SlimeRuntimeController` schedule player and
   enemy updates. `StatusTransmissionController` receives the collision system's
   pre-separation contact snapshot and owns bidirectional status transfer and
-  pair cooldowns. `ActorMotor` / `SlimeBrain` consume Chill's movement
+  pair cooldowns. `ActorMotor` / `EnemyBrain` consume Chill's movement
   multiplier; player/enemy attack owners consume its action-speed multiplier.
   `HudController` draws status marks and transmission tells, while
   `ElementAuraComponent` owns status outlines, suppression bursts, stun shakes,
@@ -244,8 +259,12 @@ Current path (the enemy portion of Slice 1 is now typed and factory-backed):
    `variant_id`; Slime variants use `slime`, and Skeleton currently uses
    `skeleton`.
 2. `EnemyFactory` uses `type_id` to choose the actor family, then the variant
-   ID to configure that actor. Reuse the `slime_*` components; extend
-   `enemy_tactics_component` only for genuinely new tactical state. A new
+   ID to configure that actor. The shared `EnemyBrain` host receives a typed
+   family behavior component; Slime and Skeleton brain components own their
+   preferred attack-distance rules. Reuse a `slime_*` component when its
+   contract is genuinely family-neutral, and add a family component for
+   behavior that gives that family a distinct role or response. Extend
+   `enemy_tactics_component` only for genuinely shared tactical state. A new
    family needs its own actor implementation and factory route. Skeleton is
    the first separate-family proof, with authored idle, walk, attack, and
    between-attack animation sheets; its bone projectile remains a code-drawn

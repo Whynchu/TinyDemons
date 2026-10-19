@@ -104,6 +104,10 @@ func build(
 	var status_title := status_page.get_node_or_null("Title") as Sprite2D
 	var equipment_title := equipment_page.get_node_or_null("Title") as Sprite2D
 	var items_title := items_page.get_node_or_null("Title") as Sprite2D
+	if status_page is MenuScreen:
+		status_title = (status_page as MenuScreen).set_heading("Title", "STATUS", pixel_texture)
+	if items_page is MenuScreen:
+		items_title = (items_page as MenuScreen).set_heading("Title", "ITEMS", pixel_texture)
 	if status_title != null: status_title.texture = pixel_texture.call("STATUS", Color.WHITE) as Texture2D
 	if equipment_title != null: equipment_title.texture = pixel_texture.call("EQUIPMENT", Color.WHITE) as Texture2D
 	if items_title != null: items_title.texture = pixel_texture.call("ITEMS", Color.WHITE) as Texture2D
@@ -128,7 +132,7 @@ func build(
 	for index in 8:
 		equipment_texts.append(widget_factory.create_sprite(equipment_page, "PauseEquipment%d" % index, null, Vector2(14, 28 + index * 12), false))
 	items_presenter = PauseItemsPresenterScript.new() as PauseItemsPresenter
-	items_presenter.build(items_page, view_size, pixel_texture, widget_factory)
+	items_presenter.build(items_page as MenuScreen, view_size, pixel_texture, widget_factory)
 	description_text = widget_factory.create_sprite(built_overlay, "PauseDescription", null, PauseMenuLayoutScript.select_prompt_position(view_size), false)
 	gold_text = widget_factory.create_sprite(built_overlay, "PauseGoldText", null, PauseMenuLayoutScript.resource_text_position(view_size, 0.0, false), false)
 	soul_text = widget_factory.create_sprite(built_overlay, "PauseSoulText", null, PauseMenuLayoutScript.resource_text_position(view_size, 0.0, true), false)
@@ -202,6 +206,8 @@ func position_controls(view_size: Vector2) -> void:
 	for page_root: Control in page_roots.values():
 		page_root.position = Vector2.ZERO
 		page_root.size = view_size
+		if page_root is MenuScreen:
+			(page_root as MenuScreen).apply_layout()
 		var page_background := page_root.get_node_or_null("Background") as NinePatchRect
 		if page_background != null: page_background.size = view_size
 		var page_title_rule := page_root.get_node_or_null("TitleRule") as ColorRect

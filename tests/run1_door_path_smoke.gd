@@ -57,9 +57,36 @@ func _initialize() -> void:
 		var player := gameplay.get("player") as Sprite2D
 		var feet: Rect2 = gameplay.call("_collision_guide_rect_by_name", player, "DoorFeetGuide")
 		player.global_position += trigger_center - feet.get_center()
+		var statuses := player.get_node_or_null("Status") as StatusComponent
+		_expect(statuses != null, "player has status state for the doorway regression", failures)
+		var records: Array[StatusRecord] = []
+		var timers: Array[Array] = []
+		if statuses != null:
+			statuses.clear_all()
+			for status_id: StringName in [&"burn", &"shocked"]:
+				var definition := ElementCatalog.status_effect_for_id(status_id)
+				statuses.apply_effect(definition, definition.element)
+				statuses.apply_effect(definition, definition.element)
+			statuses.advance(0.17)
+			for status_id: StringName in [&"burn", &"shocked"]:
+				var record := statuses.record_for(status_id)
+				_expect(record != null, "%s is active before crossing" % status_id, failures)
+				if record != null:
+					records.append(record)
+					timers.append([record.remaining, record.tick_timer, record.cadence_timer, record.damage_tick_timer, record.stacks])
 		var entered := room_controller.try_enter_active_socket(gameplay, bool(gameplay.get("door_active")), bool(gameplay.get("entrance_open")), false)
 		_expect(entered, "available authored exit is enterable even when room-wide door_active is false", failures)
 		_expect(StringName(gameplay.get("current_room_id")) == BLUE_EXIT_ROOM, "blue exit enters the authored treasure room", failures)
+		for index in records.size():
+			var record := records[index]
+			_expect(statuses.record_for(record.definition.id) == record, "%s retains its original status record across the doorway" % record.definition.id, failures)
+			_expect([record.remaining, record.tick_timer, record.cadence_timer, record.damage_tick_timer, record.stacks] == timers[index], "%s preserves duration, tick cadence, and stacks across the doorway" % record.definition.id, failures)
+		if statuses != null and not records.is_empty():
+			statuses.advance(0.1)
+			for index in records.size():
+				_expect(is_equal_approx(records[index].remaining, float(timers[index][0]) - 0.1), "status duration continues from its pre-transition value", failures)
+			statuses.advance(60.0)
+			_expect(statuses.record_for(&"burn") == null and statuses.record_for(&"shocked") == null, "carried statuses still expire normally", failures)
 
 	gameplay.queue_free()
 	await process_frame

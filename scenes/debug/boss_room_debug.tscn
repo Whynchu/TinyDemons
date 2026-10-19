@@ -28,16 +28,16 @@ layout_height = 16
 position = Vector2(0, 0)
 polygon = PackedVector2Array(118, 57, 122, 57, 248, 120, 248, 121, 122, 184, 118, 184, -8, 121, -8, 120)
 
-[node name="BossFloorUnderlay" type="Polygon2D" parent="Map/FloorTiles"]
+[node name="Entrance" parent="Map/FloorTiles" parent_id_path=PackedInt32Array(238769299) index="5" unique_id=1338102268]
+position = Vector2(36, 146)
+
+[node name="EntranceRight" parent="Map/FloorTiles" parent_id_path=PackedInt32Array(238769299) index="6" unique_id=1564566762]
+position = Vector2(189, 145)
+
+[node name="BossFloorUnderlay" type="Polygon2D" parent="Map/FloorTiles" parent_id_path=PackedInt32Array(238769299) index="7" unique_id=1513131830]
 z_index = -1
 color = Color(0.580392, 0.690196, 0.760784, 1)
 polygon = PackedVector2Array(118, 57, 122, 57, 248, 120, 248, 121, 122, 184, 118, 184, -8, 121, -8, 120)
-
-[node name="Entrance" parent="Map/FloorTiles" parent_id_path=PackedInt32Array(238769299) index="4" unique_id=1338102268]
-position = Vector2(36, 146)
-
-[node name="EntranceRight" parent="Map/FloorTiles" parent_id_path=PackedInt32Array(238769299) index="5" unique_id=1564566762]
-position = Vector2(189, 145)
 
 [node name="WallLeftLayer" parent="Map/Walls" parent_id_path=PackedInt32Array(1369138822) index="0" unique_id=242950098]
 tile_map_data = PackedByteArray("AAD//wAAAAAAAAAAAAD/////AAAAAAAAAAD///7/AAAAAAAAAAD///z/AAAAAAAAAAD///3/AAAAAAAAAAD///v/AAAAAAAAAAD///r/AAAAAAAAAAD///n/AAAAAAAAAAD//wEAAAAAAAAAAAD//wIAAAAAAAAAAAD//wMAAAAAAAAAAAD//wUAAAAAAAAAAAD//wQAAAAAAAAAAAD//wYAAAAAAAAAAAD//wgAAAAAAAAAAAD//wcAAAAAAAAAAAA=")
@@ -48,21 +48,21 @@ tile_map_data = PackedByteArray("AAD//wAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAA
 layout_width = 16
 
 [node name="DoorRight" parent="Map/Walls" parent_id_path=PackedInt32Array(1369138822) index="2" unique_id=1819223406]
-position = Vector2(169, 56)
 visible = false
+position = Vector2(169, 56)
 
 [node name="DoorLeft" parent="Map/Walls" parent_id_path=PackedInt32Array(1369138822) index="3" unique_id=1618703334]
-position = Vector2(58, 55)
 visible = false
+position = Vector2(58, 55)
 
-[node name="SpawnMarker" parent="Map/Sockets/WALL_LEFT" parent_id_path=PackedInt32Array(438265164) unique_id=779057270]
+[node name="SpawnMarker" parent="Map/Sockets/WALL_LEFT" parent_id_path=PackedInt32Array(438265164) index="0" unique_id=779057270]
 position = Vector2(58, 73)
 
-[node name="SpawnMarker" parent="Map/Sockets/WALL_RIGHT" parent_id_path=PackedInt32Array(247771686) unique_id=222120380]
+[node name="SpawnMarker" parent="Map/Sockets/WALL_RIGHT" parent_id_path=PackedInt32Array(247771686) index="0" unique_id=222120380]
 position = Vector2(169, 74)
 
-[node name="SpawnMarker" parent="Map/Sockets/BOTTOM_LEFT" parent_id_path=PackedInt32Array(304692599) unique_id=1858850565]
+[node name="SpawnMarker" parent="Map/Sockets/BOTTOM_LEFT" parent_id_path=PackedInt32Array(304692599) index="0" unique_id=1858850565]
 position = Vector2(51, 130)
 
-[node name="SpawnMarker" parent="Map/Sockets/BOTTOM_RIGHT" parent_id_path=PackedInt32Array(1797975729) unique_id=429081338]
+[node name="SpawnMarker" parent="Map/Sockets/BOTTOM_RIGHT" parent_id_path=PackedInt32Array(1797975729) index="0" unique_id=429081338]
 position = Vector2(177, 128)

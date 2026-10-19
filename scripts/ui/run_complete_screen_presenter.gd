@@ -15,15 +15,13 @@ var footer_text: Sprite2D = null
 
 
 func build(parent: Node, view_size: Vector2, pixel_texture: Callable, return_to_hub: Callable, widget_factory: MenuWidgetFactory) -> void:
-	overlay = widget_factory.create_overlay(parent, "RunCompleteOverlay", view_size, Color(0.015, 0.02, 0.035, 1.0), 6, false)
-	overlay.set_meta("display_full_view", true)
-	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-	widget_factory.add_menu_frame(overlay, view_size)
-	widget_factory.add_menu_title(overlay, "RunCompleteTitle", "RESULT", pixel_texture, view_size)
+	var menu := widget_factory.create_menu_screen(parent, "RunCompleteOverlay", view_size, 6, "RunCompleteTitle", "RESULT", pixel_texture)
+	menu.footer_height = 20.0
+	overlay = menu
 	var content_width := minf(220.0, maxf(view_size.x - 20.0, 100.0))
 	var content_x := _content_x(view_size, content_width)
-	widget_factory.make_menu_card(overlay, "RunCompleteMetrics", Vector2(content_x, 25), Vector2(content_width, 80))
-	widget_factory.make_menu_card(overlay, "RunCompleteRewards", Vector2(content_x, 109), Vector2(content_width, 29))
+	menu.add_window("RunCompleteMetrics", Rect2(content_x, 25, content_width, 80))
+	menu.add_window("RunCompleteRewards", Rect2(content_x, 109, content_width, 29))
 	lines.clear()
 	for index in LINE_POSITIONS.size():
 		lines.append(widget_factory.create_sprite(overlay, "RunCompleteLine%d" % index, null, _line_position(index, content_x), false))
@@ -47,11 +45,11 @@ func position_controls(view_size: Vector2, cursor_animator: MenuCursorAnimator, 
 	overlay.size = view_size
 	var content_width := minf(220.0, maxf(view_size.x - 20.0, 100.0))
 	var content_x := _content_x(view_size, content_width)
-	var metrics := overlay.get_node_or_null("RunCompleteMetrics") as Panel
+	var metrics := overlay.get_node_or_null("RunCompleteMetrics") as NinePatchRect
 	if metrics != null:
 		metrics.position = Vector2(content_x, 25)
 		metrics.size = Vector2(content_width, 80)
-	var rewards := overlay.get_node_or_null("RunCompleteRewards") as Panel
+	var rewards := overlay.get_node_or_null("RunCompleteRewards") as NinePatchRect
 	if rewards != null:
 		rewards.position = Vector2(content_x, 109)
 		rewards.size = Vector2(content_width, 29)
@@ -67,9 +65,6 @@ func position_controls(view_size: Vector2, cursor_animator: MenuCursorAnimator, 
 	if cursor != null:
 		var cursor_x := (return_button.position.x if return_button != null else content_x) - cursor_left_gap
 		cursor_animator.move_menu_cursor(cursor, Vector2(cursor_x, 144), true, tween_owner)
-	var title_rule := overlay.get_node_or_null("RunCompleteTitleRule") as ColorRect
-	if title_rule != null:
-		title_rule.size = Vector2(maxf(view_size.x - 16.0, 16.0), 1.0)
 	if footer_text != null:
 		footer_text.position = Vector2(view_size.x - 64.0, view_size.y - 18.0)
 

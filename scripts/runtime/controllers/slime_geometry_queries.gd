@@ -151,8 +151,15 @@ func _current_slime_collision_polygon_is_walkable(slime: Sprite2D) -> bool:
 	return area.is_slime_walkable(center / float(points.size()))
 
 
+func _walkable_area_for(root: GameplayState) -> WalkableArea:
+	return root.walkable_area
+
+
 func is_slime_walkable_point(root: GameplayState, point: Vector2) -> bool:
-	var area := root.walkable_area
+	return is_slime_walkable_point_in_area(_walkable_area_for(root), point)
+
+
+func is_slime_walkable_point_in_area(area: WalkableArea, point: Vector2) -> bool:
 	return area != null and area.is_slime_walkable(point)
 
 
@@ -203,9 +210,13 @@ func nearest_valid_slime_walkable_point(root: GameplayState, point: Vector2, sli
 
 
 func is_slime_collision_rect_walkable_at(root: GameplayState, slime: Sprite2D, foot: Vector2) -> bool:
-	var polygon: PackedVector2Array = root._slime_collision_polygon(slime, foot)
+	return is_slime_collision_rect_walkable_at_area(_walkable_area_for(root), slime, foot)
+
+
+func is_slime_collision_rect_walkable_at_area(area: WalkableArea, slime: Sprite2D, foot: Vector2) -> bool:
+	var polygon: PackedVector2Array = ActorGeometry.collision_polygon(slime, GameplayState.ACTOR_FOOT_OFFSET, foot)
 	if polygon.size() >= 3:
-		return is_slime_collision_polygon_walkable(root, polygon)
+		return is_slime_collision_polygon_walkable_in_area(area, polygon)
 	var guide := slime.get_node_or_null("CollisionGuide") as Node2D
 	var collision_bounds := Rect2(foot - Vector2(4.5, 2.2), Vector2(9, 4))
 	if guide != null:
@@ -226,7 +237,7 @@ func is_slime_collision_rect_walkable_at(root: GameplayState, slime: Sprite2D, f
 		collision_bounds.position + Vector2(0, collision_bounds.size.y * 0.5),
 	]
 	for sample in samples:
-		if not is_slime_walkable_point(root, sample):
+		if not is_slime_walkable_point_in_area(area, sample):
 			return false
 	return true
 
@@ -240,16 +251,20 @@ func slime_body_polygon(_root: GameplayState, slime: Sprite2D) -> PackedVector2A
 
 
 func is_slime_collision_polygon_walkable(root: GameplayState, polygon: PackedVector2Array) -> bool:
+	return is_slime_collision_polygon_walkable_in_area(_walkable_area_for(root), polygon)
+
+
+func is_slime_collision_polygon_walkable_in_area(area: WalkableArea, polygon: PackedVector2Array) -> bool:
 	var center := Vector2.ZERO
 	for index in polygon.size():
 		var point := polygon[index]
-		if not is_slime_walkable_point(root, point):
+		if not is_slime_walkable_point_in_area(area, point):
 			return false
 		var next_point := polygon[(index + 1) % polygon.size()]
-		if not is_slime_walkable_point(root, point.lerp(next_point, 0.5)):
+		if not is_slime_walkable_point_in_area(area, point.lerp(next_point, 0.5)):
 			return false
 		center += point
-	return is_slime_walkable_point(root, center / float(polygon.size()))
+	return is_slime_walkable_point_in_area(area, center / float(polygon.size()))
 
 
 func is_point_near_other_slime(root: GameplayState, point: Vector2, ignored_slime: Sprite2D = null) -> bool:

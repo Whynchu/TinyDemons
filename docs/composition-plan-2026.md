@@ -1,6 +1,6 @@
 # Tiny Demons — Full Composition Plan
 
-Status: active plan (approved direction)
+Status: supporting implementation record and deferred backlog; execution entry point is [COMPOSITION_STATUS.md](COMPOSITION_STATUS.md)
 
 Scope: repository-wide script composition — ownership boundaries, script
 hierarchy, executable composition rules, and the decomposition sequence that

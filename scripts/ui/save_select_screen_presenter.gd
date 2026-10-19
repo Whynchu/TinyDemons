@@ -35,10 +35,10 @@ func set_selected_slot(index: int) -> void:
 
 
 func build(parent: Node, view_size: Vector2, pixel_texture: Callable, select_callback: Callable, overwrite_yes: Callable, overwrite_no: Callable, portrait_texture: Callable, back_callback: Callable, widget_factory: MenuWidgetFactory) -> ColorRect:
-	overlay = widget_factory.create_overlay(parent, "SaveSelectOverlay", view_size, Color.BLACK, 4, false)
-	overlay.set_meta("display_full_view", true)
-	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-	_title_text = widget_factory.create_sprite(overlay, "SaveSelectTitle", pixel_texture.call("CHOOSE SAVE", Color.WHITE) as Texture2D, Vector2((view_size.x - 64.0) * 0.5, 42), false)
+	var menu := widget_factory.create_menu_screen(parent, "SaveSelectOverlay", view_size, 4, "SaveSelectTitle", "CHOOSE SAVE", pixel_texture)
+	menu.footer_height = 0.0
+	overlay = menu
+	_title_text = overlay.get_node("SaveSelectTitle") as Sprite2D
 	_cursor_text = widget_factory.create_sprite(overlay, "SaveSelectCursor", MENU_CURSOR_TEXTURE, Vector2((view_size.x - 130.0) * 0.5, 70), false)
 	_overwrite_prompt = widget_factory.create_sprite(overlay, "OverwritePrompt", pixel_texture.call("OVERWRITE?  YES / NO", Color.WHITE) as Texture2D, Vector2((view_size.x - 100.0) * 0.5, 126), false)
 	var prompt := _overwrite_prompt
@@ -104,8 +104,6 @@ func build(parent: Node, view_size: Vector2, pixel_texture: Callable, select_cal
 
 
 func position_controls(view_size: Vector2) -> void:
-	if _title_text != null:
-		_title_text.position.x = (view_size.x - _title_text.texture.get_width()) * 0.5 if _title_text.texture != null else (view_size.x - 64.0) * 0.5
 	for index in _slot_buttons.size():
 		_slot_buttons[index].position.x = (view_size.x - _slot_buttons[index].size.x) * 0.5
 	_update_cursor_anchor()

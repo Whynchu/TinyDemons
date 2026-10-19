@@ -60,7 +60,7 @@ const SUPPORT_CAST_STATE_DEFINITIONS := [&"support_caster"]
 const ElementCatalogScript = preload("res://scripts/content/element_catalog.gd")
 const SlimeVisualComponentScript = preload("res://scripts/components/slime_visual_component.gd")
 const SpriteFrameLibraryScript = preload("res://scripts/services/sprite_frame_library.gd")
-const SlimeVariantCatalogScript = preload("res://scripts/content/slime_variant_catalog.gd")
+const EnemyCatalogScript = preload("res://scripts/content/enemy_catalog.gd")
 const EffectsSpawnerScript = preload("res://scripts/runtime/services/effects_spawner.gd")
 
 
@@ -117,7 +117,7 @@ const EffectsSpawnerScript = preload("res://scripts/runtime/services/effects_spa
 			_set_definition_notice("Save edits before selecting another definition.")
 			notify_property_list_changed()
 			return
-		var registered := SlimeVariantCatalogScript.definition_resource(value.variant_id)
+		var registered := EnemyCatalogScript.definition_resource(value.variant_id)
 		if registered != value:
 			_set_definition_notice("Select authored variants with the Variant picker.")
 			notify_property_list_changed()
@@ -405,7 +405,7 @@ const EffectsSpawnerScript = preload("res://scripts/runtime/services/effects_spa
 @export_tool_button("Save Enemy Changes") var save_definition_button: Callable
 
 var definition: EnemyDefinition
-var preview_actor: SlimeActor
+var preview_actor: EnemyActor
 var preview_shadow: Sprite2D
 var _geometry_overlay: Node2D
 var frame_library: SpriteFrameLibrary
@@ -496,7 +496,7 @@ func _set_enemy_type(requested_type_id: StringName) -> void:
 		_set_workbench_error("No authored variants exist for enemy type '%s'." % requested_type_id)
 		return
 	_selected_enemy_type_id = requested_type_id
-	var current_definition := SlimeVariantCatalogScript.definition_resource(_enemy_variant_id)
+	var current_definition := EnemyCatalogScript.definition_resource(_enemy_variant_id)
 	if current_definition == null or current_definition.type_id != requested_type_id:
 		_set_enemy_variant(matching_variants[0])
 	else:
@@ -512,7 +512,7 @@ func _set_enemy_variant(requested_variant_id: StringName) -> void:
 		_set_definition_notice("Save edits before switching variants.")
 		notify_property_list_changed()
 		return
-	var selected_definition_resource := SlimeVariantCatalogScript.definition_resource(requested_variant_id)
+	var selected_definition_resource := EnemyCatalogScript.definition_resource(requested_variant_id)
 	if selected_definition_resource == null:
 		_set_workbench_error("Unknown enemy variant ID: %s" % requested_variant_id)
 		return
@@ -542,7 +542,7 @@ func _authored_type_ids() -> Array[StringName]:
 	var result: Array[StringName] = []
 	var seen_type_ids: Dictionary = {}
 	for variant_id_value in _authored_variant_ids():
-		var definition_resource_value := SlimeVariantCatalogScript.definition_resource(variant_id_value)
+		var definition_resource_value := EnemyCatalogScript.definition_resource(variant_id_value)
 		if definition_resource_value == null or seen_type_ids.has(definition_resource_value.type_id):
 			continue
 		seen_type_ids[definition_resource_value.type_id] = true
@@ -553,7 +553,7 @@ func _authored_type_ids() -> Array[StringName]:
 func _authored_variant_ids_for_type(type_id: StringName) -> Array[StringName]:
 	var result: Array[StringName] = []
 	for variant_id_value in _authored_variant_ids():
-		var definition_resource_value := SlimeVariantCatalogScript.definition_resource(variant_id_value)
+		var definition_resource_value := EnemyCatalogScript.definition_resource(variant_id_value)
 		if definition_resource_value != null and definition_resource_value.type_id == type_id:
 			result.append(variant_id_value)
 	return result
@@ -582,7 +582,7 @@ func _enemy_type_id_for_display_name(display_name_value: String) -> StringName:
 
 
 func _variant_display_name_for_id(variant_id_value: StringName) -> String:
-	var selected_definition_resource := SlimeVariantCatalogScript.definition_resource(variant_id_value)
+	var selected_definition_resource := EnemyCatalogScript.definition_resource(variant_id_value)
 	if selected_definition_resource == null:
 		return String(variant_id_value)
 	var label := selected_definition_resource.display_name.strip_edges()
@@ -594,7 +594,7 @@ func _variant_display_name_for_id(variant_id_value: StringName) -> String:
 
 
 func _variant_picker_label_for_id(variant_id_value: StringName) -> String:
-	var selected_definition_resource := SlimeVariantCatalogScript.definition_resource(variant_id_value)
+	var selected_definition_resource := EnemyCatalogScript.definition_resource(variant_id_value)
 	if selected_definition_resource == null:
 		return String(variant_id_value)
 	var label := _variant_display_name_for_id(variant_id_value)
@@ -676,9 +676,9 @@ func _ready() -> void:
 	_pixel_text_renderer.process_mode = Node.PROCESS_MODE_DISABLED
 	set_process(Engine.is_editor_hint())
 	var command_line_id := _enemy_id_from_command_line()
-	if not command_line_id.is_empty() and SlimeVariantCatalogScript.is_variant(command_line_id):
+	if not command_line_id.is_empty() and EnemyCatalogScript.contains_id(command_line_id):
 		enemy_id = command_line_id
-	if not SlimeVariantCatalogScript.is_variant(enemy_id):
+	if not EnemyCatalogScript.contains_id(enemy_id):
 		var authored_ids := _authored_variant_ids()
 		if not authored_ids.is_empty():
 			enemy_id = authored_ids[0]
@@ -746,7 +746,7 @@ func refresh_preview() -> void:
 	# ID edit, so refreshing visuals cannot orphan that unsaved Resource.
 	var definition_id_was_edited := definition != null and definition.variant_id != _original_variant_id
 	if not definition_id_was_edited:
-		SlimeVariantCatalogScript.invalidate_cache()
+		EnemyCatalogScript.invalidate_cache()
 	_cached_frame_sets.clear()
 	frame_library = SpriteFrameLibraryScript.new() as SpriteFrameLibrary
 	SlimeVisualComponentScript.direction_texture_cache.clear()
@@ -769,7 +769,7 @@ func create_authored_variant() -> void:
 		_set_workbench_error("Variant ID must match ^[a-z][a-z0-9_]*$")
 		return
 	var authored_id := StringName(candidate_id)
-	if SlimeVariantCatalogScript.is_variant(authored_id):
+	if EnemyCatalogScript.contains_id(authored_id):
 		_set_workbench_error("An authored variant already uses id '%s'" % candidate_id)
 		return
 	var resource_path := "res://resources/definitions/%s.tres" % candidate_id
@@ -790,12 +790,12 @@ func create_authored_variant() -> void:
 	if save_error != OK:
 		_set_workbench_error("Could not create %s (error %d)" % [resource_path, save_error])
 		return
-	save_error = SlimeVariantCatalogScript.register_definition(new_definition)
+	save_error = EnemyCatalogScript.register_definition(new_definition)
 	if save_error != OK:
 		_set_workbench_error("Could not register %s (error %d)" % [candidate_id, save_error])
 		return
 
-	SlimeVariantCatalogScript.invalidate_cache()
+	EnemyCatalogScript.invalidate_cache()
 	enemy_id = authored_id
 	new_variant_id = ""
 	_workbench_notice = "Created variant %s from %s" % [candidate_id, source_variant_name]
@@ -820,11 +820,11 @@ func save_selected_definition() -> void:
 	if definition.type_id == &"slime" and saved_display_name.to_lower().ends_with(" slime"):
 		definition.display_name = saved_display_name.substr(0, saved_display_name.length() - 6).strip_edges()
 	var geometry_profile := EnemyFactory.geometry_profile(definition)
-	var source_path := SlimeVariantCatalogScript.definition_source_path(definition)
+	var source_path := EnemyCatalogScript.definition_source_path(definition)
 	if source_path.is_empty():
 		_set_definition_notice("The selected definition has no authored file.")
 		return
-	var save_error: int = SlimeVariantCatalogScript.save_definition(definition)
+	var save_error: int = EnemyCatalogScript.save_definition(definition)
 	if save_error != OK:
 		_set_definition_notice("Could not save definition (error %d)." % save_error)
 		return
@@ -839,7 +839,7 @@ func save_selected_definition() -> void:
 	_observed_definition_record = definition.to_record().duplicate(true)
 	_saved_definition_record = _observed_definition_record.duplicate(true)
 	_saved_family_geometry = _capture_geometry()
-	SlimeVariantCatalogScript.invalidate_cache()
+	EnemyCatalogScript.invalidate_cache()
 	_workbench_notice = "Saved definition"
 	error_message = ""
 	print("Enemy preview workbench saved %s" % source_path)
@@ -868,7 +868,7 @@ func _new_variant_display_name(variant_id_value: String) -> String:
 
 func _authored_variant_ids() -> Array[StringName]:
 	var result: Array[StringName] = []
-	for enemy_id_value in SlimeVariantCatalogScript.variant_ids():
+	for enemy_id_value in EnemyCatalogScript.ids():
 		result.append(enemy_id_value)
 	return result
 
@@ -896,7 +896,7 @@ func _build_preview() -> void:
 	var selected_is_active := _selected_definition != null \
 		and _selected_definition == _tracked_definition \
 		and enemy_id == _original_variant_id
-	if not SlimeVariantCatalogScript.is_variant(enemy_id) and not selected_is_active:
+	if not EnemyCatalogScript.contains_id(enemy_id) and not selected_is_active:
 		error_message = "Unknown enemy id: %s" % enemy_id
 		_clear_definition_binding()
 		queue_redraw()

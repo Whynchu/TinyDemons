@@ -3,6 +3,8 @@
 [ext_resource type="Texture2D" path="res://assets/artwork/frame 16x16.png" id="1_frame"]
 [ext_resource type="Script" path="res://scripts/ui/menu_panel_8_piece.gd" id="4_layout"]
 
+[ext_resource type="Script" path="res://scripts/ui/menu_window.gd" id="shared_menu_window"]
+
 [node name="MenuPanel8Piece" type="Control"]
 offset_right = 240.0
 offset_bottom = 160.0
@@ -15,6 +17,7 @@ metadata/pause_source_resources = "res://assets/artwork/PAUSE MENU gold_soulspan
 metadata/source_layout = "240x160: left 176x160, right 64x136, resource 64x24"
 
 [node name="LeftPanel" type="NinePatchRect" parent="."]
+script = ExtResource("shared_menu_window")
 offset_right = 176.0
 offset_bottom = 160.0
 mouse_filter = 2
@@ -28,6 +31,7 @@ axis_stretch_horizontal = 1
 axis_stretch_vertical = 1
 
 [node name="RightPanel" type="NinePatchRect" parent="."]
+script = ExtResource("shared_menu_window")
 layout_mode = 0
 offset_left = 176.0
 offset_right = 240.0
@@ -43,6 +47,7 @@ axis_stretch_horizontal = 1
 axis_stretch_vertical = 1
 
 [node name="GoldSoulsPanel" type="NinePatchRect" parent="."]
+script = ExtResource("shared_menu_window")
 layout_mode = 0
 offset_left = 176.0
 offset_top = 136.0

@@ -1,5 +1,10 @@
 # Tiny Demons — Composition Refactor Analysis and Handoff
 
+> Current composition execution entry point: [COMPOSITION_STATUS.md](COMPOSITION_STATUS.md).
+> This document preserves detailed decisions and evidence. Its remaining
+> composition checklist is supporting backlog, not an instruction to resume
+> a broad refactor. Authoring and performance work retain their own authorities.
+
 Status: historical / implemented (legacy-coupling cleanup complete)
 Scope: runtime composition, component ownership, dependency direction, and the next refactor sequence
 Owner: repository refactor / architecture

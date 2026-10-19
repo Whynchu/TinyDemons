@@ -43,6 +43,15 @@ var target_overhead_aggro_markers: Dictionary = {}
 var target_overhead_aggro_offsets: Dictionary = {}
 var target_overhead_elite_symbols: Dictionary = {}
 var target_overhead_status_markers: Dictionary = {}
+var _enemy_overhead_callbacks_root: Object
+var _enemy_overhead_max_health_callback: Callable
+var _enemy_overhead_health_callback: Callable
+var _enemy_overhead_display_health_callback: Callable
+var _enemy_overhead_dead_callback: Callable
+var _enemy_overhead_aggro_callback: Callable
+var _enemy_overhead_set_values_callback: Callable
+var _enemy_overhead_hidden_callback: Callable
+var _enemy_overhead_pixel_text_callback: Callable
 var player_status_markers: Array[Sprite2D] = []
 var status_badge_texture_cache: Dictionary = {}
 var _status_transmission_flash_actors: Dictionary = {}
@@ -708,8 +717,11 @@ func update_overhead_bars(
 		_prune_status_markers(status_markers)
 		if frame == null or damage_fill == null or fill == null or aggro_marker == null or elite_symbol == null:
 			continue
+		var enemy_actor := slime as EnemyActor
+		var health_component := enemy_actor.health_capability() if enemy_actor != null else null
+		var is_dead: bool = enemy_actor.is_defeated() if enemy_actor != null else bool(is_dead_for.call(slime))
 		var hidden := (is_hidden_for.is_valid() and bool(is_hidden_for.call(slime))) or bool(slime.get_meta("boss_jump_ui_suppressed", false))
-		if is_dead_for.call(slime) or hidden:
+		if is_dead or hidden:
 			if frame.visible: frame.visible = false
 			if damage_fill.visible: damage_fill.visible = false
 			if fill.visible: fill.visible = false
@@ -718,8 +730,8 @@ func update_overhead_bars(
 			for status_marker in status_markers:
 				if status_marker.visible: status_marker.visible = false
 			continue
-		var max_health := float(max_health_for.call(slime))
-		var health := float(health_for.call(slime))
+		var max_health := health_component.maximum_health if health_component != null else float(max_health_for.call(slime))
+		var health := health_component.current_health if health_component != null else float(health_for.call(slime))
 		var is_aggroed := bool(is_aggroed_for.call(slime))
 		var should_show := health < max_health or is_aggroed
 		var is_elite := bool(slime.get_meta("is_elite", false))
@@ -730,6 +742,11 @@ func update_overhead_bars(
 		if fill.self_modulate != Color.WHITE: fill.self_modulate = Color.WHITE
 		if damage_fill.self_modulate != Color.WHITE: damage_fill.self_modulate = Color.WHITE
 		if aggro_marker.visible != is_aggroed: aggro_marker.visible = is_aggroed
+		# Healthy idle enemies have no visible overhead UI. Avoid recomputing
+		# world-space layout and resolving their status component until a bar,
+		# elite badge, or status marker needs presentation.
+		if not should_show and not is_elite and status_markers.is_empty():
+			continue
 		var fill_size := target_overhead_fill_sizes.get(slime, Vector2.ZERO) as Vector2
 		var overhead_offset := target_overhead_offsets.get(slime, Vector2.ZERO) as Vector2
 		if not is_aggroed:
@@ -772,7 +789,8 @@ func update_overhead_bars(
 		if aggro_marker.global_scale != Vector2.ONE: aggro_marker.global_scale = Vector2.ONE
 		if aggro_marker.z_index != overwold_ui_z + 3: aggro_marker.z_index = overwold_ui_z + 3
 		if should_show:
-			set_values.call(fill, damage_fill, fill_size, health, float(display_health_for.call(slime)), max_health)
+			var display_health := enemy_actor.displayed_health_value() if enemy_actor != null else float(display_health_for.call(slime))
+			set_values.call(fill, damage_fill, fill_size, health, display_health, max_health)
 
 
 func _update_actor_status_markers(actor: Sprite2D, status_component: StatusComponent, markers: Array, origin: Vector2, pixel_text: Callable) -> void:
@@ -1014,10 +1032,25 @@ func update_overworld(root: GameplayState, delta: float, ui_z: int) -> void:
 	update_combo_hud(root)
 	var timer := fmod(gold_animation_timer + delta, 0.48); gold_animation_timer = timer; _tick_gold_counter(root, delta); _tick_soul_counter(root, delta); update_gold_indicator(gold_indicator, gold_animation_frames, timer)
 	update_run_timer(root)
+	_ensure_enemy_overhead_callbacks(root)
 	var enemy_overhead_started_usec := Time.get_ticks_usec()
-	update_overhead_bars(root.get("slimes"), Callable(root, "_enemy_max_health"), Callable(root, "_slime_current_health"), Callable(root, "_slime_display_health"), Callable(root, "_is_slime_dead"), Callable(root, "_is_slime_aggroed"), Callable(self, "set_health_bar_values"), ui_z, Callable(root, "_is_slime_hidden"), Callable(root, "_pixel_text_texture"))
+	update_overhead_bars(root.get("slimes"), _enemy_overhead_max_health_callback, _enemy_overhead_health_callback, _enemy_overhead_display_health_callback, _enemy_overhead_dead_callback, _enemy_overhead_aggro_callback, _enemy_overhead_set_values_callback, ui_z, _enemy_overhead_hidden_callback, _enemy_overhead_pixel_text_callback)
 	var gameplay := root
 	gameplay._record_performance_scope(&"enemy_overhead_hud", enemy_overhead_started_usec)
+
+
+func _ensure_enemy_overhead_callbacks(root: Object) -> void:
+	if root == _enemy_overhead_callbacks_root and _enemy_overhead_aggro_callback.is_valid():
+		return
+	_enemy_overhead_callbacks_root = root
+	_enemy_overhead_max_health_callback = Callable(root, "_enemy_max_health")
+	_enemy_overhead_health_callback = Callable(root, "_slime_current_health")
+	_enemy_overhead_display_health_callback = Callable(root, "_slime_display_health")
+	_enemy_overhead_dead_callback = Callable(root, "_is_slime_dead")
+	_enemy_overhead_aggro_callback = Callable(root, "_is_slime_aggroed")
+	_enemy_overhead_set_values_callback = Callable(self, "set_health_bar_values")
+	_enemy_overhead_hidden_callback = Callable(root, "_is_slime_hidden")
+	_enemy_overhead_pixel_text_callback = Callable(root, "_pixel_text_texture")
 
 
 func update_combo_hud(root: Object) -> void:

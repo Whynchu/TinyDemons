@@ -37,11 +37,8 @@ func build(parent: Node, view_size: Vector2, pixel_texture: Callable, adjust_cal
 	_cursor_left_gap = cursor_left_gap
 	_tween_owner = tween_owner
 	_settings_service = settings_service
-	overlay = widget_factory.create_overlay(parent, "SettingsOverlay", view_size, Color(0.015, 0.02, 0.035, 1.0), 8, false)
-	overlay.set_meta("display_full_view", true)
-	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-	widget_factory.add_menu_frame(overlay, view_size)
-	title_text = widget_factory.add_menu_title(overlay, "SettingsTitle", "SETTINGS", pixel_texture, view_size)
+	overlay = widget_factory.create_menu_screen(parent, "SettingsOverlay", view_size, 8, "SettingsTitle", "SETTINGS", pixel_texture)
+	title_text = overlay.get_node("SettingsTitle") as Sprite2D
 	option_buttons.clear()
 	option_labels.clear()
 	row_labels.clear()
@@ -107,11 +104,6 @@ func position_controls(view_size: Vector2) -> void:
 	if overlay == null:
 		return
 	var option_start := maxf(90.0, view_size.x * 0.38)
-	if title_text != null and title_text.texture != null:
-		title_text.position = Vector2(13, 4)
-	var rule := overlay.get_node_or_null("SettingsTitleRule") as ColorRect
-	if rule != null:
-		rule.size = Vector2(maxf(view_size.x - 16.0, 16.0), 1.0)
 	for index in row_labels.size():
 		var row_pitch := minf(16.0, maxf(12.0, (view_size.y - 65.0) / maxf(float(row_labels.size()), 1.0)))
 		var y := 23.0 + index * row_pitch

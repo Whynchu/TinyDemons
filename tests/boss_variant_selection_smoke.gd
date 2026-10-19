@@ -1,6 +1,6 @@
 extends SceneTree
 
-const CatalogScript = preload("res://scripts/content/slime_variant_catalog.gd")
+const CatalogScript = preload("res://scripts/content/enemy_catalog.gd")
 const ElementCatalogScript = preload("res://scripts/content/element_catalog.gd")
 const RoomControllerScript = preload("res://scripts/runtime/controllers/room_controller.gd")
 
@@ -8,16 +8,16 @@ func _initialize() -> void:
 	var failures: Array[String] = []
 	var rooms := RoomControllerScript.new()
 	rooms.progression_run_rank = 2
-	for variant in CatalogScript.variants():
-		var element := CatalogScript.element_for_variant(variant)
+	for variant in CatalogScript.ids():
+		var element := CatalogScript.element_for_id(variant)
 		rooms.set_run_element_theme([element] if element > ElementCatalogScript.Element.NEUTRAL else [])
 		rooms.progression_run_number = 10
 		rooms.boss_variant_selection = variant
 		var encounter := rooms._generate_boss_encounter(1000, 12)
 		var variants := encounter["variants"] as Array
 		_expect(StringName(variants[0]) == variant, "%s is the explicit lead boss variant" % variant, failures)
-		_expect(CatalogScript.display_name_for_variant(variant) != "", "%s has an identity name" % variant, failures)
-		_expect(ElementCatalogScript.is_valid(CatalogScript.element_for_variant(variant)), "%s keeps a valid catalog element" % variant, failures)
+		_expect(CatalogScript.display_name_for_id(variant) != "", "%s has an identity name" % variant, failures)
+		_expect(ElementCatalogScript.is_valid(CatalogScript.element_for_id(variant)), "%s keeps a valid catalog element" % variant, failures)
 		for index in range(1, variants.size()):
 			_expect(StringName(variants[index]) == variant, "%s support wave inherits lead variant" % variant, failures)
 	rooms.boss_variant_selection = &""
@@ -28,7 +28,7 @@ func _initialize() -> void:
 		rooms.set_run_element_theme([element])
 		for seed in 64:
 			seen[StringName((rooms._generate_boss_encounter(seed + element * 512, 12)["variants"] as Array)[0])] = true
-	_expect(seen.size() == CatalogScript.variants().size(), "seeded selection reaches every catalog variant", failures)
+	_expect(seen.size() == CatalogScript.ids().size(), "seeded selection reaches every catalog variant", failures)
 	rooms.progression_run_rank = 1
 	rooms.progression_run_number = 1
 	rooms.set_run_element_theme([])

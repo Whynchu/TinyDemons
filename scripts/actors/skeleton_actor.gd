@@ -1,8 +1,9 @@
 @tool
-extends SlimeActor
+extends EnemyActor
 class_name SkeletonActor
 
 const SpriteFrameLibraryScript = preload("res://scripts/services/sprite_frame_library.gd")
+const SkeletonBrainBehaviorComponentScript = preload("res://scripts/components/skeleton_brain_behavior_component.gd")
 const FRAME_SIZE := Vector2i(36, 36)
 const FRAME_OFFSET := Vector2(-10.0, -10.0)
 const IDLE_PATH := "res://assets/artwork/TinyDemon-Skeleton-Idle.png"
@@ -48,6 +49,10 @@ var _attack_sequence_right: Array[Texture2D] = []
 var _attack_sequence_left: Array[Texture2D] = []
 var _attack_sequence_right_ready := false
 var _attack_sequence_left_ready := false
+
+
+func brain_behavior_component_script() -> Script:
+	return SkeletonBrainBehaviorComponentScript
 
 
 func apply_authored_visuals() -> void:

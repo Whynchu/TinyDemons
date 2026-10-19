@@ -228,8 +228,9 @@ That in-memory script has a synthetic `gdscript://` identity. Godot can then
 reject `self` when it is passed to a method typed with the script's own
 declared `class_name`. `script_check` treats this as valid only when every
 captured error from the reload has the same expected class and the same
-synthetic URI; any other compile error remains a failure. A headless project
-load or focused smoke remains the project-level confirmation.
+synthetic URI; those clone-only diagnostics are omitted from the successful
+result, and any other compile error remains a failure. A headless project load
+or focused smoke remains the project-level confirmation.
 
 Remaining trade-off:
 - **`gdscript://` URIs in error messages:** When a script has a genuine

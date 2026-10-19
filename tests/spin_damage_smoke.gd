@@ -42,7 +42,7 @@ class DamageRoot extends GameplayState:
 		return maxf(float(target_count), 1.0)
 
 
-	func _damage_slime(slime: Sprite2D, amount: float, _was_critical: bool = false, _attack_element: int = 0, _immune: bool = false) -> void:
+	func _damage_slime(slime: Sprite2D, amount: float, _was_critical: bool = false, _attack_element: int = 0, _immune: bool = false, _effectiveness: float = -1.0) -> void:
 		damage_targets.append(slime)
 		damage_values.append(amount)
 
@@ -55,7 +55,7 @@ class DamageRoot extends GameplayState:
 		sound_events.append(sound_name)
 
 
-	func _apply_player_lifesteal(_damage: float) -> void:
+	func _apply_player_lifesteal(_damage: float, _heal_ratio: float = -1.0) -> void:
 		pass
 
 

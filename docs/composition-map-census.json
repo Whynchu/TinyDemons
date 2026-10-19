@@ -1,13 +1,13 @@
 {
   "status": "Planning census; machine enumeration, not proof every symbol has been manually audited",
-  "source_commit": "39950b8b9540c55bad9f32460774cfa7c995f505",
+  "source_commit": "85c9f071354e3564b3726c9fe063f8ffb74e68f6",
   "graph_built_at_commit": "78320ffb8cbe2d29a6f801e8bc48478ed9982a5b",
   "graph_sha256": "b68d04e4f766dfdca814bf9d187b6e3ec0cfe03c32fdcf71d28068fb68f91a16",
   "nodes": 21073,
   "links": 46226,
   "communities": 727,
   "mapped_source_files": 1016,
-  "tracked_files": 3121,
+  "tracked_files": 3126,
   "tracked_extensions": {
     "(none)": 12,
     ".aseprite": 31,
@@ -21,8 +21,8 @@
     ".html": 1,
     ".import": 586,
     ".js": 1,
-    ".json": 18,
-    ".md": 251,
+    ".json": 20,
+    ".md": 254,
     ".mjs": 4,
     ".mp3": 1,
     ".ogg": 45,
@@ -1641,6 +1641,11 @@
     "config/supabase.cfg",
     "config/supabase.example.cfg",
     "docs/.gdignore",
+    "docs/composition-cleanup-review-plan.md",
+    "docs/composition-extraction-ledger.md",
+    "docs/composition-map-census.json",
+    "docs/composition-p0-disposition.json",
+    "docs/composition-p0-review.md",
     "docs/game-screenshot.png",
     "export_presets.cfg",
     "icon.svg",
@@ -2412,7 +2417,7 @@
     "docs/KNOWN_ISSUES.md",
     "docs/ROADMAP.md",
     "docs/SCRIPT_INDEX.md",
-    "docs/Tiny Demons \u2014 Elemental Chroma System Design.md",
+    "docs/Tiny Demons — Elemental Chroma System Design.md",
     "docs/VERSIONING.md",
     "docs/agent-workflow.md",
     "docs/anchored-stat-allocation-proposals.md",
@@ -3242,13 +3247,13 @@
           "degree": 297
         },
         {
-          "label": "2026-09-29T23:55Z \u00e2\u20ac\u201d opencode \u00e2\u20ac\u201d done",
+          "label": "2026-09-29T23:55Z â€” opencode â€” done",
           "file": "coord/journal.md",
           "line": "L446",
           "degree": 2
         },
         {
-          "label": "2026-09-30T00:25Z \u00e2\u20ac\u201d opencode \u00e2\u20ac\u201d handoff",
+          "label": "2026-09-30T00:25Z â€” opencode â€” handoff",
           "file": "coord/journal.md",
           "line": "L466",
           "degree": 2
@@ -3324,7 +3329,7 @@
     {
       "community": "4",
       "names": [
-        "codex \u2014 status"
+        "codex — status"
       ],
       "nodes": 183,
       "cross_community_incidents": 15,
@@ -3333,7 +3338,7 @@
       ],
       "highest_degree_nodes": [
         {
-          "label": "codex \u2014 status",
+          "label": "codex — status",
           "file": "coord/status-codex.md",
           "line": "L1",
           "degree": 196
@@ -5865,7 +5870,7 @@
     {
       "community": "75",
       "names": [
-        "TINY DEMONS \u2014 Game Design Document"
+        "TINY DEMONS — Game Design Document"
       ],
       "nodes": 41,
       "cross_community_incidents": 1,
@@ -5874,7 +5879,7 @@
       ],
       "highest_degree_nodes": [
         {
-          "label": "TINY DEMONS \u2014 Game Design Document",
+          "label": "TINY DEMONS — Game Design Document",
           "file": "docs/game-design-document.md",
           "line": "L1",
           "degree": 15
@@ -6555,7 +6560,7 @@
     {
       "community": "96",
       "names": [
-        "Tiny Demons \u2014 Elemental Binding and Flame Fusion Design"
+        "Tiny Demons — Elemental Binding and Flame Fusion Design"
       ],
       "nodes": 35,
       "cross_community_incidents": 1,
@@ -6564,7 +6569,7 @@
       ],
       "highest_degree_nodes": [
         {
-          "label": "Tiny Demons \u2014 Elemental Binding and Flame Fusion Design",
+          "label": "Tiny Demons — Elemental Binding and Flame Fusion Design",
           "file": "docs/elemental-binding-and-fusion-design.md",
           "line": "L1",
           "degree": 15
@@ -7859,7 +7864,7 @@
     {
       "community": "134",
       "names": [
-        "Tiny Demons \u2014 Timed Floor Spike Hazard Plan"
+        "Tiny Demons — Timed Floor Spike Hazard Plan"
       ],
       "nodes": 10,
       "cross_community_incidents": 6,
@@ -7868,7 +7873,7 @@
       ],
       "highest_degree_nodes": [
         {
-          "label": "Tiny Demons \u2014 Timed Floor Spike Hazard Plan",
+          "label": "Tiny Demons — Timed Floor Spike Hazard Plan",
           "file": "docs/timed-floor-hazard-plan.md",
           "line": "L1",
           "degree": 11
@@ -8124,7 +8129,7 @@
       "nodes": 31,
       "cross_community_incidents": 44,
       "source_files": [
-        "docs/Tiny Demons \u2014 Elemental Chroma System Design.md",
+        "docs/Tiny Demons — Elemental Chroma System Design.md",
         "docs/elemental-binding-and-fusion-design.md",
         "docs/elemental-binding-and-fusion-implementation-plan.md",
         "docs/elemental-chroma-handoff.md",
@@ -8694,7 +8699,7 @@
           "degree": 10
         },
         {
-          "label": "Tiny Demons \u2014 Elemental Binding and Flame Fusion Implementation Plan",
+          "label": "Tiny Demons — Elemental Binding and Flame Fusion Implementation Plan",
           "file": "docs/elemental-binding-and-fusion-implementation-plan.md",
           "line": "L1",
           "degree": 10
@@ -8710,7 +8715,7 @@
     {
       "community": "159",
       "names": [
-        "Meta Progression Vertical Slice \u2014 Implementation Plan"
+        "Meta Progression Vertical Slice — Implementation Plan"
       ],
       "nodes": 40,
       "cross_community_incidents": 2,
@@ -8719,7 +8724,7 @@
       ],
       "highest_degree_nodes": [
         {
-          "label": "Meta Progression Vertical Slice \u2014 Implementation Plan",
+          "label": "Meta Progression Vertical Slice — Implementation Plan",
           "file": "docs/meta_progression_implementation_plan.md",
           "line": "L1",
           "degree": 13
@@ -8741,7 +8746,7 @@
     {
       "community": "160",
       "names": [
-        "Tiny Demons \u2014 Peak Performance Plan"
+        "Tiny Demons — Peak Performance Plan"
       ],
       "nodes": 26,
       "cross_community_incidents": 2,
@@ -8750,19 +8755,19 @@
       ],
       "highest_degree_nodes": [
         {
-          "label": "Tiny Demons \u2014 Peak Performance Plan",
+          "label": "Tiny Demons — Peak Performance Plan",
           "file": "docs/peak-performance-plan.md",
           "line": "L1",
           "degree": 14
         },
         {
-          "label": "Workstream 4 \u2014 Reduce runtime frame cost",
+          "label": "Workstream 4 — Reduce runtime frame cost",
           "file": "docs/peak-performance-plan.md",
           "line": "L220",
           "degree": 5
         },
         {
-          "label": "Workstream 1 \u2014 Make measurement automatic",
+          "label": "Workstream 1 — Make measurement automatic",
           "file": "docs/peak-performance-plan.md",
           "line": "L122",
           "degree": 4
@@ -8859,7 +8864,7 @@
           "degree": 5
         },
         {
-          "label": "2. ConfigFile \u2014 Settings",
+          "label": "2. ConfigFile — Settings",
           "file": ".opencode/skills/save-load/references/configfile.md",
           "line": "L8",
           "degree": 3
@@ -9666,13 +9671,13 @@
           "degree": 20
         },
         {
-          "label": "Issue 6 \u2014 R5 and R6 currently produce identical rooms",
+          "label": "Issue 6 — R5 and R6 currently produce identical rooms",
           "file": "docs/current-issues-and-resolution-plan.md",
           "line": "L356",
           "degree": 3
         },
         {
-          "label": "Issue 7 \u2014 Add minimap access and flame-room fast travel",
+          "label": "Issue 7 — Add minimap access and flame-room fast travel",
           "file": "docs/current-issues-and-resolution-plan.md",
           "line": "L415",
           "degree": 3
@@ -9915,7 +9920,7 @@
     {
       "community": "196",
       "names": [
-        "Tiny Demons \u2014 Version 0.3.82 Codebase Audit"
+        "Tiny Demons — Version 0.3.82 Codebase Audit"
       ],
       "nodes": 27,
       "cross_community_incidents": 3,
@@ -9924,7 +9929,7 @@
       ],
       "highest_degree_nodes": [
         {
-          "label": "Tiny Demons \u2014 Version 0.3.82 Codebase Audit",
+          "label": "Tiny Demons — Version 0.3.82 Codebase Audit",
           "file": "docs/AUDIT.md",
           "line": "L1",
           "degree": 22
@@ -10009,7 +10014,7 @@
     {
       "community": "199",
       "names": [
-        "Tiny Demons \u2014 Elemental Spell Forms Plan"
+        "Tiny Demons — Elemental Spell Forms Plan"
       ],
       "nodes": 24,
       "cross_community_incidents": 11,
@@ -10019,7 +10024,7 @@
       ],
       "highest_degree_nodes": [
         {
-          "label": "Tiny Demons \u2014 Elemental Spell Forms Plan",
+          "label": "Tiny Demons — Elemental Spell Forms Plan",
           "file": "docs/elemental-spell-forms-plan.md",
           "line": "L1",
           "degree": 12
@@ -10041,7 +10046,7 @@
     {
       "community": "200",
       "names": [
-        "Freeze \u2014 Water + Ice Mixture Status Design"
+        "Freeze — Water + Ice Mixture Status Design"
       ],
       "nodes": 22,
       "cross_community_incidents": 9,
@@ -10051,7 +10056,7 @@
       ],
       "highest_degree_nodes": [
         {
-          "label": "Freeze \u2014 Water + Ice Mixture Status Design",
+          "label": "Freeze — Water + Ice Mixture Status Design",
           "file": "docs/freeze-status-design.md",
           "line": "L1",
           "degree": 13
@@ -10221,7 +10226,7 @@
           "degree": 12
         },
         {
-          "label": "Tiny Demons \u2014 Content Authoring System Plan",
+          "label": "Tiny Demons — Content Authoring System Plan",
           "file": "docs/authoring-system-plan.md",
           "line": "L1",
           "degree": 11
@@ -10237,7 +10242,7 @@
     {
       "community": "206",
       "names": [
-        "Tiny Demons \u2014 Composition Refactor Analysis and Handoff"
+        "Tiny Demons — Composition Refactor Analysis and Handoff"
       ],
       "nodes": 27,
       "cross_community_incidents": 3,
@@ -10246,7 +10251,7 @@
       ],
       "highest_degree_nodes": [
         {
-          "label": "Tiny Demons \u2014 Composition Refactor Analysis and Handoff",
+          "label": "Tiny Demons — Composition Refactor Analysis and Handoff",
           "file": "docs/composition-refactor-analysis.md",
           "line": "L1",
           "degree": 13
@@ -10336,7 +10341,7 @@
     {
       "community": "209",
       "names": [
-        "Tiny Demons \u2014 Modular Display and Settings Plan"
+        "Tiny Demons — Modular Display and Settings Plan"
       ],
       "nodes": 36,
       "cross_community_incidents": 7,
@@ -10347,7 +10352,7 @@
       ],
       "highest_degree_nodes": [
         {
-          "label": "Tiny Demons \u2014 Modular Display and Settings Plan",
+          "label": "Tiny Demons — Modular Display and Settings Plan",
           "file": "docs/modular-display-and-settings-plan.md",
           "line": "L1",
           "degree": 17
@@ -11109,7 +11114,7 @@
           "degree": 92
         },
         {
-          "label": "space-bunny \u2014 status",
+          "label": "space-bunny — status",
           "file": "coord/status-space-bunny.md",
           "line": "L1",
           "degree": 12
@@ -11233,7 +11238,7 @@
     {
       "community": "236",
       "names": [
-        "Tiny Demons \u2014 Long-Term Composition and Performance Plan"
+        "Tiny Demons — Long-Term Composition and Performance Plan"
       ],
       "nodes": 18,
       "cross_community_incidents": 15,
@@ -11242,19 +11247,19 @@
       ],
       "highest_degree_nodes": [
         {
-          "label": "Tiny Demons \u2014 Long-Term Composition and Performance Plan",
+          "label": "Tiny Demons — Long-Term Composition and Performance Plan",
           "file": "docs/long-term-composition-and-performance-plan.md",
           "line": "L1",
           "degree": 12
         },
         {
-          "label": "Measured improvement \u2014 2026-09-19 (startup + per-frame allocation churn)",
+          "label": "Measured improvement — 2026-09-19 (startup + per-frame allocation churn)",
           "file": "docs/long-term-composition-and-performance-plan.md",
           "line": "L574",
           "degree": 7
         },
         {
-          "label": "Measured improvement \u2014 2026-09-15 (room-transition hitches)",
+          "label": "Measured improvement — 2026-09-15 (room-transition hitches)",
           "file": "docs/long-term-composition-and-performance-plan.md",
           "line": "L528",
           "degree": 5
@@ -11264,7 +11269,7 @@
     {
       "community": "237",
       "names": [
-        "FFIII-Inspired Six-Stat & Menu Redesign \u2014 Implementation Plan"
+        "FFIII-Inspired Six-Stat & Menu Redesign — Implementation Plan"
       ],
       "nodes": 43,
       "cross_community_incidents": 3,
@@ -11273,7 +11278,7 @@
       ],
       "highest_degree_nodes": [
         {
-          "label": "FFIII-Inspired Six-Stat & Menu Redesign \u2014 Implementation Plan",
+          "label": "FFIII-Inspired Six-Stat & Menu Redesign — Implementation Plan",
           "file": "docs/ffiii-inspired-stats-and-menu-implementation-plan.md",
           "line": "L1",
           "degree": 12
@@ -11393,7 +11398,7 @@
     {
       "community": "241",
       "names": [
-        "Tiny Demons \u2014 Web Port Implementation Plan"
+        "Tiny Demons — Web Port Implementation Plan"
       ],
       "nodes": 20,
       "cross_community_incidents": 6,
@@ -11402,7 +11407,7 @@
       ],
       "highest_degree_nodes": [
         {
-          "label": "Tiny Demons \u2014 Web Port Implementation Plan",
+          "label": "Tiny Demons — Web Port Implementation Plan",
           "file": "docs/web-port-implementation-plan.md",
           "line": "L1",
           "degree": 14
@@ -11709,7 +11714,7 @@
     {
       "community": "251",
       "names": [
-        "Tiny Demons \u2014 Durable Save and Cloud Sync Plan"
+        "Tiny Demons — Durable Save and Cloud Sync Plan"
       ],
       "nodes": 28,
       "cross_community_incidents": 1,
@@ -11718,7 +11723,7 @@
       ],
       "highest_degree_nodes": [
         {
-          "label": "Tiny Demons \u2014 Durable Save and Cloud Sync Plan",
+          "label": "Tiny Demons — Durable Save and Cloud Sync Plan",
           "file": "docs/durable-save-and-cloud-sync-plan.md",
           "line": "L1",
           "degree": 13
@@ -11866,7 +11871,7 @@
     {
       "community": "256",
       "names": [
-        "Tiny Demons \u2014 Project Direction & Feature Set"
+        "Tiny Demons — Project Direction & Feature Set"
       ],
       "nodes": 18,
       "cross_community_incidents": 1,
@@ -11875,19 +11880,19 @@
       ],
       "highest_degree_nodes": [
         {
-          "label": "Tiny Demons \u2014 Project Direction & Feature Set",
+          "label": "Tiny Demons — Project Direction & Feature Set",
           "file": "docs/project_direction.md",
           "line": "L1",
           "degree": 13
         },
         {
-          "label": "1. Elemental aspects \u2014 the identity system",
+          "label": "1. Elemental aspects — the identity system",
           "file": "docs/project_direction.md",
           "line": "L64",
           "degree": 4
         },
         {
-          "label": "6. Room variety \u2014 puzzles and traps",
+          "label": "6. Room variety — puzzles and traps",
           "file": "docs/project_direction.md",
           "line": "L227",
           "degree": 3
@@ -12361,7 +12366,7 @@
     {
       "community": "271",
       "names": [
-        "Tiny Demons \u2014 Elemental Chroma System Handoff"
+        "Tiny Demons — Elemental Chroma System Handoff"
       ],
       "nodes": 23,
       "cross_community_incidents": 2,
@@ -12370,7 +12375,7 @@
       ],
       "highest_degree_nodes": [
         {
-          "label": "Tiny Demons \u2014 Elemental Chroma System Handoff",
+          "label": "Tiny Demons — Elemental Chroma System Handoff",
           "file": "docs/elemental-chroma-handoff.md",
           "line": "L1",
           "degree": 11
@@ -12476,7 +12481,7 @@
           "degree": 14
         },
         {
-          "label": "Authored Run 2\u2013R5 and generated R6+ layouts",
+          "label": "Authored Run 2–R5 and generated R6+ layouts",
           "file": "docs/run1-dungeon-map-design.md",
           "line": "L214",
           "degree": 3
@@ -13002,7 +13007,7 @@
           "degree": 7
         },
         {
-          "label": "Full-menu audit \u2014 September 2026",
+          "label": "Full-menu audit — September 2026",
           "file": "docs/demon-hub-menu-navigation-plan.md",
           "line": "L99",
           "degree": 2
@@ -13012,7 +13017,7 @@
     {
       "community": "291",
       "names": [
-        "Tiny Demons \u2014 Gear Effect Contracts"
+        "Tiny Demons — Gear Effect Contracts"
       ],
       "nodes": 16,
       "cross_community_incidents": 1,
@@ -13021,7 +13026,7 @@
       ],
       "highest_degree_nodes": [
         {
-          "label": "Tiny Demons \u2014 Gear Effect Contracts",
+          "label": "Tiny Demons — Gear Effect Contracts",
           "file": "docs/gear-effect-contracts.md",
           "line": "L1",
           "degree": 12
@@ -13112,7 +13117,7 @@
     {
       "community": "294",
       "names": [
-        "Procedural Dungeon Design \u2014 Generated Runs R6+"
+        "Procedural Dungeon Design — Generated Runs R6+"
       ],
       "nodes": 14,
       "cross_community_incidents": 6,
@@ -13121,7 +13126,7 @@
       ],
       "highest_degree_nodes": [
         {
-          "label": "Procedural Dungeon Design \u2014 Generated Runs R6+",
+          "label": "Procedural Dungeon Design — Generated Runs R6+",
           "file": "docs/procedural-dungeon-design.md",
           "line": "L1",
           "degree": 9
@@ -13174,7 +13179,7 @@
     {
       "community": "296",
       "names": [
-        "Tiny Demons \u2014 0.3.x Roadmap"
+        "Tiny Demons — 0.3.x Roadmap"
       ],
       "nodes": 16,
       "cross_community_incidents": 1,
@@ -13183,19 +13188,19 @@
       ],
       "highest_degree_nodes": [
         {
-          "label": "Tiny Demons \u2014 0.3.x Roadmap",
+          "label": "Tiny Demons — 0.3.x Roadmap",
           "file": "docs/ROADMAP.md",
           "line": "L1",
           "degree": 16
         },
         {
-          "label": "Accepted bounded gameplay slice \u2014 elemental status interactions",
+          "label": "Accepted bounded gameplay slice — elemental status interactions",
           "file": "docs/ROADMAP.md",
           "line": "L65",
           "degree": 1
         },
         {
-          "label": "Added workstream \u2014 architecture cleanup (0.3.x)",
+          "label": "Added workstream — architecture cleanup (0.3.x)",
           "file": "docs/ROADMAP.md",
           "line": "L79",
           "degree": 1
@@ -13786,7 +13791,7 @@
           "degree": 15
         },
         {
-          "label": "Tiny Demons \u2014 Gear System Rework",
+          "label": "Tiny Demons — Gear System Rework",
           "file": "docs/gear-system-rework.md",
           "line": "L1",
           "degree": 11
@@ -13896,7 +13901,7 @@
     {
       "community": "318",
       "names": [
-        "Godot UI \u2014 Control Nodes, Themes & Layout"
+        "Godot UI — Control Nodes, Themes & Layout"
       ],
       "nodes": 15,
       "cross_community_incidents": 1,
@@ -13905,7 +13910,7 @@
       ],
       "highest_degree_nodes": [
         {
-          "label": "Godot UI \u2014 Control Nodes, Themes & Layout",
+          "label": "Godot UI — Control Nodes, Themes & Layout",
           "file": ".opencode/skills/godot-ui/SKILL.md",
           "line": "L6",
           "degree": 11
@@ -14643,7 +14648,7 @@
     {
       "community": "341",
       "names": [
-        "Tiny Demons \u2014 Composition Root Reduction Plan"
+        "Tiny Demons — Composition Root Reduction Plan"
       ],
       "nodes": 14,
       "cross_community_incidents": 3,
@@ -14652,7 +14657,7 @@
       ],
       "highest_degree_nodes": [
         {
-          "label": "Tiny Demons \u2014 Composition Root Reduction Plan",
+          "label": "Tiny Demons — Composition Root Reduction Plan",
           "file": "docs/composition-root-reduction-plan.md",
           "line": "L1",
           "degree": 12
@@ -14705,7 +14710,7 @@
     {
       "community": "343",
       "names": [
-        "Tiny Demons \u2014 Elemental Chroma Implementation Plan"
+        "Tiny Demons — Elemental Chroma Implementation Plan"
       ],
       "nodes": 28,
       "cross_community_incidents": 3,
@@ -14714,7 +14719,7 @@
       ],
       "highest_degree_nodes": [
         {
-          "label": "Tiny Demons \u2014 Elemental Chroma Implementation Plan",
+          "label": "Tiny Demons — Elemental Chroma Implementation Plan",
           "file": "docs/elemental-chroma-implementation-plan.md",
           "line": "L1",
           "degree": 10
@@ -14736,7 +14741,7 @@
     {
       "community": "344",
       "names": [
-        "Tiny Demons \u2014 Gear Sources and Drop Tables"
+        "Tiny Demons — Gear Sources and Drop Tables"
       ],
       "nodes": 14,
       "cross_community_incidents": 1,
@@ -14745,7 +14750,7 @@
       ],
       "highest_degree_nodes": [
         {
-          "label": "Tiny Demons \u2014 Gear Sources and Drop Tables",
+          "label": "Tiny Demons — Gear Sources and Drop Tables",
           "file": "docs/gear-drop-tables.md",
           "line": "L1",
           "degree": 10
@@ -14867,29 +14872,29 @@
     {
       "community": "348",
       "names": [
-        "Tiny Demons \u2014 Elemental Chroma System Design"
+        "Tiny Demons — Elemental Chroma System Design"
       ],
       "nodes": 20,
       "cross_community_incidents": 1,
       "source_files": [
-        "docs/Tiny Demons \u2014 Elemental Chroma System Design.md"
+        "docs/Tiny Demons — Elemental Chroma System Design.md"
       ],
       "highest_degree_nodes": [
         {
-          "label": "Tiny Demons \u2014 Elemental Chroma System Design",
-          "file": "docs/Tiny Demons \u2014 Elemental Chroma System Design.md",
+          "label": "Tiny Demons — Elemental Chroma System Design",
+          "file": "docs/Tiny Demons — Elemental Chroma System Design.md",
           "line": "L1",
           "degree": 20
         },
         {
           "label": "Binding",
-          "file": "docs/Tiny Demons \u2014 Elemental Chroma System Design.md",
+          "file": "docs/Tiny Demons — Elemental Chroma System Design.md",
           "line": "L145",
           "degree": 1
         },
         {
           "label": "Chroma Depletion",
-          "file": "docs/Tiny Demons \u2014 Elemental Chroma System Design.md",
+          "file": "docs/Tiny Demons — Elemental Chroma System Design.md",
           "line": "L46",
           "degree": 1
         }
@@ -14978,7 +14983,7 @@
           "degree": 8
         },
         {
-          "label": "Tiny Demons \u2014 Juice and Player-Facing Feel",
+          "label": "Tiny Demons — Juice and Player-Facing Feel",
           "file": "JUICE.md",
           "line": "L1",
           "degree": 7
@@ -15440,7 +15445,7 @@
     {
       "community": "366",
       "names": [
-        "Tiny Demons \u2014 Elemental Status Implementation Plan"
+        "Tiny Demons — Elemental Status Implementation Plan"
       ],
       "nodes": 14,
       "cross_community_incidents": 2,
@@ -15449,7 +15454,7 @@
       ],
       "highest_degree_nodes": [
         {
-          "label": "Tiny Demons \u2014 Elemental Status Implementation Plan",
+          "label": "Tiny Demons — Elemental Status Implementation Plan",
           "file": "docs/elemental-status-implementation-plan.md",
           "line": "L1",
           "degree": 9
@@ -15665,7 +15670,7 @@
     {
       "community": "373",
       "names": [
-        "Tiny Demons \u2014 Verification Surface Audit"
+        "Tiny Demons — Verification Surface Audit"
       ],
       "nodes": 13,
       "cross_community_incidents": 3,
@@ -15675,7 +15680,7 @@
       ],
       "highest_degree_nodes": [
         {
-          "label": "Tiny Demons \u2014 Verification Surface Audit",
+          "label": "Tiny Demons — Verification Surface Audit",
           "file": "docs/verification-surface-audit.md",
           "line": "L1",
           "degree": 10
@@ -16123,7 +16128,7 @@
     {
       "community": "387",
       "names": [
-        "Tiny Demons \u2014 Juice Roadmap"
+        "Tiny Demons — Juice Roadmap"
       ],
       "nodes": 21,
       "cross_community_incidents": 4,
@@ -16133,7 +16138,7 @@
       ],
       "highest_degree_nodes": [
         {
-          "label": "Tiny Demons \u2014 Juice Roadmap",
+          "label": "Tiny Demons — Juice Roadmap",
           "file": "docs/juice-roadmap.md",
           "line": "L1",
           "degree": 11
@@ -16311,7 +16316,7 @@
     {
       "community": "393",
       "names": [
-        "Tiny Demons \u2014 Full Composition Plan"
+        "Tiny Demons — Full Composition Plan"
       ],
       "nodes": 19,
       "cross_community_incidents": 7,
@@ -16320,13 +16325,13 @@
       ],
       "highest_degree_nodes": [
         {
-          "label": "Tiny Demons \u2014 Full Composition Plan",
+          "label": "Tiny Demons — Full Composition Plan",
           "file": "docs/composition-plan-2026.md",
           "line": "L1",
           "degree": 16
         },
         {
-          "label": "Stage 0 \u2014 Re-base the guardrail (prerequisite)",
+          "label": "Stage 0 — Re-base the guardrail (prerequisite)",
           "file": "docs/composition-plan-2026.md",
           "line": "L286",
           "degree": 7
@@ -16342,7 +16347,7 @@
     {
       "community": "394",
       "names": [
-        "Tiny Demons \u2014 Contributor README"
+        "Tiny Demons — Contributor README"
       ],
       "nodes": 12,
       "cross_community_incidents": 1,
@@ -16351,7 +16356,7 @@
       ],
       "highest_degree_nodes": [
         {
-          "label": "Tiny Demons \u2014 Contributor README",
+          "label": "Tiny Demons — Contributor README",
           "file": "docs/CONTRIBUTOR_README.md",
           "line": "L1",
           "degree": 10
@@ -16373,7 +16378,7 @@
     {
       "community": "395",
       "names": [
-        "Tiny Demons \u2014 Authored Gear Catalogue"
+        "Tiny Demons — Authored Gear Catalogue"
       ],
       "nodes": 12,
       "cross_community_incidents": 1,
@@ -16382,7 +16387,7 @@
       ],
       "highest_degree_nodes": [
         {
-          "label": "Tiny Demons \u2014 Authored Gear Catalogue",
+          "label": "Tiny Demons — Authored Gear Catalogue",
           "file": "docs/gear-catalogue.md",
           "line": "L1",
           "degree": 11
@@ -16422,7 +16427,7 @@
           "degree": 19
         },
         {
-          "label": "Tiny Demons \u2014 Gear Catalogue and Equipment Specification",
+          "label": "Tiny Demons — Gear Catalogue and Equipment Specification",
           "file": "docs/gear-catalogue-spec.md",
           "line": "L1",
           "degree": 13
@@ -16484,7 +16489,7 @@
           "degree": 10
         },
         {
-          "label": "Refactor Route \u2014 Typed, Feature-Oriented Consolidation",
+          "label": "Refactor Route — Typed, Feature-Oriented Consolidation",
           "file": "docs/refactor-route.md",
           "line": "L1",
           "degree": 9
@@ -17422,7 +17427,7 @@
     {
       "community": "427",
       "names": [
-        "Composition Root Reduction \u2014 R0 Inventory"
+        "Composition Root Reduction — R0 Inventory"
       ],
       "nodes": 8,
       "cross_community_incidents": 3,
@@ -17431,7 +17436,7 @@
       ],
       "highest_degree_nodes": [
         {
-          "label": "Composition Root Reduction \u2014 R0 Inventory",
+          "label": "Composition Root Reduction — R0 Inventory",
           "file": "docs/composition-root-r0-inventory.md",
           "line": "L1",
           "degree": 7
@@ -17453,7 +17458,7 @@
     {
       "community": "428",
       "names": [
-        "Tiny Demons \u2014 Known Issues and Verification Gaps"
+        "Tiny Demons — Known Issues and Verification Gaps"
       ],
       "nodes": 14,
       "cross_community_incidents": 8,
@@ -17462,7 +17467,7 @@
       ],
       "highest_degree_nodes": [
         {
-          "label": "Tiny Demons \u2014 Known Issues and Verification Gaps",
+          "label": "Tiny Demons — Known Issues and Verification Gaps",
           "file": "docs/KNOWN_ISSUES.md",
           "line": "L1",
           "degree": 16
@@ -17907,7 +17912,7 @@
           "degree": 8
         },
         {
-          "label": "Focused baseline verification \u2014 2026-09-11",
+          "label": "Focused baseline verification — 2026-09-11",
           "file": "docs/KNOWN_ISSUES.md",
           "line": "L272",
           "degree": 8
@@ -18050,7 +18055,7 @@
     {
       "community": "447",
       "names": [
-        "Part 2 \u2014 Design Decisions"
+        "Part 2 — Design Decisions"
       ],
       "nodes": 14,
       "cross_community_incidents": 13,
@@ -18059,19 +18064,19 @@
       ],
       "highest_degree_nodes": [
         {
-          "label": "Part 2 \u2014 Design Decisions",
+          "label": "Part 2 — Design Decisions",
           "file": "docs/speed_stat_design.md",
           "line": "L154",
           "degree": 6
         },
         {
-          "label": "Speed Stat \u2014 Historical Design (Superseded)",
+          "label": "Speed Stat — Historical Design (Superseded)",
           "file": "docs/speed_stat_design.md",
           "line": "L1",
           "degree": 6
         },
         {
-          "label": "Part 1 \u2014 Understanding the Current System",
+          "label": "Part 1 — Understanding the Current System",
           "file": "docs/speed_stat_design.md",
           "line": "L30",
           "degree": 5
@@ -18162,7 +18167,7 @@
           "degree": 11
         },
         {
-          "label": "Focused follow-up \u2014 2026-09-13",
+          "label": "Focused follow-up — 2026-09-13",
           "file": "docs/test-target-audit.md",
           "line": "L165",
           "degree": 2
@@ -18225,13 +18230,13 @@
           "degree": 7
         },
         {
-          "label": "Slice B \u2014 Settings opt-in and pause DEBUG page",
+          "label": "Slice B — Settings opt-in and pause DEBUG page",
           "file": "docs/popup-and-debug-menu-plan.md",
           "line": "L88",
           "degree": 6
         },
         {
-          "label": "Slice A \u2014 Four-frame popup hold",
+          "label": "Slice A — Four-frame popup hold",
           "file": "docs/popup-and-debug-menu-plan.md",
           "line": "L36",
           "degree": 4
@@ -18666,7 +18671,7 @@
     {
       "community": "466",
       "names": [
-        "Tiny Demons \u2014 Elemental Ability and Status System Design"
+        "Tiny Demons — Elemental Ability and Status System Design"
       ],
       "nodes": 13,
       "cross_community_incidents": 5,
@@ -18675,7 +18680,7 @@
       ],
       "highest_degree_nodes": [
         {
-          "label": "Tiny Demons \u2014 Elemental Ability and Status System Design",
+          "label": "Tiny Demons — Elemental Ability and Status System Design",
           "file": "docs/elemental-ability-and-status-system.md",
           "line": "L1",
           "degree": 13
@@ -18729,7 +18734,7 @@
     {
       "community": "468",
       "names": [
-        "Tiny Demons \u2014 Gear Catalogue Expansion Implementation Plan"
+        "Tiny Demons — Gear Catalogue Expansion Implementation Plan"
       ],
       "nodes": 12,
       "cross_community_incidents": 2,
@@ -18738,7 +18743,7 @@
       ],
       "highest_degree_nodes": [
         {
-          "label": "Tiny Demons \u2014 Gear Catalogue Expansion Implementation Plan",
+          "label": "Tiny Demons — Gear Catalogue Expansion Implementation Plan",
           "file": "docs/gear-catalogue-implementation-plan.md",
           "line": "L1",
           "degree": 13
@@ -18760,7 +18765,7 @@
     {
       "community": "469",
       "names": [
-        "Tiny Demons \u2014 Architecture"
+        "Tiny Demons — Architecture"
       ],
       "nodes": 10,
       "cross_community_incidents": 3,
@@ -18769,7 +18774,7 @@
       ],
       "highest_degree_nodes": [
         {
-          "label": "Tiny Demons \u2014 Architecture",
+          "label": "Tiny Demons — Architecture",
           "file": "docs/ARCHITECTURE.md",
           "line": "L1",
           "degree": 7
@@ -18817,7 +18822,7 @@
           "degree": 9
         },
         {
-          "label": "Tiny Demons \u2014 Elemental Ability and Status System: Decision Addendum",
+          "label": "Tiny Demons — Elemental Ability and Status System: Decision Addendum",
           "file": "docs/elemental-ability-and-status-system-addendum.md",
           "line": "L1",
           "degree": 9
@@ -18889,7 +18894,7 @@
     {
       "community": "473",
       "names": [
-        "Tiny Demons \u2014 Repository Review: Composition, Code Efficiency, and Practicality"
+        "Tiny Demons — Repository Review: Composition, Code Efficiency, and Practicality"
       ],
       "nodes": 13,
       "cross_community_incidents": 6,
@@ -18898,7 +18903,7 @@
       ],
       "highest_degree_nodes": [
         {
-          "label": "Tiny Demons \u2014 Repository Review: Composition, Code Efficiency, and Practicality",
+          "label": "Tiny Demons — Repository Review: Composition, Code Efficiency, and Practicality",
           "file": "docs/repo-review-2026-10-01.md",
           "line": "L1",
           "degree": 14
@@ -19202,7 +19207,7 @@
           "degree": 4
         },
         {
-          "label": "Phase 1 \u2014 Web build baseline",
+          "label": "Phase 1 — Web build baseline",
           "file": "docs/web-port-implementation-plan.md",
           "line": "L298",
           "degree": 2
@@ -20140,7 +20145,7 @@
     {
       "community": "512",
       "names": [
-        "Tiny Demons \u2014 Contributor Map"
+        "Tiny Demons — Contributor Map"
       ],
       "nodes": 10,
       "cross_community_incidents": 1,
@@ -20149,7 +20154,7 @@
       ],
       "highest_degree_nodes": [
         {
-          "label": "Tiny Demons \u2014 Contributor Map",
+          "label": "Tiny Demons — Contributor Map",
           "file": "AGENTS.md",
           "line": "L1",
           "degree": 8
@@ -20233,7 +20238,7 @@
     {
       "community": "515",
       "names": [
-        "Tiny Demons \u2014 Design Interview Decision Record (2026-09-18)"
+        "Tiny Demons — Design Interview Decision Record (2026-09-18)"
       ],
       "nodes": 9,
       "cross_community_incidents": 1,
@@ -20242,7 +20247,7 @@
       ],
       "highest_degree_nodes": [
         {
-          "label": "Tiny Demons \u2014 Design Interview Decision Record (2026-09-18)",
+          "label": "Tiny Demons — Design Interview Decision Record (2026-09-18)",
           "file": "docs/design-interview-record-2026-09-18.md",
           "line": "L1",
           "degree": 9
@@ -20327,7 +20332,7 @@
     {
       "community": "518",
       "names": [
-        "Tiny Demons \u2014 Engineering Friction Audit"
+        "Tiny Demons — Engineering Friction Audit"
       ],
       "nodes": 9,
       "cross_community_incidents": 1,
@@ -20336,7 +20341,7 @@
       ],
       "highest_degree_nodes": [
         {
-          "label": "Tiny Demons \u2014 Engineering Friction Audit",
+          "label": "Tiny Demons — Engineering Friction Audit",
           "file": "docs/engineering-friction-audit.md",
           "line": "L1",
           "degree": 9
@@ -20421,7 +20426,7 @@
     {
       "community": "521",
       "names": [
-        "Tiny Demons \u2014 Component Composition Design"
+        "Tiny Demons — Component Composition Design"
       ],
       "nodes": 8,
       "cross_community_incidents": 5,
@@ -20430,7 +20435,7 @@
       ],
       "highest_degree_nodes": [
         {
-          "label": "Tiny Demons \u2014 Component Composition Design",
+          "label": "Tiny Demons — Component Composition Design",
           "file": "docs/component-composition-design.md",
           "line": "L1",
           "degree": 12
@@ -20625,13 +20630,13 @@
           "degree": 9
         },
         {
-          "label": "Phase 0 \u2014 Characterize the current generator",
+          "label": "Phase 0 — Characterize the current generator",
           "file": "docs/r6-plus-risk-reward-generation-plan.md",
           "line": "L532",
           "degree": 1
         },
         {
-          "label": "Phase 1 \u2014 Typed route roles and ungated backbone",
+          "label": "Phase 1 — Typed route roles and ungated backbone",
           "file": "docs/r6-plus-risk-reward-generation-plan.md",
           "line": "L544",
           "degree": 1
@@ -21308,7 +21313,7 @@
     {
       "community": "549",
       "names": [
-        "Composition Root Reduction \u2014 R1 Checkpoint 2"
+        "Composition Root Reduction — R1 Checkpoint 2"
       ],
       "nodes": 6,
       "cross_community_incidents": 2,
@@ -21317,7 +21322,7 @@
       ],
       "highest_degree_nodes": [
         {
-          "label": "Composition Root Reduction \u2014 R1 Checkpoint 2",
+          "label": "Composition Root Reduction — R1 Checkpoint 2",
           "file": "docs/composition-root-r1-checkpoint.md",
           "line": "L1",
           "degree": 5
@@ -21829,13 +21834,13 @@
           "degree": 8
         },
         {
-          "label": "Phase 1 \u2014 Characterization and seams",
+          "label": "Phase 1 — Characterization and seams",
           "file": "docs/fusion-bind-menu-implementation-plan.md",
           "line": "L298",
           "degree": 1
         },
         {
-          "label": "Phase 2 \u2014 Build editor-authored scenes",
+          "label": "Phase 2 — Build editor-authored scenes",
           "file": "docs/fusion-bind-menu-implementation-plan.md",
           "line": "L309",
           "degree": 1
@@ -22086,7 +22091,7 @@
           "degree": 14
         },
         {
-          "label": "Tiny Demons \u2014 Elemental Slimes and Combat Matchups",
+          "label": "Tiny Demons — Elemental Slimes and Combat Matchups",
           "file": "docs/elemental-slimes-and-combat-plan.md",
           "line": "L1",
           "degree": 13
@@ -22586,7 +22591,7 @@
           "degree": 6
         },
         {
-          "label": "Completed batch 3 \u2014 script semantics",
+          "label": "Completed batch 3 — script semantics",
           "file": "coord/status-codex.md",
           "line": "L23",
           "degree": 1
@@ -22772,13 +22777,13 @@
           "degree": 4
         },
         {
-          "label": "`mcp_toolkit/limits/save_read_cap_kb` \u2014 default `256`",
+          "label": "`mcp_toolkit/limits/save_read_cap_kb` — default `256`",
           "file": "addons/godot_mcp_toolkit/docs/advanced_configuration.md",
           "line": "L134",
           "degree": 1
         },
         {
-          "label": "`mcp_toolkit/limits/script_read_cap_kb` \u2014 default `256`",
+          "label": "`mcp_toolkit/limits/script_read_cap_kb` — default `256`",
           "file": "addons/godot_mcp_toolkit/docs/advanced_configuration.md",
           "line": "L147",
           "degree": 1
@@ -23320,7 +23325,7 @@
     {
       "community": "613",
       "names": [
-        "opencode \u2014 status"
+        "opencode — status"
       ],
       "nodes": 5,
       "cross_community_incidents": 2,
@@ -23329,7 +23334,7 @@
       ],
       "highest_degree_nodes": [
         {
-          "label": "opencode \u2014 status",
+          "label": "opencode — status",
           "file": "coord/status-opencode.md",
           "line": "L1",
           "degree": 5
@@ -24780,7 +24785,7 @@
     {
       "community": "724",
       "names": [
-        "Tiny Demons \u2014 Astra Review Package"
+        "Tiny Demons — Astra Review Package"
       ],
       "nodes": 6,
       "cross_community_incidents": 1,
@@ -24789,7 +24794,7 @@
       ],
       "highest_degree_nodes": [
         {
-          "label": "Tiny Demons \u2014 Astra Review Package",
+          "label": "Tiny Demons — Astra Review Package",
           "file": "docs/review/00-astra-review-index.md",
           "line": "L1",
           "degree": 5
@@ -25194,7 +25199,7 @@
     {
       "community": "776",
       "names": [
-        "Composition Root Reduction \u2014 2,000-Line Milestone"
+        "Composition Root Reduction — 2,000-Line Milestone"
       ],
       "nodes": 5,
       "cross_community_incidents": 1,
@@ -25203,7 +25208,7 @@
       ],
       "highest_degree_nodes": [
         {
-          "label": "Composition Root Reduction \u2014 2,000-Line Milestone",
+          "label": "Composition Root Reduction — 2,000-Line Milestone",
           "file": "docs/composition-root-2000-milestone.md",
           "line": "L1",
           "degree": 5
@@ -25943,7 +25948,7 @@
           "degree": 1
         },
         {
-          "label": "SMS Component SFX Lab. A component-based spectral modeling synthesis toolkit:\u2026",
+          "label": "SMS Component SFX Lab. A component-based spectral modeling synthesis toolkit:…",
           "file": "tools/sfx_lab/src/sfxlab/__init__.py",
           "line": "L1",
           "degree": 1
@@ -29119,5 +29124,6 @@
     "assets/sounds/reconstructed_ui/zelda_sms_library/ww_systemse_066.sms.wav",
     "assets/sounds/reconstructed_ui/zelda_sms_library/ww_systemse_067.sms.wav"
   ],
-  "audio_literal_reference_review_note": "All 335 lack a full literal path in scanned text because constants compose paths. Use resolved_sound_catalog; neither scan authorizes deletion."
+  "audio_literal_reference_review_note": "All 335 lack a full literal path in scanned text because constants compose paths. Use resolved_sound_catalog; neither scan authorizes deletion.",
+  "tracked_file_census_note": "Path inventory reconciled to tracked-tree commit 85c9f071 plus the two generated P0 review artifacts; graph structure remains from built_at_commit. No tracked source paths were stale; newly added documentation is explicitly listed as unmapped."
 }

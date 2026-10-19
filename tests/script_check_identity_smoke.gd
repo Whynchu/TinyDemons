@@ -8,6 +8,10 @@ func _initialize() -> void:
 	var valid_message := 'ERROR: Parse Error: Invalid argument for "animation_context()" function: argument 1 should be "GameplayState" but is "%s".\n   at: GDScript::reload (%s:391)' % [uri, uri]
 	var valid_entries: Array[Dictionary] = [{"level": "error", "message": valid_message}]
 	_expect(ScriptCommands._only_self_identity_errors(valid_entries, "GameplayState"), "own class and same synthetic reload URI is recognized")
+	var filtered_result: Dictionary = ScriptCommands._self_identity_validation_result()
+	_expect(bool(filtered_result.get("valid", false)), "filtered self-type errors produce a successful result")
+	var filtered_diagnostics: Array = filtered_result.get("diagnostics", [])
+	_expect(filtered_diagnostics.is_empty(), "filtered self-type errors do not become user-facing warnings")
 	_expect(not ScriptCommands._only_self_identity_errors(valid_entries, "EnemyActor"), "a different declared class is not ignored")
 
 	var other_uri := "gdscript://different-script.gd"

@@ -84,7 +84,7 @@ func _actor_is_eligible(actor: Sprite2D) -> bool:
 		return false
 	if bool(actor.get_meta("boss_airborne", false)):
 		return false
-	if actor is SlimeActor and (actor as SlimeActor).is_spawn_locked():
+	if actor is EnemyActor and (actor as EnemyActor).is_spawn_locked():
 		return false
 	var spawn := actor.get_node_or_null("Spawn")
 	if spawn != null and bool(spawn.call("is_active")):

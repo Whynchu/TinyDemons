@@ -6,6 +6,7 @@ const SOUL_PICKUP_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers
 const GOLD_PICKUP_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/gold_pickup_controller.gd")
 const FEEDBACK_ANIMATION_REGISTRY_SCRIPT = preload("res://scripts/services/feedback_animation_registry.gd")
 const PLAYER_ASPECT_ABILITY_COMPONENT_SCRIPT = preload("res://scripts/components/player_aspect_ability_component.gd")
+const ENEMY_CATALOG_SCRIPT = preload("res://scripts/content/enemy_catalog.gd")
 const PROFILE_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/profile_runtime_controller.gd")
 const PICKUP_RUNTIME_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/pickup_runtime_controller.gd")
 const RUN_FLOW_CONTROLLER_SCRIPT = preload("res://scripts/runtime/controllers/run_flow_controller.gd")
@@ -271,7 +272,7 @@ func initialize(root: GameplayState, preview_session: RefCounted = null) -> void
 	var actors: Array[Sprite2D] = [player]; actors.append_array(slimes); root.set("actor_sprites", actors)
 	geometry_debug.configure(actors, Callable(root, "_actor_foot"), Callable(root, "_collision_rect"), Callable(root, "_slime_body_polygon"))
 	var collision: Array[Sprite2D] = [player]; collision.append_array(slimes); collision.append(chest); root.set("collision_sprites", collision)
-	var enemy_services := RoomEnemySpawnServices.new()
+	var enemy_services := RoomEnemySpawnServices.new(); enemy_services.enemy_roster = EnemyRoster.new(); enemy_services.enemy_roster.replace_members(slimes)
 	enemy_services.slime_tuning = root.slime_tuning; enemy_services.rng = root.rng; enemy_services.player_profile = root.player_profile; enemy_services.run_state = root.run_state; enemy_services.walkable_area = root.walkable_area; enemy_services.dungeon_graph = root.dungeon_graph; enemy_services.dungeon_map_controller = root.dungeon_map_controller; enemy_services.effects_spawner = root.effects_spawner; enemy_services.hud_controller = root.hud_controller; enemy_services.occlusion_renderer = occlusion; enemy_services.player = player; enemy_services.chest = chest; enemy_services.slimes = slimes; enemy_services.collision_rect = Callable(root, "_collision_rect"); enemy_services.actor_sprites = actors; enemy_services.collision_sprites = collision; enemy_services.depth_sprites = root.depth_sprites; enemy_services.occluder_sprites = root.occluder_sprites; enemy_services.last_valid_positions = root.slime_last_valid_positions; enemy_services.actor_foot_offset = root.ACTOR_FOOT_OFFSET
 	enemy_services.set_actor_visual_scale = Callable(root, "_set_actor_visual_scale"); enemy_services.apply_actor_scale = Callable(root, "_apply_actor_scale"); enemy_services.apply_enemy_room_level = Callable(root, "_apply_enemy_room_level"); enemy_services.enemy_max_health = Callable(root, "_enemy_max_health"); enemy_services.prepare_slime_idle_visual = Callable(root, "_prepare_slime_idle_visual"); enemy_services.begin_slime_spawn = Callable(root, "_begin_slime_spawn"); enemy_services.build_slime_direction_textures = Callable(root, "_build_slime_direction_textures"); enemy_services.assign_slime_attack_frames = Callable(root, "_assign_slime_attack_frames"); enemy_services.assign_slime_shocked_frames = Callable(root, "_assign_slime_shocked_frames"); enemy_services.assign_slime_spawn_frames = Callable(root, "_assign_slime_spawn_frames")
 	enemy_services.enemy_health_damaged_callback = Callable(root, "_on_slime_health_damaged"); enemy_services.enemy_health_healed_callback = Callable(root, "_on_slime_health_healed"); enemy_services.enemy_health_changed_callback = Callable(root, "_on_slime_health_changed")
@@ -431,7 +432,7 @@ func _preview_session_errors(session: RefCounted) -> Array[String]:
 	if String(loadout.get("preset", "")) != "starter":
 		errors.append("Enemy preview mode requires the starter loadout preset.")
 	var content_id := session.get("content_id") as StringName
-	if not EnemyFactory.is_variant(content_id):
+	if not ENEMY_CATALOG_SCRIPT.contains_id(content_id):
 		errors.append("Unknown enemy content ID '%s'." % content_id)
 	return errors
 
@@ -600,10 +601,10 @@ func _initialize_walkable_area(root: GameplayState, edge_margin: float, slime_ed
 func _initialize_slimes(root: Object, slimes: Array[Sprite2D]) -> void:
 	var rng := root.get("rng") as RandomNumberGenerator; var tuning := root.get("slime_tuning") as SlimeTuning
 	for slime in slimes:
-		var actor := slime as SlimeActor
+		var actor := slime as EnemyActor
 		if actor != null: actor.reset_runtime_state(slime.position, root.call("_nearest_slime_walkable_point", root.call("_actor_foot", slime)), rng.randf_range(tuning.repath_min, tuning.repath_max), rng.randf_range(tuning.hold_min, tuning.hold_max), rng.randf_range(0.0, tuning.idle_breath_time), rng.randf_range(0.2, 0.6))
 		root.call("_update_slime_attack_guides", slime); root.call("_apply_enemy_room_level", slime)
-		var maximum := float(root.call("_enemy_max_health", slime)); var slime_actor := slime as SlimeActor
+		var maximum := float(root.call("_enemy_max_health", slime)); var slime_actor := slime as EnemyActor
 		if slime_actor != null: slime_actor.ensure_components()
 		var health := root.call("_slime_health", slime) as HealthComponent
 		if slime_actor != null: health = slime_actor.configure_health(maximum, tuning.regen_delay, tuning.regen_interval, tuning.regen_amount)

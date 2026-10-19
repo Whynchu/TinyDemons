@@ -1,5 +1,23 @@
 # Asset And Reference Audit
 
+## P0 Reconciliation — 2026-10-12
+
+The whole-map P0 inventory in [composition-p0-disposition.json](composition-p0-disposition.json)
+reconciles the earlier static audit against the tracked-tree snapshot. It finds
+335 tracked audio clips, 53 catalog keys resolving to 90 declared/preferred
+endpoints, and 245 clips outside those endpoints. The outside-endpoint files
+remain candidates for source, alternate, preview, or tooling review; catalog
+absence does not establish that they are unused. It also records 22 editable
+BFXR source projects separately from the audio clip count.
+
+Exact hashing found 184 media groups: 5 audio groups and 179 non-audio groups.
+Many non-audio matches are source-art/runtime copies. Hash equality is not a
+deletion decision. The P0 inventory retains all 586 `.import` files and 608
+`.uid` sidecars, and no asset or sidecar is approved for removal. The older
+counts below describe the 2026-09-07 audit snapshot; use the P0 inventory for
+the current reconciliation. The full cleanup proposal retains the exported-PCK,
+catalog fallback, preview, test and regeneration evidence gates.
+
 Status: conservative static audit
 
 Audit date: 2026-09-07

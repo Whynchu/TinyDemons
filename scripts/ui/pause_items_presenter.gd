@@ -8,6 +8,11 @@ const PauseItemsModelScript = preload("res://scripts/ui/pause_items_model.gd")
 const PauseMenuLayoutScript = preload("res://scripts/ui/pause_menu_layout.gd")
 const MenuResponsiveLayoutScript = preload("res://scripts/ui/menu_responsive_layout.gd")
 const ITEMS_DETAIL_LINE_COUNT := 10
+const FILTER_Y := 26.0
+const SORT_Y := 41.0
+const LIST_Y := 53.0
+const ROW_PITCH := 11.0
+const DETAIL_PITCH := 8.0
 
 var model: PauseItemsModel = null
 var filter_buttons: Array[Button] = []
@@ -16,42 +21,40 @@ var position_text: Sprite2D = null
 var row_buttons: Array[Button] = []
 var detail_texts: Array[Sprite2D] = []
 var empty_text: Sprite2D = null
-var divider: ColorRect = null
+var list_window: NinePatchRect = null
+var detail_window: NinePatchRect = null
+var _page: MenuScreen
 var _catalog: ItemCatalog = null
 var _widget_factory: MenuWidgetFactory = null
 var _view_width := 240.0
 
 
-func build(page: Control, view_size: Vector2, pixel_texture: Callable, widget_factory: MenuWidgetFactory) -> void:
+func build(page: MenuScreen, view_size: Vector2, pixel_texture: Callable, widget_factory: MenuWidgetFactory) -> void:
 	if page == null:
 		return
+	_page = page
 	_widget_factory = widget_factory
 	model = PauseItemsModelScript.new() as PauseItemsModel
 	_catalog = ItemCatalog.new()
+	list_window = page.add_window("ItemsListWindow", Rect2(4, 38, 110, 95))
+	detail_window = page.add_window("ItemsDetailWindow", Rect2(116, 38, 120, 95))
 	filter_buttons.clear()
 	for index in PauseItemsModel.FILTER_COUNT:
-		var button := widget_factory.make_retro_button(model.filter_label(index), Vector2(8.0 + index * 54.0, 22.0), Vector2(52.0, 12.0), pixel_texture)
+		var button := widget_factory.make_retro_button(model.filter_label(index), Vector2(8.0 + index * 54.0, FILTER_Y), Vector2(52.0, 12.0), pixel_texture)
 		button.name = "PauseItemsFilter%d" % index
 		button.focus_mode = Control.FOCUS_NONE
 		page.add_child(button)
 		button.pressed.connect(_set_filter.bind(index))
 		filter_buttons.append(button)
-	sort_button = widget_factory.make_retro_button(model.sort_label(), Vector2(8.0, 35.0), Vector2(108.0, 11.0), pixel_texture)
+	sort_button = widget_factory.make_retro_button(model.sort_label(), Vector2(8.0, SORT_Y), Vector2(103.0, 11.0), pixel_texture)
 	sort_button.name = "PauseItemsSort"
 	sort_button.focus_mode = Control.FOCUS_NONE
 	sort_button.pressed.connect(toggle_sort)
 	page.add_child(sort_button)
-	position_text = widget_factory.create_sprite(page, "PauseItemsPosition", null, Vector2(122.0, 37.0), false)
-	divider = ColorRect.new()
-	divider.name = "PauseItemsDivider"
-	divider.position = Vector2(115.0, 34.0)
-	divider.size = Vector2(1.0, 99.0)
-	divider.color = Color(0.36, 0.4, 0.52, 0.85)
-	divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	page.add_child(divider)
+	position_text = widget_factory.create_sprite(page, "PauseItemsPosition", null, Vector2(122.0, 42.0), false)
 	row_buttons.clear()
 	for index in PauseItemsModel.VISIBLE_ROW_COUNT:
-		var button := widget_factory.make_retro_button("", Vector2(8.0, 47.0 + index * 12.0), Vector2(103.0, 11.0), pixel_texture)
+		var button := widget_factory.make_retro_button("", Vector2(8.0, LIST_Y + index * ROW_PITCH), Vector2(103.0, 11.0), pixel_texture)
 		button.name = "PauseItemsRow%d" % index
 		button.focus_mode = Control.FOCUS_NONE
 		button.pressed.connect(_select_visible_row.bind(index))
@@ -63,34 +66,42 @@ func build(page: Control, view_size: Vector2, pixel_texture: Callable, widget_fa
 		row_buttons.append(button)
 	detail_texts.clear()
 	for index in ITEMS_DETAIL_LINE_COUNT:
-		detail_texts.append(widget_factory.create_sprite(page, "PauseItemsDetail%d" % index, null, Vector2(122.0, 46.0 + index * 10.0), false))
-	empty_text = widget_factory.create_sprite(page, "PauseItemsEmpty", null, Vector2(13.0, 50.0), false)
+		detail_texts.append(widget_factory.create_sprite(page, "PauseItemsDetail%d" % index, null, Vector2(122.0, LIST_Y + index * DETAIL_PITCH), false))
+	empty_text = widget_factory.create_sprite(page, "PauseItemsEmpty", null, Vector2(13.0, LIST_Y + 3.0), false)
 	empty_text.texture = pixel_texture.call("NO ITEMS", PauseMenuLayoutScript.MUTED_TEXT_COLOR) as Texture2D
 	empty_text.visible = false
 	position_controls(view_size)
 
 
 func position_controls(view_size: Vector2) -> void:
+	if _page == null:
+		return
 	_view_width = view_size.x
-	var list_rect := MenuResponsiveLayoutScript.map_rect(Rect2(8.0, 47.0, 103.0, 11.0), view_size.x)
-	var divider_x := MenuResponsiveLayoutScript.map_edge(115.0, view_size.x)
+	var list_rect := MenuResponsiveLayoutScript.map_rect(Rect2(8.0, LIST_Y, 103.0, 11.0), view_size.x)
 	var detail_x := MenuResponsiveLayoutScript.map_edge(122.0, view_size.x)
+	var window_height := maxf(view_size.y - _page.footer_height - 3.0 - 38.0, 6.0)
+	if list_window != null:
+		var rect := MenuResponsiveLayoutScript.map_rect(Rect2(4, 38, 110, window_height), view_size.x)
+		list_window.position = rect.position
+		list_window.size = rect.size
+	if detail_window != null:
+		var rect := MenuResponsiveLayoutScript.map_rect(Rect2(116, 38, 120, window_height), view_size.x)
+		detail_window.position = rect.position
+		detail_window.size = rect.size
 	for index in filter_buttons.size():
-		filter_buttons[index].position = Vector2(MenuResponsiveLayoutScript.map_edge(8.0 + index * 54.0, view_size.x), 22.0)
+		filter_buttons[index].position = Vector2(MenuResponsiveLayoutScript.map_edge(8.0 + index * 54.0, view_size.x), FILTER_Y)
 	if sort_button != null:
-		sort_button.position = Vector2(MenuResponsiveLayoutScript.map_edge(8.0, view_size.x), 35.0)
+		sort_button.position = Vector2(MenuResponsiveLayoutScript.map_edge(8.0, view_size.x), SORT_Y)
+		sort_button.size.x = list_rect.size.x
 	if position_text != null:
-		position_text.position = Vector2(detail_x, 37.0)
-	if divider != null:
-		divider.position = Vector2(divider_x, 34.0)
-		divider.size = Vector2(1.0, maxf(minf(view_size.y - 27.0, 99.0), 1.0))
+		position_text.position = Vector2(detail_x, 42.0)
 	for index in row_buttons.size():
-		row_buttons[index].position = Vector2(list_rect.position.x, 47.0 + index * 12.0)
+		row_buttons[index].position = Vector2(list_rect.position.x, LIST_Y + index * ROW_PITCH)
 		row_buttons[index].size = list_rect.size
 	for index in detail_texts.size():
-		detail_texts[index].position = Vector2(detail_x, 46.0 + index * 10.0)
+		detail_texts[index].position = Vector2(detail_x, LIST_Y + index * DETAIL_PITCH)
 	if empty_text != null:
-		empty_text.position = Vector2(list_rect.position.x + 5.0, 50.0)
+		empty_text.position = Vector2(list_rect.position.x + 5.0, LIST_Y + 3.0)
 
 
 func update(profile: PlayerProfile, pixel_texture: Callable, highlight: Color) -> void:

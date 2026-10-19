@@ -83,6 +83,9 @@ func _initialize() -> void:
 	var run_one_rooms := RoomController.new()
 	run_one_rooms.progression_run_rank = 1
 	run_one_rooms.progression_run_number = 1
+	# Run 1's default theme is neutral-only. Supply an authored Fire theme here
+	# so the test measures the support companion roll instead of the theme filter.
+	run_one_rooms.set_run_element_theme([ElementCatalog.Element.FIRE])
 	var healer_seen_in_run_one := false
 	var healer_roll_successes := 0
 	var support_roll_opportunities := 0

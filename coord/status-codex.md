@@ -2,8 +2,321 @@
 
 _Only codex writes this file._
 
-**Focus:** Explicit extraction ledger reconciled against current code and active workstream plans; update pushed Tiny Demons review branch. Docs only; no runtime changes or deletions. Main history and unrelated worktree edits remain separate.
-**Updated:** 2026-10-12
+**Focus:** Unused top-right menu header windows are now opt-in; Equipment/Hub active headers retained.
+**Updated:** 2026-10-18
+
+## Latest handoff - optional top-right header window
+
+MenuScreen now exports show_header_window (default false). The TitleWindow
+remains at top left; unused HeaderWindow nodes stay hidden, including through
+resize. The shared scene also starts with that window hidden. Cloud Save
+explicitly enables it for its header Back control. Authored Equipment and
+Demon Hub header panels are unchanged by this correction.
+Expanded existing menu-route checks for visibility persistence, opt-in/out,
+and top-left title placement; gameplay checks remain unrun under owner
+instruction. Four focused script diagnostics pass; template/Pause/Hub/Equipment
+preloads pass through a temporary probe, removed with UID. Diff whitespace
+passes; script index regenerated. Menu authoring documents the option.
+No game execution, input, foreground screenshot, or scene switch. A background
+Graphify refresh writes to system TEMP `tiny-demons-header-graphify.log`;
+inspect completion before another writer. Changes remain uncommitted.
+
+## Latest correction - title scope and partial Pause chrome
+
+Owner explicitly excludes the main title screen from the menu-window change;
+its presenter is restored to its original source. Save Selection/New Save and
+other approved shared screens retain their migration.
+Status and Items previously only changed border skins and retained legacy
+Background/TitleTab/TitleRule geometry. Both are now MenuScreen instances in
+the authored Pause scene; old chrome nodes are removed. Runtime headings use
+the shared title window. Items replaces its old vertical rule with framed
+list/detail windows, fits seven rows and ten detail lines above the footer,
+and keeps filtering, sorting, and selection models intact. Hidden pages get
+explicit shell reflow during Pause layout changes.
+Updated existing route/Pause checks to guard the title exception, shared
+Status/Items shell, legacy-node retirement, and Items interior bounds. Checks
+compile but gameplay execution remains deferred per owner instruction.
+Five changed scripts/checks pass MCP diagnostics; all six relevant menu scene
+preloads pass through a temporary probe (removed with its UID); Pause resource
+ordering, manifest validation, and diff whitespace pass. Script index and
+existing authoring/ownership docs updated. No game start, simulated input,
+scene switch, or screenshot capture.
+A background Graphify refresh is running with output in system TEMP at
+`tiny-demons-pause-graphify.log`; inspect completion before another writer.
+All changes remain uncommitted with the existing shared working tree.
+
+## Correction - menu text resource parsing
+
+The menu migration placed the new shared ext_resource declaration after
+sub_resource blocks in Equipment, Shop, Demon Hub, and Pause. This is invalid
+Godot text-resource ordering and caused the reported cascading preload errors.
+Moved those declarations into the initial ext_resource section. A temporary
+MCP script-write preload probe passed for all ten menu/component/preview
+resources, including Shop/Fusion previews; the probe and UID were removed.
+ScreenStateController, PauseScreenPresenter, and the authoring plugin pass
+MCP script_check. External-resource ordering passes for all nine menu/component
+scene files; diff whitespace passes. No game start, input, or scene switch.
+The earlier script-only diagnostics were insufficient to establish scene-file
+validity; use explicit resource preload checks when changing scene resources.
+
+## Latest handoff - shared menu composition (2026-10-18)
+
+- Added MenuWindow (`scripts/ui/menu_window.gd`, scene in `scenes/ui/components/`) as the canonical frame-art/patch/filter/tile owner. Compatibility Panel cards use its StyleBoxTexture adapter.
+- Added MenuScreen and its authored scene: configurable title/header/content/footer rectangles, heading, and additional child windows. No gameplay dependencies or per-frame callback.
+- MenuWidgetFactory creates this shell for Title, Settings, Save Selection, Character Setup, Name Entry, Results, Game Over, and Cloud Save. Debug uses the same scene with its existing injected actions.
+- Authored Hub/Pause/Equipment/Shop windows and title tabs use the skin; inherited Fusion windows follow Shop. Bind and minimap construction reuse it too. Geometry/visibility comparison against HEAD confirms all five touched reference scene files retain their authored rectangles and visibility; 35 direct windows share the skin.
+- Screen presenters retain controls/actions; existing route/input owners are preserved. Old procedural frame/title builders were removed. The common route registry remains a separate backlog item.
+- Updated existing architecture, menu-authoring and feature docs, authoring Slice 4 status, and generated SCRIPT_INDEX (311 scripts). Added shell/artwork/resize assertions to menu_route_scene_smoke; manifest explicitly marks its runtime rerun unverified.
+- Static verification: all 16 initially checked scripts passed MCP script_check; final Window/Factory and dependent Hub legacy/stats presenters plus expanded test also pass. Manifest validator passes (160 rows / 158 runnable / 46 gate); composition regression audit passes; diff whitespace passes. No gameplay suites launched.
+- Owner requested no playtests while using the computer. Initial reference playtest was stopped; no subsequent game start, simulated input, scene switching, or foreground captures. Rendered/input acceptance remains open.
+- Graphify update was launched in exec session 33192 with output at the system TEMP path `tiny-demons-menu-graphify.log`; it was still CPU-processing at handoff. Inspect completion/freshness before another refresh. Late Panel-style adapter edits may require a later incremental refresh. Do not start concurrent map writers.
+- Changes remain uncommitted with pre-existing work. No release acceptance or clean gate is claimed.
+
+## Current session constraint
+
+Owner requested no game playtests while using the computer. Do not start the
+game, simulate input, raise windows, or capture foreground screenshots during
+this menu work. The inspection playtest was stopped immediately. Continue with
+source inspection and script diagnostics; rendered acceptance remains pending.
+
+## Latest handoff - room transition status preservation
+
+Removed the explicit player StatusComponent.clear_all() from room entry. The
+persistent player now retains the same records, durations, stacks, damage tick
+and stun cadence timers. New-run/recovery reset paths remain separate.
+Extended run1_door_path_smoke to carry stacked Burn/Shocked through a real
+doorway, compare records and timers, and check continued countdown/expiry.
+Both modified scripts pass MCP script_check. The editor and live game remain
+active, so no standalone runtime smoke was launched; the manifest row records
+that the expanded regression awaits runtime verification. Existing console
+errors refer to unrelated boss_movement_contact_smoke/spin_damage_smoke.
+No runtime status or room was modified by the inspection calls.
+Graphify refresh was started after diagnostics; it is still processing the
+existing map at handoff (Python process 12148). A duplicate invocation was
+stopped; do not start another concurrent refresh.
+Changes remain uncommitted alongside pre-existing work.
+
+## Latest handoff ? composition documentation closeout
+
+- Reduced AGENTS mandatory reading from 19 documents to three entry points with task-specific routing.
+- Replaced the contributor guide's stale cleanup queue and shortened the documentation map.
+- Added `docs/COMPOSITION_STATUS.md` as the single composition execution entry point, with current foundation, exceptions, and evidence links.
+- Marked older composition plans as supporting backlog/history; retained their unique decisions and stable link paths.
+- Corrected the component contract's obsolete claim that no data layer/factory exists. Preserved the reusable-component rules.
+- No runtime files changed by this pass; no runtime tests run. Navigation link targets checked (three entry pages, zero missing); `git diff --check` passed.
+- No documents deleted or relocated. No new runtime acceptance claimed. Existing source, test, and documentation edits remain in place; do not treat this handoff as a clean release checkpoint.
+- Further work starts with a concrete feature/ownership problem from the status page, not an old plan's entire unchecked list.
+
+## Earlier handoff context (historical)
+
+**Focus:** P3 refactor commit fd99745 is on the local `review/composition-cleanup-plan` branch. Remote push is pending explicit approval after automatic review blocked the export.
+**Updated:** 2026-10-14
+
+**P3 acceptance:** Recorded in the composition plan. The two focused P3 smokes
+remain unverified.
+
+## Latest correction - M1 plan alignment
+
+The user clarified that performance is not the current priority. Continue against
+the active authoring-system plan, whose M1 acceptance includes editor-side
+content lifecycle, preview state, and undo/redo. The next bounded check is the
+enemy design-preview geometry edit and undo/redo path; use only the live editor
+and leave authored `.tres` resources untouched.
+
+Follow-up live editor probe: the workbench drag helpers changed the collision
+guide from `18x8` to `21x9.5`; Undo restored `18x8`, Redo reapplied the edit, and
+a final Undo restored the original geometry with `dirty:false` and valid geometry.
+Changing the selected definition's display name surfaced “Unsaved changes — save
+when ready”; restoring it returned the preview to “All changes saved.” The
+invalid-ID probe showed the prior valid actor remains visible while the status
+reports the invalid ID; Refresh restored the clean Healer preview. That probe
+emitted one expected console warning; the retained debugger warning/error list
+is empty. No `.tres` was saved. The next plan item is the saved-resource
+lifecycle, but the current Create path writes both a standalone definition and
+the shared catalog and has no unregister/rollback operation, so first establish
+a reversible cleanup path before attempting that fixture. Exact rendered-palette
+capture and editor pointer routing remain open.
+
+## Latest handoff - M1 editor acceptance
+
+`authoring_dock_preview_smoke` and `preview_session_contract_smoke` pass with
+Godot 4.7.2. The elevated editor connected after the ordinary GUI process was
+blocked from writing its MCP token/registry files. Dock Refresh reported a
+current definition manifest and retained all 26 enemy IDs; Design selected
+`crimson`, whose workbench summary reported ready and valid geometry. Invoking
+the death action produced 26 transient particles and hid the intact actor; I
+cleared that transient state and restored the scene to its saved Healer/Boss
+defaults. The viewport texture capture lagged the inspected selection, so exact
+rendered palette acceptance remains open.
+
+The actual dock Play action launched `crimson` with seed `41723`. Its schema-v1
+payload used the starter loadout and boss encounter mode; the child wrote its
+heartbeat from its unique `%TEMP%` session directory. Stop exited the process
+and the launcher removed that directory. SHA-256 snapshots of eight active
+game settings/profile files were identical before and after. The editor's
+warning/error filter returned zero entries. The two test manifest rows now
+record their focused Godot passes and this live lifecycle evidence.
+
+Remaining M1 design acceptance is the saved-resource lifecycle, a real canvas
+geometry drag/undo cycle, and a reliable rendered-palette capture. No authored
+resource was saved and `docs/AUDIT.md` remains unchanged. `tools/validate_test_manifest.ps1`
+passes at 160 rows / 158 runnable / 46 gate. Graphify was not refreshed because
+this batch changed only coordination/test metadata, not source code.
+
+## Handoff - GameplayState script check
+
+The toolkit validator strips `class_name` before `GDScript.new().reload()`,
+which makes `self` synthetic (`gdscript://...`) and falsely rejects typed calls
+to the already-registered `GameplayState`. The validator now suppresses only a
+homogeneous set of same-URI errors whose expected type is exactly that declared
+class; real, mixed, mismatched-URI, and different-class errors remain failures.
+The compatibility note and `script_check_identity_smoke` cover the limitation
+and filtering boundaries. The focused smoke and
+`active_run_recovery_contract_smoke` pass on Godot 4.7.1 headless.
+
+User-authorized curated headless gate completed: 29 pass, 14 fail, and 3 timed
+out (46 paths); Web export and main-scene checks pass. Failures concern other
+existing gameplay/UI contracts. Focused enemy owner smokes also exposed
+unrelated P3 failures in `slime_brain.gd` typed arrays and the enemy entrance
+scene; details are in the task handoff. Manifest (160 rows / 158 runnable / 46
+gate), UID validation (468), composition self-test/strict audit, definitions
+(44/44), catalog report, and diff check passed. Do not change `docs/AUDIT.md`.
+
+The self-type filter now returns `valid: true` with an empty diagnostics array.
+The fresh editor's `GameplayState` check and the focused identity regression
+pass; the live editor console and debugger panel contained zero warnings/errors.
+The focused standalone smoke also passed. Its console printed the known
+root-certificate and restricted user-data write warnings; those are local
+environment issues documented in `AGENTS.md`.
+
+The user reprioritized away from performance and toward the authoring plan's M1
+shared authoring/preview foundation. The last Graphify refresh completed at
+21,307 nodes / 46,729 edges / 785 communities. Preserve opencode's
+runner/Pages claim.
+
+## Latest handoff - P3 family brain behavior
+
+The latest user direction authorizes implementing the P3 family behavior slice
+with Pip, Thorn, and Hexley included. This handoff covers that bounded change;
+P1/P2 formal acceptance remains separate and open. The connected Godot editor
+and runtime remain active, so do not run standalone focused smokes, Web export
+runtime checks, or the curated 45-path gate in this session.
+
+`EnemyBrain` stays shared and receives a typed behavior component for Slime or
+Skeleton preferred distance. `EnemyActor.ensure_components()` installs the
+strategy through each family actor hook, so authored scenes and factory actors
+use the same policy. Both actor classes extend the registered `EnemyActor`
+class; this fixed the factory runtime type check after a clean resource scan.
+Thorn identified the live Skeleton walk path through `EnemyBrain.aggro_target()`;
+the characterization checks that target and the actual boss Slime scene. Pip
+recommended repeatable assertions for family replacement, now added to the
+existing Slime-to-Skeleton-to-Slime smoke. Hexley confirmed the spacing roles
+and left one-Slime/one-Skeleton player-facing readability open.
+
+MCP script diagnostics pass for the changed brain/family smoke sources, the
+manifest validator passes (159 rows, 157 runnable, 45-path gate), composition
+strict audit/self-test pass (308 scripts, zero unclassified), UID validation
+passes (467 sidecars), and `git diff --check` passes. The replacement smoke's
+manifest status is unverified until that added assertion runs. A clean
+BossRoomDebug launch showed both behavior components attached with no runtime
+errors, but its 16-enemy Run 30 scene is too dense for readability acceptance.
+
+Graphify refreshed successfully: 21,297 nodes, 46,713 edges, 776 communities;
+`graph.json`, `graph.html`, and `GRAPH_REPORT.md` were regenerated. Focused map
+paths include both family behavior components. The graph was refreshed without
+LLM relabeling.
+
+P1/P2 still require current-source focused smokes, Run 30 performance evidence,
+rebuilt-Web authored-content/autoload browser proof, and the curated 45-path
+gate. Keep `docs/AUDIT.md` unchanged until those gates pass.
+
+## Previous checkpoint - P1/P2 plus bounded P3 slice
+
+The late `EnemyFactory.configure_actor()` type error was traced to a second
+preloaded `EnemyFactory` resource used by `RoomController`; the rest of runtime
+uses the registered `EnemyFactory` class. `RoomController` now uses that same
+class for its boss-phase pool. The same editor then ran the mixed encounter past
+the previous failure point and through an additional 45-second capture with no
+factory errors. This makes the duplicate preload the likely cause, but a clean
+standalone factory/encounter smoke is still required before accepting P2. The
+earlier P3 steering-world slice remains in the worktree, but this task will not
+expand it while closing P1/P2.
+
+P2 implementation is in place: `EnemyActor` siblings, ordered `EnemyRoster`,
+stable roster slots, generic group registration, family replacement,
+save/restore, preview lifecycle, shared `slimes` compatibility view, and
+actor-owned defeat checks in `EnemyActor.tick_runtime()`. Earlier family,
+save/restore, definition, and preview smokes passed; current callback/component
+cache edits need focused reruns. MCP offline script diagnostics, composition
+audit/self-test, UID validation (463 sidecars), definitions (44/44), catalog
+report, test manifest, and the previous Web export smoke pass. The user reports normal local play; see
+[`composition-p1-characterization.md`](../docs/composition-p1-characterization.md).
+
+The earlier focused unscoped Run 30, `capture-2026-10-13T10-36-14.json`, ran
+46.532 s / 2,791 frames with the window focused. It recorded 59.980229 FPS,
+16.6722 ms average wall interval, 16.8380 ms average process time,
+p95/p99 22.709/28.066 ms, and 42.220 ms worst. Its first sampled interval was
+40.972 ms; strict average/p99 acceptance remains open. The scoped follow-up
+`capture-2026-10-13T10-38-31.json` measured `slime_actor_runtime` at 3.312
+ms/frame and `slime_scoot_updates` at 1.783 ms/frame, effectively unchanged
+from the previous 3.317/1.740 measurements. The component/knockback
+callback-cache source batch first produced a diagnostic capture with the late
+factory error, saved as
+[`run30-unscoped-p1p2-followup-2026-10-13.json`](../docs/evidence/run30-unscoped-p1p2-followup-2026-10-13.json).
+After the `RoomController` factory path correction, the focused unscoped capture
+[`run30-unscoped-post-factory-fix-2026-10-13.json`](../docs/evidence/run30-unscoped-post-factory-fix-2026-10-13.json)
+ran 45.128 seconds / 2,700 frames with no runtime errors. It recorded 59.829817
+FPS, 16.7141 ms average wall interval, 17.6077 ms average process time,
+p95/p99 22.737/27.775 ms, and 91.085 ms worst. The strict average and p99
+target still fail. Its scoped companion measured `slime_actor_runtime` at
+3.278 ms/frame, `slime_scoot_updates` at 1.772, and `enemy_overhead_hud` at
+0.918; the cached source batch has not shown a material reduction in the major
+enemy scopes. The previous rebuilt Web
+export passed packaging smoke and booted in a browser to the title/menu;
+authored-manifest runtime behavior and the inert MCP autoload remain open. The
+curated 45-path gate is also open. The MCP Godot editor remains connected, so
+AGENTS.md requires the supervised standalone suite to wait. The opencode
+runner/Pages claim is untouched.
+
+The P3 smoke is registered but unverified because MCP cannot execute
+`tests/*.gd` and the editor is active. Changed enemy/runtime scripts pass MCP
+offline checks; focused Godot smoke execution remains pending. The one
+`gameplay_state.gd` offline `script_check` also reported typed self-context
+errors against a temporary `gdscript://` identity at existing `GameplayState`
+calls. The live scene ran, so treat that as a checker limitation until a clean
+standalone compile confirms it. The manifest
+validator passes (158 rows, 156 runnable, 2 reports, 45-path gate), UID
+validation passes (463 sidecars), composition self-test passes, and strict
+composition audit passes at 100% weighted progress / 94.6% editor composition.
+The earlier P3 boss-room probe was clean; the latest combined boss-room launch
+shows the unresolved factory type error above.
+
+**Next:** identify why the late Run 30 encounter factory call rejects a slime,
+then run the focused enemy/status smokes, curated gate, Web content/autoload
+runtime check, and a clean Run 30 in a supervised standalone session. Keep the
+strict performance gate open until the 60 FPS average and p99 target pass. Run
+`pwsh -ExecutionPolicy Bypass -File tests/run_all_smoke.ps1` only after the
+shared Godot editor/runtime is inactive. Do not update the formal P1 phase
+status in `docs/AUDIT.md` until performance and release gates pass.
+
+The required Graphify refresh was attempted with `tools/graphify.ps1 update .`.
+It re-extracted the changed scripts, then held the rebuild lock for several
+minutes without replacing `graph.json` or `GRAPH_REPORT.md`; the stalled command
+was stopped. The local graph remains at its previous build and needs a later
+refresh.
+
+## Completed: Composition cleanup P0 dispositions
+
+Published a human-readable P0 review, a complete per-community/per-file JSON
+inventory, and reconciled the whole-map census and asset/SFX audit on
+`review/composition-cleanup-plan`. Validation matches all 3,126 inventory paths
+against 3,124 source-commit paths plus the two P0 artifacts; all 727 communities
+and 2,110 unmatched paths have non-empty dispositions and evidence fields. No
+deletion is approved. The source Graphify map remains at `78320ff`; its
+committed code/asset/scene/test paths match the tracked snapshot at `85c9f07`.
+The pre-existing `project.godot` and enemy preview scene edits remain outside
+this review. Local main's unrelated Graphify integration commits were not
+included in the review-branch update.
 
 ## In flight: Hosted Graphify R1 CI gate
 
@@ -1741,33 +2054,33 @@ run because the configured Godot CLI executable is absent; no gameplay smoke or
 second editor was started. Focused smoke sources remain registered as
 unverified for the next supervised standalone Godot slot.
 
-## Active focus � event hitches and Wet/Chill reaction
+## Active focus — event hitches and Wet/Chill reaction
 
 Investigating room-entry, pickup, and event slowdowns; fixing the report that Wet suppresses innate Chill before the Freeze mixture can resolve. Avoiding opencode's smoke-runner/Pages files. No runtime/editor started.
 
 
-## Completed focus � event hitches and Wet/Chill reaction
+## Completed focus — event hitches and Wet/Chill reaction
 
 Changed mixture resolution to remember whether an innate ingredient was already suppressed before the incoming hit. This allows Wet + innate Chill (or Chill + innate Wet) to react while preventing later hits from refreshing Freeze for free. Profile persistence from XP now uses the existing deferred queue; room entry no longer requests an unchanged profile save. Active-run checkpoint writes now verify bytes instead of parsing the just-written JSON again. Added room-entry and checkpoint phase scopes for the next controlled capture.
 
 MCP diagnostics pass for the mixture, persistence, room controller, and smoke source. GameplayState offline validation reports its known gdscript:// self-type false positive. After clearing that stale diagnostic buffer, the connected editor started the main game successfully with an empty error buffer. An uncontrolled 78.4-second capture recorded 14.52 ms average frames, 73.02 ms p99, 180 hitches, and profile writes averaging 8.68 ms; it did not exercise room transitions. Controlled before/after captures and the focused mixture smoke remain open; no smoke suite was run.
 
 
-## Active focus � Stage 3.1 Hub construction ownership
+## Active focus — Stage 3.1 Hub construction ownership
 Claimed a bounded Hub construction seam: legacy item, Shop, equipment fallback, and binding controls currently created inside ScreenStateController.build_hub. Will move the legacy item/equipment widget group into a typed builder that populates the existing responsive layout owner, preserving call sites and callbacks. Existing authored-view fallback behavior remains unchanged.
 
-## Completed focus � Stage 3.1 Hub legacy widget construction
+## Completed focus — Stage 3.1 Hub legacy widget construction
 Moved legacy inventory, Shop, equipment-fallback, and Fusion widget construction from ScreenStateController into HubLegacyWidgetBuilder. HubResponsiveLayoutPresenter owns the constructed widget references and shop cursor; a named ScreenStateController callback retains mode-state updates. Controller size is 2,340 lines, down 91 from the 2,431-line checkpoint; helper is 138 lines. Script index and role map refreshed. Focused Godot script diagnostics pass and MCP editor error buffer is empty. Strict composition audit still fails on GameplayState (1,714 vs 1,709 baseline) and RoomController (2,180 vs 2,175 baseline), both outside this slice. UID validator stops on an unresolved resource UID in resources/definitions/element_catalog.tres; this new UI UID was independently checked for format and uniqueness. No gameplay tests run.
 
 Next: continue Stage 3.1 by extracting remaining authored-page and Bind screen setup, then reassess the responsive-layout ownership boundary.
 
-## Completed follow-on � Hub Bind construction
+## Completed follow-on — Hub Bind construction
 Moved the legacy Bind panel, its five text labels, and action button into HubLegacyWidgetBuilder. The builder now owns all adjacent legacy Hub fallback widget construction while storing typed references in HubResponsiveLayoutPresenter. Preserved each authored label position, including the wider final message-row gap. Final size: ScreenStateController 2,332 lines, builder 165 lines. Script index regenerated to include the new builder methods; role map and composition plan updated. Focused diagnostics pass for all three changed scripts, the MCP editor error buffer is empty, and git diff --check passes. No gameplay tests run. Next boundary remains authored-page discovery/assembly in build_hub.
 
-## Active focus � Freeze movement lock enforcement
+## Active focus — Freeze movement lock enforcement
 User reports that frozen enemies display Freeze correctly but keep moving. Trace found that zero speed only affects new SlimeBrain scoots; active scoots, Skeleton's separate walk path, attack lunges, knockback, and actor collision separation bypass it. Fixing the shared movement-lock predicate across those paths while preserving the authored movement-only behavior (attacks remain legal). Avoid opencode's smoke runner and Pages files.
 
-## Active focus � Freeze and Fusion behavior fixes
+## Active focus — Freeze and Fusion behavior fixes
 Freeze now enforces the movement-only lock across active scoots, Skeleton walking, combat lunge/knockback, and collision separation while leaving attacks usable. Fusion refactor audit found that the new menu discarded the model's affordability state and did not render the failure message. The view now displays the required Soul amount, disables invalid amount confirmation, clears stale feedback as selection/count changes, and reports an inventory race instead of silently rejecting it. The existing next-rank cap remains intentional (for example, a +9 item has one step to +10). MCP runtime is unavailable; use editor script diagnostics and static checks only; do not launch a second editor or smoke runner.
 
 ## Completed: Freeze movement and Fusion feedback
@@ -1777,14 +2090,14 @@ Fusion now uses its computed material and affordability state to govern the amou
 
 All nine affected scripts pass MCP script diagnostics; the editor error buffer is empty and git diff --check passes. No gameplay run or smoke test was performed. The MCP runtime peer is unavailable, and supervised gameplay verification remains open.
 
-## Active focus � Stage 3.1 ScreenStateController to 1,500
+## Active focus — Stage 3.1 ScreenStateController to 1,500
 Claimed the ScreenStateController and UI screen-flow documentation surfaces. Current controller is 2,332 lines. Mapping typed ownership boundaries for title/archetype, settings, game-over, and remaining construction/layout code; preserve GameplayState and SaveFlowController facades. No gameplay/test runs. Use connected-editor script diagnostics for each extracted script.
 
 ## Completed: Stage 3.1 ScreenStateController 1,500-line checkpoint
 Reduced ScreenStateController from 2,332 to 1,475 lines while preserving its existing public method signatures. Extracted title/archetype/defeat flow, Pause and Settings routes, display and cursor layout, Hub screen setup, and Hub list scrolling into five focused UI owners. All six affected scripts pass MCP script diagnostics; the generated index now covers 287 scripts, and the role map/composition plan record the checkpoint. No gameplay or smoke test was run. The plan's 800-line forward target remains open; further work should start from typed context/compatibility-property review.
 Correction: final EOF cleanup removed one trailing blank line; ScreenStateController is 1,474 lines, 858 fewer than the 2,332-line checkpoint.
 
-## Active focus � Stage 3.1 ScreenStateController to 800
+## Active focus — Stage 3.1 ScreenStateController to 800
 Continuing from the 1,474-line checkpoint. The remaining target needs a property/caller ownership pass, not more mechanical method extraction. Inspect typed screen owners, move callers off redundant facade accessors where safe, preserve scene/frame APIs only where needed, then verify and commit only this slice. Other worktree changes belong to concurrent or prior tasks and stay out of this commit.
 
 
@@ -2103,3 +2416,59 @@ Verification: changed-area regression modules passed (1,482 passed, 73 skipped, 
 The local Tiny Demons map is at `graphify-godot/.tools/tiny-demons-map/`. It now has 17,165 nodes and 21,766 links, with zero source paths inside the nested `graphify-godot/` folder. The root `.gitignore` rule `/graphify-godot/` is honored by Graphify and confirmed by `git check-ignore`.
 
 Ran `GRAPHIFY_OUT=<absolute map path> python -m graphify cluster-only .. --no-label` to generate cluster analysis and the HTML viewer without an LLM backend. The map directory contains `graph.html` (847,408 bytes), `GRAPH_REPORT.md`, and `.graphify_analysis.json`; the HTML aggregates the 17,165 source nodes into 761 named communities. `verification/graph.html` provides a focused 800-node view of the runner, test inventory, test scripts, and explicit code dependencies. All outputs remain local under ignored `.tools/`.
+
+## In flight: Composition cleanup P1 characterization
+
+**Updated:** 2026-10-12
+
+P0 was completed and pushed on `review/composition-cleanup-plan`. P1 is now
+characterizing the current enemy and persistence contracts before any generic
+enemy ownership changes. Planned scope: extend existing tests (no test-count
+growth) for in-slot Slime/Skeleton replacement and file-backed active-run
+snapshot loading; record preview, exported-resource/UID, current verification,
+and mixed-enemy performance evidence in `docs/composition-p1-characterization.md`.
+
+The source currently replaces an actor in place through
+`RoomEnemySpawnServices`, rebinding ordered arrays, HUD caches, occlusion state,
+health callbacks, and last-valid position. Existing recovery coverage only
+normalizes a snapshot through in-memory JSON; there is no explicit test of the
+disk load path or family replacement sequence. The Godot MCP WebSocket is
+disconnected and no Godot process is running. `GODOT_BIN` is unset and the
+documented default executable path is absent; locate a usable Godot 4.7.1 binary
+before running focused tests or export checks.
+
+## Completed: Shared EnemyBrain P3 follow-through and branch publication
+
+**Updated:** 2026-10-14
+
+Updated P3 ownership documentation for the accepted shared `EnemyBrain` used
+by Slime and Skeleton family behavior, preserving the historical `slime_brain.gd`
+resource path. Published commit `fd99745` to
+`review/composition-cleanup-plan`; a direct remote ref check confirmed the
+branch tip. `main` was not changed. The registered P3 smoke rows remain
+unverified and non-blocking for the user's behavior acceptance; no tests were
+run in this push step.
+
+## Completed: P4 catalog API migration slice (phase remains open)
+
+**Updated:** 2026-10-14
+
+Moved mixed-family lookups to canonical `EnemyCatalog`; the historical
+`SlimeVariantCatalog` API forwards to it. The authored catalog resource/class
+path and stable IDs remain intact. The preview field now accepts `EnemyActor`
+siblings. Published `ed08069` to `review/composition-cleanup-plan`.
+
+Verification: 21 changed GDScript files pass MCP script checks; the `BossRoomDebug`
+MCP playtest reached `boot_active=false` with 13 enemy slots, and the migrated
+target label returned `lv.24 Electric Slime`. Strict composition, UID, and test
+manifest validators pass. P4 remains open for M1 saved-resource lifecycle
+evidence and the consumed-field authority decisions. Smoke suites and the
+curated gate were not run while the MCP Godot editor was active. EnemyDefinition
+geometry authority is settled as family-profile runtime ownership with a legacy
+serialized projection; removing those fields stays with P6.
+
+## Release preparation - 2026-10-18
+
+Owner authorized publishing all current PC changes and local main history. Preparing version 0.3.93, static guardrails and MCP diagnostics, then GitHub Pages verification. Existing editor remains open; no standalone gameplay suite or intrusive playtest.
+
+Release checks: 75/75 changed/new non-plugin GDScript files pass MCP script_check. Plugin validator edit is protected from MCP checks. Manifest validator, composition self-test, strict composition audit, and diff whitespace pass. Corrected two stale test fixtures (boss contact root typing; spin damage/lifesteal signatures). Gameplay/rendered mobile acceptance remains for device testing. GitHub export/deployment verification follows push.

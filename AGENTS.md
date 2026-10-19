@@ -2,31 +2,21 @@
 
 ## Read first
 
-1. `README.md` — project entry point and verification commands.
-2. `docs/authoring-system-plan.md` — active plan for making content and feature
-   work cheap: typed definitions, single-source registries, factories,
-   previews, verification, and docs. Read its trap register before touching
-   content data.
-3. `docs/AUDIT.md` — current findings and phase status.
-4. `docs/DOCUMENTATION_MAP.md` — authority and document lifecycle guide.
-5. `docs/wiki/README.md` — concise design wiki and topic navigation.
-6. `docs/ROADMAP.md` — active product and infrastructure sequence.
-7. `docs/KNOWN_ISSUES.md` — open behavior, verification, and infrastructure findings.
-8. `docs/verification-surface-audit.md` — test/report roles, release-gate scope, and test-debt cleanup.
-9. `docs/performance-cost-guide.md` — editor gameplay/rendering cost map,
-   measured Run 30 scopes, and source-based performance practices.
-10. `docs/CONTENT_AUTHORING.md` — current content workflows and boundaries. It
-   documents the runtime as it is, including the data paths that currently do
-   nothing; the authoring plan is the target it moves toward.
-11. `docs/refactor-route.md` — accepted migration route.
-12. `docs/composition-refactor-analysis.md` — component/composition measurements and handoff sequence.
-13. `docs/component-composition-design.md` — approved component contract, wiring rules, and interchangeable-entity proof sequence.
-14. `docs/long-term-composition-and-performance-plan.md` — long-term content composition, authoring, and performance direction.
-15. `docs/ARCHITECTURE.md` — ownership and runtime boundaries.
-16. `docs/GAMEPLAY_TUNING.md` — designer-facing balance index.
-17. `docs/web-port-implementation-plan.md` — browser export, input, and Pages workflow.
-18. `docs/SCRIPT_INDEX.md` — generated script, class, signal, export, and function navigation.
-19. `docs/agent-workflow.md` — project-scoped Pip, Thorn, and Hexley advisory roles and usage.
+1. `README.md` ? project overview; `docs/CONTRIBUTOR_README.md` for commands.
+2. `docs/FEATURE_MAP.md` ? find the owner for the task, then inspect its source.
+3. `docs/DOCUMENTATION_MAP.md` ? choose only the authority relevant to the task.
+
+Do not read every plan before ordinary work. For composition changes, read
+`docs/COMPOSITION_STATUS.md` and the contract in
+`docs/component-composition-design.md`. For content changes, read
+`docs/CONTENT_AUTHORING.md` and the trap register in
+`docs/authoring-system-plan.md`. For verification, follow the rules below and
+`docs/verification-surface-audit.md`; select checks from `tests/manifest.csv`.
+
+`docs/ARCHITECTURE.md` describes runtime boundaries; `docs/SCRIPT_INDEX.md`
+locates symbols. `docs/KNOWN_ISSUES.md` records open issues. Historical plans
+are evidence, not standing instructions to resume a refactor.
+
 ## Coordination with other agents
 
 More than one AI agent may work this repo at the same time (opencode and codex
@@ -109,7 +99,8 @@ process exits nonzero or a test reports failure.
 | Frame ordering | `gameplay_frame_controller.gd` |
 | Player input and movement | `player_controller.gd`, `actor_motor.gd` |
 | Actor geometry and combat bounds | `actor_geometry.gd`, then `actor_collision_system.gd` |
-| Slime behavior and attack timing | `slime_brain.gd`, `slime_combat_component.gd`, `slime_actor.gd` |
+| Enemy decision and family behavior | `slime_brain.gd` (`EnemyBrain`, historical resource path), `slime_brain_behavior_component.gd`, `skeleton_brain_behavior_component.gd`; [P3 behavior status](docs/composition-p3-family-brain-behavior.md) |
+| Slime attack timing and actor hooks | `slime_combat_component.gd`, `slime_actor.gd` |
 | Chroma and elemental casting | `player_chroma_component.gd`, then `player_aspect_ability_component.gd` and `magic_runtime_controller.gd` |
 | Projectile lifecycle | `magic_projectile_controller.gd`, driven by `magic_runtime_controller.gd` |
 | Room generation and milestones | `room_controller.gd`, `dungeon_graph.gd`, `dungeon_map_controller.gd`, `room_transition_result.gd` |

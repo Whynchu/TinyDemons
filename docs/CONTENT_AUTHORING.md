@@ -263,12 +263,17 @@ behavior until that isolated workbench lands in the authoring plan.
 
 Current owners:
 
-- actor behavior and lifecycle: `slime_actor.gd`;
-- decision-making: `slime_brain.gd`;
+- shared actor identity and lifecycle: `enemy_actor.gd`;
+- family actor hooks: `slime_actor.gd` and `skeleton_actor.gd`;
+- shared decision state: `EnemyBrain` (historical resource path:
+  `slime_brain.gd`);
+- family brain behavior: `slime_brain_behavior_component.gd` and
+  `skeleton_brain_behavior_component.gd`;
 - combat and attack timing: `slime_combat_component.gd`;
 - spawn placement: `slime_spawn_component.gd` and room encounter ownership;
-- visual variant mapping: `slime_variant_catalog.gd` and
-  `slime_visual_component.gd`; and
+- enemy definition registry: `enemy_catalog.gd` (the historical
+  `slime_variant_catalog.gd` path is a forwarding adapter); visual palette
+  application remains in `slime_visual_component.gd`; and
 - balance values: `slime_tuning.gd` and combat tuning.
 
 Workflow (current, typed enemy-definition path):
@@ -293,12 +298,12 @@ Workflow (current, typed enemy-definition path):
    generation: `encounter_role` (`baseline`, `matchup`, `late`, `shadow`, or `support`),
    `encounter_weight`, `encounter_min_run_number`, and any preferred/matchup weight.
    `EncounterDefinition` and `RoomController` consume these fields at runtime.
-4. Do not add a `VARIANTS` entry, a `RoomController` constant, a scene-authored
-   roster slot, or a count-table expectation. The registry discovers the typed
-   entry with `ResourceLoader.list_directory`, `EnemyFactory` materializes it,
-   and the runtime pool configures the selected slot from the definition. The
-   shared catalog validator checks distinct embedded and standalone sources for
-   duplicate stable IDs and reports both paths before export.
+4. Do not add a second ID list, a `RoomController` constant, a scene-authored
+   roster slot, or a count-table expectation. `EnemyCatalog` combines embedded
+   definitions from the historical `slime_variant_catalog.tres` with
+   standalone paths from the generated enemy manifest. `EnemyFactory`
+   materializes the selected definition, and the shared validator reports
+   duplicate stable IDs with both source paths before export.
 5. If the variant introduces a genuinely new palette or behavior, extend that
    narrow owner and add a focused golden assertion. Reusing an existing
    `visual_source` is data-only; invalid palette IDs fail enemy-definition
@@ -383,9 +388,13 @@ polygon arrays:
 The separate `Add Enemy Family` section marks the family boundary. The
 workbench can create variants for a registered family; a new runtime family
 still needs a family definition and a supported actor route in `EnemyFactory`
-before it can be previewed or spawned. Skeleton is the current second family
-proof. The family workflow remains: create the family (stable ID, display name,
-actor route), create its first variant from that family, and add sibling
+before it can be previewed or spawned. `EnemyFactory` selects the actor family
+from `type_id`; the selected actor's component hook installs its family brain
+behavior, including for scene-authored actors. Share a
+`slime_*` component when its contract is family-neutral; keep behavior that
+defines a family's role in that family's component. Skeleton is the current
+second family proof. The family workflow remains: create the family (stable ID,
+display name, actor route), create its first variant from that family, and add sibling
 variants as needed.
 
 Edits appear in the preview as you make them. The workbench marks unsaved edits
@@ -406,7 +415,8 @@ Godot's regular undo history. Geometry edits resolve to the family profile:
 `resources/definitions/geometry/slime.tres` for Slime and
 `resources/definitions/geometry/skeleton.tres` for Skeleton. `EnemyFactory`
 applies that same authored family geometry to every variant's preview and
-runtime actor.
+runtime actor. `EnemyDefinition` still serializes per-variant geometry fields
+for resource round-trips, but runtime and preview assembly do not consume them.
 
 `healer_slime` is the first `support` encounter-role variant. Its
 `behavior_id = support_caster` composes ally healing onto the normal Slime
@@ -633,6 +643,38 @@ measurement for values that affect timing, geometry, persistence, or economy.
 
 ## Adding menu content
 
+Use `scenes/ui/components/menu_screen.tscn` for a standard menu and
+`menu_window.tscn` for additional rectangles. `MenuWindow` owns the existing
+`assets/artwork/frame 16x16.png` texture, three-pixel patches, nearest filtering,
+and tiled borders. Change the shared skin rather than drawing a similar border
+with `StyleBoxFlat`. Older `Panel` cards use `MenuWindow.panel_style()` to
+consume the same artwork while retaining their node types and geometry.
+
+`MenuScreen` provides the top-left title window, adjacent header window, content
+window, and optional footer. Its exported heading, title width, header height,
+and footer height can be edited in the Inspector. `show_header_window` defaults
+to false: enable it only when controls actually occupy the area beside the
+title (for example, Cloud Save's Back control). Equipment and Demon Hub retain
+their authored header windows and controls. The shell reflows to the
+logical viewport without rebuilding controls. Screen-specific windows are
+ordinary scene children, or can be composed by the presenter:
+
+```gdscript
+var menu := widgets.create_menu_screen(parent, "ExampleMenu", view_size, 8,
+	"ExampleTitle", "EXAMPLE", pixel_texture)
+menu.footer_height = 20.0
+var details := menu.add_window("Details", Rect2(12, 28, 216, 100))
+# Add the screen's controls and connect its actions through its presenter.
+```
+
+The Pause command screen, Equipment, Hub, Shop, and inherited Fusion layouts
+share the window skin while keeping their authored geometry. Pause Status and
+Items use the complete shared shell; Items composes framed list/detail windows.
+Settings, Save Selection, Character Setup, Name Entry, Results, Game Over,
+Cloud Save, and Debug screens also use the shell. The main title screen keeps
+its original splash presentation. Loading/fade covers are overlays.
+The migration passes script diagnostics; rendered and input acceptance is pending.
+
 Current ownership: `screen_state_controller.gd` composes the screen owners;
 `screen_route_controller.gd` owns Pause/Settings routes; page presenters own
 their presentation and selection models. Pause Items specifically uses
@@ -645,9 +687,9 @@ define its input context, selection ownership, confirm/back behavior, touch hit
 targets, and cursor visibility. Do not add a separate navigation convention
 for one screen.
 
-Menu work remains an extraction boundary in Slice 4 of the authoring plan.
-Pause and Demon Hub are scene-backed and use dedicated presenters, but there is
-not yet one authored route registry or shared lifecycle for every screen. The
+The shared skin and shell are implemented. The route registry and common
+enter/exit lifecycle in authoring Slice 4 remain separate follow-ups; the shell
+does not own profile writes, gameplay state, or screen navigation. The
 Pause Items page reuses the framed Pause page structure and current profile gear
 instances; it does not create authoring support for future Consumables or Key
 Items, whose typed definitions and runtime storage remain unimplemented. A menu

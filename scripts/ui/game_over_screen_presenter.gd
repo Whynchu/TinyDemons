@@ -13,8 +13,9 @@ var fade_timer := 0.0
 
 
 func build(parent: Node, view_size: Vector2, pixel_texture: Callable, restart: Callable, return_title: Callable, widget_factory: MenuWidgetFactory) -> void:
-	overlay = widget_factory.create_overlay(parent, "GameOverOverlay", view_size, Color(0.015, 0.02, 0.035, 1.0), 8, false)
-	overlay.set_meta("display_full_view", true)
+	var menu := widget_factory.create_menu_screen(parent, "GameOverOverlay", view_size, 8, "GameOverHeading", "GAME OVER", pixel_texture)
+	menu.footer_height = 20.0
+	overlay = menu
 	overlay.modulate.a = 0.0
 	var title_texture := pixel_texture.call("GAME OVER", Color.WHITE) as Texture2D
 	widget_factory.create_sprite(overlay, "GameOverTitle", title_texture, Vector2((view_size.x - title_texture.get_width() * 3.0) * 0.5, 50), false, Vector2(3, 3))

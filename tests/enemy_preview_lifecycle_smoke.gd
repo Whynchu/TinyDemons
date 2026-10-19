@@ -15,6 +15,9 @@ func _initialize() -> void:
 func _run() -> void:
 	var failures: Array[String] = []
 	var preview := PREVIEW_SCENE.instantiate()
+	# The workbench scene opens in Boss actor mode for the editor. Start this
+	# regular-family characterization explicitly, then exercise the size switch.
+	preview.set("preview_actor_size", 0)
 	preview.set("enemy_id", &"guard_slime")
 	root.add_child(preview)
 	await process_frame
@@ -67,7 +70,7 @@ func _run() -> void:
 		_expect(saved_actor.get_node("BodyHitbox").polygon == points, "boss saved scene retains edited body", failures)
 		_expect(saved_actor.get_node("Combat") != null and saved_actor.get_node("Visual") != null, "boss save preserves runtime components", failures)
 		saved_actor.free()
-		DirAccess.remove_absolute(roundtrip_path)
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(roundtrip_path))
 	preview.call("undo_geometry_edit")
 	preview.set("preview_actor_size", 0)
 	await process_frame

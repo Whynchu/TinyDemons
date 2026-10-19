@@ -101,7 +101,10 @@ func tick_attack(delta: float, actor: Sprite2D, tuning: SlimeTuning, frames: Arr
 	if player_dead:
 		timer = 0.0
 		return false
-	var status := actor.get_node_or_null("Status") as StatusComponent
+	var enemy_actor := actor as EnemyActor
+	var status: StatusComponent = enemy_actor._status_component if enemy_actor != null else actor.get_node_or_null("Status") as StatusComponent
+	if status == null:
+		status = actor.get_node_or_null("Status") as StatusComponent
 	var movement_locked: bool = status != null and status.is_movement_locked()
 	var is_boss := float(actor.get_meta("encounter_scale", 1.0)) > 1.0
 	var frame_time := tuning.attack_frame_time * (tuning.boss_attack_frame_time_multiplier if is_boss else 1.0)

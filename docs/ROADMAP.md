@@ -78,6 +78,10 @@ version remains governed by [`VERSIONING.md`](VERSIONING.md).
 
 ## Added workstream — architecture cleanup (0.3.x)
 
+Current composition closeout and exceptions: [COMPOSITION_STATUS.md](COMPOSITION_STATUS.md).
+The records below explain prior slices; further extraction requires a concrete
+extension or ownership problem. Do not restart the broad cleanup from this table.
+
 Status: **added after the 0.3.0 checkpoint.** This is a recorded change to the
 0.3.x sequence, not part of the original plan.
 

@@ -27,8 +27,7 @@ var starter_flame_index := 0
 
 
 func build(parent: Node, view_size: Vector2, shift_type: Callable, shift_color: Callable, start_callback: Callable, pixel_texture: Callable, widget_factory: MenuWidgetFactory) -> Dictionary:
-	overlay = widget_factory.create_overlay(parent, "ArchetypeOverlay", view_size, Color.BLACK, 1, false)
-	overlay.set_meta("display_full_view", true)
+	overlay = widget_factory.create_menu_screen(parent, "ArchetypeOverlay", view_size, 1, "ArchetypeTitle", "CHARACTER", pixel_texture)
 	preview = widget_factory.create_sprite(overlay, "ArchetypePreview", null, Vector2(0, 43), false, Vector2(1.5, 1.5))
 	name_text = widget_factory.create_sprite(overlay, "ArchetypeName", null, Vector2.ZERO, false)
 	left_buttons.clear()

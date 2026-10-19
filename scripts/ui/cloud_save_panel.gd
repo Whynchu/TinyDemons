@@ -19,9 +19,13 @@ func configure(game_root: Object, cloud_service: CloudSaveService) -> void:
 	_paste_poll_timer = Timer.new(); _paste_poll_timer.wait_time = 0.15; _paste_poll_timer.timeout.connect(_poll_pasted_key); add_child(_paste_poll_timer)
 
 func build(parent: Node) -> void:
-	overlay = ColorRect.new(); overlay.name = "CloudSaveOverlay"; overlay.color = Color(0.015, 0.02, 0.035, 0.96); overlay.size = Vector2(240, 160); overlay.z_index = 40; overlay.visible = false; overlay.mouse_filter = Control.MOUSE_FILTER_STOP; parent.add_child(overlay)
 	var pixel_texture := Callable(root, "_pixel_text_texture")
-	var title: Sprite2D = root.screen_state_controller._menu_widget_factory.create_sprite(overlay, "CloudSaveTitle", pixel_texture.call("CLOUD SAVE", Color8(148, 220, 255)) as Texture2D, Vector2(12, 7), false)
+	var menu: MenuScreen = root.screen_state_controller._menu_widget_factory.create_menu_screen(parent, "CloudSaveOverlay", Vector2(240, 160), 40, "CloudSaveTitle", "CLOUD SAVE", pixel_texture)
+	menu.footer_height = 0.0
+	# This screen uses the header for its Back control.
+	menu.show_header_window = true
+	overlay = menu
+	var title := overlay.get_node("CloudSaveTitle") as Sprite2D
 	var help_text: Sprite2D = root.screen_state_controller._menu_widget_factory.create_sprite(overlay, "CloudSaveHelp", pixel_texture.call("KEEP YOUR RECOVERY KEY SAFE", Color8(150, 156, 170)) as Texture2D, Vector2(12, 24), false)
 	# Keep these locals typed even though the sprites are configured by the
 	# shared presentation owner. This makes the dynamic pixel UI safe to edit
@@ -34,7 +38,7 @@ func build(parent: Node) -> void:
 	var labels := ["CREATE BACKUP", "COPY KEY", "PASTE KEY", "RESTORE", "SYNC NOW", "DELETE CLOUD", "BACK"]
 	for index in labels.size():
 		var button_position: Vector2 = Vector2(12 + (index % 2) * 110, 78 + floori(float(index) / 2.0) * 24) if index < 6 else Vector2(176, 5)
-		var button_size: Vector2 = Vector2(106, 22) if index < 6 else Vector2(52, 20)
+		var button_size: Vector2 = Vector2(106, 22) if index < 6 else Vector2(52, 12)
 		var button: Button = root.screen_state_controller._menu_widget_factory.make_retro_button(labels[index], button_position, button_size, pixel_texture) as Button; button.focus_mode = Control.FOCUS_NONE
 		if index < 6:
 			button.position = button_position; button.size = button_size
@@ -45,7 +49,7 @@ func build(parent: Node) -> void:
 	for line_index in 2:
 		status_texts.append(root.screen_state_controller._menu_widget_factory.create_sprite(overlay, "CloudSaveStatus%d" % line_index, null, Vector2(12, 62 + line_index * 7), false))
 	for child in overlay.get_children():
-		if child is Control: (child as Control).set_meta("cloud_base_x", (child as Control).position.x)
+		if child is Control and not child is NinePatchRect: (child as Control).set_meta("cloud_base_x", (child as Control).position.x)
 	apply_layout(root.screen_state_controller.layout_controller.layout_view_size())
 
 func apply_layout(view_size: Vector2) -> void:
