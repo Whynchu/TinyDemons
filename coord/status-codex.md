@@ -2472,3 +2472,7 @@ serialized projection; removing those fields stays with P6.
 Owner authorized publishing all current PC changes and local main history. Preparing version 0.3.93, static guardrails and MCP diagnostics, then GitHub Pages verification. Existing editor remains open; no standalone gameplay suite or intrusive playtest.
 
 Release checks: 75/75 changed/new non-plugin GDScript files pass MCP script_check. Plugin validator edit is protected from MCP checks. Manifest validator, composition self-test, strict composition audit, and diff whitespace pass. Corrected two stale test fixtures (boss contact root typing; spin damage/lifesteal signatures). Gameplay/rendered mobile acceptance remains for device testing. GitHub export/deployment verification follows push.
+
+## Corrective release 0.3.94
+
+GitHub run 39184718741 passed definition validation (44/44), composition self-test and regression audit; web smoke caught the missing explicit gl_compatibility web renderer override. Restored it. Local web configuration preflight passes; actual export deferred to GitHub (local expected Godot executable absent). Title version script diagnostic passes. Publishing 0.3.94 and monitoring replacement deployment.
