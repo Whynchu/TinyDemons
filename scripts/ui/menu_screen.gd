@@ -6,6 +6,8 @@ class_name MenuScreen
 ## Additional windows can be authored as children or added through add_window().
 const WINDOW_SCENE: PackedScene = preload("res://scenes/ui/components/menu_window.tscn")
 const PixelTextTextureFactoryScript = preload("res://scripts/runtime/services/pixel_text_texture_factory.gd")
+const STANDARD_TITLE_WIDTH := 90.0
+const TITLE_TEXT_RIGHT_INSET := 4.0
 
 @export var heading := "MENU":
 	set(value):
@@ -15,7 +17,7 @@ const PixelTextTextureFactoryScript = preload("res://scripts/runtime/services/pi
 	set(value):
 		show_header_window = value
 		apply_layout()
-@export_range(32.0, 160.0, 1.0) var title_width := 90.0:
+@export_range(32.0, 160.0, 1.0) var title_width := STANDARD_TITLE_WIDTH:
 	set(value):
 		title_width = value
 		apply_layout()
@@ -78,6 +80,7 @@ func apply_layout() -> void:
 	var footer := get_node_or_null("FooterWindow") as Control
 	if footer != null:
 		footer.visible = footer_size > 0.0
+	_position_heading()
 
 
 func _layout_window(window_name: String, rect: Rect2) -> void:
@@ -100,4 +103,14 @@ func _update_heading() -> void:
 		if _preview_text_factory == null:
 			_preview_text_factory = PixelTextTextureFactoryScript.new()
 		_heading_sprite.texture = _preview_text_factory.number_texture(heading, Color.WHITE)
-	_heading_sprite.position = Vector2(13, floorf((header_height - 5.0) * 0.5))
+	_position_heading()
+
+
+func _position_heading() -> void:
+	if _heading_sprite == null:
+		_heading_sprite = get_node_or_null("Heading") as Sprite2D
+	if _heading_sprite == null:
+		return
+	var title_size := minf(title_width, size.x)
+	var text_width := float(_heading_sprite.texture.get_width()) if _heading_sprite.texture != null else 0.0
+	_heading_sprite.position = Vector2(floorf(title_size - TITLE_TEXT_RIGHT_INSET - text_width), floorf((header_height - 5.0) * 0.5))

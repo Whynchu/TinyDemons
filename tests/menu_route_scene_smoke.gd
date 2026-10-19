@@ -74,6 +74,14 @@ func _initialize() -> void:
 		_clear_menu_edge(router)
 		await process_frame
 		_expect(screens.pause_page == 1 and not screens.pause_root_page.is_visible_in_tree() and screens.pause_page_roots[1].is_visible_in_tree(), "Pause command input activates Status and replaces the command root", failures)
+		var stats_page := screens.pause_page_roots[1] as MenuScreen
+		if stats_page != null:
+			var stats_heading := stats_page.get_node_or_null("Title") as Sprite2D
+			_expect(is_equal_approx(stats_page.title_width, 90.0), "Pause Stats uses the standard title panel width", failures)
+			_expect(stats_heading != null and stats_heading.texture != null, "Pause Stats heading has a rendered texture", failures)
+			if stats_heading != null and stats_heading.texture != null:
+				var expected_right := minf(stats_page.title_width, stats_page.size.x) - 4.0
+				_expect(is_equal_approx(stats_heading.position.x + stats_heading.texture.get_width(), expected_right), "Pause Stats heading shares the menu right inset", failures)
 		_expect(screens.pause_menu_buttons.all(func(button: Button) -> bool: return not button.is_visible_in_tree()), "pause commands are unavailable on Status", failures)
 		_expect(not screens.pause_gold_icon.is_visible_in_tree() and not screens.pause_resource_icon.is_visible_in_tree() and not screens.pause_gold_text.is_visible_in_tree() and not screens.pause_soul_text.is_visible_in_tree(), "Status hides currency icons and counts after player data refresh", failures)
 		_set_menu_edge(router, false, true)
@@ -141,6 +149,7 @@ func _check_menu_shell(overlay: ColorRect, failures: Array[String]) -> void:
 	var menu := overlay as MenuScreen
 	if menu == null:
 		return
+	_expect(is_equal_approx(menu.title_width, 90.0), "shared menu titles use the standard panel width", failures)
 	for window_name in ["TitleWindow", "HeaderWindow", "ContentWindow", "FooterWindow"]:
 		var window := menu.get_node_or_null(NodePath(window_name)) as NinePatchRect
 		_expect(window != null, "%s provides %s" % [menu.name, window_name], failures)
@@ -159,8 +168,14 @@ func _check_menu_shell(overlay: ColorRect, failures: Array[String]) -> void:
 		var content := menu.get_node("ContentWindow") as Control
 		var footer := menu.get_node("FooterWindow") as Control
 		var title := menu.get_node("TitleWindow") as Control
+		var heading := menu.get_node_or_null("Heading") as Sprite2D
+		if heading == null:
+			heading = menu.get_node_or_null("Title") as Sprite2D
 		_expect(header.visible == original_header_visibility, "resize preserves the screen's optional header visibility", failures)
 		_expect(title.visible and title.position == Vector2.ZERO, "the title remains in the top-left window", failures)
+		if heading != null and heading.texture != null:
+			var heading_right := heading.position.x + heading.texture.get_width()
+			_expect(is_equal_approx(heading_right, minf(menu.title_width, width) - 4.0), "menu heading keeps the shared right inset", failures)
 		_expect(header.position.x == menu.title_width and header.position.x + header.size.x == width, "header expands beside the fixed title window", failures)
 		_expect(content.size.x == width and content.position.y == menu.header_height, "content window follows the logical viewport", failures)
 		if menu.footer_height > 0.0:

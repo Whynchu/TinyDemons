@@ -27,10 +27,9 @@ var _bar_fractions: Array[float] = [0.0, 0.0, 0.0]
 
 func build_status(page: MenuScreen, pixel_texture: Callable, widgets: MenuWidgetFactory) -> Array[Sprite2D]:
 	_status_page = page
-	page.title_width = 60.0
 	page.show_header_window = true
 	page.set_heading("Title", "STATS", pixel_texture)
-	_status_identity = widgets.create_sprite(page, "BuildIdentity", null, Vector2(70, 8), false)
+	_status_identity = widgets.create_sprite(page, "BuildIdentity", null, Vector2(page.title_width + 10.0, 8), false)
 	_status_values.clear()
 	for index in 4:
 		_status_values.append(widgets.create_sprite(page, "PauseStatus%d" % index, null, Vector2.ZERO, false))
@@ -132,7 +131,10 @@ func update_status(context: MenuPlayerContext, pixel_texture: Callable, status_t
 		status_texts[index].texture = pixel_texture.call(values[index], PROGRESS_COLOR if index == 1 else Color.WHITE) as Texture2D
 	if _status_page != null:
 		var identity := "%s / %s" % [PlayerProfile.normalize_player_name(profile.player_name), context.element_display_name()]
-		var identity_width := _status_page.size.x - 90.0 - status_texts[0].texture.get_width()
+		var identity_left := _status_page.title_width + 10.0
+		var level_left := _status_page.size.x - 10.0 - status_texts[0].texture.get_width()
+		var identity_width := maxf(level_left - 8.0 - identity_left, 0.0)
+		_status_identity.position.x = identity_left
 		_status_identity.texture = pixel_texture.call(identity, Color.WHITE) as Texture2D
 		while _status_identity.texture.get_width() > identity_width and identity.length() > 1:
 			identity = identity.left(-1)

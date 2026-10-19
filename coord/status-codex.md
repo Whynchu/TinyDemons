@@ -2509,8 +2509,14 @@ Release checks: 75/75 changed/new non-plugin GDScript files pass MCP script_chec
 
 GitHub run 39184718741 passed definition validation (44/44), composition self-test and regression audit; web smoke caught the missing explicit gl_compatibility web renderer override. Restored it. Local web configuration preflight passes; actual export deferred to GitHub (local expected Godot executable absent). Title version script diagnostic passes. Publishing 0.3.94 and monitoring replacement deployment.
 
-## In flight - pause Stats polish (2026-10-19)
+## Previous handoff - pause Stats polish (2026-10-19)
 
 Refurbishing only the pause Stats page: vitals/progress, grouped attribute and combat totals, readable labels and responsive alignment. Preserving the shared shell and pause navigation. Owner reviews before proceeding to another menu.
 
-Map maintenance: one incremental Graphify refresh (update . --no-cluster) is still CPU-processing in exec session 94427 at handoff. Process tree began 2026-10-19 16:33:52; inspect completion before starting another map writer. This ignored analysis job does not affect the reviewable Stats page or its passing checks.
+The prior incremental Graphify process was stopped before this correction; no map writer remains active.
+
+## Latest handoff - shared menu heading convention (2026-10-19)
+
+Owner noted Pause Stats title panel is too narrow and shared headings must align right like the hand-authored Equipment title. Standardizing MenuScreen to the authored 90px panel/right inset across shared menus; deleting Stats one-off width. User reviews after this focused correction.
+
+Shared MenuScreen headings now right-align to a 4px panel inset on initial layout and resize. Pause Stats uses the standard 90px title window; its identity starts after the panel and truncates before the level value. The existing routed-menu smoke now checks shared-menu panel width, heading alignment through two widths, and the Pause Stats heading. MCP script diagnostics pass for both changed scripts and the smoke; `git diff --check` passes. No game start, input simulation, scene switch, or screenshot capture was performed. The runtime smoke remains unrun for owner review. The required incremental Graphify refresh extracted 16 code files but was stopped to keep this review focused; its ignored map JSON timestamp is unchanged and no map writer remains active.

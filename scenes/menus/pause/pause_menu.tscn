@@ -149,7 +149,6 @@ region_rect = Rect2(0, 0, 16, 16)
 visible = false
 heading = "STATS"
 show_header_window = true
-title_width = 60.0
 
 
 
