@@ -135,9 +135,9 @@ runtime or per-content test edit.
 
 ## Web build
 
-Current game version: `0.3.94`. Every push to `main` increments the patch version
-by at least `0.0.01`; update the in-game title-menu version and both READMEs in
-the same commit.
+Current game version: `0.3.96`. Every push to `main` increments the patch version
+by at least `0.0.01`; update the in-game title-menu version, project metadata,
+and both READMEs in the same commit.
 
 The browser build publishes to
 [GitHub Pages](https://whynchu.github.io/TinyDemons/) from `main`. Pull requests
